@@ -85,6 +85,11 @@ interface VisualNodes
     lastY: number;
     lastW: number;
     lastH: number;
+    // Whether the outer <g> currently carries display="none". Tracked so the
+    // visibility gate only touches the DOM on an actual transition — a visible
+    // node's walk otherwise called removeAttribute('display') EVERY pass (a top
+    // native hotspot in the render profile), and the common case is no change.
+    displayNone: boolean;
 }
 
 export interface SvgRendererOptions
@@ -288,6 +293,8 @@ export class SvgRenderer
                 lastY: Number.NaN,
                 lastW: Number.NaN,
                 lastH: Number.NaN,
+                // A brand-new outer <g> has no display attribute yet.
+                displayNone: false,
             };
             info.outer.setAttribute('class', 'mural-visual');
             info.own  .setAttribute('class', 'mural-own');
@@ -318,13 +325,23 @@ export class SvgRenderer
         // full rebuild on every Visibility toggle).
         if (visual.Visibility !== 'Visible')
         {
-            info.outer.setAttribute('display', 'none');
+            // Only write the attribute on the Visible→hidden transition; a node
+            // that was already hidden needs no DOM touch.
+            if (!info.displayNone)
+            {
+                info.outer.setAttribute('display', 'none');
+                info.displayNone = true;
+            }
             this.markSubtreeVisited(visual, visited);
             return;
         }
-        // Clear a stale `display="none"` from a prior pass. removeAttribute
-        // on a missing attribute is a cheap no-op.
-        info.outer.removeAttribute('display');
+        // Clear a stale `display="none"` only when one is actually present —
+        // the common visible-node case then does no DOM work at all.
+        if (info.displayNone)
+        {
+            info.outer.removeAttribute('display');
+            info.displayNone = false;
+        }
 
         // DOM host (DomHost): wrap the visual's `ForeignElement` in a
         // persistent <foreignObject> parked in the OUTER group. Created once

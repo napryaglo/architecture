@@ -5,6 +5,7 @@ import { JSDOM } from 'jsdom';
 import {
     Application,
     Visual,
+    Visibility,
     Size,
     Rect,
     Color,
@@ -323,5 +324,38 @@ describe('SvgRenderer — back-ref → hit-test integration', () => {
             cur = cur.parentNode;
         }
         assert.equal(recovered, border);
+    });
+});
+
+describe('SvgRenderer — visibility gate', () => {
+    beforeEach(() => { Application.current = null; });
+
+    test('toggling Visibility drives display and leaves it clean while visible', () => {
+        const { document, surface } = makeDom();
+        const renderer = new SvgRenderer(surface, { document });
+
+        const border = new Border();
+        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        border.Measure(new Size(50, 50));
+        border.Arrange(new Rect(0, 0, 50, 50));
+
+        // Visible: no display attribute.
+        renderer.Render(border, undefined, null, null);
+        const outer = surface.querySelector('g.mural-visual')!;
+        assert.equal(outer.getAttribute('display'), null);
+
+        // Re-render while still visible: the guard must not add a display attr.
+        renderer.Render(border, undefined, null, null);
+        assert.equal(outer.getAttribute('display'), null);
+
+        // Hidden → display="none".
+        border.Visibility = Visibility.Hidden;
+        renderer.Render(border, undefined, null, null);
+        assert.equal(outer.getAttribute('display'), 'none');
+
+        // Visible again → attribute cleared.
+        border.Visibility = Visibility.Visible;
+        renderer.Render(border, undefined, null, null);
+        assert.equal(outer.getAttribute('display'), null);
     });
 });

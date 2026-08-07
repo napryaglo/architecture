@@ -182,7 +182,7 @@ export abstract class Freezable extends Model
 
         // Re-point the nested-Freezable subscription for THIS property so a
         // freshly-assigned child bubbles and the old one stops.
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const key = descriptor.ComposedKey;
         const prev = this._childSubs?.get(key);
         if (prev !== undefined)
         {
