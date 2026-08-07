@@ -19,7 +19,7 @@ The subsystem separates the **model** (data you own and persist) from the
 
 | Layer | Type | Role |
 |-------|------|------|
-| Model | `DiagramDocument` | Owns the `Nodes` / `Connectors` / `ToolboxShapes` collections, the mutation methods (`CreateNode`, `Group`, …) and `Save` / `Load`. |
+| Model | `DiagramDocument` | Owns the `Nodes` / `Connectors` collections, the mutation methods (`CreateNode`, `Group`, …) and `Save` / `Load`. (The palette lives in the framework `ToolboxRepository`, not the document.) |
 | View | `Diagram` | An `ItemsControl`/`Selector` that renders the nodes on a `Canvas`, handles selection, drag, resize, connector interaction, and raises gesture events. |
 | Items | `Figure`, `Group` | The canvas items themselves — visuals **and** data fused (no data/visual split, no per-item `DataTemplate`). |
 | Edges | `Connector` | Self-drawing routed lines mounted as siblings behind the figures. |
@@ -110,8 +110,10 @@ command toolbars, and format pane).
 new DiagramDocument(storage?: DiagramStorage)
 ```
 
-Populates `ToolboxShapes` from `SHAPE_CATALOG` and wires the `SaveCommand` /
-`LoadCommand` relay commands.
+Wires the `SaveCommand` / `LoadCommand` relay commands. The palette is no
+longer owned by the document — the `Diagram` control first-inits a
+`ToolboxRepository` (a `Services` singleton) with a built-in Shapes page; see
+**Palette drops** below.
 
 ### Dependency properties
 
@@ -124,7 +126,6 @@ Populates `ToolboxShapes` from `SHAPE_CATALOG` and wires the `SaveCommand` /
 | `Inspector` | `DiagramInspector` | instance | Format-Shape inspector panel. |
 | `Nodes` | `ObservableCollection<Figure \| Group>` | empty | The canvas items. |
 | `Connectors` | `ObservableCollection<Connector>` | empty | The edges. |
-| `ToolboxShapes` | `ObservableCollection<ToolboxShape>` | from catalog | Palette tiles. |
 | `Status` | `string` | `''` | Status-strip text. |
 | `Storage` | `DiagramStorage \| undefined` | ctor arg | Persistence backend. |
 | `SaveCommand` / `LoadCommand` | `RelayCommand \| undefined` | instances | Bind to Save/Load buttons. |
@@ -646,15 +647,36 @@ interface DiagramMutator {
 
 `attachCanvasDropBehavior(receiver, diagram)` attaches a drag-drop listener to
 `receiver` (a `Border`/`ScrollViewer`), translating host coordinates to
-canvas-local, accepting data that carries `TOOLBOX_NODE_KIND_FORMAT`, and
-firing `Diagram.ItemDropped`. Returns a detach thunk. The dropped node lands
-offset by `NodeDropOffset` (default `(40, 40)` — half the default node size —
-so the cursor maps to the node centre).
+canvas-local, accepting data that carries `TOOLBOX_ITEM_FORMAT`, and firing
+`Diagram.ItemDropped`. Returns a detach thunk. The drag payload carries the
+dropped **item id**; `attach-standard-mutations` looks the id up in the
+`ToolboxRepository` and calls the item's registered `IToolboxDropFactory` (the
+shape factory delegates to `mutator.CreateNode`). The dropped node lands offset
+by `NodeDropOffset` (default `(40, 40)` — half the default node size — so the
+cursor maps to the node centre).
 
 ```ts
-const TOOLBOX_NODE_KIND_FORMAT = '@pragmatic-lab/mural/node-kind';   // drag-data format key
+const TOOLBOX_ITEM_FORMAT = '@pragmatic-lab/mural/toolbox-item';   // drag-data format key (item id)
 interface ItemDroppedArgs { Data: DataObject; Position: Point }  // Position is canvas-local
 ```
+
+### Toolbox repository
+
+The palette is a framework subsystem, resolved from `Application.current.Services`:
+
+- `ToolboxRepository` (`ToolboxRepository.Key`) holds `ToolboxPage`s of
+  `ToolboxItem`s. The `Diagram` control first-inits it (idempotent) with a
+  built-in **Shapes** page from `SHAPE_CATALOG`.
+- Each `ToolboxItem` carries a `ToolboxVisualDescriptor` (`{ ResolverKey, Key }`)
+  and a `FactoryKey`. A per-kind `IToolboxVisualResolver` turns the descriptor
+  into a `Visual` (`VisualContext.Tile` | `Figure`) and signals when a
+  not-yet-loaded visual arrives; a per-kind `IToolboxDropFactory` materializes
+  the dropped node.
+- `ToolboxVisualPresenter` is the shared `ContentControl` every surface (palette
+  tile, canvas node, preview) mounts to resolve a descriptor and re-host on the
+  resolver's change signal — so the surfaces can't drift.
+- Apps register additional pages/items/resolvers/factories against the same
+  repository.
 
 ---
 

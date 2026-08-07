@@ -55,6 +55,17 @@ Phases 1–6 + 7 + 8 (including the 19.7-engine + 19.8 corpus close-outs) + the 
 
 ## 21. Diagram toolbox items factory
 
+> **Largely delivered** by the ToolboxRepository subsystem
+> (`src/framework/diagram/toolbox/`, spec + plan under
+> `docs/superpowers/{specs,plans}/2026-08-08-toolbox-repository-mural.md`): the
+> toolbox is now an open registry — `ToolboxRepository` of `ToolboxPage`/
+> `ToolboxItem`, per-kind `IToolboxVisualResolver` + `IToolboxDropFactory`
+> resolved from `Application.Services`, drop routes by item id → factory, and a
+> shared `ToolboxVisualPresenter`. `ToolboxShape`/`DiagramDocument.ToolboxShapes`
+> are gone. Remaining from the original sketch below: richer per-node
+> configuration presets (ports/subclass/label baked into a descriptor) and
+> `.mu`-authored item registration beyond the current markup surface.
+
 Turn the diagram toolbox from a closed, geometry-only built-in catalog into an **open registry of factories** where each entry produces a **fully-configured node** (geometry + presets + label + ports + optional `Figure`/`Group` subclass), registrable from both TypeScript and `.mu`. Today the toolbox is hard-wired: `SHAPE_CATALOG` (35 kinds) auto-populates `DiagramDocument.ToolboxShapes` ([src/framework/diagram/diagram-document.ts:84-105](src/framework/diagram/diagram-document.ts#L84-L105)); a tile carries only `Kind`/`Label`/`PreviewNode`; drop → `attach-standard-mutations` reads the kind string → `CreateNode(kind)` → `Figure.fromKind(kind)`, which can only pull unit-1 geometry from the catalog. No way for an app to contribute an item that drops as a pre-configured node, and no way to assemble a non-built-in toolbox.
 
 **Locked design decisions** (brainstormed 2026-06-26): item richness = **fully-configured node** (`create()` returns a ready `Figure`/`Group`); registration = **TS registry API _and_ `.mu` markup**; catalog relationship = **`SHAPE_CATALOG` unified as the built-in factory source** (no special-case branch — `Figure.fromKind` becomes one ordinary descriptor's `create`); serialization = **full snapshot** (keep writing `d` + fill per node, as today); registry scope = **global singleton**; categories = **descriptor field now, flat rail UI** (grouped/collapsible rail is a follow-up). Open micro-decision: duplicate-`kind` policy — recommended **last-wins** (app can deliberately override a built-in, dev-mode `console.warn` on built-in override); alternatives are throw-on-collision or first-wins.
