@@ -344,7 +344,7 @@ export class StyleApplicator
         const descriptor = resolveSetterDescriptor(setter);
         if (descriptor === undefined) return;
         const target = this._target;
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const key = descriptor.ComposedKey;
         const evd = propertyValues(target).get(key);
         const bindings  = tier === SetterTier.Style ? this._styleSetterBindings   : this._triggerSetterBindings;
         const writeback = tier === SetterTier.Style ? this._styleSetterWriteback  : this._triggerSetterWriteback;

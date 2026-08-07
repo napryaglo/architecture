@@ -942,7 +942,7 @@ export class Element extends Visual implements ITriggerHost
     public override _refresh_inherited(descriptor: PropertyDescriptor): void
     {
         if (!inherits(descriptor.MetaData)) return;
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const key = descriptor.ComposedKey;
         const value = this.walk_inherited(key);
         if (value !== undefined)
         {

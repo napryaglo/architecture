@@ -437,7 +437,7 @@ export class Model
 
     public RemovePropertyChangedListener(key: PropertyKey<unknown>, callback: PropertyChangeCallback): void
     {
-        const composed = Model.compose_key(key.descriptor.RootOwner, key.descriptor.Name);
+        const composed = key.descriptor.ComposedKey;
         this.property_values.get(composed)?.RemoveChangeListener(callback);
     }
 
@@ -493,7 +493,7 @@ export class Model
 
     public GetValueSource<T>(key: PropertyKey<T>): PropertyValueSource
     {
-        const composed = Model.compose_key(key.descriptor.RootOwner, key.descriptor.Name);
+        const composed = key.descriptor.ComposedKey;
         return this.property_values.get(composed)?.Source ?? PropertyValueSource.Default;
     }
 
@@ -506,7 +506,7 @@ export class Model
     // release — pair every direct call with a matching ClearAnimatedValue.
     public SetAnimatedValue<T>(key: PropertyKey<T>, value: T): void
     {
-        const composed = Model.compose_key(key.descriptor.RootOwner, key.descriptor.Name);
+        const composed = key.descriptor.ComposedKey;
         let evd = this.property_values.get(composed);
         if (evd === undefined)
         {
@@ -518,13 +518,13 @@ export class Model
 
     public ClearAnimatedValue<T>(key: PropertyKey<T>): void
     {
-        const composed = Model.compose_key(key.descriptor.RootOwner, key.descriptor.Name);
+        const composed = key.descriptor.ComposedKey;
         this.property_values.get(composed)?.ClearAnimatedValue();
     }
 
     public get_property_value<T>(key: PropertyKey<T>): T
     {
-        const composed = Model.compose_key(key.descriptor.RootOwner, key.descriptor.Name);
+        const composed = key.descriptor.ComposedKey;
         const evd = this.property_values.get(composed);
         if (evd !== undefined) return evd.value;
         // Default-value fallback walks this instance's class chain so
@@ -557,7 +557,7 @@ export class Model
 
     private clear_via_descriptor(descriptor: PropertyDescriptor): void
     {
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const key = descriptor.ComposedKey;
         const evd = this.property_values.get(key);
         if (evd !== undefined)
         {
@@ -568,7 +568,7 @@ export class Model
 
     private remove_via_descriptor(descriptor: PropertyDescriptor): boolean
     {
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const key = descriptor.ComposedKey;
         const evd = this.property_values.get(key);
         if (evd === undefined) return false;
         // Dispose any active binding FIRST. ClearValue would have done
@@ -636,7 +636,7 @@ export class Model
             );
         }
 
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const key = descriptor.ComposedKey;
         let effective_value = this.property_values.get(key);
 
         if (effective_value === undefined)
@@ -693,7 +693,7 @@ export class Model
     // attach paths and by Visual's inheritance refresh.
     protected ensure_effective_value_for(descriptor: PropertyDescriptor): EffectiveValueDescriptor
     {
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const key = descriptor.ComposedKey;
         let evd = this.property_values.get(key);
         if (evd === undefined)
         {

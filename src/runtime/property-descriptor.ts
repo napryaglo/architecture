@@ -50,6 +50,10 @@ export class PropertyDescriptor
     private own: PropertyMetadata;
     private parent_descriptor: PropertyDescriptor | undefined;
     private readOnly: boolean;
+    // Memoised per-instance storage key `${RootOwner.name}.${name}`. Computed
+    // once (RootOwner + name never change after construction) so the hot
+    // get/set/clear paths stop re-allocating the composite string every access.
+    private composedKey: string | undefined;
 
     constructor(
         owner: Function,
@@ -92,6 +96,16 @@ export class PropertyDescriptor
     public get Name(): string
     {
         return this.name;
+    }
+
+    // The per-instance storage key `${RootOwner.name}.${name}` — identical to
+    // `Model.compose_key(descriptor.RootOwner, descriptor.Name)` but computed
+    // once and cached. RootOwner and name are fixed at construction, so this is
+    // safe to memoise; it removes a template-string allocation from every DP
+    // read/write (a top CPU hotspot in the render walk).
+    public get ComposedKey(): string
+    {
+        return (this.composedKey ??= `${this.RootOwner.name}.${this.name}`);
     }
 
     public get DefaultValue(): any

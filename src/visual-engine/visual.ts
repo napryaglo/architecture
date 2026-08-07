@@ -1482,7 +1482,7 @@ export class Visual extends Model
             if (t.Property !== descriptor.Name) continue;
             // Capture the effective value just before the write — picks
             // up an in-flight Animated value when one's active.
-            const composed = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+            const composed = descriptor.ComposedKey;
             const evd = propertyValues(this).get(composed);
             const old_effective = evd !== undefined ? evd.value : descriptor.DefaultValue;
             applyImplicitTransition(this, descriptor.Name, old_effective, new_value, t);
@@ -1533,7 +1533,7 @@ export class Visual extends Model
         // DP — the overwhelmingly common case (numbers, strings, enums).
         if (!newIsFreezable && !(oldValue instanceof Freezable) && this._freezableOwners === undefined) return;
 
-        const key = Model.compose_key(descriptor.RootOwner, descriptor.Name);
+        const key = descriptor.ComposedKey;
         const prev = this._freezableOwners?.get(key);
         if (prev !== undefined)
         {
