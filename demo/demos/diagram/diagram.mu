@@ -1,9 +1,10 @@
 // diagram.mu — node-only Visio-/drawio-style scene backed by the
 // framework's DiagramDocument. Items inside the canvas ARE Figure /
 // Group instances directly (no data/visual split, no DataTemplate
-// dispatch for items). The toolbox rail enumerates ToolboxShape
-// instances; dropping a tile onto the canvas calls the Document's
-// CreateNode method through the Mutator wiring.
+// dispatch for items). The toolbox rail enumerates the framework
+// ToolboxRepository's pages of ToolboxItems; dropping a tile routes
+// through its factory (the shape factory calls the Document's CreateNode
+// via the Mutator wiring).
 
 import DiagramTool from "./diagram-tools.mjs"
 
@@ -80,14 +81,14 @@ resources DiagramDemo {
 
     // ── Toolbox tile template ───────────────────────────────────────
     //
-    // ONE tile template — the picture is a ContentControl hosting the
-    // ToolboxShape's PreviewNode (a per-Kind Figure sized 48×48).
-    // ContentControl's Visual-content path slots the Figure directly
-    // (no DataTemplate dispatch) and the Figure renders itself.
-    DataTemplate [DataType = ToolboxShape] {
+    // ONE tile template per ToolboxItem — the picture is a
+    // ToolboxVisualPresenter that resolves the item's Descriptor to a
+    // Visual (Context defaults to Tile) and hosts it. The draggable Border
+    // emits the single toolbox-item payload via $BeginDragData.
+    DataTemplate [DataType = ToolboxItem] {
         Border x:root
             [ IsDraggable     = true,
-              OnDragStart     = $BeginKindDragData,
+              OnDragStart     = $BeginDragData,
               Background      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1),
@@ -95,8 +96,8 @@ resources DiagramDemo {
               Padding         = (4,8,4,8),
               Margin          = (2,0,2,4) ] {
             StackPanel [ Orientation = Vertical, HorizontalAlignment = Center ] {
-                ContentControl
-                    [ Content             = $PreviewNode,
+                ToolboxVisualPresenter
+                    [ Descriptor          = $Descriptor,
                       Width               = 48,
                       Height              = 48,
                       HorizontalAlignment = Center ]
@@ -107,6 +108,22 @@ resources DiagramDemo {
                       Margin              = (0,4,0,0),
                       HorizontalAlignment = Center ]
             }
+        }
+    }
+
+    // ── Toolbox page template ───────────────────────────────────────
+    // One section per ToolboxRepository page: a bold title over its items
+    // laid out by the shared wrap panel.
+    DataTemplate [DataType = ToolboxPage] {
+        DockPanel [ Margin = (0,0,0,8) ] {
+            TextBlock
+                [ DockPanel.Dock = Top,
+                  Text           = $Title,
+                  FontSize       = 11,
+                  FontWeight     = Bold,
+                  Foreground     = @OnSurfaceVariant,
+                  Margin         = (2,0,0,8) ]
+            ItemsControl [ ItemsSource = $Items, ItemsPanel = @DiagramToolboxPanel ]
         }
     }
 
@@ -342,8 +359,10 @@ resources DiagramDemo {
                     }
                 }
 
-                // Toolbox strip — Document.ToolboxShapes drives an
-                // ItemsControl bound through DiagramTileTemplate.
+                // Toolbox strip — the framework ToolboxRepository (a Services
+                // singleton the Diagram first-inits with a Shapes page) drives
+                // an ItemsControl of pages; each page renders its own title +
+                // item tiles.
                 Border
                     [ DockPanel.Dock  = Left,
                       Width           = 200,
@@ -352,13 +371,6 @@ resources DiagramDemo {
                       BorderThickness = (0,0,1,0),
                       Padding         = (8) ] {
                     DockPanel {
-                        TextBlock
-                            [ DockPanel.Dock = Top,
-                              Text           = "Shapes",
-                              FontSize       = 11,
-                              FontWeight     = Bold,
-                              Foreground     = @OnSurfaceVariant,
-                              Margin         = (2,0,0,8) ]
                         StackPanel [ DockPanel.Dock = Bottom ] {
                             TextBlock
                                 [ Text       = "Document",
@@ -382,9 +394,7 @@ resources DiagramDemo {
                                   Margin       = (2,4,2,0) ]
                         }
                         ScrollViewer [ IsAutoHideScrollBars = false ] {
-                            ItemsControl
-                                [ ItemsSource = $ToolboxShapes,
-                                  ItemsPanel  = @DiagramToolboxPanel ]
+                            ItemsControl [ ItemsSource = $service(ToolboxRepository).Pages ]
                         }
                     }
                 }

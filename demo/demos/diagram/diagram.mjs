@@ -1,14 +1,16 @@
 // diagram demo bootstrap — node-only scene with marquee multi-select.
 //
 // Every data class lives in the framework now: DiagramDocument owns
-// the Nodes / ToolboxShapes / Status / Save+Load + the structural
-// mutation methods, Figure / Group are the canvas items themselves
-// (visuals + data fused), and ToolboxShape is the toolbox-tile
-// model. The demo just creates a Document, plugs in localStorage,
-// seeds a few Figures, and returns it for the platform to mount.
+// the Nodes / Status / Save+Load + the structural mutation methods,
+// Figure / Group are the canvas items themselves (visuals + data
+// fused), and the toolbox palette lives in the framework
+// ToolboxRepository (a Services singleton the Diagram first-inits with
+// a built-in Shapes page). The demo just creates a Document, plugs in
+// localStorage, seeds a few Figures, and returns it for the platform
+// to mount.
 
 import { Application } from '@pragmatic-lab/mural/runtime';
-import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextShape, Callout, deserializeFlowDocument, documentWithFields } from '@pragmatic-lab/mural/framework';
+import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextShape, Callout, deserializeFlowDocument, documentWithFields, ensureToolboxDefaults } from '@pragmatic-lab/mural/framework';
 import { register } from '../../platform/registry.mjs';
 
 let docInstance;
@@ -20,6 +22,10 @@ register({
     subtitle: 'Drag shapes from the toolbox; drag a node to move; click / marquee to select; Delete to remove.',
     factory: () => {
         if (docInstance === undefined) {
+            // Ensure the toolbox repository + built-in Shapes page exist so the
+            // strip's $service(ToolboxRepository) binding resolves regardless of
+            // when the Diagram control is constructed. Idempotent.
+            ensureToolboxDefaults(Application.current?.Services);
             // Storage comes from the app's service provider (registered
             // at the platform composition root). Optional: if no backend
             // is registered the document just runs without persistence.
