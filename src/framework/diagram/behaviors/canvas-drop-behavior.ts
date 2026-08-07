@@ -105,3 +105,8 @@ export type ItemDroppedListener = (args: ItemDroppedArgs) => void;
 // gates DragOver/Drop on the presence of this key; payloads without it
 // are ignored.
 export const TOOLBOX_NODE_KIND_FORMAT = NODE_KIND_FORMAT;
+
+// The single toolbox drag format: the payload carries the dropped item's
+// id. The drop router looks the item up in the ToolboxRepository and calls
+// its factory. Replaces TOOLBOX_NODE_KIND_FORMAT (removed in the cutover).
+export const TOOLBOX_ITEM_FORMAT = '@pragmatic-lab/mural/toolbox-item';
