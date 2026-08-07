@@ -141,6 +141,15 @@ export class ResourceDictionary
     // next change with no re-subscribe.
     private _styleParticipating = true;
 
+    // Memoised resolutions. Resolve is a pure function of `entries` + `merged`,
+    // and the same keys (theme tokens, TargetType implicit styles) are resolved
+    // repeatedly against the same composition as TryFindResource walks the tree —
+    // a top render-profile hotspot. Cleared on EVERY signal (local mutation,
+    // merged add/remove, or a forwarded merged-child change), so a cached value
+    // can never outlive a change that could affect it. Only non-undefined hits
+    // are cached; misses re-walk (no miss-sentinel needed). Lazily created.
+    private resolveCache: Map<ResourceKey, unknown> | undefined;
+
     // Batch coalescing state. While _batchDepth > 0, signal() records which
     // channels were touched instead of firing; Batch() replays exactly those
     // on exit. See Batch().
@@ -251,11 +260,30 @@ export class ResourceDictionary
     // the entries.has check first.
     public Resolve(key: ResourceKey): unknown | undefined
     {
-        if (this.entries.has(key)) return this.entries.get(key);
+        // Memoised hit — the common case during materialization (same token /
+        // TargetType resolved through the same composition over and over).
+        const cached = this.resolveCache?.get(key);
+        if (cached !== undefined) return cached;
+
+        // Local entry wins (shadows merged) — one map get on the hit path; the
+        // has-check runs only when get is undefined (a locally-defined key whose
+        // value is genuinely undefined still shadows, and is not cached).
+        const local = this.entries.get(key);
+        if (local !== undefined)
+        {
+            (this.resolveCache ??= new Map()).set(key, local);
+            return local;
+        }
+        if (this.entries.has(key)) return undefined;
+
         for (let i = this.merged.length - 1; i >= 0; i--)
         {
             const v = this.merged[i]!.Resolve(key);
-            if (v !== undefined) return v;
+            if (v !== undefined)
+            {
+                (this.resolveCache ??= new Map()).set(key, v);
+                return v;
+            }
         }
         return undefined;
     }
@@ -522,6 +550,10 @@ export class ResourceDictionary
     // channels instead of firing (Batch replays them on exit).
     private signal(styleRelevant: boolean): void
     {
+        // Any mutation (or forwarded merged-child change) can change what keys
+        // resolve to — drop the memo before listeners re-resolve. Cleared here,
+        // ahead of the fan-out, so a SubscribeKey listener re-resolves fresh.
+        this.resolveCache?.clear();
         if (this._batchDepth > 0)
         {
             this._pendingGeneral = true;
