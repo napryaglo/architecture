@@ -6,7 +6,7 @@ export { compile, instantiate, EmitError, type CompileResult } from './compile.j
 export { format, type FormatOptions } from './format.js';
 export { Compiler, type CompilerOptions, type CompilerOutput } from './compiler.js';
 export type { IncludeResolver, IncludeResolution } from './compiler.js';
-export { svgToGeometryJs, type GeometryResourceJs } from '../tooling/svg-geometry.js';
+export { svgToGeometryJs, svgToIconJs, type GeometryResourceJs, type DrawingResourceJs } from '../tooling/svg-geometry.js';
 export { Lexer } from './lexer.js';
 export { Parser, ParseError } from './parser.js';
 export {
