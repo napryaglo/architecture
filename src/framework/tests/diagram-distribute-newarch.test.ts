@@ -178,12 +178,12 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
     test('End-to-end: drop on Diagram-as-DropReceiver with auto-wired Mutator creates a node', async () => {
         // Mirrors the diagram demo exactly: DropReceiver = $Self (the
         // Diagram itself), Mutator auto-wired off DataContext. A drop
-        // carrying mural/node-kind should run through canvas-drop
+        // carrying the toolbox-item format should run through canvas-drop
         // behavior → ItemDropped → mutator.CreateNode → Nodes.Add.
         const { Application } = await import('../../runtime/index.js');
         const { DragEventArgs, dispatchDrag } = await import('../../visual-engine/index.js');
         const { DataObject, DragDropEffects, NoModifiers } = await import('../../runtime/index.js');
-        const { TOOLBOX_NODE_KIND_FORMAT } = await import('../diagram/behaviors/canvas-drop-behavior.js');
+        const { TOOLBOX_ITEM_FORMAT } = await import('../diagram/behaviors/canvas-drop-behavior.js');
         Application.current = null;
         new Application();
 
@@ -205,7 +205,10 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
 
         const before = doc.Nodes.Count;
         const data = new DataObject();
-        data.Set(TOOLBOX_NODE_KIND_FORMAT, 'rectangle');
+        // The built-in Shapes page (first-inited by the Diagram ctor) carries a
+        // "shape:rectangle" item; the router resolves it to the shape factory,
+        // which calls mutator.CreateNode → Nodes.Add.
+        data.Set(TOOLBOX_ITEM_FORMAT, 'shape:rectangle');
         const args = new DragEventArgs('Drop', diagram, {
             HostX: 200, HostY: 150, Modifiers: NoModifiers,
             Data: data, AllowedEffects: DragDropEffects.All, Session: undefined,

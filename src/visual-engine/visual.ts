@@ -964,7 +964,7 @@ export class Visual extends Model
     /** @internal Detach this Visual from its current visual parent, if any.
      *  Used by content hosts (ContentPresenter) to CLAIM a Visual that a
      *  now-discarded prior view still references — re-presenting a shared Visual
-     *  (e.g. a ToolboxShape.PreviewNode bound into a palette tile whose view a
+     *  (e.g. a shared toolbox preview Visual bound into a palette tile whose view a
      *  capability switch tore down) would otherwise hit the single-parent guard
      *  in AttachVisual. No-op when already parentless. */
     public _release_from_visual_parent(): void

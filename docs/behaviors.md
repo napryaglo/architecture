@@ -139,7 +139,7 @@ body:
 ```mu
 StackPanel {
     Behaviors {
-        DragSourceBehavior [DataFormat="@pragmatic-lab/mural/node-kind"]
+        DragSourceBehavior [DataFormat="@pragmatic-lab/mural/toolbox-item"]
     }
     Border [Background=#ffffff]
     Border [Background=#f0f0f0]

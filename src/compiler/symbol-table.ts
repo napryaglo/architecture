@@ -224,7 +224,10 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     // DataType those cap DataTemplates bind against ($Brush / $Pen).
     ['Connector',               '@pragmatic-lab/mural/framework/diagram/connector.js'],
     ['ConnectorCapDataContext', '@pragmatic-lab/mural/framework/diagram/caps/connector-cap-data-context.js'],
-    ['ToolboxShape',            '@pragmatic-lab/mural/framework/diagram/toolbox-shape.js'],
+    ['ToolboxVisualPresenter',  '@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-visual-presenter.js'],
+    ['ToolboxRepository',       '@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-repository.js'],
+    ['ToolboxPage',             '@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-page.js'],
+    ['ToolboxItem',             '@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-item.js'],
     ['DiagramDocument',         '@pragmatic-lab/mural/framework/diagram/diagram-document.js'],
     ['DiagramStorageKey',       '@pragmatic-lab/mural/framework/diagram/diagram-document.js'],
     ['DiagramEditingContext',   '@pragmatic-lab/mural/framework/diagram/diagram-command-contexts.js'],

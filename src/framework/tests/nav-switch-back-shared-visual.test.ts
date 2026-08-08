@@ -12,7 +12,7 @@ import { NavigationItem } from '../navigation/navigation-item.js';
 import { Capability } from '../shell/module.js';
 import { ModifierKeys } from '../../runtime/index.js';
 
-// A capability service that exposes a SHARED Visual (like ToolboxShape.PreviewNode
+// A capability service that exposes a SHARED Visual (like the shared toolbox preview Visual
 // — a Figure held on the model and bound into a tile's ContentControl.Content).
 class SharedVisualSvc extends Model {
     public static readonly PreviewKey = Model.RegisterProperty<Visual | undefined>(
@@ -37,7 +37,7 @@ describe('Navigation — re-presenting a capability whose view hosts a shared Vi
             .register(ServiceProvider.tokenFor(OtherSvc), () => new OtherSvc(), 'singleton')
             .registerScoped(NavigationService.Key, (p) => new NavigationService(p));
         // The capability's panel view binds a ContentControl to the service's
-        // SHARED Preview Visual — the ToolboxShape tile shape.
+        // SHARED Preview Visual — the toolbox tile shape.
         Application.current.Resources.Set(SharedVisualSvc, new DataTemplate((s) => {
             const cc = new ContentControl();
             cc.DataContext = s;

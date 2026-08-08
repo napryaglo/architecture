@@ -1,4 +1,5 @@
 import {
+    Application,
     Element,
     MetaData,
     Model,
@@ -17,6 +18,7 @@ import type { DataTemplate } from '../../basic/templates/data-template.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Group } from './group.js';
+import { ensureToolboxDefaults } from './toolbox/ensure-toolbox-defaults.js';
 import { connectorCapOptions } from './caps/connector-cap-options.js';
 import type { CapOption } from '../formatting/cap-option.js';
 import { Selector } from '../list/selector.js';
@@ -58,7 +60,7 @@ import {
     type ItemDroppedArgs,
     type ItemDroppedListener,
 } from './behaviors/canvas-drop-behavior.js';
-export { attachCanvasDropBehavior, TOOLBOX_NODE_KIND_FORMAT } from './behaviors/canvas-drop-behavior.js';
+export { attachCanvasDropBehavior, TOOLBOX_ITEM_FORMAT } from './behaviors/canvas-drop-behavior.js';
 export type { ItemDroppedArgs, ItemDroppedListener } from './behaviors/canvas-drop-behavior.js';
 import type {
     ConnectorCreatedArgs,
@@ -890,6 +892,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         // (relative-source-self, i.e. the Diagram instance) works
         // without an enclosing Border.
         this.applyDefaultStyle();
+        // First-init the toolbox repository + built-in Shapes page (idempotent;
+        // no-op when there is no Application service provider, e.g. headless).
+        ensureToolboxDefaults(Application.current?.Services);
         // Collaborators — internal, no public surface. Eagerly
         // constructed so the Diagram is fully-equipped from the moment
         // the constructor returns.

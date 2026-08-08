@@ -108,7 +108,7 @@ export class ContentControl extends Control
         {
             // A Visual bound as Content may be SHARED and still logically
             // parented to a now-discarded prior view (e.g. a
-            // ToolboxShape.PreviewNode Figure bound into a palette tile whose view
+            // shared toolbox preview Visual bound into a palette tile whose view
             // a capability switch tore down, then re-presented on switch-back).
             // Claim it — release from the stale parent — instead of tripping the
             // single-parent guard in AttachLogical.

@@ -36,8 +36,6 @@ import type { Diagram } from '../diagram.js';
 // time. Without this, a drop inside the visible viewport AFTER the
 // user has scrolled lands at the wrong canvas coordinate.
 
-const NODE_KIND_FORMAT = '@pragmatic-lab/mural/node-kind';
-
 /** @internal */
 export function attachCanvasDropBehavior(receiver: Visual, diagram: Diagram): () => void
 {
@@ -69,13 +67,13 @@ export function attachCanvasDropBehavior(receiver: Visual, diagram: Diagram): ()
     };
 
     const onDragOver = (args: DragEventArgs): void => {
-        // Accept any drop carrying a known node-kind format. Consumers
-        // wanting other formats can wire their own DragOver listener.
-        if (args.Data.Has(NODE_KIND_FORMAT)) args.Effect = DragDropEffects.Copy;
+        // Accept any drop carrying a toolbox-item payload. Consumers wanting
+        // other formats can wire their own DragOver listener.
+        if (args.Data.Has(TOOLBOX_ITEM_FORMAT)) args.Effect = DragDropEffects.Copy;
     };
 
     const onDrop = (args: DragEventArgs): void => {
-        if (!args.Data.Has(NODE_KIND_FORMAT)) return;
+        if (!args.Data.Has(TOOLBOX_ITEM_FORMAT)) return;
         diagram._fireItemDropped({
             Data:     args.Data,
             Position: localPosition(args),
@@ -100,8 +98,9 @@ export interface ItemDroppedArgs
 
 export type ItemDroppedListener = (args: ItemDroppedArgs) => void;
 
-// Drag-data format key consumers should put their toolbox tile's kind
-// under: `dataObject.Set('@pragmatic-lab/mural/node-kind', kindString)`. The behavior
-// gates DragOver/Drop on the presence of this key; payloads without it
-// are ignored.
-export const TOOLBOX_NODE_KIND_FORMAT = NODE_KIND_FORMAT;
+// The single toolbox drag format: the payload carries the dropped item's
+// id (`dataObject.Set(TOOLBOX_ITEM_FORMAT, item.Id)`). The behavior gates
+// DragOver/Drop on the presence of this key; payloads without it are
+// ignored. The drop router (attach-standard-mutations) looks the item up in
+// the ToolboxRepository and calls its factory.
+export const TOOLBOX_ITEM_FORMAT = '@pragmatic-lab/mural/toolbox-item';

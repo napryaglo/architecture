@@ -203,6 +203,20 @@ resources Diagrams {
         Template = @DefaultDiagram;
     }
 
+    // ── ToolboxVisualPresenter: the shared toolbox-visual host ─────────
+    //
+    // A ContentControl subclass. Its Content is a Visual the presenter
+    // resolves from its Descriptor (the palette tile, canvas node, and
+    // preview all mount this control), so the template is a bare
+    // ContentPresenter that slots that resolved Visual. No chrome — the
+    // enclosing tile/node supplies any frame.
+    Template x:key="DefaultToolboxVisualPresenter" [TargetType = ToolboxVisualPresenter] {
+        ContentPresenter
+    }
+    Style [TargetType = ToolboxVisualPresenter] {
+        Template = @DefaultToolboxVisualPresenter;
+    }
+
     // ── DiagramInspector: the Format Shape pane BODY ───────────────────
     //
     // The InspectorService hosts this DiagramInspector; the region wraps it in an

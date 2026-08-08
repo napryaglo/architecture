@@ -188,7 +188,7 @@ export {
 export {
     Diagram,
     attachCanvasDropBehavior,
-    TOOLBOX_NODE_KIND_FORMAT,
+    TOOLBOX_ITEM_FORMAT,
     type IDiagramViewHost,
     type ItemDroppedArgs,
     type ItemDroppedListener,
@@ -215,7 +215,18 @@ export {
     Field, FieldKind, isFieldKind, resolveFields, documentWithFields, type FieldResolver,
 } from './diagram/shape-text-field.js';
 export { Group } from './diagram/group.js';
-export { ToolboxShape, TOOLBOX_PREVIEW_SIZE } from './diagram/toolbox-shape.js';
+// ── Toolbox repository subsystem ───────────────────────────────────────
+export { ToolboxRepository } from './diagram/toolbox/toolbox-repository.js';
+export { ToolboxPage } from './diagram/toolbox/toolbox-page.js';
+export { ToolboxItem } from './diagram/toolbox/toolbox-item.js';
+export { ToolboxVisualDescriptor } from './diagram/toolbox/toolbox-visual-descriptor.js';
+export { ToolboxVisualPresenter } from './diagram/toolbox/toolbox-visual-presenter.js';
+export { VisualContext, type IToolboxVisualResolver } from './diagram/toolbox/toolbox-visual-resolver.js';
+export { type IToolboxDropFactory, type ToolboxDropContext } from './diagram/toolbox/toolbox-drop-factory.js';
+export { ShapeToolboxItem } from './diagram/toolbox/shape-toolbox-item.js';
+export { ShapeVisualResolver, ShapeVisualResolverKey } from './diagram/toolbox/shape-visual-resolver.js';
+export { ShapeDropFactory, ShapeDropFactoryKey } from './diagram/toolbox/shape-drop-factory.js';
+export { ensureToolboxDefaults } from './diagram/toolbox/ensure-toolbox-defaults.js';
 export {
     SHAPE_CATALOG,
     SHAPE_CATALOG_MAP,
