@@ -228,6 +228,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['ToolboxRepository',       '@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-repository.js'],
     ['ToolboxPage',             '@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-page.js'],
     ['ToolboxItem',             '@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-item.js'],
+    ['VisualContext',           '@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-visual-resolver.js'],
     ['DiagramDocument',         '@pragmatic-lab/mural/framework/diagram/diagram-document.js'],
     ['DiagramStorageKey',       '@pragmatic-lab/mural/framework/diagram/diagram-document.js'],
     ['DiagramEditingContext',   '@pragmatic-lab/mural/framework/diagram/diagram-command-contexts.js'],
@@ -531,6 +532,7 @@ export const ENUM_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<st
     ['CardVariant',           new Set(['Filled', 'Elevated', 'Outlined'])],
     ['TopAppBarVariant',      new Set(['Small', 'CenterAligned', 'Medium', 'Large'])],
     ['Orientation',           new Set(['Vertical', 'Horizontal'])],
+    ['VisualContext',         new Set(['Tile', 'Figure'])],
     ['SelectionMode',         new Set(['Single', 'Multiple', 'Extended'])],
     ['MarqueeBoundsPolicy',   new Set(['Intersect', 'Contained'])],
     ['Dock',                  new Set(['Left', 'Top', 'Right', 'Bottom'])],
@@ -624,6 +626,11 @@ export const STATIC_MEMBERS: ReadonlyMap<string, ReadonlySet<string>> = new Map<
         'TopLeft', 'TopRight', 'BottomLeft', 'BottomRight',
         'Above', 'Below', 'LeftOf', 'RightOf',
     ])],
+    // ToolboxVisualPresenter.Context = VisualContext.Tile / .Figure. The `Context`
+    // property name is overloaded (a class-ref `Context = DiagramEditingContext`
+    // also exists), so the bare-member PROPERTY_TO_ENUM path can't be used — author
+    // the qualified `VisualContext.Tile` form, resolved here.
+    ['VisualContext', new Set(['Tile', 'Figure'])],
 ]);
 
 // Property-name → enum class candidates. Used when the markup
