@@ -1,6 +1,7 @@
-import { MetaData, Model, type PropertyDescriptor } from '../../runtime/index.js';
+import { MetaData, Model, Size, type PropertyDescriptor } from '../../runtime/index.js';
 import { Brush, Color, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { NodeViewModel } from './node-view-model.js';
+import { DiagramSettings } from './diagram-settings.js';
 import { ShapeText, TextAutoFit } from './shape-text.js';
 import { FieldKind, resolveFields } from './shape-text-field.js';
 
@@ -47,9 +48,26 @@ export class TextNodeVM extends NodeViewModel
         text.AddPropertyChangedListener(ShapeText.DocumentKey, this._onLabelChanged);
         text.AddPropertyChangedListener(ShapeText.ContentKey,  this._onLabelChanged);
         this._refreshLabelFields();
+        this._applyAutoFit();
     }
 
-    private readonly _onLabelChanged = (): void => { this._refreshLabelFields(); };
+    private readonly _onLabelChanged = (): void => { this._refreshLabelFields(); this._applyAutoFit(); };
+
+    // TextAutoFit.GrowShape: grow this node so the label's natural size fits
+    // (plus a margin). Grow-only — never shrinks. Mirrors Figure._applyAutoFit
+    // against the VM's own ShapeText (a standalone ShapeText measures headlessly).
+    private _applyAutoFit(): void
+    {
+        const label = this.Text;
+        if (label === undefined || label.AutoFit !== TextAutoFit.GrowShape) return;
+        label.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
+        const d = label.DesiredSize;
+        const margin = DiagramSettings.ShapeLabelMargin();
+        const needW = d.Width  + margin * 2;
+        const needH = d.Height + margin * 2;
+        if (needW > this.Width)  this.Width  = needW;
+        if (needH > this.Height) this.Height = needH;
+    }
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
