@@ -545,7 +545,10 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         }
         this.Nodes.Insert(minIdx, grp);
         grp.IsSelected = true;
-        for (const leaf of grp.EnumerateLeaves()) leaf.IsSelected = false;
+        for (const leaf of grp.EnumerateLeaves())
+        {
+            if (leaf instanceof Figure) leaf.IsSelected = false;
+        }
         for (const sub  of grp.EnumerateSubGroups()) sub.IsSelected = false;
         this.Status = `Grouped ${selection.length} items.`;
         this._markDirty();
@@ -564,7 +567,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         for (const g of groups)
         {
             const parent = g.Parent;
-            const members: (Figure | Group)[] = [];
+            const members: (Figure | Group | NodeViewModel)[] = [];
             for (let i = 0; i < g.Members.Count; i++) members.push(g.Members.Get(i)!);
             for (const m of members)
             {

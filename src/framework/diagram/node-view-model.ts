@@ -1,3 +1,4 @@
+import type { Group } from './group.js';
 import { MetaData, Model } from '../../runtime/index.js';
 import { DiagramSettings } from './diagram-settings.js';
 
@@ -22,4 +23,8 @@ export class NodeViewModel extends Model
     public set Width(v:  number) { this.set_property_value(NodeViewModel.WidthKey, v); }
     public get Height(): number { return this.get_property_value(NodeViewModel.HeightKey); }
     public set Height(v: number) { this.set_property_value(NodeViewModel.HeightKey, v); }
+
+    /** Enclosing group, or undefined when top-level. View-invisible
+     *  structural metadata, so a plain field (mirrors Figure.Parent). */
+    public Parent: Group | undefined = undefined;
 }

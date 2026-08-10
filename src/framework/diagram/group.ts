@@ -9,6 +9,9 @@ import {
 import { Canvas } from '../../basic/index.js';
 import { ContentControl } from '../base/content-control.js';
 import { Figure } from './figure.js';
+import { NodeViewModel } from './node-view-model.js';
+
+type GroupMember = Figure | Group | NodeViewModel;
 
 // First-class group entity for the framework Diagram. A Group sits in
 // the Diagram's flat Items collection alongside leaf Figures and renders
@@ -53,21 +56,21 @@ export class Group extends ContentControl
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
         Group, 'IsSelected', false, MetaData.None);
 
-    public readonly Members: ObservableCollection<Figure | Group> = new ObservableCollection();
+    public readonly Members: ObservableCollection<GroupMember> = new ObservableCollection();
 
     // Group back-reference. undefined ≡ top-level. View-invisible
     // structural metadata, so plain field.
     public Parent: Group | undefined = undefined;
 
     // Per-member detach thunks, keyed by member identity.
-    private readonly _memberListeners: Map<Figure | Group, () => void> = new Map();
+    private readonly _memberListeners: Map<GroupMember, () => void> = new Map();
 
     // Reentrancy gate — true during a Left/Top write shift so per-member
     // PropertyChanged callbacks skip the bbox recompute cascade. One
     // final recompute fires after every member has moved.
     private _shiftSuppressed: boolean = false;
 
-    constructor(initialMembers?: readonly (Figure | Group)[])
+    constructor(initialMembers?: readonly GroupMember[])
     {
         super();
         // Default Template flows from the bundled diagram theme entry
@@ -158,8 +161,8 @@ export class Group extends ContentControl
         this._shiftBy(dx, dy);
     }
 
-    /** Recursively enumerate every leaf Figure contained (transitively). */
-    public *EnumerateLeaves(): Iterable<Figure>
+    /** Recursively enumerate every leaf Figure or NodeViewModel contained (transitively). */
+    public *EnumerateLeaves(): Iterable<Figure | NodeViewModel>
     {
         for (let i = 0; i < this.Members.Count; i++)
         {
@@ -207,7 +210,7 @@ export class Group extends ContentControl
         this._recomputeBounds();
     }
 
-    private _handleMembersChange(change: CollectionChange<Figure | Group>): void
+    private _handleMembersChange(change: CollectionChange<GroupMember>): void
     {
         switch (change.kind)
         {
@@ -243,29 +246,27 @@ export class Group extends ContentControl
         if (change.kind !== 'moved') this._recomputeBounds();
     }
 
-    private _listenMember(m: Figure | Group): () => void
+    private _listenMember(m: GroupMember): () => void
     {
-        // The four geometry DPs share the same name across Figure and
-        // Group, but the key objects differ. Pick the right keys based
+        // The four geometry DPs share the same name across Figure, Group, and
+        // NodeViewModel, but the key objects differ. Pick the right keys based
         // on the member's class.
-        const isGroup = m instanceof Group;
-        const leftKey = isGroup ? Group.LeftKey   : Figure.LeftKey;
-        const topKey  = isGroup ? Group.TopKey    : Figure.TopKey;
-        const wKey    = isGroup ? Group.WidthKey  : Figure.WidthKey;
-        const hKey    = isGroup ? Group.HeightKey : Figure.HeightKey;
-        const handler = (): void => {
-            if (this._shiftSuppressed) return;
-            this._recomputeBounds();
-        };
-        m.AddPropertyChangedListener(leftKey, handler);
-        m.AddPropertyChangedListener(topKey,  handler);
-        m.AddPropertyChangedListener(wKey,    handler);
-        m.AddPropertyChangedListener(hKey,    handler);
+        const keys =
+            m instanceof Group
+                ? { l: Group.LeftKey, t: Group.TopKey, w: Group.WidthKey, h: Group.HeightKey }
+                : m instanceof NodeViewModel
+                    ? { l: NodeViewModel.LeftKey, t: NodeViewModel.TopKey, w: NodeViewModel.WidthKey, h: NodeViewModel.HeightKey }
+                    : { l: Figure.LeftKey, t: Figure.TopKey, w: Figure.WidthKey, h: Figure.HeightKey };
+        const handler = (): void => { if (this._shiftSuppressed) return; this._recomputeBounds(); };
+        m.AddPropertyChangedListener(keys.l, handler);
+        m.AddPropertyChangedListener(keys.t, handler);
+        m.AddPropertyChangedListener(keys.w, handler);
+        m.AddPropertyChangedListener(keys.h, handler);
         return (): void => {
-            m.RemovePropertyChangedListener(leftKey, handler);
-            m.RemovePropertyChangedListener(topKey,  handler);
-            m.RemovePropertyChangedListener(wKey,    handler);
-            m.RemovePropertyChangedListener(hKey,    handler);
+            m.RemovePropertyChangedListener(keys.l, handler);
+            m.RemovePropertyChangedListener(keys.t, handler);
+            m.RemovePropertyChangedListener(keys.w, handler);
+            m.RemovePropertyChangedListener(keys.h, handler);
         };
     }
 
@@ -274,7 +275,7 @@ export class Group extends ContentControl
     // extra events. Members.Remove fires Subscribe's removed-change,
     // which detaches listeners via the normal path.
     /** @internal */
-    public _removeMember(m: Figure | Group): void
+    public _removeMember(m: GroupMember): void
     {
         const idx = this.Members.IndexOf(m);
         if (idx >= 0) this.Members.RemoveAt(idx);
