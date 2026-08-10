@@ -483,6 +483,23 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 // that share a side rebalance to the smaller slot count.
                 o.DetachFromHosts();
             }
+            // Callout cleanup: detach any removed callout from its target, and
+            // clear the leader on any surviving callout whose target was removed
+            // (mirrors the connector DetachFromHosts cascade above).
+            for (const item of items)
+            {
+                if (item instanceof CalloutNodeVM) item.Detach();
+            }
+            for (let i = 0; i < this.Nodes.Count; i++)
+            {
+                const n = this.Nodes.Get(i);
+                if (n instanceof CalloutNodeVM
+                    && n.LeaderTargetNode !== undefined
+                    && items.includes(n.LeaderTargetNode as unknown))
+                {
+                    n.LeaderTargetNode = undefined;
+                }
+            }
             const orphanSuffix = orphaned.length > 0
                 ? ` + ${orphaned.length} orphaned connector${orphaned.length === 1 ? '' : 's'}`
                 : '';

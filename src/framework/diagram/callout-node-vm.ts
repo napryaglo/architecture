@@ -97,6 +97,23 @@ export class CalloutNodeVM extends TextNodeVM
         return this.get_property_value(CalloutNodeVM.LeaderGeometryKey);
     }
 
+    /** Release the target-geometry subscription. The document calls this when
+     *  this callout is deleted so it stops tracking a node it no longer draws
+     *  (mirrors the connector DetachFromHosts cascade). */
+    public Detach(): void
+    {
+        const prev = this._trackedTarget;
+        if (prev !== undefined)
+        {
+            for (const name of TARGET_TRACK)
+            {
+                const key = resolveKey(prev, undefined, name);
+                prev.RemovePropertyChangedListener(key, this._onTargetMoved);
+            }
+            this._trackedTarget = undefined;
+        }
+    }
+
     // ── Lifecycle ──────────────────────────────────────────────────────
 
     protected override OnPropertyChanged(
