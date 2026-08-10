@@ -1,8 +1,12 @@
-import { MetaData, Model, type PropertyDescriptor } from '../../runtime/index.js';
-import { Brush, Color, Pen, SolidColorBrush, type PathGeometry } from '../../visual-engine/index.js';
+import { MetaData, Model, Rect, type PropertyDescriptor } from '../../runtime/index.js';
+import { Brush, Color, Pen, SolidColorBrush, type PathGeometry, type Point } from '../../visual-engine/index.js';
 import { SHAPE_CATALOG_MAP, scaleGeometry } from './shape-catalog.js';
 import { DiagramSettings } from './diagram-settings.js';
 import { NodeViewModel } from './node-view-model.js';
+import { type Port, type ResolvedPortSide } from './port.js';
+import { resolveDefaultPortProvider } from './port-providers/default-port-providers.js';
+import { SideEndpointRegistry, type ISideEndpointHost } from './side-endpoint-host.js';
+import type { ConnectorEndpoint } from './connector-endpoint.js';
 
 const DEFAULT_FILL         = new SolidColorBrush(Color.FromHex('#bfdbfe'));
 const DEFAULT_STROKE_BRUSH = new SolidColorBrush(Color.FromHex('#1976d2'));
@@ -13,7 +17,7 @@ export interface ShapeFromSourceOptions { readonly width?: number; readonly heig
 // A freeform shape as a node view-model: ports Figure's geometry logic (unit-1
 // source scaled to Width/Height) onto NodeViewModel, rendered by the
 // [DataType=ShapeNodeVM] DataTemplate inside the Figure container.
-export class ShapeNodeVM extends NodeViewModel
+export class ShapeNodeVM extends NodeViewModel implements ISideEndpointHost
 {
     public static readonly KindKey     = Model.RegisterProperty<string>(ShapeNodeVM, 'Kind', '', MetaData.None);
     public static readonly GeometryKey = Model.RegisterProperty<PathGeometry | undefined>(ShapeNodeVM, 'Geometry', undefined, MetaData.None);
@@ -21,6 +25,52 @@ export class ShapeNodeVM extends NodeViewModel
     public static readonly StrokeKey   = Model.RegisterProperty<Pen | undefined>(ShapeNodeVM, 'Stroke', undefined, MetaData.None);
 
     private _source: PathGeometry | undefined = undefined;
+
+    // ── Side-endpoint host surface ────────────────────────────────────
+    // Delegates the full ISideEndpointHost contract to a shared
+    // SideEndpointRegistry, supplying bounds from Left/Top/Width/Height
+    // (matching the nodeRect() convention used in connector.ts).
+    private readonly _sideHost = new SideEndpointRegistry(
+        () => new Rect(this.Left, this.Top, this.Width, this.Height),
+    );
+
+    public get Ports(): readonly Port[]
+    {
+        return resolveDefaultPortProvider(this).GetPorts(this);
+    }
+
+    public GetSideSlot(
+        endpoint: ConnectorEndpoint,
+        side: ResolvedPortSide,
+    ): { index: number; count: number } | undefined
+    {
+        return this._sideHost.GetSideSlot(endpoint, side);
+    }
+
+    public GetSideEndpointCount(side: ResolvedPortSide): number
+    {
+        return this._sideHost.GetSideEndpointCount(side);
+    }
+
+    public SlotIndexForPosition(side: ResolvedPortSide, cursor: Point): number | undefined
+    {
+        return this._sideHost.SlotIndexForPosition(side, cursor);
+    }
+
+    public _registerSideEndpoint(
+        side: ResolvedPortSide,
+        endpoint: ConnectorEndpoint,
+        onRebalance: () => void,
+        owner?: unknown,
+    ): void
+    {
+        this._sideHost._registerSideEndpoint(side, endpoint, onRebalance, owner);
+    }
+
+    public _unregisterSideEndpoint(side: ResolvedPortSide, endpoint: ConnectorEndpoint): void
+    {
+        this._sideHost._unregisterSideEndpoint(side, endpoint);
+    }
 
     constructor()
     {
@@ -56,6 +106,11 @@ export class ShapeNodeVM extends NodeViewModel
 
     public get Kind(): string { return this.get_property_value(ShapeNodeVM.KindKey); }
     public get Geometry(): PathGeometry | undefined { return this.get_property_value(ShapeNodeVM.GeometryKey); }
+
+    // IPortHost surface — lets PortProviders that read ArrangedRect work
+    // correctly when this VM is passed as the host (mirrors the nodeRect()
+    // convention used in connector.ts for VM-backed endpoints).
+    public get ArrangedRect(): Rect { return new Rect(this.Left, this.Top, this.Width, this.Height); }
     public get Fill(): Brush | undefined { return this.get_property_value(ShapeNodeVM.FillKey); }
     public set Fill(v: Brush | undefined) { this.set_property_value(ShapeNodeVM.FillKey, v); }
     public get Stroke(): Pen | undefined { return this.get_property_value(ShapeNodeVM.StrokeKey); }

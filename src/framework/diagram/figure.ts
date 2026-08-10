@@ -19,10 +19,11 @@ import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { Selector } from '../list/selector.js';
 import { SHAPE_CATALOG_MAP, scaleGeometry } from './shape-catalog.js';
 import type { Group } from './group.js';
-import { PortSide, type Port, type ResolvedPortSide } from './port.js';
+import { type Port, type ResolvedPortSide } from './port.js';
 import type { IPortProvider } from './port-providers/port-provider.js';
 import { resolveDefaultPortProvider } from './port-providers/default-port-providers.js';
 import type { ConnectorEndpoint } from './connector-endpoint.js';
+import { SideEndpointRegistry, type ISideEndpointHost } from './side-endpoint-host.js';
 import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-connector-drag.js';
 import { DiagramSettings } from './diagram-settings.js';
 
@@ -81,7 +82,7 @@ export interface FigureFromSourceOptions
     readonly kind?:   string;
 }
 
-export class Figure extends ContentControl
+export class Figure extends ContentControl implements ISideEndpointHost
 {
     static {
         Model.OverrideMetadata(Figure, Element.DefaultStyleKeyKey, { default_value: Figure });
@@ -407,33 +408,15 @@ export class Figure extends ContentControl
 
     // ── Side-anchored endpoint registry ──────────────────────────────
     //
-    // Per-side lists of ConnectorEndpoints whose Node references THIS
-    // Figure and whose PortSide pins them to that side. The framework's
-    // side-slot resolver (path 3a in connector.ts's resolveEndpoint)
-    // reads these lists to compute each endpoint's position along its
-    // side via the even-distribution rule:
-    //
-    //   slot N of M endpoints on a side sits at fractional offset
-    //   (N + 1) / (M + 1) along the side's length
-    //
-    // — symmetric around the side's centre, with the centre slot
-    // occupied for odd M and left empty for even M (e.g. M=2 →
-    // 1/3, 2/3; M=3 → 1/4, 1/2, 3/4).
-    //
-    // Connectors register their endpoints with `_registerSideEndpoint`
-    // when an endpoint settles on a (this Figure, side) pair and
-    // unregister via `_unregisterSideEndpoint` when it moves off, gets
-    // freed, or the connector is torn down. The rebalance callback is
-    // invoked for every endpoint on a side whenever the list changes,
-    // so connectors re-resolve and re-render at the new slot positions.
-    private readonly _sideEndpoints: Map<ResolvedPortSide, ConnectorEndpoint[]> = new Map();
-    private readonly _sideRebalanceCallbacks: Map<ConnectorEndpoint, () => void> = new Map();
-    // Endpoint → owning Connector (duck-typed). The side-intersection
-    // optimizer reads the owner's Geometry to detect crossings between
-    // pairs of connectors on the same side; storing the back-reference
-    // here avoids a quadratic scan through diagram.Connectors at every
-    // optimize pass.
-    private readonly _sideEndpointOwners: Map<ConnectorEndpoint, ISideAnchoredConnector> = new Map();
+    // Delegated to SideEndpointRegistry (side-endpoint-host.ts).
+    // Figure keeps its public API and the _sideEndpointsChangedListeners
+    // channel (visual observers — SideBarsAdorner); the registry handles
+    // endpoint → slot bookkeeping.  _fireSideRebalance bridges both by
+    // calling the registry's connector callbacks first, then the
+    // observer channel.
+    private readonly _sideHost = new SideEndpointRegistry(
+        () => new Rect(this.Left, this.Top, this.Width, this.Height),
+    );
     // Re-entry guard for _optimizeSideIntersections. The optimizer calls
     // _fireSideRebalance to re-route after each swap; the re-route
     // cascades back through Connector recompute paths that themselves
@@ -449,26 +432,21 @@ export class Figure extends ContentControl
         owner?: ISideAnchoredConnector,
     ): void
     {
-        let list = this._sideEndpoints.get(side);
-        if (list === undefined) { list = []; this._sideEndpoints.set(side, list); }
-        if (list.includes(endpoint)) return;
-        list.push(endpoint);
-        this._sideRebalanceCallbacks.set(endpoint, onRebalance);
-        if (owner !== undefined) this._sideEndpointOwners.set(endpoint, owner);
-        this._fireSideRebalance(side);
+        // Delegate to the registry; it calls _fireSideRebalance via its
+        // own internal path which only fires connector callbacks.  We
+        // intercept the post-register rebalance here to also notify
+        // the observer channel.
+        this._sideHost._registerSideEndpoint(side, endpoint, onRebalance, owner);
+        // NOTE: the registry already fired connector rebalances; we
+        // additionally fire observers via _notifySideEndpointsChanged.
+        this._notifySideEndpointsChanged();
     }
 
     /** @internal — called by Connector when an endpoint moves off / clears. */
     public _unregisterSideEndpoint(side: ResolvedPortSide, endpoint: ConnectorEndpoint): void
     {
-        const list = this._sideEndpoints.get(side);
-        if (list === undefined) return;
-        const idx = list.indexOf(endpoint);
-        if (idx < 0) return;
-        list.splice(idx, 1);
-        this._sideRebalanceCallbacks.delete(endpoint);
-        this._sideEndpointOwners.delete(endpoint);
-        this._fireSideRebalance(side);
+        this._sideHost._unregisterSideEndpoint(side, endpoint);
+        this._notifySideEndpointsChanged();
     }
 
     /** Slot index + total count for `endpoint` on `side`, or undefined
@@ -480,11 +458,7 @@ export class Figure extends ContentControl
         side: ResolvedPortSide,
     ): { index: number; count: number } | undefined
     {
-        const list = this._sideEndpoints.get(side);
-        if (list === undefined) return undefined;
-        const idx = list.indexOf(endpoint);
-        if (idx < 0) return undefined;
-        return { index: idx, count: list.length };
+        return this._sideHost.GetSideSlot(endpoint, side);
     }
 
     /** Number of side-anchored endpoints currently registered on `side`.
@@ -493,7 +467,7 @@ export class Figure extends ContentControl
      *  count to paint a port-marker dot per slot. */
     public GetSideEndpointCount(side: ResolvedPortSide): number
     {
-        return this._sideEndpoints.get(side)?.length ?? 0;
+        return this._sideHost.GetSideEndpointCount(side);
     }
 
     /** Slot index whose dynamic position is nearest `cursor` along the
@@ -503,19 +477,7 @@ export class Figure extends ContentControl
      *  side is empty or the figure is unsized. */
     public SlotIndexForPosition(side: ResolvedPortSide, cursor: Point): number | undefined
     {
-        const list = this._sideEndpoints.get(side);
-        if (list === undefined || list.length === 0) return undefined;
-        const count = list.length;
-        const vertical = side === PortSide.E || side === PortSide.W;   // distributes along Y
-        const start = vertical ? this.Top    : this.Left;
-        const len   = vertical ? this.Height : this.Width;
-        if (len <= 0) return undefined;
-        const pos = vertical ? cursor.Y : cursor.X;
-        // slotCenter(i) = start + (i + 1) / (count + 1) * len  →  invert for i.
-        let idx = Math.round((pos - start) / len * (count + 1) - 1);
-        if (idx < 0) idx = 0;
-        if (idx > count - 1) idx = count - 1;
-        return idx;
+        return this._sideHost.SlotIndexForPosition(side, cursor);
     }
 
     /** Move `endpoint` to slot `toIndex` on `side`, firing a rebalance so
@@ -524,8 +486,7 @@ export class Figure extends ContentControl
      *  Backs the position-based segment-drag reorder + its abort restore. */
     public MoveSideEndpoint(side: ResolvedPortSide, endpoint: ConnectorEndpoint, toIndex: number): void
     {
-        const list = this._sideEndpoints.get(side);
-        if (list === undefined) return;
+        const list = this._sideHost.getSideList(side);
         const from = list.indexOf(endpoint);
         if (from < 0) return;
         let to = toIndex;
@@ -549,19 +510,18 @@ export class Figure extends ContentControl
 
     private _fireSideRebalance(side: ResolvedPortSide): void
     {
-        const list = this._sideEndpoints.get(side);
-        if (list === undefined) return;
-        // Snapshot — listener may unregister mid-fire (a rebalance can
-        // cascade through a Connector that detaches its previous side).
-        for (const ep of [...list])
-        {
-            this._sideRebalanceCallbacks.get(ep)?.();
-        }
+        // Fire connector rebalance callbacks via the registry.
+        this._sideHost._fireSideRebalance(side);
         // Notify external observers (the SideBarsAdorner port-marker
         // overlay) that the side-endpoint count for at least one side
         // changed. Connectors react via the per-endpoint rebalance
         // callbacks above; this channel is for visual indicators that
         // need to redraw without owning a connector endpoint themselves.
+        this._notifySideEndpointsChanged();
+    }
+
+    private _notifySideEndpointsChanged(): void
+    {
         for (const l of [...this._sideEndpointsChangedListeners]) l();
     }
 
@@ -579,12 +539,12 @@ export class Figure extends ContentControl
     public _optimizeSideIntersections(side: ResolvedPortSide): void
     {
         if (this._optimizing) return;
-        const list = this._sideEndpoints.get(side);
-        if (list === undefined || list.length < 2) return;
+        const list = this._sideHost.getSideList(side);
+        if (list.length < 2) return;
         const owners: ISideAnchoredConnector[] = [];
         for (const ep of list)
         {
-            const o = this._sideEndpointOwners.get(ep);
+            const o = this._sideHost.getOwner(ep);
             if (o === undefined) return;  // mixed-ownership side — skip
             owners.push(o);
         }
