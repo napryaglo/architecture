@@ -806,14 +806,14 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     // Parent chains, dedupes). Match the framework's `selectedTopLevel`
     // semantics so Group / Ungroup respect Visio-style "selecting a
     // member ≡ selecting its outermost group" elevation.
-    private _topLevel(items: readonly unknown[]): (Figure | Group)[]
+    private _topLevel(items: readonly unknown[]): (Figure | Group | NodeViewModel)[]
     {
-        const out = new Set<Figure | Group>();
+        const out = new Set<Figure | Group | NodeViewModel>();
         for (const item of items)
         {
-            if (item instanceof Figure || item instanceof Group)
+            if (item instanceof Figure || item instanceof Group || item instanceof NodeViewModel)
             {
-                let cur: Figure | Group = item;
+                let cur: Figure | Group | NodeViewModel = item;
                 while (cur.Parent !== undefined) cur = cur.Parent;
                 out.add(cur);
             }

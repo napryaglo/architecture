@@ -236,9 +236,7 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
             `DropReceiver after $Self binding install should be the Diagram itself; got ${String(diagram.DropReceiver)}`);
     });
 
-    // TODO(M4: groups on VM engine) — Group requires Figure/Group items; ShapeNodeVM
-    // items are not grouped by the current document mutator.
-    test.skip('Dragging a Figure inside a Group moves the entire group (items-are-Figures)', () => {
+    test('Dragging a Figure inside a Group moves the entire group (items-are-Figures)', () => {
         // Repro for "can not move a group on the canvas". Set up a
         // diagram with 3 figures, group them, then synthesize a drag
         // gesture on one member — partners should follow and the Group
@@ -265,21 +263,25 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
         assert.equal(grp.Left, 100,  'group Left at member-min');
         assert.equal(grp.Top,  100,  'group Top at member-min');
 
-        // Synthesize a drag on `a` via Figure's PointerDown/Move/Up.
+        // Synthesize a drag on `a` via the container Figure's PointerDown/Move.
+        // VM members' pointer handlers live on the wrapping Figure container.
         // PointerDown at (150, 150) — inside A. PointerMove to (200, 170).
         // Expected delta on a: +50, +20. Same delta on b and c.
+        const fa = diagram.Generator.ContainerFromItem(a) as unknown as {
+            OnPointerDown(a: unknown): void; OnPointerMove(a: unknown): void;
+        };
         const argsDown = {
-            Kind: 'PointerDown' as const, Source: a, Visual: a,
+            Kind: 'PointerDown' as const, Source: fa, Visual: fa,
             HostX: 150, HostY: 150, PointerId: 0,
             Modifiers: ModifierKeys.None,
             Handled: false,
             CapturePointer: () => {},
             ReleasePointerCapture: () => {},
         };
-        (a as unknown as { OnPointerDown(a: unknown): void }).OnPointerDown(argsDown);
+        fa.OnPointerDown(argsDown);
 
         const argsMove = { ...argsDown, Kind: 'PointerMove' as const, HostX: 200, HostY: 170, Handled: false };
-        (a as unknown as { OnPointerMove(a: unknown): void }).OnPointerMove(argsMove);
+        fa.OnPointerMove(argsMove);
 
         assert.equal(a.Left, 150, 'A.Left after drag');
         assert.equal(b.Left, 350, 'B.Left should shift along with A');
@@ -287,9 +289,7 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
         assert.equal(grp.Left, 150, 'Group bbox follows members');
     });
 
-    // TODO(M4: groups on VM engine) — Group requires Figure/Group items; ShapeNodeVM
-    // items are not grouped by the current document mutator.
-    test.skip('AlignCenter with a Group in the selection preserves intra-group spacing', () => {
+    test('AlignCenter with a Group in the selection preserves intra-group spacing', () => {
         // Repro for "distance between shapes in the group was eaten
         // during the alignment". When the user marquee-selects across
         // a group, the leaf Figures end up in SelectedItems directly
@@ -312,12 +312,17 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
 
         // Selection that mimics a marquee dragging across the canvas:
         // it picks the LEAVES of the group, not the Group itself.
-        diagram.HandleContainerClick(standalone as unknown as Visual,
+        // VM members' pointer handlers live on the wrapping Figure container —
+        // use ContainerFromItem so HandleContainerClick receives an actual Visual.
+        const clk = (vm: unknown) =>
+            diagram.HandleContainerClick(
+                diagram.Generator.ContainerFromItem(vm) as unknown as Visual,
+                ModifierKeys.Control);
+        diagram.HandleContainerClick(
+            diagram.Generator.ContainerFromItem(standalone) as unknown as Visual,
             ModifierKeys.None);
-        diagram.HandleContainerClick(m1 as unknown as Visual,
-            ModifierKeys.Control);
-        diagram.HandleContainerClick(m2 as unknown as Visual,
-            ModifierKeys.Control);
+        clk(m1);
+        clk(m2);
 
         diagram.AlignCenterCommand?.Execute();
         layout(surface);

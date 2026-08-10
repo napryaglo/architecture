@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
 import { Group } from '../group.js';
 import { ShapeNodeVM } from '../shape-node-vm.js';
+import { DiagramDocument } from '../diagram-document.js';
 
 function app(): void { Application.current = null; new Application(); }
 
@@ -53,5 +54,36 @@ describe('M4 Group — VM members', () => {
         const outer = new Group([a, inner]);
         const leaves = [...outer.EnumerateLeaves()];
         assert.deepEqual(new Set(leaves), new Set([a, b]));
+    });
+
+    test('Ungroup clears member Parent and restores them to the root', () => {
+        app();
+        const doc = new DiagramDocument();
+        const a = doc.CreateNode('rectangle', 0, 0)!;
+        const b = doc.CreateNode('rectangle', 100, 0)!;
+        doc.Group([a, b]);
+        // Find the Group in doc.Nodes
+        let grp: Group | undefined;
+        for (let i = 0; i < doc.Nodes.Count; i++)
+        {
+            const n = doc.Nodes.Get(i);
+            if (n instanceof Group) { grp = n; break; }
+        }
+        assert.ok(grp !== undefined, 'a Group should exist in doc.Nodes after grouping');
+        doc.Ungroup([grp]);
+        assert.equal(a.Parent, undefined, 'a.Parent should be cleared after ungroup');
+        assert.equal(b.Parent, undefined, 'b.Parent should be cleared after ungroup');
+        // a and b should still be in doc.Nodes, grp should be gone
+        let foundA = false, foundB = false, foundGrp = false;
+        for (let i = 0; i < doc.Nodes.Count; i++)
+        {
+            const n = doc.Nodes.Get(i);
+            if (n === a) foundA = true;
+            if (n === b) foundB = true;
+            if (n === grp) foundGrp = true;
+        }
+        assert.ok(foundA, 'doc.Nodes should still contain a');
+        assert.ok(foundB, 'doc.Nodes should still contain b');
+        assert.ok(!foundGrp, 'doc.Nodes should no longer contain the group');
     });
 });
