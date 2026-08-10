@@ -61,17 +61,21 @@ Plexus freeform shapes must stay green after every stage.
   container template; resolve `[DataType]` via existing `ContentControl` machinery;
   bind container `Left`/`Top` two-way to the VM; selection surfaces the VM via `Tag`.
   Prove with one minimal VM kind + template. Shapes remain intrinsic (dual path).
-- **M2 — `ShapeNodeVM`.** Migrate freeform shapes onto the VM path: `ShapeNodeVM` +
-  shape DataTemplate (geometry/fill/stroke, size-driven rescale). `CreateNode` /
-  `Figure.fromKind` emit `ShapeNodeVM` into `Nodes`. Remove intrinsic geometry
-  rendering from the Figure container. Demo green.
-- **M3 — Text/Callout VMs + generic serialize.** `TextNodeVM` / `CalloutNodeVM`;
-  per-VM `(serialize, deserialize)` registry; `DiagramDocument` dispatch on load;
-  back-compat read of the old Figure-based `.diagram` scene, write the new typed-VM
-  format.
-- **M4 — Ports / connectors / groups.** Verify connector endpoints anchor to the
-  container's bounds (not the VM), ports resolve per container, and groups wrap VM
-  containers. Fix whatever the VM path exposes.
+- **M2 — Shapes (`ShapeNodeVM`).** Migrate freeform shapes onto the VM path:
+  `ShapeNodeVM` + shape DataTemplate (geometry/fill/stroke, size-driven rescale).
+  `CreateNode` / `CombineSelection` emit `ShapeNodeVM` into `Nodes`; `DeleteNodes` +
+  ungrouped-shape `Combine` operate on VM items. **Groups and connectors are NOT
+  migrated here** — `Group`/`Ungroup` and connector endpoints stay Figure-based, so
+  grouping/connecting VM shapes is limited until M4/M3; the group-related regression
+  tests are temporarily skipped (re-enabled in M4). Serialize stays on the legacy
+  format (interim) until M3.
+- **M3 — Connectors + generic serialize.** Migrate connector endpoints to reference
+  VMs and route against VM bounds; wire the `DeleteNodes` connector cascade to VMs.
+  Replace the legacy `.diagram` format with a generic per-VM `(serialize, deserialize)`
+  registry (`DiagramDocument` dispatch on load; back-compat read of old Figure scenes).
+- **M4 — Groups + ports + Text/Callout VMs.** `GroupViewModel` (groups on the VM
+  engine, bbox/parent/leaf semantics) + a group DataTemplate; per-kind port fidelity;
+  `TextNodeVM` / `CalloutNodeVM`. Re-enable the group regression tests.
 - **P1 — Plexus `ArchNodeVM`.** Arch drop factory builds `ArchNodeVM` (icon
   `Descriptor` + `Label` + `EntityId`) into `Nodes`; `[DataType=ArchNodeVM]` template
   renders icon + label; the arch binding re-materializes VMs from the model on open;
