@@ -127,15 +127,13 @@ describe('DiagramDocument — Figure delete cascades to dependent connectors', (
 // ── Save / Load round-trip ───────────────────────────────────────────
 
 describe('DiagramDocument — Save / Load round-trips connectors', () => {
-    test('node-anchored endpoints rehydrate by Figure.Id', () => {
+    test('node-anchored endpoints rehydrate by node Id', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
 
-        // Use Figure.fromKind directly so the nodes are serializable
-        // (CreateNode now emits ShapeNodeVM which _serialize skips; VM
-        // serialization is a later task — M2).
-        const a = Figure.fromKind('rectangle', 100, 100); a.Id = 'n1'; doc.Nodes.Add(a);
-        const b = Figure.fromKind('ellipse',   300, 100); b.Id = 'n2'; doc.Nodes.Add(b);
+        // CreateNode emits ShapeNodeVM (serializable via the 'shape' registry).
+        const a = doc.CreateNode('rectangle', 100, 100)!;
+        const b = doc.CreateNode('ellipse',   300, 100)!;
         const c = doc.CreateConnector(
             new ConnectorEndpoint({ Node: a, PortName: 'out' }),
             new ConnectorEndpoint({ Node: b }))!;
@@ -151,8 +149,8 @@ describe('DiagramDocument — Save / Load round-trips connectors', () => {
 
         assert.equal(restored.Nodes.Count, 2);
         assert.equal(restored.Connectors.Count, 1);
-        const rA = restored.Nodes.Get(0)! as Figure;
-        const rB = restored.Nodes.Get(1)! as Figure;
+        const rA = restored.Nodes.Get(0)!;
+        const rB = restored.Nodes.Get(1)!;
         const rC = restored.Connectors.Get(0)!;
         assert.equal(rC.Source!.Node, rA);
         assert.equal(rC.Source!.PortName, 'out');
