@@ -147,8 +147,10 @@ export class CommandsVM extends DiagramDocument {
                 const v = nodes.Get(i);
                 // This demo only ever creates Figure subclasses via CreateNode,
                 // so every selected node is a Figure (carries Left/Top setters
-                // + DemoKind). Narrow the Figure|Group element to Figure.
-                if (v !== undefined && v.IsSelected)
+                // + DemoKind). Narrow the Figure|Group|NodeViewModel element to
+                // Figure (NodeViewModel has no IsSelected — selection is on the
+                // container).
+                if (v instanceof Figure && v.IsSelected)
                     out.push(v);
             }
             return out;
@@ -183,7 +185,7 @@ export class CommandsVM extends DiagramDocument {
             const nodes = this.Nodes;
             for (let i = 0; i < nodes.Count; i++) {
                 const v = nodes.Get(i);
-                if (v !== undefined)
+                if (v instanceof Figure)
                     v.IsSelected = true;
             }
             this.set_property_value(CommandsVM.HasSelectionKey, nodes.Count > 0);
@@ -217,6 +219,11 @@ export class CommandsVM extends DiagramDocument {
     // DiagramDocument.CreateNode (which routes through Figure.fromKind
     // against the framework SHAPE_CATALOG keyed by the catalog kind name
     // — 'rectangle' / 'ellipse' / …). Returns null for unknown kinds.
+    // Base CreateNode now returns ShapeNodeVM | null (post node-VM migration);
+    // this demo predates that and creates custom Figure subclasses instead.
+    // The signature matches the base so the override is well-typed; no caller
+    // uses the return value (bootstrap seeds + paste/duplicate ignore it), so
+    // the structural cast is safe for the demo.
     CreateNode(kind, left, top) {
         const Cls = CMD_KIND_TO_CLASS[kind];
         if (Cls === undefined)
@@ -271,8 +278,8 @@ export class CommandsVM extends DiagramDocument {
         for (let i = 0; i < nodes.Count; i++) {
             const v = nodes.Get(i);
             // Demo nodes are all Figures (see selected()); narrow for Left/Top
-            // writes below.
-            if (v !== undefined && v.IsSelected)
+            // writes below (NodeViewModel has no IsSelected).
+            if (v instanceof Figure && v.IsSelected)
                 sel.push(v);
         }
         if (sel.length === 0)

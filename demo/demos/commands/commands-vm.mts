@@ -28,7 +28,7 @@ import {
     RelayCommand,
 } from '@pragmatic-lab/mural/runtime';
 import { SolidColorBrush } from '@pragmatic-lab/mural/visual-engine';
-import { Figure } from '@pragmatic-lab/mural/framework';
+import { Figure, ShapeNodeVM } from '@pragmatic-lab/mural/framework';
 import { DiagramDocument, type DiagramStorage } from '@pragmatic-lab/mural/framework';
 
 // A Figure subclass constructor carrying the demo's per-kind marker.
@@ -182,8 +182,10 @@ export class CommandsVM extends DiagramDocument
                 const v = nodes.Get(i);
                 // This demo only ever creates Figure subclasses via CreateNode,
                 // so every selected node is a Figure (carries Left/Top setters
-                // + DemoKind). Narrow the Figure|Group element to Figure.
-                if (v !== undefined && v.IsSelected) out.push(v as Figure);
+                // + DemoKind). Narrow the Figure|Group|NodeViewModel element to
+                // Figure (NodeViewModel has no IsSelected — selection is on the
+                // container).
+                if (v instanceof Figure && v.IsSelected) out.push(v);
             }
             return out;
         };
@@ -216,7 +218,7 @@ export class CommandsVM extends DiagramDocument
             const nodes = this.Nodes;
             for (let i = 0; i < nodes.Count; i++) {
                 const v = nodes.Get(i);
-                if (v !== undefined) v.IsSelected = true;
+                if (v instanceof Figure) v.IsSelected = true;
             }
             this.set_property_value(CommandsVM.HasSelectionKey, nodes.Count > 0);
             this._raiseGated();
@@ -254,7 +256,12 @@ export class CommandsVM extends DiagramDocument
     // DiagramDocument.CreateNode (which routes through Figure.fromKind
     // against the framework SHAPE_CATALOG keyed by the catalog kind name
     // — 'rectangle' / 'ellipse' / …). Returns null for unknown kinds.
-    override CreateNode(kind: string, left: number, top: number): Figure | null {
+    // Base CreateNode now returns ShapeNodeVM | null (post node-VM migration);
+    // this demo predates that and creates custom Figure subclasses instead.
+    // The signature matches the base so the override is well-typed; no caller
+    // uses the return value (bootstrap seeds + paste/duplicate ignore it), so
+    // the structural cast is safe for the demo.
+    override CreateNode(kind: string, left: number, top: number): ShapeNodeVM | null {
         const Cls = CMD_KIND_TO_CLASS[kind];
         if (Cls === undefined) return null;
         // `_nextId` is the base DiagramDocument's private id counter; reach in
@@ -262,7 +269,7 @@ export class CommandsVM extends DiagramDocument
         const id = 'n' + (this as unknown as DiagramDocumentNextId)._nextId++;
         const fig = new Cls(id, left, top);
         this.Nodes.Add(fig);
-        return fig;
+        return fig as unknown as ShapeNodeVM;
     }
 
     get HasSelection():      boolean { return this.get_property_value(CommandsVM.HasSelectionKey); }
@@ -310,8 +317,8 @@ export class CommandsVM extends DiagramDocument
         for (let i = 0; i < nodes.Count; i++) {
             const v = nodes.Get(i);
             // Demo nodes are all Figures (see selected()); narrow for Left/Top
-            // writes below.
-            if (v !== undefined && v.IsSelected) sel.push(v as Figure);
+            // writes below (NodeViewModel has no IsSelected).
+            if (v instanceof Figure && v.IsSelected) sel.push(v);
         }
         if (sel.length === 0) return;
         switch (mode) {
