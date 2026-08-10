@@ -34,6 +34,8 @@ resources Diagrams {
                   Stroke   = $$Stroke,
                   Width    = $$Width,
                   Height   = $$Height ]
+            ContentPresenter x:name="PART_Content"
+                [ Width = $$Width, Height = $$Height, IsHitTestVisible = false ]
             // Text-block host. Figure slots its own ShapeText instance
             // (Figure.Text) here after applyDefaultStyle — the block renders
             // itself reactively from its DPs, so a label edit repaints without
