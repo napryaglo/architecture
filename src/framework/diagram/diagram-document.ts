@@ -653,17 +653,15 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
     /** PowerPoint Merge-Shapes counterpart. Folds the geometric subset
      *  of `items` via `mergeShapes` and replaces the inputs with a single
-     *  combined-source Figure. */
+     *  combined-source ShapeNodeVM. Figure-based Groups are not VM leaves
+     *  yet (M4) — skip them. */
     public CombineSelection(items: readonly unknown[], mode: GeometryCombineMode): void
     {
-        const leaves: Figure[] = [];
+        const leaves: ShapeNodeVM[] = [];
         for (const item of items)
         {
-            if (item instanceof Figure) leaves.push(item);
-            else if (item instanceof Group)
-            {
-                for (const leaf of item.EnumerateLeaves()) leaves.push(leaf);
-            }
+            if (item instanceof ShapeNodeVM) leaves.push(item);
+            // Figure-based Groups are not VM leaves yet (M4) — skip them.
         }
         if (leaves.length < 2) return;
         const merged = mergeShapes(leaves, mode);
@@ -673,7 +671,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             return;
         }
         const template = leaves[0]!;
-        const result = Figure.fromSource(merged.source, merged.x, merged.y, {
+        const result = ShapeNodeVM.fromSource(merged.source, merged.x, merged.y, {
             width:  merged.w,
             height: merged.h,
         });
@@ -684,14 +682,16 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             const PenCtor = template.Stroke.constructor as new (...args: unknown[]) => typeof template.Stroke;
             result.Stroke = new PenCtor(template.Stroke.Brush, template.Stroke.Thickness);
         }
+        // ShapeNodeVM has no IsSelected property (it's on the Figure container,
+        // not the VM) — the result.IsSelected = true line from the old Figure
+        // body is intentionally omitted. Selection of the combined node is not
+        // required for this task.
         for (const leaf of leaves)
         {
-            if (leaf.Parent !== undefined) leaf.Parent._removeMember(leaf);
             const idx = this.Nodes.IndexOf(leaf);
             if (idx >= 0) this.Nodes.RemoveAt(idx);
         }
         this.Nodes.Add(result);
-        result.IsSelected = true;
         this.Status = `Combined ${leaves.length} shapes (${combineModeName(mode)}).`;
         this._markDirty();
     }

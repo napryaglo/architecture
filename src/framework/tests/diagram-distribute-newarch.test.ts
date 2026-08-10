@@ -105,9 +105,7 @@ describe('Diagram — Distribute on Figure items (new arch, with framework theme
         assert.equal(rectOf(a)?.Y, expectedMidY - a.Height / 2);
     });
 
-    // TODO(M2 Task 4: Combine emits VMs) — CombineSelection still expects Figure
-    // leaves; ShapeNodeVM items are not Figures so the collapse is a no-op.
-    test.skip('Mutator auto-wires from DataContext when DC implements DiagramMutator', () => {
+    test('Mutator auto-wires from DataContext when DC implements DiagramMutator', () => {
         // Mirrors the diagram demo's wiring after the $Self semantic
         // fix: DataContext is the DiagramDocument; Mutator is NOT set
         // in markup. The Diagram detects that the DC duck-types
