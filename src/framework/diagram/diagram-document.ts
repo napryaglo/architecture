@@ -440,6 +440,11 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         return vm;
     }
 
+    public AddNode(node: NodeViewModel): void
+    {
+        this.Nodes.Add(node);
+    }
+
     public DeleteNodes(items: readonly unknown[]): void
     {
         if (items.length === 0) return;

@@ -10,6 +10,7 @@ import type { GeometryCombineMode } from '../commands/combine.js';
 import type { Connector } from '../connector.js';
 import type { ConnectorEndpoint } from '../connector-endpoint.js';
 import type { ConnectorCreatedArgs } from './connector-create-behavior.js';
+import type { NodeViewModel } from '../node-view-model.js';
 
 // Standard wiring between a Diagram's gesture events and a mutator that
 // owns the data collection. Subscribes to Group / Ungroup / Combine /
@@ -51,6 +52,13 @@ export interface DiagramMutator
      * drop lands already-selected.
      */
     CreateNode(kind: string, x: number, y: number): unknown | null | undefined;
+
+    /**
+     * Add a pre-built node view-model to the diagram's data collection.
+     * Used by downstream consumers to insert already-constructed VMs
+     * without going through the CreateNode factory path.
+     */
+    AddNode(node: NodeViewModel): void;
 
     /** Materialize a new Connector with the proposed Source / Target
      *  endpoints from a drag-create gesture. Optional, same reasoning
