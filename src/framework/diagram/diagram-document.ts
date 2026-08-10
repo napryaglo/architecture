@@ -747,9 +747,24 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         // be deserialized after the callout).
         const pendingLeaders: { callout: CalloutNodeVM; targetId: string }[] = [];
 
+        // Ids already claimed by explicit records (or generated below) — the
+        // fallback generator must skip these so an empty-id node never collides
+        // with an inbound 'nN' and overwrites it in byId.
+        const claimedIds = new Set<string>();
         for (const n of payload.nodes ?? [])
         {
-            const id = n.id !== '' ? n.id : 'n' + this._nextId++;
+            if (n.id !== '') claimedIds.add(n.id);
+        }
+        const nextFreeId = (): string => {
+            let candidate = 'n' + this._nextId++;
+            while (claimedIds.has(candidate)) candidate = 'n' + this._nextId++;
+            claimedIds.add(candidate);
+            return candidate;
+        };
+
+        for (const n of payload.nodes ?? [])
+        {
+            const id = n.id !== '' ? n.id : nextFreeId();
             const base: NodeBaseRecord = { id, left: n.left, top: n.top, w: n.w, h: n.h };
 
             let node: Figure | ShapeNodeVM | TextNodeVM | CalloutNodeVM | undefined;
