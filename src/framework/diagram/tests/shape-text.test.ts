@@ -11,6 +11,7 @@ import { FlowDocument } from '../../../basic/documents/flow-document.js';
 import { Paragraph } from '../../../basic/documents/paragraph.js';
 import { Run } from '../../../basic/documents/inlines.js';
 import { Figure } from '../figure.js';
+import { TextShape } from '../text-shape.js';
 import { ShapeText, TextAutoFit, TextPlacement, computeTextBlockAnchor, isOutsideTextPlacement } from '../shape-text.js';
 import {
     cloneFlowDocument, deserializeFlowDocument, flowDocumentFromPlainText,
@@ -117,10 +118,9 @@ describe('ShapeText — save/load persistence', () => {
 
     test('label text survives a Save/Load round-trip (the data-loss fix)', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // Use Figure.fromKind directly so the node is serializable.
-        // CreateNode now emits ShapeNodeVM which _serialize skips (VM
-        // serialization is a later task — M2).
-        const n = Figure.fromKind('rectangle', 10, 20); n.Id = 'n1'; doc.Nodes.Add(n);
+        // M2: geometry nodes (catalog shapes) reload as ShapeNodeVM. Use TextShape,
+        // which serializes as kind='text' and always reloads as a Figure (TextShape).
+        const n = new TextShape(); n.Id = 'n1'; n.Left = 10; n.Top = 20; doc.Nodes.Add(n);
         n.LabelText = 'Node A';
         doc.Save();
         doc.Load();
@@ -130,7 +130,8 @@ describe('ShapeText — save/load persistence', () => {
 
     test('non-default formatting round-trips too', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        const n = Figure.fromKind('ellipse', 0, 0); n.Id = 'n1'; doc.Nodes.Add(n);
+        // M2: use TextShape so the node reloads as a Figure after deserialization.
+        const n = new TextShape(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText        = 'Styled';
         n.Text.FontSize    = 18;
         n.Text.FontWeight  = FontWeight.Bold;
@@ -148,7 +149,8 @@ describe('ShapeText — save/load persistence', () => {
 
     test('an empty label round-trips as empty (no phantom text)', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        const n = Figure.fromKind('squircle', 5, 5); n.Id = 'n1'; doc.Nodes.Add(n);
+        // M2: use TextShape (reloads as Figure with text) to test empty-text persistence.
+        const n = new TextShape(); n.Id = 'n1'; doc.Nodes.Add(n);
         doc.Save();
         doc.Load();
         assert.equal((doc.Nodes.Get(0) as Figure).LabelText, '', 'stays empty');
@@ -393,9 +395,8 @@ describe('ShapeText — transform persistence (Slice 3)', () => {
 
     test('offset / angle / placement / block size / vertical align round-trip', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // Use Figure.fromKind directly — CreateNode now emits ShapeNodeVM
-        // which _serialize skips (VM serialization is a later task — M2).
-        const n = Figure.fromKind('rectangle', 0, 0); n.Id = 'n1'; doc.Nodes.Add(n);
+        // M2: use TextShape so the node reloads as a Figure (TextShape branch).
+        const n = new TextShape(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText                    = 'Rotated';
         n.Text.Offset                  = new Point(7, -3);
         n.Text.Angle                   = 42;
@@ -417,7 +418,8 @@ describe('ShapeText — transform persistence (Slice 3)', () => {
 
     test('a plain centred label persists no transform fields (stays compact)', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        const n = Figure.fromKind('ellipse', 0, 0); n.Id = 'n1'; doc.Nodes.Add(n);
+        // M2: use TextShape so the node reloads as a Figure (TextShape branch).
+        const n = new TextShape(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText = 'Plain';
         doc.Save();
         doc.Load();
@@ -481,9 +483,8 @@ describe('ShapeText — auto-fit (Slice 7)', () => {
 
     test('AutoFit mode round-trips through Save/Load', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // Use Figure.fromKind directly — CreateNode now emits ShapeNodeVM
-        // which _serialize skips (VM serialization is a later task — M2).
-        const n = Figure.fromKind('rectangle', 0, 0); n.Id = 'n1'; doc.Nodes.Add(n);
+        // M2: use TextShape so the node reloads as a Figure (TextShape branch).
+        const n = new TextShape(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText = 'x';
         n.Text.AutoFit = TextAutoFit.ShrinkText;
         doc.Save();
@@ -582,9 +583,8 @@ describe('ShapeText — rich content persistence (Slice 4)', () => {
 
     test('a rich Document round-trips through Save/Load', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // Use Figure.fromKind directly — CreateNode now emits ShapeNodeVM
-        // which _serialize skips (VM serialization is a later task — M2).
-        const n = Figure.fromKind('rectangle', 0, 0); n.Id = 'n1'; doc.Nodes.Add(n);
+        // M2: use TextShape so the node reloads as a Figure (TextShape branch).
+        const n = new TextShape(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.Text.Document = makeRichDoc();
         n.Text.Content  = flowDocumentToPlainText(n.Text.Document);   // mirror a real commit
         doc.Save();
@@ -600,7 +600,8 @@ describe('ShapeText — rich content persistence (Slice 4)', () => {
 
     test('a plain label persists no doc field and reloads without a Document', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        const n = Figure.fromKind('ellipse', 0, 0); n.Id = 'n1'; doc.Nodes.Add(n);
+        // M2: use TextShape so the node reloads as a Figure (TextShape branch).
+        const n = new TextShape(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText = 'Plain';
         doc.Save();
         doc.Load();

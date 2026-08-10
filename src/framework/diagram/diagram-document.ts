@@ -742,20 +742,41 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         for (let i = 0; i < this.Nodes.Count; i++)
         {
             const v = this.Nodes.Get(i)!;
-            if (!(v instanceof Figure)) continue;     // groups not persisted in v1
-            const source = v._getSource();
-            const d = source !== undefined ? pathGeometryToSvgD(source) : '';
-            nodes.push({
-                id:   v.Id ?? '',
-                kind: v.Kind,
-                left: v.Left,
-                top:  v.Top,
-                w:    v.Width,
-                h:    v.Height,
-                d,
-                text: serializeShapeText(v.Text),
-                leaderTargetId: v instanceof Callout ? (v.LeaderTargetNode?.Id ?? undefined) : undefined,
-            });
+            if (v instanceof ShapeNodeVM)
+            {
+                // Interim M2 shim: ShapeNodeVM serialized via the legacy record
+                // format.  Text + leader are Figure-only features; omit them.
+                const source = v._getSource();
+                const d = source !== undefined ? pathGeometryToSvgD(source) : '';
+                nodes.push({
+                    id:   v.Id ?? '',
+                    kind: v.Kind,
+                    left: v.Left,
+                    top:  v.Top,
+                    w:    v.Width,
+                    h:    v.Height,
+                    d,
+                });
+            }
+            else if (v instanceof Figure)
+            {
+                // Figure covers text/callout shapes (and any legacy Figure-based
+                // geometry shapes that aren't yet VMs).
+                const source = v._getSource();
+                const d = source !== undefined ? pathGeometryToSvgD(source) : '';
+                nodes.push({
+                    id:   v.Id ?? '',
+                    kind: v.Kind,
+                    left: v.Left,
+                    top:  v.Top,
+                    w:    v.Width,
+                    h:    v.Height,
+                    d,
+                    text: serializeShapeText(v.Text),
+                    leaderTargetId: v instanceof Callout ? (v.LeaderTargetNode?.Id ?? undefined) : undefined,
+                });
+            }
+            // Groups not persisted in v1 — skip everything else.
         }
         const connectors: SerializedConnector[] = [];
         for (let i = 0; i < this.Connectors.Count; i++)
@@ -784,54 +805,63 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
         // Round-trip nodes first so connectors can resolve their
         // endpoint nodeIds against the freshly-rehydrated Nodes set.
-        const byId = new Map<string, Figure>();
+        // M2 shim: byId may hold Figure (text/callout) or ShapeNodeVM (geometry
+        // shapes); ConnectorEndpoint.Node is typed Model so both are accepted.
+        const byId = new Map<string, Figure | ShapeNodeVM>();
         // Callout leader targets resolve in a second pass (the target node may
         // be deserialized after the callout).
         const pendingLeaders: { callout: Callout; targetId: string }[] = [];
         for (const n of payload.nodes ?? [])
         {
             const id = n.id !== '' ? n.id : 'n' + this._nextId++;
-            let fig: Figure;
             // Text shapes (Slice 8) reconstruct their class from the kind; the
             // class re-derives its own box geometry, so the d-string is unused.
             if (n.kind === 'text')
             {
-                fig = new TextShape();
+                const fig = new TextShape();
                 placeNode(fig, n);
+                fig.Id = id;
+                if (n.text !== undefined) applySerializedText(fig.Text, n.text);
+                this.Nodes.Add(fig);
+                byId.set(id, fig);
             }
             else if (n.kind === 'callout')
             {
                 const callout = new Callout();
-                fig = callout;
-                placeNode(fig, n);
+                placeNode(callout, n);
+                callout.Id = id;
+                if (n.text !== undefined) applySerializedText(callout.Text, n.text);
                 if (n.leaderTargetId !== undefined) pendingLeaders.push({ callout, targetId: n.leaderTargetId });
+                this.Nodes.Add(callout);
+                byId.set(id, callout);
             }
             else if (n.kind !== '' && SHAPE_CATALOG_MAP.has(n.kind))
             {
-                fig = Figure.fromKind(n.kind, n.left, n.top, { width: n.w, height: n.h });
+                // Interim M2 shim: catalog-kind shapes rehydrate as ShapeNodeVM.
+                const vm = ShapeNodeVM.fromKind(n.kind, n.left, n.top, { width: n.w, height: n.h });
+                vm.Id = id;
+                this.Nodes.Add(vm);
+                byId.set(id, vm);
             }
             else if (typeof n.d === 'string' && n.d.length > 0)
             {
-                fig = Figure.fromSource(pathGeometryFromSvgD(n.d), n.left, n.top, {
+                // Interim M2 shim: freeform-source shapes rehydrate as ShapeNodeVM.
+                const vm = ShapeNodeVM.fromSource(pathGeometryFromSvgD(n.d), n.left, n.top, {
                     width:  n.w,
                     height: n.h,
                     kind:   n.kind,
                 });
+                vm.Id = id;
+                this.Nodes.Add(vm);
+                byId.set(id, vm);
             }
-            else
-            {
-                continue;
-            }
-            fig.Id = id;
-            if (n.text !== undefined) applySerializedText(fig.Text, n.text);
-            this.Nodes.Add(fig);
-            byId.set(id, fig);
+            // Unknown record format — skip.
         }
         // Wire callout leaders now that every node id resolves.
         for (const { callout, targetId } of pendingLeaders)
         {
             const target = byId.get(targetId);
-            if (target !== undefined) callout.LeaderTargetNode = target;
+            if (target instanceof Figure) callout.LeaderTargetNode = target;
         }
         for (const sc of payload.connectors ?? [])
         {
@@ -888,7 +918,7 @@ function serializeEndpoint(ep: ConnectorEndpoint): SerializedConnectorEndpoint
 
 function rehydrateEndpoint(
     s: SerializedConnectorEndpoint,
-    byId: ReadonlyMap<string, Figure>,
+    byId: ReadonlyMap<string, Figure | ShapeNodeVM>,
 ): ConnectorEndpoint
 {
     if (s.nodeId !== undefined)

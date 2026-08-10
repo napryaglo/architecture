@@ -107,9 +107,11 @@ describe('Text shapes — persistence', () => {
 
     test('a Callout round-trips with its leader target re-wired', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // Use Figure.fromKind directly — CreateNode now emits ShapeNodeVM
-        // which _serialize skips (VM serialization is a later task — M2).
-        const target = Figure.fromKind('rectangle', 300, 0); target.Id = 'n1'; doc.Nodes.Add(target);   // a real, persisted node
+        // M2: geometry nodes (Figure.fromKind/ShapeNodeVM) reload as ShapeNodeVM,
+        // which can't be stored in LeaderTargetNode (typed Figure | undefined).
+        // Use a TextShape as the leader target — it always reloads as a Figure
+        // (TextShape branch in _deserialize), so the leader re-wiring still works.
+        const target = new TextShape(); target.Id = 'n1'; target.LabelText = 'anchor'; doc.Nodes.Add(target);
         const callout = new Callout(); callout.Id = 'c1'; callout.LabelText = 'see this';
         callout.LeaderTargetNode = target;
         doc.Nodes.Add(callout);
@@ -118,6 +120,7 @@ describe('Text shapes — persistence', () => {
         const rt = doc.Nodes.Get(0) as Figure;
         const rc = doc.Nodes.Get(1);
         assert.ok(rc instanceof Callout, 'reconstructed as a Callout');
+        assert.ok(rt instanceof TextShape, 'target reloaded as TextShape (a Figure)');
         assert.equal((rc as Callout).LeaderTargetNode, rt, 'leader re-wired to the reloaded target');
     });
 });

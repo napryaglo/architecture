@@ -4,6 +4,7 @@ import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import { Run } from '../../../basic/documents/inlines.js';
 import { Figure } from '../figure.js';
+import { TextShape } from '../text-shape.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Field, FieldKind, documentWithFields, resolveFields } from '../shape-text-field.js';
@@ -95,9 +96,9 @@ describe('Field — persistence', () => {
 
     test('a field persists its key and re-resolves live on load', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // Use Figure.fromKind directly — CreateNode now emits ShapeNodeVM
-        // which _serialize skips (VM serialization is a later task — M2).
-        const n = Figure.fromKind('rectangle', 10, 20); n.Id = 'n1'; doc.Nodes.Add(n);   // default 80×80
+        // M2: use TextShape so the node reloads as a Figure (TextShape branch).
+        // TextShape default width is 120; set to 80 so the {Width} field stays 80.
+        const n = new TextShape(); n.Id = 'n1'; n.Width = 80; doc.Nodes.Add(n);
         n.Text.Document = documentWithFields('{Width}');
         n.Text.Content  = flowDocumentToPlainText(n.Text.Document);
         doc.Save();
