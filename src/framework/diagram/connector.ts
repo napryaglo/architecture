@@ -29,6 +29,7 @@ import { ConnectorEndpoint } from './connector-endpoint.js';
 import { ConnectorCapDataContext } from './caps/connector-cap-data-context.js';
 import { Figure } from './figure.js';
 import { NodeViewModel } from './node-view-model.js';
+import { type ISideEndpointHost } from './side-endpoint-host.js';
 import {
     type IPortHost,
     Port,
@@ -257,15 +258,15 @@ export class Connector extends Shape
     private _trackedSourceNode: Model | undefined = undefined;
     private _trackedTargetNode: Model | undefined = undefined;
 
-    // Side-anchored endpoint registration on the host Figure. When an
-    // endpoint settles on (Figure F, PortSide S) with no PortName /
-    // PortIndex / FreePoint set, the connector registers it in F's
-    // side-endpoint list so its slot index participates in the
-    // distribution rule. Subsequent endpoint changes re-register; teardown
-    // (Source/Target swap, ctor cleanup) unregisters.
-    private _trackedSourceFigure: Figure | undefined = undefined;
+    // Side-anchored endpoint registration on the host Figure or VM (any
+    // ISideEndpointHost). When an endpoint settles on (host, PortSide S)
+    // with no PortName / PortIndex / FreePoint set, the connector registers
+    // it in the host's side-endpoint list so its slot index participates in
+    // the distribution rule. Subsequent endpoint changes re-register;
+    // teardown (Source/Target swap, ctor cleanup) unregisters.
+    private _trackedSourceFigure: ISideEndpointHost | undefined = undefined;
     private _trackedSourceSide:   ResolvedPortSide | undefined = undefined;
-    private _trackedTargetFigure: Figure | undefined = undefined;
+    private _trackedTargetFigure: ISideEndpointHost | undefined = undefined;
     private _trackedTargetSide:   ResolvedPortSide | undefined = undefined;
 
     // Re-entry guard. _scheduleRecompute writes to ep.PortSide during
@@ -818,32 +819,45 @@ export class Connector extends Shape
 
     /** Reorder `end`'s slot among its port siblings to the one nearest
      *  `cursor` (diagram-host coords). No-op when `end` isn't
-     *  side-anchored. */
+     *  side-anchored or the host doesn't support positional reorder
+     *  (e.g. VM shapes not yet wired to a drag gesture). */
     public ReorderPortSlot(end: ConnectorEnd, cursor: Point): void
     {
         if (end === ConnectorEnd.Source)
         {
             if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined && this._trackedSource !== undefined)
-                this._trackedSourceFigure.ReorderSideEndpoint(this._trackedSourceSide, this._trackedSource, cursor);
+            {
+                const f = this._trackedSourceFigure as unknown as { ReorderSideEndpoint?: (s: ResolvedPortSide, e: ConnectorEndpoint, c: Point) => void };
+                f.ReorderSideEndpoint?.(this._trackedSourceSide, this._trackedSource, cursor);
+            }
             return;
         }
         if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined && this._trackedTarget !== undefined)
-            this._trackedTargetFigure.ReorderSideEndpoint(this._trackedTargetSide, this._trackedTarget, cursor);
+        {
+            const f = this._trackedTargetFigure as unknown as { ReorderSideEndpoint?: (s: ResolvedPortSide, e: ConnectorEndpoint, c: Point) => void };
+            f.ReorderSideEndpoint?.(this._trackedTargetSide, this._trackedTarget, cursor);
+        }
     }
 
     /** Move `end`'s slot to an explicit index — used by the gesture's
      *  abort path to restore the pre-drag order. No-op when `end` isn't
-     *  side-anchored. */
+     *  side-anchored or the host doesn't support index-based reorder. */
     public MovePortSlotToIndex(end: ConnectorEnd, index: number): void
     {
         if (end === ConnectorEnd.Source)
         {
             if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined && this._trackedSource !== undefined)
-                this._trackedSourceFigure.MoveSideEndpoint(this._trackedSourceSide, this._trackedSource, index);
+            {
+                const f = this._trackedSourceFigure as unknown as { MoveSideEndpoint?: (s: ResolvedPortSide, e: ConnectorEndpoint, i: number) => void };
+                f.MoveSideEndpoint?.(this._trackedSourceSide, this._trackedSource, index);
+            }
             return;
         }
         if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined && this._trackedTarget !== undefined)
-            this._trackedTargetFigure.MoveSideEndpoint(this._trackedTargetSide, this._trackedTarget, index);
+        {
+            const f = this._trackedTargetFigure as unknown as { MoveSideEndpoint?: (s: ResolvedPortSide, e: ConnectorEndpoint, i: number) => void };
+            f.MoveSideEndpoint?.(this._trackedTargetSide, this._trackedTarget, index);
+        }
     }
 
     // Force a route recompute. Public seam for a host that changed a global
@@ -986,11 +1000,13 @@ export class Connector extends Shape
         // → connector recompute → this point).
         if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined)
         {
-            this._trackedSourceFigure._optimizeSideIntersections(this._trackedSourceSide);
+            const sf = this._trackedSourceFigure as unknown as { _optimizeSideIntersections?: (side: ResolvedPortSide) => void };
+            sf._optimizeSideIntersections?.(this._trackedSourceSide);
         }
         if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined)
         {
-            this._trackedTargetFigure._optimizeSideIntersections(this._trackedTargetSide);
+            const tf = this._trackedTargetFigure as unknown as { _optimizeSideIntersections?: (side: ResolvedPortSide) => void };
+            tf._optimizeSideIntersections?.(this._trackedTargetSide);
         }
 
         // Re-place the label on the freshly-computed route (§ Slice 5) and
@@ -1224,14 +1240,14 @@ function tryResolveSideSlot(
 {
     const slot = endpointSideSlot(ep);
     if (slot === undefined) return undefined;
-    const [figure, side] = slot;
-    const info = figure.GetSideSlot(ep, side);
+    const [host, side] = slot;
+    const info = host.GetSideSlot(ep, side);
     if (info === undefined) return undefined;
-    // Use nodeRect so figures without a live Arrange pass (early ctor /
+    // Use nodeRect so hosts without a live Arrange pass (early ctor /
     // tests) still pick up positions from Left / Top / Width / Height.
     // Figure.ArrangedRect defaults to Rect.Zero, which would collapse
     // every slot onto the origin and silently break unit-test fixtures.
-    const r = nodeRect(figure);
+    const r = nodeRect(host as unknown as Model);
     if (r === undefined || r.Width === 0 || r.Height === 0) return undefined;
     const t = (info.index + 1) / (info.count + 1);
     const x = side === PortSide.E ? r.X + r.Width
@@ -1271,19 +1287,31 @@ function laneOffsetFor(
     return otherIsPast ? (count - 1 - index) : index;
 }
 
-// Endpoint qualifies for the side-anchored registry when its Node is a
-// Figure, its PortSide is a cardinal (not Auto), and no competing port
-// reference (PortName / PortIndex) or FreePoint is set. Same gate used
-// by Connector's `_reregister*Side` registration and by path 3a.
-function endpointSideSlot(ep: ConnectorEndpoint): [Figure, ResolvedPortSide] | undefined
+// Duck-typed cast: returns the node as ISideEndpointHost when it exposes
+// the GetSideSlot method (i.e. it is a Figure or ShapeNodeVM after B1).
+// This lets the side-slot path accept VM shapes without a base-class
+// relationship between Figure and NodeViewModel.
+function asSideSlotHost(node: unknown): ISideEndpointHost | undefined
 {
-    if (!(ep.Node instanceof Figure)) return undefined;
+    return node !== undefined && typeof (node as { GetSideSlot?: unknown }).GetSideSlot === 'function'
+        ? (node as ISideEndpointHost) : undefined;
+}
+
+// Endpoint qualifies for the side-anchored registry when its Node
+// implements ISideEndpointHost (Figure or ShapeNodeVM), its PortSide is a
+// cardinal (not Auto), and no competing port reference (PortName /
+// PortIndex) or FreePoint is set. Same gate used by Connector's
+// `_reregister*Side` registration and by path 3a.
+function endpointSideSlot(ep: ConnectorEndpoint): [ISideEndpointHost, ResolvedPortSide] | undefined
+{
+    const host = asSideSlotHost(ep.Node);
+    if (host === undefined) return undefined;
     if (ep.PortName  !== undefined) return undefined;
     if (ep.PortIndex !== undefined) return undefined;
     if (ep.FreePoint !== undefined) return undefined;
     const side = ep.PortSide;
     if (side === undefined || side === PortSide.Auto) return undefined;
-    return [ep.Node, side];
+    return [host, side];
 }
 
 // Bake PortSide into a legacy bare-{Node} endpoint so it joins the
@@ -1302,7 +1330,7 @@ function endpointSideSlot(ep: ConnectorEndpoint): [Figure, ResolvedPortSide] | u
 // against stale anchors).
 function bakeSideIfBare(ep: ConnectorEndpoint, side: ResolvedPortSide): boolean
 {
-    if (!(ep.Node instanceof Figure)) return false;
+    if (asSideSlotHost(ep.Node) === undefined) return false;
     if (ep.PortName  !== undefined) return false;
     if (ep.PortIndex !== undefined) return false;
     if (ep.FreePoint !== undefined) return false;
