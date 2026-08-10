@@ -1,12 +1,12 @@
 // Built-in node serializer registrations.
 //
 // This module registers the three default NodeSerializer implementations —
-// 'shape' (ShapeNodeVM), 'text' (TextShape), 'callout' (Callout) — as side
+// 'shape' (ShapeNodeVM), 'text' (TextNodeVM), 'callout' (CalloutNodeVM) — as side
 // effects on import.  diagram-document.ts imports this module once for its
 // side effects so the registry is populated before any Save/Load call.
 //
 // Cycle-avoidance: this module imports FROM the concrete classes (ShapeNodeVM,
-// TextShape, Callout) and FROM node-serialization (registry).  It does NOT
+// TextNodeVM, CalloutNodeVM) and FROM node-serialization (registry).  It does NOT
 // import from diagram-document, so there is no cycle.  diagram-document.ts
 // imports this module and may also import individual helpers exported here
 // (serializeShapeText, applySerializedText, placeNode).

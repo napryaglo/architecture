@@ -221,7 +221,6 @@ export {
     type SerializedDoc, type SerializedParagraph, type SerializedRun,
 } from './diagram/shape-text-document.js';
 export { TextBlockAdorner } from './diagram/behaviors/text-block-adorner.js';
-export { TextShape, Callout } from './diagram/text-shape.js';
 export { pointAlongPolyline, nearestTOnPolyline, polylineLength, type RoutePoint } from './diagram/connector-route.js';
 export {
     Field, FieldKind, isFieldKind, resolveFields, documentWithFields, type FieldResolver,
