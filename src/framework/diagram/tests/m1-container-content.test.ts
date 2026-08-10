@@ -88,12 +88,16 @@ describe('Diagram — NodeViewModel container content + position binding (m1)', 
         // Walk the entire visual subtree of the container Figure.
         const visuals = collectVisuals(container);
 
-        // The DataTemplate produces a Border as its root — it should appear
-        // somewhere in the Figure's visual subtree (not as the Figure itself).
-        const hasBorder = visuals.some(v => v instanceof Border && v !== container);
-        assert.ok(hasBorder, 'DataTemplate Border should be present in the Figure subtree');
+        // Direct proof the DataTemplate resolved + rendered: its own
+        // TextBlock('vm') must be in the subtree. (A bare `instanceof Border`
+        // check would false-positive on the Figure template's own
+        // PART_LabelHost Border, which is always present.)
+        const hasTemplateContent = visuals.some(
+            v => v instanceof TextBlock && (v as TextBlock).Text === 'vm',
+        );
+        assert.ok(hasTemplateContent, "DataTemplate's TextBlock('vm') should be present in the Figure subtree");
 
-        // The "can not resolve template" fallback TextBlock must not appear.
+        // And the "can not resolve template" fallback TextBlock must not appear.
         const hasErrorBlock = visuals.some(
             v => v instanceof TextBlock
               && (v as TextBlock).Text.startsWith('can not resolve template'),
