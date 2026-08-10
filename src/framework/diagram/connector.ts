@@ -28,6 +28,7 @@ import { nearestTOnPolyline, pointAlongPolyline, polylineLength } from './connec
 import { ConnectorEndpoint } from './connector-endpoint.js';
 import { ConnectorCapDataContext } from './caps/connector-cap-data-context.js';
 import { Figure } from './figure.js';
+import { NodeViewModel } from './node-view-model.js';
 import {
     type IPortHost,
     Port,
@@ -1117,9 +1118,14 @@ function placeCap(cap: Visual | undefined, anchor: ResolvedAnchor, tangentRadian
 
 // A connector endpoint's node id for the {SourceId}/{TargetId} fields —
 // empty when the end is free-floating or the node carries no id.
+// Handles both Figure (legacy/items-are-Figures path) and NodeViewModel
+// (M3+: endpoint.Node is the VM so routing/delete/serialize track the data item).
 function connectorEndpointId(ep: ConnectorEndpoint | undefined): string
 {
-    return ep?.Node instanceof Figure ? (ep.Node.Id ?? '') : '';
+    const n = ep?.Node;
+    if (n instanceof Figure)        return n.Id ?? '';
+    if (n instanceof NodeViewModel) return n.Id ?? '';
+    return '';
 }
 
 const EMPTY_WAYPOINTS: readonly Point[] = Object.freeze([]) as readonly Point[];

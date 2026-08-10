@@ -3,6 +3,8 @@ import type { Diagram } from '../diagram.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import type { Figure } from '../figure.js';
+import { NodeViewModel } from '../node-view-model.js';
+import type { Model } from '../../../runtime/index.js';
 import type { ResolvedPortSide } from '../port.js';
 import { RoutingMode } from '../routing/router.js';
 
@@ -129,6 +131,15 @@ export class ConnectorCreateBehavior
     }
 }
 
+// A container Figure wraps a node VM (its DataContext); connectors should
+// reference that VM so routing/serialize/delete track the data item. Text/
+// callout figures have no VM DataContext and reference the Figure itself.
+function itemOf(figure: Figure): Model
+{
+    const dc = figure.DataContext;
+    return dc instanceof NodeViewModel ? dc : figure;
+}
+
 // Side-anchored endpoint constructor. The slot index on the side is
 // not assigned here — Figure's side-endpoint registration (invoked
 // when the Connector's Source / Target DPs settle) assigns slots
@@ -136,7 +147,7 @@ export class ConnectorCreateBehavior
 // off the figure's current slot list at every resolve.
 function makeSideEndpoint(figure: Figure, side: ResolvedPortSide): ConnectorEndpoint
 {
-    return new ConnectorEndpoint({ Node: figure, PortSide: side });
+    return new ConnectorEndpoint({ Node: itemOf(figure), PortSide: side });
 }
 
 // Convenience attach function mirroring the canvas-drop / mutator

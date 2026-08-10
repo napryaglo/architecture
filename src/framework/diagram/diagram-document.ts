@@ -903,7 +903,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 function serializeEndpoint(ep: ConnectorEndpoint): SerializedConnectorEndpoint
 {
     const node = ep.Node;
-    if (node instanceof Figure && node.Id !== undefined && node.Id !== '')
+    if ((node instanceof Figure || node instanceof NodeViewModel) && node.Id !== undefined && node.Id !== '')
     {
         const out: SerializedConnectorEndpoint = { nodeId: node.Id };
         if (ep.PortName !== undefined) return { ...out, portName: ep.PortName };
