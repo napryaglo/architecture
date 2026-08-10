@@ -30,70 +30,70 @@ The M4 engine renders diagram items as `NodeViewModel` instances placed in a
 
 ---
 
-## SP1 — Auto-Grow (container-driven measure-and-grow)
+## SP1 — Auto-Grow (VM-side, mirrors `Figure._applyAutoFit`)
 
 ### Problem
 `TextNodeVM` ctor sets `Text.AutoFit = TextAutoFit.GrowShape`
-([text-node-vm.ts:35-38]) but there is no `_applyAutoFit` on the VM. The legacy
-`Figure._applyAutoFit` ([figure.ts:353-364]) measures its `ShapeText` label
-unconstrained (`label.Measure(∞,∞)`), reads `label.DesiredSize`, and grows the
-figure. A VM cannot do this — it has no label to measure. But the **container
-Figure** that hosts the VM *does* hold both the VM (via `DataContext`) and the
-realized, measured template content.
+([text-node-vm.ts:35-38]) but there is no `_applyAutoFit` on the VM, so the mode
+is inert. The legacy `Figure._applyAutoFit` ([figure.ts:353-364]) measures its
+`ShapeText` label unconstrained (`label.Measure(∞,∞)`), reads
+`label.DesiredSize`, and grows the figure.
 
-### Approach
-The container Figure is the single place with both halves, so
-container→VM feedback during layout is the correct hook.
+### Approach (revised after investigation)
+The original design assumed a VM "has no visual tree to measure text" and routed
+the fix through the container Figure. Investigation disproved that premise: a
+standalone `ShapeText` measures its content headlessly under `initTestApp()`
+(see [shape-text.test.ts:312-322] — `new ShapeText(); st.Content='x';
+st.Measure(...)` yields a content-hugging size, and `ShapeText` applies its own
+default template in its constructor). Crucially, the **VM already owns that exact
+object**: `TextNodeVM.Text` is the `ShapeText` the `[DataType=TextNodeVM]`
+template slots into `PART_LabelHost` via `Content=$Text`.
 
-1. **Capability signal.** Add `public AutoSizeToContent: boolean = false;` to
-   `NodeViewModel` (plain field, mirrors the existing `Parent` field).
-   `TextNodeVM` sets it `true` in its constructor; `CalloutNodeVM` inherits it.
+So the VM can measure its own `ShapeText` directly — the same call the legacy
+Figure makes — with **no container hook, no `figure.ts` change, no cross-layer
+coupling**:
 
-2. **Generalize `_applyAutoFit`.** When the container Figure's `DataContext` is a
-   `NodeViewModel` with `AutoSizeToContent === true`:
-   - locate the realized measurable part: `PART_LabelHost` if the template
-     declares it, else `PART_Content`;
-   - measure it unconstrained (`Measure(∞,∞)`) and read `DesiredSize`;
-   - write the desired width/height back to the VM's `Width` / `Height` DPs
-     (the container's own bounds already track the VM), **grow-only** and
-     **conditional** — only write when the desired size exceeds the current by
-     more than an epsilon (e.g. 0.5px) — to avoid a measure→write→invalidate
-     loop.
+1. Add a private `_applyAutoFit()` to `TextNodeVM` that mirrors
+   `Figure._applyAutoFit` verbatim against `this.Text`:
+   - return early unless `this.Text?.AutoFit === TextAutoFit.GrowShape`;
+   - `this.Text.Measure(new Size(∞, ∞))`, read `DesiredSize`;
+   - `needW = d.Width + margin*2`, `needH = d.Height + margin*2` using
+     `DiagramSettings.ShapeLabelMargin()`;
+   - **grow-only**: `if (needW > this.Width) this.Width = needW;` likewise
+     Height. Grow-only + this being the sole caller path (never called from a
+     Width/Height change) prevents oscillation.
+2. Call `_applyAutoFit()` from the existing `_onLabelChanged` handler (fires on
+   `ShapeText.Document`/`Content` change) and once at the end of the constructor
+   — exactly the trigger points the Figure uses.
+3. `CalloutNodeVM` inherits `_applyAutoFit` for free; its existing
+   `OnPropertyChanged` already recomputes the leader when `Height`/`Width`
+   change, so the leader follows the grown box.
 
-   For a legacy Figure (no auto-size VM DataContext) the method keeps measuring
-   its `ShapeText`. One implementation, two content sources.
+No `NodeViewModel.AutoSizeToContent` field and no `figure.ts` edits are needed.
 
-3. **Re-trigger.** Run the generalized auto-fit when the VM's `Text` changes (the
-   VM already raises property-changed on its text) and on initial template
-   realization / attach.
+### MVVM note
+These are framework diagram classes (`src/framework/diagram`), not demo
+`*-vm.mts` files, so the demo-scoped MVVM rules do not apply. `TextNodeVM`
+already holds the `ShapeText` DP and calls `resolveFields` on it; measuring it is
+consistent with existing behavior.
 
-### Testability (resolved first, before any SP1 implementation)
-The premise is that a headless VM can't measure text — but the *container*
-measures via the layout engine, and the legacy `_applyAutoFit` tests already
-measure `ShapeText` headlessly, proving the harness has a text-measurement
-backend.
-
-**SP1 Task 0 is a spike:** confirm a test can realize a `[DataType=TextNodeVM]`
-template inside a container Figure and get a non-zero `DesiredSize` from the
-measure pass.
-- If yes → tests assert the container grows the VM after a `Text` change.
-- If the harness cannot realize a template headlessly → the test constructs the
-  measurable content element directly, hands it to the generalized auto-fit
-  entry point, and still asserts grow-only conditional write-back. The
-  production wiring (part lookup + re-trigger) is then covered by a thinner test
-  that stubs the realized part.
+### Testability (already de-risked)
+The confirming test IS the SP1 acceptance test: construct a `TextNodeVM`, set a
+long `LabelText`, assert `Width`/`Height` grew past the 120×44 default; set a
+shorter text, assert it did **not** shrink (grow-only). No template realization
+or container needed. `initTestApp()` provides the text-measurement backend the
+standalone `ShapeText` tests already rely on.
 
 ### Files
-- `src/framework/diagram/node-view-model.ts` — add `AutoSizeToContent`.
-- `src/framework/diagram/text-node-vm.ts` — set `AutoSizeToContent = true`.
-- `src/framework/diagram/figure.ts` — generalize `_applyAutoFit` + part lookup +
-  re-trigger wiring.
-- Tests alongside each in `tests/`.
+- `src/framework/diagram/text-node-vm.ts` — add `_applyAutoFit`, wire into
+  `_onLabelChanged` + ctor.
+- `src/framework/diagram/tests/*.test.ts` — grow-only auto-fit test.
 
 ### Success criteria
-A container hosting a `TextNodeVM` grows the VM's `Width`/`Height` to fit its
-text; growth is monotonic (never shrinks) and idempotent (no oscillation);
-legacy Figure auto-fit behavior is unchanged.
+A `TextNodeVM` grows its `Width`/`Height` to fit its text; growth is monotonic
+(never shrinks) and idempotent (no oscillation); a `CalloutNodeVM` grows the
+same way and its leader still tracks. Legacy Figure auto-fit behavior is
+untouched.
 
 ---
 
