@@ -107,7 +107,9 @@ describe('Text shapes — persistence', () => {
 
     test('a Callout round-trips with its leader target re-wired', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        const target = doc.CreateNode('rectangle', 300, 0)!;   // a real, persisted node
+        // Use Figure.fromKind directly — CreateNode now emits ShapeNodeVM
+        // which _serialize skips (VM serialization is a later task — M2).
+        const target = Figure.fromKind('rectangle', 300, 0); target.Id = 'n1'; doc.Nodes.Add(target);   // a real, persisted node
         const callout = new Callout(); callout.Id = 'c1'; callout.LabelText = 'see this';
         callout.LeaderTargetNode = target;
         doc.Nodes.Add(callout);

@@ -18,6 +18,8 @@ import {
     type SerializedDoc,
 } from './shape-text-document.js';
 import { Group } from './group.js';
+import { NodeViewModel } from './node-view-model.js';
+import { ShapeNodeVM } from './shape-node-vm.js';
 import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
 import { GeometryCombineMode } from './commands/combine.js';
 import type { DiagramMutator } from './behaviors/attach-standard-mutations.js';
@@ -289,8 +291,8 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     public static readonly InspectorKey     = Model.RegisterProperty<DiagramInspector>(
         DiagramDocument, 'Inspector',     undefined as unknown as DiagramInspector, MetaData.None);
 
-    public static readonly NodesKey         = Model.RegisterProperty<ObservableCollection<Figure | Group>>(
-        DiagramDocument, 'Nodes',         undefined as unknown as ObservableCollection<Figure | Group>, MetaData.None);
+    public static readonly NodesKey         = Model.RegisterProperty<ObservableCollection<Figure | Group | NodeViewModel>>(
+        DiagramDocument, 'Nodes',         undefined as unknown as ObservableCollection<Figure | Group | NodeViewModel>, MetaData.None);
     public static readonly ConnectorsKey    = Model.RegisterProperty<ObservableCollection<Connector>>(
         DiagramDocument, 'Connectors',    undefined as unknown as ObservableCollection<Connector>, MetaData.None);
     public static readonly StatusKey        = Model.RegisterProperty<string>(
@@ -339,7 +341,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         super();
         this.set_property_value(DiagramDocument.IdKey,            'diagram-' + (++_diagramDocSeq));
         this.set_property_value(DiagramDocument.InspectorKey,     new DiagramInspector());
-        this.set_property_value(DiagramDocument.NodesKey,         new ObservableCollection<Figure | Group>());
+        this.set_property_value(DiagramDocument.NodesKey,         new ObservableCollection<Figure | Group | NodeViewModel>());
         this.set_property_value(DiagramDocument.ConnectorsKey,    new ObservableCollection<Connector>());
         this.set_property_value(DiagramDocument.StorageKey,       storage);
         // The palette lives in the framework ToolboxRepository (a Services
@@ -486,7 +488,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         }
     }
 
-    public get Nodes():         ObservableCollection<Figure | Group> { return this.get_property_value(DiagramDocument.NodesKey); }
+    public get Nodes():         ObservableCollection<Figure | Group | NodeViewModel> { return this.get_property_value(DiagramDocument.NodesKey); }
     public get Connectors():    ObservableCollection<Connector>      { return this.get_property_value(DiagramDocument.ConnectorsKey); }
     public get Status():        string                               { return this.get_property_value(DiagramDocument.StatusKey); }
     public set Status(v: string)                                     { this.set_property_value(DiagramDocument.StatusKey, v); }
@@ -497,15 +499,15 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
     // ── Mutation API (DiagramMutator surface) ──────────────────────
 
-    public CreateNode(kind: string, x: number, y: number): Figure | null
+    public CreateNode(kind: string, x: number, y: number): ShapeNodeVM | null
     {
         if (!SHAPE_CATALOG_MAP.has(kind)) return null;
-        const fig = Figure.fromKind(kind, x, y);
-        fig.Id = 'n' + this._nextId++;
-        this.Nodes.Add(fig);
+        const vm = ShapeNodeVM.fromKind(kind, x, y);
+        vm.Id = 'n' + this._nextId++;
+        this.Nodes.Add(vm);
         this.Status = `Placed ${kind}. ${this.Nodes.Count} nodes.`;
         this._markDirty();
-        return fig;
+        return vm;
     }
 
     public DeleteNodes(items: readonly unknown[]): void
@@ -514,9 +516,9 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         let removed = 0;
         for (const item of items)
         {
-            if (!(item instanceof Figure || item instanceof Group)) continue;
+            if (!(item instanceof Figure || item instanceof Group || item instanceof NodeViewModel)) continue;
             // Detach from parent group bookkeeping first if any.
-            if (item.Parent !== undefined) item.Parent._removeMember(item);
+            if ((item instanceof Figure || item instanceof Group) && item.Parent !== undefined) item.Parent._removeMember(item);
             const idx = this.Nodes.IndexOf(item);
             if (idx < 0) continue;
             this.Nodes.RemoveAt(idx);

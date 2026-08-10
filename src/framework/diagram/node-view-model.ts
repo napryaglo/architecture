@@ -6,11 +6,14 @@ import { DiagramSettings } from './diagram-settings.js';
 // serializers (later stage) read them. Node kinds (ShapeNodeVM, ArchNodeVM) extend this.
 export class NodeViewModel extends Model
 {
+    public static readonly IdKey     = Model.RegisterProperty<string | undefined>(NodeViewModel, 'Id',     undefined, MetaData.None);
     public static readonly LeftKey   = Model.RegisterProperty<number>(NodeViewModel, 'Left',   0, MetaData.None);
     public static readonly TopKey    = Model.RegisterProperty<number>(NodeViewModel, 'Top',    0, MetaData.None);
     public static readonly WidthKey  = Model.RegisterProperty<number>(NodeViewModel, 'Width',  DiagramSettings.ShapeDefaultSize(), MetaData.None);
     public static readonly HeightKey = Model.RegisterProperty<number>(NodeViewModel, 'Height', DiagramSettings.ShapeDefaultSize(), MetaData.None);
 
+    public get Id():     string | undefined { return this.get_property_value(NodeViewModel.IdKey); }
+    public set Id(v:     string | undefined) { this.set_property_value(NodeViewModel.IdKey, v); }
     public get Left():   number { return this.get_property_value(NodeViewModel.LeftKey); }
     public set Left(v:   number) { this.set_property_value(NodeViewModel.LeftKey, v); }
     public get Top():    number { return this.get_property_value(NodeViewModel.TopKey); }

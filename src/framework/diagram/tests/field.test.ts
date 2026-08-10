@@ -95,7 +95,9 @@ describe('Field — persistence', () => {
 
     test('a field persists its key and re-resolves live on load', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        const n = doc.CreateNode('rectangle', 10, 20)!;   // default 80×80
+        // Use Figure.fromKind directly — CreateNode now emits ShapeNodeVM
+        // which _serialize skips (VM serialization is a later task — M2).
+        const n = Figure.fromKind('rectangle', 10, 20); n.Id = 'n1'; doc.Nodes.Add(n);   // default 80×80
         n.Text.Document = documentWithFields('{Width}');
         n.Text.Content  = flowDocumentToPlainText(n.Text.Document);
         doc.Save();

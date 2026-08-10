@@ -11,3 +11,10 @@ test('NodeViewModel exposes Left/Top/Width/Height DPs with defaults', () => {
     assert.equal(vm.Left, 40);
     assert.equal(vm.Top, 25);
 });
+
+test('NodeViewModel Id DP round-trips', () => {
+    const vm = new NodeViewModel();
+    assert.equal(vm.Id, undefined);
+    vm.Id = 'n42';
+    assert.equal(vm.Id, 'n42');
+});
