@@ -68,6 +68,27 @@ const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width',
 const DEFAULT_FILL         = new SolidColorBrush(Color.FromHex('#bfdbfe'));
 const DEFAULT_STROKE_BRUSH = new SolidColorBrush(Color.FromHex('#1976d2'));
 
+// Duck-typed interface for a content VM that owns its own in-place edit entry.
+// Applied via a named cast (never bracket access) so figure.ts stays decoupled
+// from TextNodeVM (no import cycle risk — only the interface lives here).
+export interface IInlineEditable
+{
+    BeginEdit(): void;
+}
+
+// Resolve the editable target for a container Figure: if its Content implements
+// IInlineEditable, delegate there; otherwise fall back to the Figure's own Text.
+function resolveEditTarget(container: Figure): { BeginEdit(): void } | undefined
+{
+    const content = container.Content;
+    if (content !== null && content !== undefined &&
+        typeof (content as Partial<IInlineEditable>).BeginEdit === 'function')
+    {
+        return content as unknown as IInlineEditable;
+    }
+    return container.Text;
+}
+
 export interface FigureFromKindOptions
 {
     readonly width?:  number;
@@ -645,7 +666,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
         // editor takes the pointer from here.
         if (args.IsDoubleClick)
         {
-            this.Text?.BeginEdit();
+            resolveEditTarget(this)?.BeginEdit();
             args.Handled = true;
             return;
         }
