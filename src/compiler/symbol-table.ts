@@ -218,6 +218,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Figure',                  '@pragmatic-lab/mural/framework/diagram/figure.js'],
     ['ShapeNodeVM',             '@pragmatic-lab/mural/framework/diagram/shape-node-vm.js'],
     ['TextNodeVM',              '@pragmatic-lab/mural/framework/diagram/text-node-vm.js'],
+    ['CalloutNodeVM',           '@pragmatic-lab/mural/framework/diagram/callout-node-vm.js'],
     ['ShapeText',               '@pragmatic-lab/mural/framework/diagram/shape-text.js'],
     ['Group',                   '@pragmatic-lab/mural/framework/diagram/group.js'],
     ['Diagram',                 '@pragmatic-lab/mural/framework/diagram/diagram.js'],
