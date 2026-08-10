@@ -201,9 +201,18 @@ export {
 export { DiagramEditingContext, DiagramCommandId } from './diagram/diagram-command-contexts.js';
 export { DiagramInspector } from './diagram/diagram-inspector.js';
 export { Figure } from './diagram/figure.js';
+export { NodeViewModel } from './diagram/node-view-model.js';
 export { ShapeNodeVM } from './diagram/shape-node-vm.js';
 export { TextNodeVM } from './diagram/text-node-vm.js';
 export { CalloutNodeVM, type ILeaderTarget } from './diagram/callout-node-vm.js';
+export {
+    registerNodeSerializer,
+    serializerFor,
+    serializerByType,
+    type NodeSerializer,
+    type NodeBaseRecord,
+    type SerializedNodeV2,
+} from './diagram/node-serialization.js';
 export { DiagramSettings, DiagramSettingKey } from './diagram/diagram-settings.js';
 export { ShapeText, TextPlacement, TextAutoFit, isOutsideTextPlacement, computeTextBlockAnchor } from './diagram/shape-text.js';
 export {
