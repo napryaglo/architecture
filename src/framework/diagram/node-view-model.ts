@@ -1,0 +1,22 @@
+import { MetaData, Model } from '../../runtime/index.js';
+import { DiagramSettings } from './diagram-settings.js';
+
+// Position/size contract every diagram node view-model satisfies. The Figure
+// container two-way binds its Left/Top/Width/Height to these; the per-VM
+// serializers (later stage) read them. Node kinds (ShapeNodeVM, ArchNodeVM) extend this.
+export class NodeViewModel extends Model
+{
+    public static readonly LeftKey   = Model.RegisterProperty<number>(NodeViewModel, 'Left',   0, MetaData.None);
+    public static readonly TopKey    = Model.RegisterProperty<number>(NodeViewModel, 'Top',    0, MetaData.None);
+    public static readonly WidthKey  = Model.RegisterProperty<number>(NodeViewModel, 'Width',  DiagramSettings.ShapeDefaultSize(), MetaData.None);
+    public static readonly HeightKey = Model.RegisterProperty<number>(NodeViewModel, 'Height', DiagramSettings.ShapeDefaultSize(), MetaData.None);
+
+    public get Left():   number { return this.get_property_value(NodeViewModel.LeftKey); }
+    public set Left(v:   number) { this.set_property_value(NodeViewModel.LeftKey, v); }
+    public get Top():    number { return this.get_property_value(NodeViewModel.TopKey); }
+    public set Top(v:    number) { this.set_property_value(NodeViewModel.TopKey, v); }
+    public get Width():  number { return this.get_property_value(NodeViewModel.WidthKey); }
+    public set Width(v:  number) { this.set_property_value(NodeViewModel.WidthKey, v); }
+    public get Height(): number { return this.get_property_value(NodeViewModel.HeightKey); }
+    public set Height(v: number) { this.set_property_value(NodeViewModel.HeightKey, v); }
+}
