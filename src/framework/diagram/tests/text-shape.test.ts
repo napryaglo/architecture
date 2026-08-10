@@ -6,6 +6,8 @@ import { Shape } from '../../../basic/shapes/shape.js';
 import { Figure } from '../figure.js';
 import { TextAutoFit } from '../shape-text.js';
 import { TextShape, Callout } from '../text-shape.js';
+import { TextNodeVM } from '../text-node-vm.js';
+import { CalloutNodeVM } from '../callout-node-vm.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 
 // § diagram-text Slice 8 — text shapes. A TextShape is an auto-growing text
@@ -93,34 +95,32 @@ describe('Callout — leader to a target', () => {
 describe('Text shapes — persistence', () => {
     beforeEach(() => { initTestApp(); });
 
-    test('a TextShape round-trips as a TextShape with its label', () => {
+    test('a TextNodeVM round-trips as a TextNodeVM with its label', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        const t = new TextShape();
+        // C4: use TextNodeVM — the serializer now builds VMs, not Figure classes.
+        const t = new TextNodeVM();
         t.Id = 't1'; t.LabelText = 'note';
         doc.Nodes.Add(t);
         doc.Save();
         doc.Load();
         const reloaded = doc.Nodes.Get(0);
-        assert.ok(reloaded instanceof TextShape, 'reconstructed as a TextShape');
-        assert.equal((reloaded as TextShape).LabelText, 'note');
+        assert.ok(reloaded instanceof TextNodeVM, 'reconstructed as a TextNodeVM');
+        assert.equal((reloaded as TextNodeVM).LabelText, 'note');
     });
 
-    test('a Callout round-trips with its leader target re-wired', () => {
+    test('a CalloutNodeVM round-trips with its leader target re-wired', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // M2: geometry nodes (Figure.fromKind/ShapeNodeVM) reload as ShapeNodeVM,
-        // which can't be stored in LeaderTargetNode (typed Figure | undefined).
-        // Use a TextShape as the leader target — it always reloads as a Figure
-        // (TextShape branch in _deserialize), so the leader re-wiring still works.
-        const target = new TextShape(); target.Id = 'n1'; target.LabelText = 'anchor'; doc.Nodes.Add(target);
-        const callout = new Callout(); callout.Id = 'c1'; callout.LabelText = 'see this';
+        // C4: use TextNodeVM as target and CalloutNodeVM as callout — both serialize as VMs.
+        const target = new TextNodeVM(); target.Id = 'n1'; target.LabelText = 'anchor'; doc.Nodes.Add(target);
+        const callout = new CalloutNodeVM(); callout.Id = 'c1'; callout.LabelText = 'see this';
         callout.LeaderTargetNode = target;
         doc.Nodes.Add(callout);
         doc.Save();
         doc.Load();
-        const rt = doc.Nodes.Get(0) as Figure;
+        const rt = doc.Nodes.Get(0);
         const rc = doc.Nodes.Get(1);
-        assert.ok(rc instanceof Callout, 'reconstructed as a Callout');
-        assert.ok(rt instanceof TextShape, 'target reloaded as TextShape (a Figure)');
-        assert.equal((rc as Callout).LeaderTargetNode, rt, 'leader re-wired to the reloaded target');
+        assert.ok(rc instanceof CalloutNodeVM, 'reconstructed as a CalloutNodeVM');
+        assert.ok(rt instanceof TextNodeVM, 'target reloaded as TextNodeVM');
+        assert.equal((rc as CalloutNodeVM).LeaderTargetNode, rt, 'leader re-wired to the reloaded target');
     });
 });

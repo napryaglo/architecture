@@ -20,8 +20,10 @@ import {
     type SerializedDoc,
 } from './shape-text-document.js';
 import { Figure } from './figure.js';
-import { TextShape, Callout } from './text-shape.js';
+import { NodeViewModel } from './node-view-model.js';
 import { ShapeNodeVM } from './shape-node-vm.js';
+import { TextNodeVM } from './text-node-vm.js';
+import { CalloutNodeVM } from './callout-node-vm.js';
 import { SHAPE_CATALOG_MAP } from './shape-catalog.js';
 import { registerNodeSerializer, type NodeBaseRecord } from './node-serialization.js';
 
@@ -98,8 +100,8 @@ export function applySerializedText(st: ShapeText, data: SerializedText): void
     if (data.doc       !== undefined) st.Document              = deserializeFlowDocument(data.doc);
 }
 
-/** Place a Figure at the bounds from a base record. */
-export function placeNode(fig: Figure, base: NodeBaseRecord): void
+/** Place a Figure or NodeViewModel at the bounds from a base record. */
+export function placeNode(fig: Figure | NodeViewModel, base: NodeBaseRecord): void
 {
     fig.Left   = base.left;
     fig.Top    = base.top;
@@ -154,66 +156,63 @@ registerNodeSerializer({
     },
 });
 
-// ── 'text' serializer (TextShape) ────────────────────────────────────
+// ── 'text' serializer (TextNodeVM) ────────────────────────────────────
 
 registerNodeSerializer({
     type: 'text',
 
     matches(node: unknown): boolean
     {
-        // TextShape is a superclass of Callout; check Callout first so a
-        // Callout doesn't accidentally match here.  The 'callout' serializer
-        // is registered after this one and uses `instanceof Callout`.
-        // Because we check the exact class first, the callout serializer's
-        // matches() wins when the node IS a Callout (REGISTRY.find returns
-        // the first match, and both text and callout match Callout via
-        // instanceof TextShape).  To be safe, exclude Callout explicitly.
-        return node instanceof TextShape && !(node instanceof Callout);
+        // TextNodeVM is a superclass of CalloutNodeVM; exclude CalloutNodeVM
+        // so a callout doesn't match here.  The 'callout' serializer is
+        // registered after this one and matches CalloutNodeVM explicitly.
+        return node instanceof TextNodeVM && !(node instanceof CalloutNodeVM);
     },
 
     serialize(node: unknown): Record<string, unknown>
     {
-        const fig = node as TextShape;
-        return { text: serializeShapeText(fig.Text) };
+        const vm = node as TextNodeVM;
+        return { text: serializeShapeText(vm.Text) };
     },
 
-    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): TextShape
+    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): TextNodeVM
     {
-        const fig = new TextShape();
-        placeNode(fig, base);
-        fig.Id = base.id;
-        if (data.text !== undefined) applySerializedText(fig.Text, data.text as SerializedText);
-        return fig;
+        const vm = new TextNodeVM();
+        placeNode(vm, base);
+        vm.Id = base.id;
+        if (data.text !== undefined) applySerializedText(vm.Text, data.text as SerializedText);
+        return vm;
     },
 });
 
-// ── 'callout' serializer (Callout) ───────────────────────────────────
+// ── 'callout' serializer (CalloutNodeVM) ─────────────────────────────
 //
 // NOTE: the leader-target wiring is intentionally NOT done here.
 // Wiring requires all nodes to exist first.  The `leaderTargetId` is stored
 // in `data` so DiagramDocument._deserialize can read it during the second
-// pass (pendingLeaders) — exactly as before.
+// pass (pendingLeaders) — exactly as before.  Payload byte-shape is
+// identical to M3: { text, leaderTargetId }.
 
 registerNodeSerializer({
     type: 'callout',
 
     matches(node: unknown): boolean
     {
-        return node instanceof Callout;
+        return node instanceof CalloutNodeVM;
     },
 
     serialize(node: unknown): Record<string, unknown>
     {
-        const c = node as Callout;
+        const c = node as CalloutNodeVM;
         return {
             text:           serializeShapeText(c.Text),
-            leaderTargetId: c.LeaderTargetNode?.Id ?? undefined,
+            leaderTargetId: c.LeaderTargetId,
         };
     },
 
-    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): Callout
+    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): CalloutNodeVM
     {
-        const callout = new Callout();
+        const callout = new CalloutNodeVM();
         placeNode(callout, base);
         callout.Id = base.id;
         if (data.text !== undefined) applySerializedText(callout.Text, data.text as SerializedText);

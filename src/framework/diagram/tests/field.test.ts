@@ -4,7 +4,7 @@ import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import { Run } from '../../../basic/documents/inlines.js';
 import { Figure } from '../figure.js';
-import { TextShape } from '../text-shape.js';
+import { TextNodeVM } from '../text-node-vm.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Field, FieldKind, documentWithFields, resolveFields } from '../shape-text-field.js';
@@ -96,18 +96,18 @@ describe('Field — persistence', () => {
 
     test('a field persists its key and re-resolves live on load', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // M2: use TextShape so the node reloads as a Figure (TextShape branch).
-        // TextShape default width is 120; set to 80 so the {Width} field stays 80.
-        const n = new TextShape(); n.Id = 'n1'; n.Width = 80; doc.Nodes.Add(n);
+        // C4: use TextNodeVM — serializes as type='text' and reloads as TextNodeVM.
+        // TextNodeVM default width is 120; set to 80 so the {Width} field stays 80.
+        const n = new TextNodeVM(); n.Id = 'n1'; n.Width = 80; doc.Nodes.Add(n);
         n.Text.Document = documentWithFields('{Width}');
         n.Text.Content  = flowDocumentToPlainText(n.Text.Document);
         doc.Save();
         doc.Load();
-        const fig = doc.Nodes.Get(0) as Figure;
-        assert.ok(fig.Text.Document !== undefined, 'rich document restored');
-        assert.equal(flowDocumentToPlainText(fig.Text.Document!), '80', 're-resolved to live width');
+        const vm = doc.Nodes.Get(0) as TextNodeVM;
+        assert.ok(vm.Text.Document !== undefined, 'rich document restored');
+        assert.equal(flowDocumentToPlainText(vm.Text.Document!), '80', 're-resolved to live width');
         // Still live after the round-trip.
-        fig.Width = 200;
-        assert.equal(flowDocumentToPlainText(fig.Text.Document!), '200', 'field stayed reactive');
+        vm.Width = 200;
+        assert.equal(flowDocumentToPlainText(vm.Text.Document!), '200', 'field stayed reactive');
     });
 });

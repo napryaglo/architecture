@@ -1,7 +1,8 @@
-import { MetaData, Model } from '../../runtime/index.js';
+import { MetaData, Model, type PropertyDescriptor } from '../../runtime/index.js';
 import { Brush, Color, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { NodeViewModel } from './node-view-model.js';
 import { ShapeText, TextAutoFit } from './shape-text.js';
+import { FieldKind, resolveFields } from './shape-text-field.js';
 
 // Reuse the same visual constants TextShape uses so the VM renders identically.
 const TEXT_NODE_FILL   = new SolidColorBrush(Color.FromHex('#00000000'));
@@ -9,6 +10,9 @@ const TEXT_NODE_STROKE = new Pen(new SolidColorBrush(Color.FromHex('#94a3b8')), 
 
 const TEXT_NODE_DEFAULT_W = 120;
 const TEXT_NODE_DEFAULT_H = 44;
+
+// DP names whose change triggers a label-field re-resolution (mirrors Figure).
+const FIELD_SOURCE_NAMES = new Set(['Left', 'Top', 'Width', 'Height', 'Id']);
 
 // TextNodeVM — the VM form of TextShape: a rectangular text-box node rendered
 // by the [DataType=TextNodeVM] DataTemplate inside the Figure container.
@@ -38,6 +42,42 @@ export class TextNodeVM extends NodeViewModel
         // Override NodeViewModel defaults (ShapeDefaultSize) to text-box dims.
         this.Width  = TEXT_NODE_DEFAULT_W;
         this.Height = TEXT_NODE_DEFAULT_H;
+        // Wire field re-resolution: when Text.Document changes, or when our
+        // own geometry changes, re-resolve any {field} tokens in the document.
+        text.AddPropertyChangedListener(ShapeText.DocumentKey, this._onLabelChanged);
+        text.AddPropertyChangedListener(ShapeText.ContentKey,  this._onLabelChanged);
+        this._refreshLabelFields();
+    }
+
+    private readonly _onLabelChanged = (): void => { this._refreshLabelFields(); };
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue:   unknown,
+        newValue:   unknown,
+    ): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (FIELD_SOURCE_NAMES.has(descriptor.Name)) this._refreshLabelFields();
+    }
+
+    private _refreshLabelFields(): void
+    {
+        const doc = this.Text?.Document;
+        if (doc !== undefined) resolveFields(doc, (k) => this._resolveField(k));
+    }
+
+    private _resolveField(key: FieldKind): string | undefined
+    {
+        switch (key)
+        {
+            case FieldKind.Width:  return String(Math.round(this.Width));
+            case FieldKind.Height: return String(Math.round(this.Height));
+            case FieldKind.Left:   return String(Math.round(this.Left));
+            case FieldKind.Top:    return String(Math.round(this.Top));
+            case FieldKind.Id:     return this.Id ?? '';
+            default:               return undefined;
+        }
     }
 
     public get Text():   ShapeText      { return this.get_property_value(TextNodeVM.TextKey); }
