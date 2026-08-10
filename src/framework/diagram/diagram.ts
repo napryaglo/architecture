@@ -1,5 +1,7 @@
 import {
     Application,
+    Binding,
+    BindingMode,
     Element,
     MetaData,
     Model,
@@ -10,10 +12,11 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
     type RelayCommand,
-    type Visual,
+    Visual,
     hasModifier,
     ModifierKeys,
 } from '../../runtime/index.js';
+import { NodeViewModel } from './node-view-model.js';
 import type { DataTemplate } from '../../basic/templates/data-template.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
@@ -1365,6 +1368,16 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             node.Tag         = item;
             node.DataContext = item;
             node.Content     = item;
+            if (item instanceof NodeViewModel)
+            {
+                // Two-way position bind: NodeViewModel ↔ Figure container.
+                // The runtime accepts a Binding at value-position on any DP;
+                // `as unknown as number` satisfies TS without a suppression comment.
+                node.set_property_value(Figure.LeftKey,   new Binding(item, 'Left',   BindingMode.TwoWay) as unknown as number);
+                node.set_property_value(Figure.TopKey,    new Binding(item, 'Top',    BindingMode.TwoWay) as unknown as number);
+                node.set_property_value(Visual.WidthKey,  new Binding(item, 'Width',  BindingMode.TwoWay) as unknown as number);
+                node.set_property_value(Visual.HeightKey, new Binding(item, 'Height', BindingMode.TwoWay) as unknown as number);
+            }
         }
         else
         {
