@@ -10,7 +10,7 @@
 // to mount.
 
 import { Application } from '@pragmatic-lab/mural/runtime';
-import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextShape, Callout, deserializeFlowDocument, documentWithFields, ensureToolboxDefaults } from '@pragmatic-lab/mural/framework';
+import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextNodeVM, CalloutNodeVM, deserializeFlowDocument, documentWithFields, ensureToolboxDefaults } from '@pragmatic-lab/mural/framework';
 import { register } from '../../platform/registry.mjs';
 
 let docInstance;
@@ -80,16 +80,16 @@ register({
             docInstance.CreateConnector(
                 new ConnectorEndpoint({ Node: squir }),
                 new ConnectorEndpoint({ Node: flower }));
-            // Slice 8: text shapes. A free-floating annotation box (auto-grows
-            // to its text) and a callout whose leader points at — and follows
-            // — the heart node.
-            const note = new TextShape();
+            // Slice 8: text shapes. A free-floating annotation box (TextNodeVM,
+            // auto-grows to its text) and a callout (CalloutNodeVM) whose leader
+            // points at — and follows — the heart node.
+            const note = new TextNodeVM();
             note.Id = 'note1';
             note.Left = 380; note.Top = 210;
             note.LabelText = 'Free-floating note — double-click to edit';
             docInstance.Nodes.Add(note);
 
-            const callout = new Callout();
+            const callout = new CalloutNodeVM();
             callout.Id = 'call1';
             callout.Left = 40; callout.Top = 320;
             callout.LabelText = 'This one has a leader ↘';

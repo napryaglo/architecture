@@ -11,7 +11,6 @@ import { FlowDocument } from '../../../basic/documents/flow-document.js';
 import { Paragraph } from '../../../basic/documents/paragraph.js';
 import { Run } from '../../../basic/documents/inlines.js';
 import { Figure } from '../figure.js';
-import { TextShape } from '../text-shape.js';
 import { TextNodeVM } from '../text-node-vm.js';
 import { ShapeText, TextAutoFit, TextPlacement, computeTextBlockAnchor, isOutsideTextPlacement } from '../shape-text.js';
 import {
