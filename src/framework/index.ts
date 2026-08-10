@@ -201,6 +201,7 @@ export {
 export { DiagramEditingContext, DiagramCommandId } from './diagram/diagram-command-contexts.js';
 export { DiagramInspector } from './diagram/diagram-inspector.js';
 export { Figure } from './diagram/figure.js';
+export { ShapeNodeVM } from './diagram/shape-node-vm.js';
 export { DiagramSettings, DiagramSettingKey } from './diagram/diagram-settings.js';
 export { ShapeText, TextPlacement, TextAutoFit, isOutsideTextPlacement, computeTextBlockAnchor } from './diagram/shape-text.js';
 export {

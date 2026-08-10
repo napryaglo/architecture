@@ -49,6 +49,16 @@ resources Diagrams {
         Template = @DefaultFigure;
     }
 
+    // ── ShapeNodeVM: renders a shape as a Shape primitive ─────────────
+    //
+    // DataTemplate for ShapeNodeVM hosted inside the Figure container's
+    // PART_Content ContentPresenter. Binds the Shape's Geometry / Fill /
+    // Stroke / Width / Height to the ShapeNodeVM's corresponding DPs,
+    // using single-$ bindings (bind to the data item).
+    DataTemplate [DataType = ShapeNodeVM] {
+        Shape [ Geometry = $Geometry, Fill = $Fill, Stroke = $Stroke, Width = $Width, Height = $Height ]
+    }
+
     // ── ShapeText: a shape's text block (the Visio "text block") ────
     // A Border (PART_Bg) carries the optional text-background fill + inner
     // margins (Padding) and is placed / sized / rotated within the shape by
