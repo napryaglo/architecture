@@ -880,6 +880,15 @@ function serializeEndpoint(ep: ConnectorEndpoint): SerializedConnectorEndpoint
         if (ep.PortName !== undefined) return { ...out, portName: ep.PortName };
         return out;
     }
+    // A reference whose node wasn't present at the last load: preserve the id
+    // (and any port) so the endpoint re-binds on a later, correct load rather
+    // than being silently rewritten to a free point (which destroys it).
+    if (ep.UnresolvedNodeId !== undefined)
+    {
+        const out: SerializedConnectorEndpoint = { nodeId: ep.UnresolvedNodeId };
+        if (ep.PortName !== undefined) return { ...out, portName: ep.PortName };
+        return out;
+    }
     const fp = ep.FreePoint;
     if (fp !== undefined) return { freeX: fp.X, freeY: fp.Y };
     // Endpoint without a usable anchor — serialize as empty; rehydrate
@@ -902,9 +911,17 @@ function rehydrateEndpoint(
                 PortName: s.portName,
             });
         }
-        // Dangling reference — fall through to FreePoint(0,0) so the
-        // connector still materializes (without crashing) and the
-        // consumer can observe the orphan.
+        // Node absent from THIS load (e.g. a node type whose serializer wasn't
+        // registered when Load ran, so its record was skipped). PRESERVE the
+        // id — a later load with the node present re-binds the endpoint. The
+        // old behaviour fell through to FreePoint(0,0), which permanently
+        // destroyed the reference (a one-time ordering glitch corrupted the
+        // scene forever). Connector treats an UnresolvedNodeId endpoint as
+        // un-routable, so it stays hidden rather than snapping to the origin.
+        return new ConnectorEndpoint({
+            UnresolvedNodeId: s.nodeId,
+            PortName:         s.portName,
+        });
     }
     if (typeof s.freeX === 'number' && typeof s.freeY === 'number')
     {

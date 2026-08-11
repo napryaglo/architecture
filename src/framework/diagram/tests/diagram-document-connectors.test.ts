@@ -222,6 +222,59 @@ describe('DiagramDocument — Save / Load round-trips connectors', () => {
         assert.equal(rC.Target!.FreePoint!.Y, 17);
     });
 
+    test('an endpoint whose node is absent on load PRESERVES its nodeId (no origin collapse)', () => {
+        const storage = new MemoryStorage();
+        const doc = newDoc(storage);
+        const a = doc.CreateNode('rectangle', 100, 100)!;
+        const b = doc.CreateNode('ellipse',   300, 100)!;
+        doc.CreateConnector(
+            new ConnectorEndpoint({ Node: a }),
+            new ConnectorEndpoint({ Node: b, PortName: 'in' }))!;
+        doc.Save();
+
+        // Simulate 'b' being unloadable (e.g. its node serializer wasn't
+        // registered yet): drop its node record but keep the connector that
+        // references it by id.
+        const KEY = 'mural-diagram-state-v1';
+        const raw = JSON.parse(storage.GetItem(KEY)!) as {
+            nodes: { id: string }[];
+            connectors: { target: { nodeId?: string } }[];
+        };
+        const bId = raw.nodes[1]!.id;
+        raw.nodes = raw.nodes.filter(n => n.id !== bId);
+        storage.SetItem(KEY, JSON.stringify(raw));
+
+        const restored = newDoc(storage);
+        restored.Storage = storage;
+        restored.Load();
+
+        // The node is gone, but the reference is PRESERVED — not destroyed by
+        // collapsing to FreePoint(0,0).
+        const rC = restored.Connectors.Get(0)!;
+        assert.equal(rC.Target!.Node, undefined);
+        assert.equal(rC.Target!.FreePoint, undefined, 'must NOT collapse to a free point');
+        assert.equal(rC.Target!.UnresolvedNodeId, bId, 'nodeId preserved for later re-bind');
+        assert.equal(rC.Target!.PortName, 'in', 'portName preserved too');
+
+        // Re-saving keeps the id — the corruption is not baked in.
+        restored.Save();
+        const raw2 = JSON.parse(storage.GetItem(KEY)!) as {
+            connectors: { target: { nodeId?: string; freeX?: number } }[];
+        };
+        assert.equal(raw2.connectors[0]!.target.nodeId, bId, 're-save preserves the id');
+        assert.equal(raw2.connectors[0]!.target.freeX, undefined, 'no origin free point written');
+
+        // Recovery: with the node record present again, the endpoint re-binds.
+        raw2.connectors[0]!.target.nodeId = bId;
+        const withNode = raw2 as unknown as { nodes: unknown[] };
+        withNode.nodes = [{ type: 'shape', id: bId, left: 300, top: 100, w: 80, h: 80, data: { kind: 'ellipse', d: '' } }];
+        storage.SetItem(KEY, JSON.stringify(withNode));
+        const recovered = newDoc(storage);
+        recovered.Storage = storage;
+        recovered.Load();
+        assert.equal(recovered.Connectors.Get(0)!.Target!.Node, recovered.Nodes.Get(0), 're-binds to the node');
+    });
+
     test('Load with a payload missing the connectors field leaves Connectors empty', () => {
         const storage = new MemoryStorage();
         // Hand-craft a legacy node-only payload.

@@ -11,6 +11,7 @@ export interface ConnectorEndpointInit
     readonly PortSide?:  PortSide;
     readonly PortIndex?: number;
     readonly FreePoint?: Point;
+    readonly UnresolvedNodeId?: string;
 }
 
 // One end of a Connector. The 5 DPs describe a single endpoint via
@@ -41,6 +42,13 @@ export class ConnectorEndpoint extends Model
         ConnectorEndpoint, 'PortIndex', undefined, MetaData.None);
     public static readonly FreePointKey = Model.RegisterProperty<Point | undefined>(
         ConnectorEndpoint, 'FreePoint', undefined, MetaData.None);
+    // A node id that could NOT be resolved to a live Node when the endpoint
+    // was rehydrated (e.g. the node's serializer wasn't registered at load
+    // time, so its record was skipped). Kept so a later, correct load
+    // re-binds the endpoint instead of the reference being destroyed. Never
+    // set alongside a resolved Node — resolution clears it by construction.
+    public static readonly UnresolvedNodeIdKey = Model.RegisterProperty<string | undefined>(
+        ConnectorEndpoint, 'UnresolvedNodeId', undefined, MetaData.None);
 
     public get Node():      Model | undefined    { return this.get_property_value(ConnectorEndpoint.NodeKey); }
     public set Node(v:      Model | undefined)   { this.set_property_value(ConnectorEndpoint.NodeKey, v); }
@@ -52,6 +60,8 @@ export class ConnectorEndpoint extends Model
     public set PortIndex(v: number | undefined)  { this.set_property_value(ConnectorEndpoint.PortIndexKey, v); }
     public get FreePoint(): Point | undefined    { return this.get_property_value(ConnectorEndpoint.FreePointKey); }
     public set FreePoint(v: Point | undefined)   { this.set_property_value(ConnectorEndpoint.FreePointKey, v); }
+    public get UnresolvedNodeId(): string | undefined  { return this.get_property_value(ConnectorEndpoint.UnresolvedNodeIdKey); }
+    public set UnresolvedNodeId(v: string | undefined) { this.set_property_value(ConnectorEndpoint.UnresolvedNodeIdKey, v); }
 
     constructor(init?: ConnectorEndpointInit)
     {
@@ -62,5 +72,6 @@ export class ConnectorEndpoint extends Model
         if (init.PortSide  !== undefined) this.PortSide  = init.PortSide;
         if (init.PortIndex !== undefined) this.PortIndex = init.PortIndex;
         if (init.FreePoint !== undefined) this.FreePoint = init.FreePoint;
+        if (init.UnresolvedNodeId !== undefined) this.UnresolvedNodeId = init.UnresolvedNodeId;
     }
 }

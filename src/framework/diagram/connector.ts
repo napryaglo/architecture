@@ -910,7 +910,13 @@ export class Connector extends Shape
     {
         const src = this.Source;
         const tgt = this.Target;
-        if (src === undefined || tgt === undefined)
+        // An endpoint carrying an UnresolvedNodeId points at a node that wasn't
+        // present at load time (its serializer hadn't registered). It has no
+        // anchor to route to, so leave the connector un-drawn — NOT snapped to
+        // the origin — until a later load re-binds it. The id is preserved on
+        // the endpoint, so nothing is lost while it's hidden.
+        if (src === undefined || tgt === undefined
+            || src.UnresolvedNodeId !== undefined || tgt.UnresolvedNodeId !== undefined)
         {
             this.Geometry = undefined;
             this._currentSrcAnchor = undefined;
