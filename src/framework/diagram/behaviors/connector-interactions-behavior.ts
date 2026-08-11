@@ -24,6 +24,7 @@ import {
 import { Border, Shape } from '../../../basic/index.js';
 import { SelectionMode } from '../../list/list-box.js';
 import { Connector } from '../connector.js';
+import { routePoints } from '../route-waypoint.js';
 import { ConnectorCreateBehavior } from './connector-create-behavior.js';
 import { ConnectorEditAdorner, segmentIsHorizontal } from './connector-edit-adorner.js';
 import { Figure } from '../figure.js';
@@ -462,7 +463,7 @@ class EditHandlesAdorner extends Adorner
                     tgt.y - epHandleSize() / 2,
                     epHandleSize(), epHandleSize()));
             }
-            const wps = conn.Waypoints ?? [];
+            const wps = routePoints(conn.Waypoints);
             for (let i = 0; i < wps.length && wpUsed < this._wpPool.length; i++)
             {
                 const v = this._wpPool[wpUsed++]!;

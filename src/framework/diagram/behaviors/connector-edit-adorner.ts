@@ -5,6 +5,7 @@ import type { Figure } from '../figure.js';
 import { type PortSide, type ResolvedPortSide } from '../port.js';
 import { ConnectorEnd } from '../routing/router.js';
 import { DiagramSettings } from '../diagram-settings.js';
+import { type RouteWaypoint, waypoint, routePoints } from '../route-waypoint.js';
 
 // Snapshot of a ConnectorEndpoint's 5 DPs taken at the start of a
 // drag, so an aborted gesture (PointerUp over empty space) can
@@ -25,7 +26,7 @@ type Model = ConnectorEndpoint['Node'];
 type DragState =
     | { readonly kind: 'idle' }
     | { readonly kind: 'endpoint'; readonly connector: Connector; readonly end: ConnectorEnd; readonly snapshot: EndpointSnapshot }
-    | { readonly kind: 'waypoint'; readonly connector: Connector; readonly index: number; readonly snapshot: readonly Point[] }
+    | { readonly kind: 'waypoint'; readonly connector: Connector; readonly index: number; readonly snapshot: readonly RouteWaypoint[] }
     // Mid-segment drag: a segment of the RENDERED route (including the
     // L/Z corners an Orthogonal route computes from zero user waypoints)
     // moves as a rigid bar PERPENDICULAR to itself — a horizontal segment
@@ -44,7 +45,7 @@ type DragState =
           readonly moveB: number;
           readonly keepA: number;
           readonly keepB: number;
-          readonly snapshot: readonly Point[];
+          readonly snapshot: readonly RouteWaypoint[];
       }
     // Port-slot reorder: dragging the segment that LEAVES a side-anchored
     // port slides the connector among its siblings on that port. No
@@ -183,6 +184,7 @@ export class ConnectorEditAdorner
         const far  = route[i + 1]!;
         const horizontal = segmentIsHorizontal(near, far);
         const snapshot = (connector.Waypoints ?? []).slice();
+        const priors   = priorPinsOf(connector);   // pins to carry through the materialise
 
         const sourcePinned = i === 0;
         const targetPinned = i + 1 === n;
@@ -234,7 +236,7 @@ export class ConnectorEditAdorner
         const keepA = horizontal ? next[moveA]!.X : next[moveA]!.Y;
         const keepB = horizontal ? next[moveB]!.X : next[moveB]!.Y;
 
-        connector.Waypoints = next;
+        connector.Waypoints = tag(next, priors, new Set([moveA, moveB]));
         this._state = { kind: 'segment', connector, horizontal, moveA, moveB, keepA, keepB, snapshot };
     }
 
@@ -246,8 +248,10 @@ export class ConnectorEditAdorner
         // restores by overwriting with the snapshot, which doesn't
         // contain the new waypoint.
         const snapshot = wps.slice();
-        const next: Point[] = [...wps.slice(0, insertIndex), point, ...wps.slice(insertIndex)];
-        connector.Waypoints = next;
+        const priors = priorPinsOf(connector);
+        const pts = routePoints(wps);
+        const next: Point[] = [...pts.slice(0, insertIndex), point, ...pts.slice(insertIndex)];
+        connector.Waypoints = tag(next, priors, new Set([insertIndex]));   // the inserted point is user intent → pinned
         this._state = { kind: 'waypoint', connector, index: insertIndex, snapshot };
     }
 
@@ -266,16 +270,16 @@ export class ConnectorEditAdorner
         }
         if (this._state.kind === 'waypoint')
         {
-            const wps = this._state.connector.Waypoints ?? [];
-            const next: Point[] = wps.slice();
+            const conn = this._state.connector;
+            const next: Point[] = routePoints(conn.Waypoints).slice();
             next[this._state.index] = cursor;
-            this._state.connector.Waypoints = next;
+            conn.Waypoints = tag(next, priorPinsOf(conn), new Set([this._state.index]));   // the dragged waypoint is pinned
             return;
         }
         if (this._state.kind === 'segment')
         {
             const { connector, horizontal, moveA, moveB, keepA, keepB } = this._state;
-            const next: Point[] = (connector.Waypoints ?? []).slice();
+            const next: Point[] = routePoints(connector.Waypoints).slice();
             if (moveA >= next.length || moveB >= next.length) return;
             // Perpendicular translation: the two moving waypoints hold
             // their constrained-axis coordinate (keepA / keepB) and snap
@@ -292,7 +296,7 @@ export class ConnectorEditAdorner
                 next[moveA] = new Point(cursor.X, keepA);
                 next[moveB] = new Point(cursor.X, keepB);
             }
-            connector.Waypoints = next;
+            connector.Waypoints = tag(next, priorPinsOf(connector), new Set([moveA, moveB]));
         }
     }
 
@@ -375,8 +379,7 @@ export class ConnectorEditAdorner
     {
         const wps = connector.Waypoints;
         if (wps === undefined || waypointIndex < 0 || waypointIndex >= wps.length) return;
-        const next: Point[] = wps.filter((_, i) => i !== waypointIndex);
-        connector.Waypoints = next;
+        connector.Waypoints = wps.filter((_, i) => i !== waypointIndex);
     }
 }
 
@@ -408,19 +411,46 @@ function pointAlong(from: Point, to: Point, dist: number, horizontal: boolean): 
     return new Point(from.X, from.Y + Math.sign(to.Y - from.Y) * dist);
 }
 
-// Collapse runs of identical adjacent points to a single point. Used on
-// segment-drag commit to shed the coincident jog anchor + moving twin a
-// no-op drag would otherwise leave behind.
-function dedupeAdjacent(pts: readonly Point[]): Point[]
+// Collapse runs of identical adjacent waypoints to one. Used on segment-drag
+// commit to shed the coincident jog anchor + moving twin a no-op drag leaves
+// behind. When two coincide, a pin wins so a user pin is never dropped.
+function dedupeAdjacent(pts: readonly RouteWaypoint[]): RouteWaypoint[]
 {
-    const out: Point[] = [];
+    const out: RouteWaypoint[] = [];
     for (const p of pts)
     {
         const prev = out[out.length - 1];
-        if (prev !== undefined && prev.X === p.X && prev.Y === p.Y) continue;
+        if (prev !== undefined && prev.point.X === p.point.X && prev.point.Y === p.point.Y)
+        {
+            if (p.userAltered && !prev.userAltered) out[out.length - 1] = p;   // pin wins
+            continue;
+        }
         out.push(p);
     }
     return out;
+}
+
+// Sub-pixel coincidence — the primitives Point has no approximate equality.
+const COINCIDE_EPS = 0.5;
+function coincides(a: Point, b: Point): boolean
+{
+    return Math.abs(a.X - b.X) < COINCIDE_EPS && Math.abs(a.Y - b.Y) < COINCIDE_EPS;
+}
+
+// The absolute points of a connector's currently-pinned waypoints.
+function priorPinsOf(c: Connector): readonly Point[]
+{
+    return (c.Waypoints ?? []).filter(w => w.userAltered).map(w => w.point);
+}
+
+// Rebuild a RouteWaypoint[] from bare geometry points: a point is PINNED if its
+// index is in `forcePinned` (the vertices the user is dragging) OR it coincides
+// with an existing pin. Everything else is AUTO. This preserves user pins across
+// the segment-drag materialise-from-rendered-route while flagging exactly what
+// the user moved.
+function tag(points: readonly Point[], priorPins: readonly Point[], forcePinned: ReadonlySet<number>): RouteWaypoint[]
+{
+    return points.map((p, i) => waypoint(p, forcePinned.has(i) || priorPins.some(q => coincides(p, q))));
 }
 
 function endpointOf(c: Connector, end: ConnectorEnd): ConnectorEndpoint | undefined

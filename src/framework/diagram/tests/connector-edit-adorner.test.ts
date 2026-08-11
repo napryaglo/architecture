@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 
 import { Application } from '../../../runtime/index.js';
 import { Point } from '../../../visual-engine/index.js';
+import { waypoint } from '../route-waypoint.js';
 import {
     attachConnectorEditAdorner,
     ConnectorEditAdorner,
@@ -151,36 +152,36 @@ describe('ConnectorEditAdorner — waypoint drag', () => {
     test('BeginWaypointDrag → UpdateCursor → EndDragOverEmpty commits new position', () => {
         newApplication();
         const c = makeConnector();
-        c.Waypoints = [new Point(50, 50), new Point(75, 25)];
+        c.Waypoints = [waypoint(new Point(50, 50)), waypoint(new Point(75, 25))];
         const adorner = new ConnectorEditAdorner();
         adorner.BeginWaypointDrag(c, 0);
         adorner.UpdateCursor(new Point(60, 60));
         adorner.EndDragOverEmpty();
-        assert.equal(c.Waypoints![0]!.X, 60);
-        assert.equal(c.Waypoints![0]!.Y, 60);
+        assert.equal(c.Waypoints![0]!.point.X, 60);
+        assert.equal(c.Waypoints![0]!.point.Y, 60);
         // Untouched waypoint preserved.
-        assert.equal(c.Waypoints![1]!.X, 75);
-        assert.equal(c.Waypoints![1]!.Y, 25);
+        assert.equal(c.Waypoints![1]!.point.X, 75);
+        assert.equal(c.Waypoints![1]!.point.Y, 25);
         assert.equal(adorner.IsActive, false);
     });
 
     test('Abort during a waypoint drag restores the snapshotted Waypoints array', () => {
         newApplication();
         const c = makeConnector();
-        const initial = [new Point(50, 50), new Point(75, 25)];
+        const initial = [waypoint(new Point(50, 50)), waypoint(new Point(75, 25))];
         c.Waypoints = initial;
         const adorner = new ConnectorEditAdorner();
         adorner.BeginWaypointDrag(c, 0);
         adorner.UpdateCursor(new Point(99, 99));
         adorner.Abort();
-        assert.equal(c.Waypoints![0]!.X, 50);
-        assert.equal(c.Waypoints![0]!.Y, 50);
+        assert.equal(c.Waypoints![0]!.point.X, 50);
+        assert.equal(c.Waypoints![0]!.point.Y, 50);
     });
 
     test('BeginWaypointDrag with out-of-range index is a silent no-op', () => {
         newApplication();
         const c = makeConnector();
-        c.Waypoints = [new Point(50, 50)];
+        c.Waypoints = [waypoint(new Point(50, 50))];
         const adorner = new ConnectorEditAdorner();
         adorner.BeginWaypointDrag(c, 99);
         assert.equal(adorner.IsActive, false);
@@ -193,28 +194,28 @@ describe('ConnectorEditAdorner — InsertWaypointAndDrag', () => {
     test('inserts the new waypoint at the requested index + immediately enters drag', () => {
         newApplication();
         const c = makeConnector();
-        c.Waypoints = [new Point(50, 50)];
+        c.Waypoints = [waypoint(new Point(50, 50))];
         const adorner = new ConnectorEditAdorner();
         adorner.InsertWaypointAndDrag(c, 0, new Point(25, 25));
         assert.equal(c.Waypoints!.length, 2);
-        assert.equal(c.Waypoints![0]!.X, 25);
-        assert.equal(c.Waypoints![1]!.X, 50);
+        assert.equal(c.Waypoints![0]!.point.X, 25);
+        assert.equal(c.Waypoints![1]!.point.X, 50);
         assert.equal(adorner.IsActive, true);
 
         adorner.UpdateCursor(new Point(30, 30));
-        assert.equal(c.Waypoints![0]!.X, 30);
-        assert.equal(c.Waypoints![0]!.Y, 30);
+        assert.equal(c.Waypoints![0]!.point.X, 30);
+        assert.equal(c.Waypoints![0]!.point.Y, 30);
     });
 
     test('Abort after Insert removes the just-inserted waypoint', () => {
         newApplication();
         const c = makeConnector();
-        c.Waypoints = [new Point(50, 50)];
+        c.Waypoints = [waypoint(new Point(50, 50))];
         const adorner = new ConnectorEditAdorner();
         adorner.InsertWaypointAndDrag(c, 0, new Point(25, 25));
         adorner.Abort();
         assert.equal(c.Waypoints!.length, 1);
-        assert.equal(c.Waypoints![0]!.X, 50);
+        assert.equal(c.Waypoints![0]!.point.X, 50);
     });
 
     test('EndDragOverEmpty after Insert keeps the new waypoint at its current position', () => {
@@ -226,8 +227,8 @@ describe('ConnectorEditAdorner — InsertWaypointAndDrag', () => {
         adorner.UpdateCursor(new Point(45, 50));
         adorner.EndDragOverEmpty();
         assert.equal(c.Waypoints!.length, 1);
-        assert.equal(c.Waypoints![0]!.X, 45);
-        assert.equal(c.Waypoints![0]!.Y, 50);
+        assert.equal(c.Waypoints![0]!.point.X, 45);
+        assert.equal(c.Waypoints![0]!.point.Y, 50);
     });
 });
 
@@ -237,18 +238,18 @@ describe('ConnectorEditAdorner — RemoveWaypoint', () => {
     test('removes the entry at the given index', () => {
         newApplication();
         const c = makeConnector();
-        c.Waypoints = [new Point(50, 50), new Point(75, 25), new Point(90, 10)];
+        c.Waypoints = [waypoint(new Point(50, 50)), waypoint(new Point(75, 25)), waypoint(new Point(90, 10))];
         const adorner = new ConnectorEditAdorner();
         adorner.RemoveWaypoint(c, 1);
         assert.equal(c.Waypoints!.length, 2);
-        assert.equal(c.Waypoints![0]!.X, 50);
-        assert.equal(c.Waypoints![1]!.X, 90);
+        assert.equal(c.Waypoints![0]!.point.X, 50);
+        assert.equal(c.Waypoints![1]!.point.X, 90);
     });
 
     test('out-of-range index is a silent no-op', () => {
         newApplication();
         const c = makeConnector();
-        c.Waypoints = [new Point(50, 50)];
+        c.Waypoints = [waypoint(new Point(50, 50))];
         const adorner = new ConnectorEditAdorner();
         adorner.RemoveWaypoint(c, 99);
         assert.equal(c.Waypoints!.length, 1);
@@ -263,7 +264,7 @@ describe('ConnectorEditAdorner — gesture preemption + idle no-ops', () => {
         const original = fig(50, 50);
         const c = makeConnector();
         c.Source = new ConnectorEndpoint({ Node: original });
-        c.Waypoints = [new Point(50, 50)];
+        c.Waypoints = [waypoint(new Point(50, 50))];
         const adorner = new ConnectorEditAdorner();
         adorner.BeginEndpointDrag(c, ConnectorEnd.Source, new Point(0, 0));
         adorner.BeginWaypointDrag(c, 0);
@@ -302,7 +303,7 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
     function wpConnector(): Connector
     {
         const c = makeConnector();
-        c.Waypoints = [new Point(40, 30), new Point(120, 30), new Point(120, 90)];
+        c.Waypoints = [waypoint(new Point(40, 30)), waypoint(new Point(120, 30)), waypoint(new Point(120, 90))];
         return c;
     }
 
@@ -314,11 +315,11 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         assert.equal(adorner.IsActive, true);
         adorner.UpdateCursor(new Point(999, 75));        // X ignored, Y drives
         const wps = c.Waypoints!;
-        assert.equal(wps[0]!.X, 40,  'left end keeps its X');
-        assert.equal(wps[1]!.X, 120, 'right end keeps its X');
-        assert.equal(wps[0]!.Y, 75,  'left end snaps to cursor Y');
-        assert.equal(wps[1]!.Y, 75,  'right end snaps to cursor Y');
-        assert.equal(wps[2]!.Y, 90,  'the next bend is untouched');
+        assert.equal(wps[0]!.point.X, 40,  'left end keeps its X');
+        assert.equal(wps[1]!.point.X, 120, 'right end keeps its X');
+        assert.equal(wps[0]!.point.Y, 75,  'left end snaps to cursor Y');
+        assert.equal(wps[1]!.point.Y, 75,  'right end snaps to cursor Y');
+        assert.equal(wps[2]!.point.Y, 90,  'the next bend is untouched');
     });
 
     test('an interior vertical segment moves only horizontally — both ends take cursor.X, keep Y', () => {
@@ -328,11 +329,11 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         adorner.BeginSegmentDrag(c, 2);                  // route seg 2 = (120,30)→(120,90)
         adorner.UpdateCursor(new Point(160, 999));       // Y ignored, X drives
         const wps = c.Waypoints!;
-        assert.equal(wps[1]!.Y, 30, 'top end keeps its Y');
-        assert.equal(wps[2]!.Y, 90, 'bottom end keeps its Y');
-        assert.equal(wps[1]!.X, 160, 'top end snaps to cursor X');
-        assert.equal(wps[2]!.X, 160, 'bottom end snaps to cursor X');
-        assert.equal(wps[0]!.X, 40,  'the prior bend is untouched');
+        assert.equal(wps[1]!.point.Y, 30, 'top end keeps its Y');
+        assert.equal(wps[2]!.point.Y, 90, 'bottom end keeps its Y');
+        assert.equal(wps[1]!.point.X, 160, 'top end snaps to cursor X');
+        assert.equal(wps[2]!.point.X, 160, 'bottom end snaps to cursor X');
+        assert.equal(wps[0]!.point.X, 40,  'the prior bend is untouched');
     });
 
     // A source-adjacent axis-aligned segment: the port can't move, so the
@@ -343,7 +344,7 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         const c = makeConnector();
         c.Source = new ConnectorEndpoint({ FreePoint: new Point(0, 0) });
         c.Target = new ConnectorEndpoint({ FreePoint: new Point(60, 80) });
-        c.Waypoints = [new Point(60, 0)];
+        c.Waypoints = [waypoint(new Point(60, 0))];
         return c;   // route: (0,0)→(60,0)→(60,80)
     }
 
@@ -356,11 +357,11 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         const wps = c.Waypoints!;
         // [fixedAnchor, movingNear, movingFar]
         assert.equal(wps.length, 3, 'one jog anchor + moving twin + far end');
-        assert.deepEqual({ X: wps[0]!.X, Y: wps[0]!.Y }, { X: 26, Y: 0 },
+        assert.deepEqual({ X: wps[0]!.point.X, Y: wps[0]!.point.Y }, { X: 26, Y: 0 },
             'fixed jog anchor stays at the port level (Y=0)');
-        assert.equal(wps[1]!.Y, -30, 'moving near end slid to cursor Y');
-        assert.equal(wps[2]!.Y, -30, 'moving far end slid to cursor Y');
-        assert.equal(wps[2]!.X, 60,  'far end keeps its X');
+        assert.equal(wps[1]!.point.Y, -30, 'moving near end slid to cursor Y');
+        assert.equal(wps[2]!.point.Y, -30, 'moving far end slid to cursor Y');
+        assert.equal(wps[2]!.point.X, 60,  'far end keeps its X');
         assert.equal(c.Source!.FreePoint!.X, 0, 'source port stays pinned');
         assert.equal(c.Source!.FreePoint!.Y, 0);
     });
@@ -374,10 +375,10 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         const wps = c.Waypoints!;
         // [movingNear, movingFar, fixedAnchor]
         assert.equal(wps.length, 3);
-        assert.equal(wps[0]!.X, 90, 'moving near end slid to cursor X');
-        assert.equal(wps[1]!.X, 90, 'moving far end slid to cursor X');
-        assert.equal(wps[0]!.Y, 0,  'near end keeps its Y');
-        assert.deepEqual({ X: wps[2]!.X, Y: wps[2]!.Y }, { X: 60, Y: 54 },
+        assert.equal(wps[0]!.point.X, 90, 'moving near end slid to cursor X');
+        assert.equal(wps[1]!.point.X, 90, 'moving far end slid to cursor X');
+        assert.equal(wps[0]!.point.Y, 0,  'near end keeps its Y');
+        assert.deepEqual({ X: wps[2]!.point.X, Y: wps[2]!.point.Y }, { X: 60, Y: 54 },
             'fixed jog anchor stays on the target column (X=60)');
         assert.equal(c.Target!.FreePoint!.X, 60, 'target port stays pinned');
         assert.equal(c.Target!.FreePoint!.Y, 80);
@@ -386,13 +387,13 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
     test('Abort restores the pre-drag waypoints (un-materializes the route)', () => {
         newApplication();
         const c = wpConnector();
-        const before = c.Waypoints!.map(p => ({ X: p.X, Y: p.Y }));
+        const before = c.Waypoints!.map(p => ({ X: p.point.X, Y: p.point.Y }));
         const adorner = new ConnectorEditAdorner();
         adorner.BeginSegmentDrag(c, 1);
         adorner.UpdateCursor(new Point(0, 200));
         adorner.Abort();
         const after = c.Waypoints!;
-        assert.deepEqual(after.map(p => ({ X: p.X, Y: p.Y })), before);
+        assert.deepEqual(after.map(p => ({ X: p.point.X, Y: p.point.Y })), before);
         assert.equal(adorner.IsActive, false);
     });
 
@@ -404,8 +405,8 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         adorner.UpdateCursor(new Point(0, 55));
         adorner.EndDragOverEmpty();
         assert.equal(adorner.IsActive, false);
-        assert.equal(c.Waypoints![0]!.Y, 55, 'committed Y persists');
-        assert.equal(c.Waypoints![1]!.Y, 55);
+        assert.equal(c.Waypoints![0]!.point.Y, 55, 'committed Y persists');
+        assert.equal(c.Waypoints![1]!.point.Y, 55);
     });
 
     test('a grab released with no move sheds the coincident jog anchor on commit', () => {
@@ -417,9 +418,23 @@ describe('ConnectorEditAdorner — segment drag (perpendicular slide)', () => {
         const wps = c.Waypoints!;
         for (let i = 1; i < wps.length; i++)
         {
-            assert.ok(!(wps[i]!.X === wps[i - 1]!.X && wps[i]!.Y === wps[i - 1]!.Y),
+            assert.ok(!(wps[i]!.point.X === wps[i - 1]!.point.X && wps[i]!.point.Y === wps[i - 1]!.point.Y),
                 'no coincident adjacent waypoints survive commit');
         }
+    });
+
+    test('a segment drag marks the moved vertices userAltered and keeps a prior pin', () => {
+        newApplication();
+        const c = makeConnector();
+        // First waypoint is a user pin; the other two are auto bends.
+        c.Waypoints = [waypoint(new Point(40, 30), true), waypoint(new Point(120, 30)), waypoint(new Point(120, 90))];
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginSegmentDrag(c, 2);                  // interior vertical seg (120,30)→(120,90)
+        adorner.UpdateCursor(new Point(160, 999));        // X drives
+        adorner.EndDragOverEmpty();
+        const wps = c.Waypoints!;
+        assert.ok(wps.some(w => w.userAltered && w.point.X === 40 && w.point.Y === 30), 'prior pin preserved');
+        assert.ok(wps.some(w => w.userAltered && w.point.X === 160), 'dragged vertex is pinned');
     });
 
     test('BeginSegmentDrag on an out-of-range segment index is a no-op', () => {
