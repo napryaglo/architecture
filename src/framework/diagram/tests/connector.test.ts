@@ -685,6 +685,23 @@ describe('Connector reactivity — source / target node moves', () => {
         assert.ok(c.Geometry !== undefined, 're-routed clean to the new position');
     });
 
+    test('moving an endpoint PRESERVES pinned waypoints and drops only the auto ones', () => {
+        const src = makeFigure(100, 100, 80, 80, []);
+        const tgt = makeFigure(400, 100, 80, 80, []);
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Orthogonal;
+        c.Source = new ConnectorEndpoint({ Node: src, PortSide: PortSide.E });
+        c.Target = new ConnectorEndpoint({ Node: tgt, PortSide: PortSide.W });
+        c.Waypoints = [waypoint(new Point(250, 60), true), waypoint(new Point(250, 300))];   // one pin, one auto
+
+        src.Left = 150;                       // move the source figure
+        const wps = c.Waypoints;
+        assert.ok(wps !== undefined && wps.length === 1, 'auto dropped, pin kept');
+        assert.equal(wps![0]!.userAltered, true);
+        assert.equal(wps![0]!.point.X, 250);
+        assert.equal(wps![0]!.point.Y, 60);
+    });
+
     test('moving the TARGET figure also clears the waypoints', () => {
         const src = makeFigure(100, 100, 80, 80, []);
         const tgt = makeFigure(400, 100, 80, 80, []);

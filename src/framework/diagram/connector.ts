@@ -318,9 +318,16 @@ export class Connector extends Shape
     private _onAttachedNodeMoved(): void
     {
         const wps = this.Waypoints;
-        if (wps !== undefined && wps.length > 0)
+        if (hasPinned(wps))
         {
-            this.Waypoints = undefined;   // OnPropertyChanged(WaypointsKey) → _scheduleRecompute
+            // Pins are absolute — keep them where the user put them; drop only
+            // the auto vertices so the moved port re-routes cleanly through the
+            // pins. Setting Waypoints schedules the recompute.
+            this.Waypoints = wps!.filter(w => w.userAltered);
+        }
+        else if (wps !== undefined && wps.length > 0)
+        {
+            this.Waypoints = undefined;   // no pins → clean reroute (legacy behaviour)
         }
         else
         {
