@@ -38,6 +38,7 @@ import {
 import type { Brush, Pen } from '../../../visual-engine/index.js';
 import { SolidColorBrush } from '../../../visual-engine/index.js';
 import type { Transform } from '../../../visual-engine/drawing/transform.js';
+import { waypoint } from '../route-waypoint.js';
 import { Shape } from '../../../basic/shapes/shape.js';
 import { HaloShape } from '../behaviors/connector-interactions-behavior.js';
 import { Connector } from '../connector.js';
@@ -72,7 +73,7 @@ function waypointConnector(): Connector
     c.RoutingMode = RoutingMode.Straight;
     c.Source = new ConnectorEndpoint({ FreePoint: new Point(0,   0) });
     c.Target = new ConnectorEndpoint({ FreePoint: new Point(200, 0) });
-    c.Waypoints = [new Point(100, 120)];
+    c.Waypoints = [waypoint(new Point(100, 120))];
     return c;
 }
 
