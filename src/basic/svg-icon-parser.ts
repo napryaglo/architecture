@@ -33,10 +33,15 @@ import {
 //     compose. `transform` attribute is NOT yet supported (drop with a
 //     parser warning).
 //
+// Partial support:
+//   * Gradient fills — `<linear|radialGradient>` defs are pre-scanned and a
+//     `fill="url(#id)"` shape lowers to the gradient's first-stop color (a
+//     solid stand-in; no true gradient paint). href-chained gradients skipped.
+//
 // Out of scope (sketch-level):
-//   * `<defs>`, `<symbol>`, `<use>` (icon packs that ship sprite sheets
-//     need a pre-pass to expand them).
-//   * Gradients, filters, masks, clip-paths, `<text>`.
+//   * `<symbol>`, `<use>` (icon packs that ship sprite sheets need a
+//     pre-pass to expand them).
+//   * Filters, masks, clip-paths, `<text>`.
 //   * CSS styles (`style=` attribute, `<style>` blocks).
 //   * Most `transform=` matrix / rotate / skew. Only the parent <g>
 //     pattern is flagged; per-shape transforms drop silently for now.
@@ -99,9 +104,12 @@ export function parseSvgIcon(svgText: string, opts: ParseOptions = {}): IconDefi
     const bodyEnd   = svgText.lastIndexOf('</svg>');
     const body      = svgText.slice(bodyStart, bodyEnd === -1 ? undefined : bodyEnd);
 
-    const rootInherited = mergeInherited(EMPTY_INHERITED, svgAttrs);
+    // Pre-scan gradient defs so `fill="url(#id)"` shapes resolve to a solid
+    // stand-in (see collectGradients) instead of the CURRENT_COLOR fallback.
+    const gradients = collectGradients(body);
+    const rootInherited = mergeInherited(EMPTY_INHERITED, svgAttrs, gradients);
     const shapes: IconShape[] = [];
-    parseGroup(body, rootInherited, shapes);
+    parseGroup(body, rootInherited, shapes, gradients);
     return new IconDefinition(viewBoxW, viewBoxH, shapes);
 }
 
@@ -128,7 +136,7 @@ const EMPTY_INHERITED: InheritedPaint = Object.freeze({
 });
 
 // Walk one body section, emitting shapes into `out`. Recurses into <g>.
-function parseGroup(body: string, inherited: InheritedPaint, out: IconShape[]): void
+function parseGroup(body: string, inherited: InheritedPaint, out: IconShape[], gradients: Map<string, Color>): void
 {
     // Tag-level tokenizer. Each iteration finds the next opening tag,
     // extracts its attributes, and either:
@@ -172,17 +180,17 @@ function parseGroup(body: string, inherited: InheritedPaint, out: IconShape[]): 
 
         if (tagName === 'g')
         {
-            const merged = mergeInherited(inherited, attrs);
+            const merged = mergeInherited(inherited, attrs, gradients);
             // Walk to matching </g>. Nesting-aware (skip <g> opens that
             // aren't ours).
             const subEnd = findMatchingClose(body, tagEnd + 1, 'g');
             if (subEnd === -1) break;
-            parseGroup(body.slice(tagEnd + 1, subEnd), merged, out);
+            parseGroup(body.slice(tagEnd + 1, subEnd), merged, out, gradients);
             i = body.indexOf('>', subEnd) + 1;
             continue;
         }
 
-        const shape = buildShape(tagName, attrs, inherited);
+        const shape = buildShape(tagName, attrs, inherited, gradients);
         if (shape !== undefined) out.push(shape);
 
         if (!selfClose)
@@ -226,14 +234,14 @@ function findMatchingClose(body: string, from: number, tagName: string): number
     return -1;
 }
 
-function mergeInherited(parent: InheritedPaint, attrs: Map<string, string>): InheritedPaint
+function mergeInherited(parent: InheritedPaint, attrs: Map<string, string>, gradients: Map<string, Color>): InheritedPaint
 {
     const fillAttr   = attrs.get('fill');
     const strokeAttr = attrs.get('stroke');
     const swAttr     = attrs.get('stroke-width');
     return {
-        Fill:        fillAttr   !== undefined ? parsePaint(fillAttr)   : parent.Fill,
-        Stroke:      strokeAttr !== undefined ? parsePaint(strokeAttr) : parent.Stroke,
+        Fill:        fillAttr   !== undefined ? parsePaint(fillAttr, gradients)   : parent.Fill,
+        Stroke:      strokeAttr !== undefined ? parsePaint(strokeAttr, gradients) : parent.Stroke,
         StrokeWidth: swAttr     !== undefined ? parseFloat(swAttr)     : parent.StrokeWidth,
     };
 }
@@ -242,13 +250,14 @@ function buildShape(
     tag:        string,
     attrs:      Map<string, string>,
     inherited:  InheritedPaint,
+    gradients:  Map<string, Color>,
 ): IconShape | undefined
 {
     const fillRaw   = attrs.get('fill');
     const strokeRaw = attrs.get('stroke');
     const swRaw     = attrs.get('stroke-width');
-    const fill:        IconPaint = fillRaw   !== undefined ? parsePaint(fillRaw)   : inherited.Fill;
-    const stroke:      IconPaint = strokeRaw !== undefined ? parsePaint(strokeRaw) : inherited.Stroke;
+    const fill:        IconPaint = fillRaw   !== undefined ? parsePaint(fillRaw, gradients)   : inherited.Fill;
+    const stroke:      IconPaint = strokeRaw !== undefined ? parsePaint(strokeRaw, gradients) : inherited.Stroke;
     const strokeWidth: number    = swRaw     !== undefined ? parseFloat(swRaw)     : inherited.StrokeWidth;
 
     let geometry: Geometry | undefined;
@@ -361,16 +370,59 @@ function parseNumbers(s: string): number[]
     return (s.match(/-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?/g) ?? []).map(Number);
 }
 
-function parsePaint(s: string): IconPaint
+function parsePaint(s: string, gradients: Map<string, Color>): IconPaint
 {
     const v = s.trim();
     if (v === '' || v.toLowerCase() === 'none') return undefined;
     if (v.toLowerCase() === 'currentcolor')     return CURRENT_COLOR;
+    // `fill="url(#id)"` — resolve a gradient reference to its solid stand-in
+    // (first stop). Unknown / non-gradient refs keep the currentColor fallback.
+    const url = /^url\(\s*#([^)\s]+)\s*\)$/i.exec(v);
+    if (url !== null) return gradients.get(url[1]!) ?? CURRENT_COLOR;
     // SVG accepts named colors too — we'd need a table; for sketch we
     // hex / rgb only. Anything unrecognised falls back to currentColor
     // so the icon still paints.
     const color = parseColor(v);
     return color ?? CURRENT_COLOR;
+}
+
+// Pre-scan `<linearGradient>` / `<radialGradient>` defs into id → first-stop
+// color. A gradient can't be a solid IconPaint, so a `url(#id)` fill lowers to
+// the gradient's first stop — the convention Azure/Fluent icons follow (a
+// darker base stop as the representative brand color). Gradients that only
+// inherit stops via href (no own <stop>) are skipped; their url() falls back to
+// CURRENT_COLOR, unchanged from before.
+function collectGradients(body: string): Map<string, Color>
+{
+    const out = new Map<string, Color>();
+    const re = /<(?:linear|radial)Gradient\b([^>]*)>([\s\S]*?)<\/(?:linear|radial)Gradient>/gi;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(body)) !== null)
+    {
+        const id = parseAttributes(m[1] ?? '').get('id');
+        if (id === undefined) continue;
+        const color = firstStopColor(m[2] ?? '');
+        if (color !== undefined) out.set(id, color);
+    }
+    return out;
+}
+
+function firstStopColor(inner: string): Color | undefined
+{
+    const stop = /<stop\b([^>]*?)\/?>/i.exec(inner);
+    if (stop === null) return undefined;
+    const attrs = parseAttributes(stop[1] ?? '');
+    const raw = attrs.get('stop-color') ?? styleProp(attrs.get('style'), 'stop-color');
+    return raw !== undefined ? parseColor(raw.trim()) : undefined;
+}
+
+// Read one `prop: value` out of a `style="…"` attribute (icon packs sometimes
+// put stop-color there instead of the presentation attribute).
+function styleProp(style: string | undefined, prop: string): string | undefined
+{
+    if (style === undefined) return undefined;
+    const m = new RegExp(`(?:^|;)\\s*${prop}\\s*:\\s*([^;]+)`, 'i').exec(style);
+    return m !== null ? m[1]!.trim() : undefined;
 }
 
 function parseColor(s: string): Color | undefined
