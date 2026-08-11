@@ -1,4 +1,5 @@
 import {
+    type CollectionChange,
     type ICommand,
     MetaData,
     Model,
@@ -8,6 +9,7 @@ import {
     ServiceKey,
     type ServiceToken,
 } from '../../runtime/index.js';
+import { resolveKey } from '../../runtime/model-internals.js';
 import { Point, TextAlignment } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Group } from './group.js';
@@ -260,6 +262,14 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
     private _nextId = 1;
 
+    // Per-item teardown thunks for the dirty-on-edit listeners (see _trackEdits).
+    // A route drag, endpoint reconnect, or node move mutates a Connector / node
+    // DIRECTLY — not through a mutation method — so without these the document
+    // never learns it has unsaved changes and the shell's Save command (gated on
+    // IsDirty) stays disabled. Keyed by the node / connector; cleared on removal.
+    private readonly _nodeDirtyTeardown      = new Map<object, () => void>();
+    private readonly _connectorDirtyTeardown = new Map<object, () => void>();
+
     // Guards the view→document mirror so a pulled value isn't written straight
     // back out to the view (which would loop).
     private _syncingFromView = false;
@@ -275,6 +285,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         this.set_property_value(DiagramDocument.NodesKey,         new ObservableCollection<Figure | Group | NodeViewModel>());
         this.set_property_value(DiagramDocument.ConnectorsKey,    new ObservableCollection<Connector>());
         this.set_property_value(DiagramDocument.StorageKey,       storage);
+        this._trackEdits();
         // The palette lives in the framework ToolboxRepository (a Services
         // singleton the Diagram first-inits with a built-in Shapes page); the
         // document no longer owns a ToolboxShapes collection.
@@ -306,6 +317,101 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     // mutation; cleared by Save / Load. Private — dirtiness is derived, not set
     // from outside.
     private _markDirty(): void { this.set_property_value(DiagramDocument.IsDirtyKey, true); }
+
+    // Observe the Nodes / Connectors collections so an in-place edit — a route
+    // drag (Waypoints), an endpoint reconnect (endpoint.Node / FreePoint), a
+    // routing-mode flip, or a node move / resize — flips IsDirty. Structural
+    // add / delete already dirty through the mutation methods; this covers the
+    // edits that mutate a live node or connector directly. Load / Save clear
+    // IsDirty AFTER their work, so the rehydration writes below don't leave a
+    // freshly opened or just-saved document falsely dirty.
+    private _trackEdits(): void
+    {
+        this.Nodes.Subscribe(ch => this._reconcileDirtyListeners(
+            ch, this._nodeDirtyTeardown, n => this._wireNodeDirty(n)));
+        this.Connectors.Subscribe(ch => this._reconcileDirtyListeners(
+            ch, this._connectorDirtyTeardown, c => this._wireConnectorDirty(c)));
+    }
+
+    private _reconcileDirtyListeners<T extends object>(
+        change:   CollectionChange<T>,
+        teardowns: Map<object, () => void>,
+        wire:     (item: T) => () => void,
+    ): void
+    {
+        const track = (item: T): void => {
+            if (teardowns.has(item)) return;
+            teardowns.set(item, wire(item));
+        };
+        const untrack = (item: object): void => {
+            const off = teardowns.get(item);
+            if (off !== undefined) { off(); teardowns.delete(item); }
+        };
+        switch (change.kind)
+        {
+            case 'inserted': for (const it of change.items) track(it); break;
+            case 'removed':  for (const it of change.items) untrack(it); break;
+            case 'replaced': untrack(change.oldItem); track(change.newItem); break;
+            case 'cleared':  for (const off of teardowns.values()) off(); teardowns.clear(); break;
+            // 'moved' preserves identity — the listeners already cover it.
+        }
+    }
+
+    // A move (Left / Top) or resize (Width / Height) is a persisted edit. Skip
+    // any node lacking those DPs (e.g. a bare Group) — nothing to observe.
+    private _wireNodeDirty(node: Figure | Group | NodeViewModel): () => void
+    {
+        const ctor = node.constructor;
+        const names = (['Left', 'Top', 'Width', 'Height'] as const).filter(n => Model.HasProperty(ctor, n));
+        if (names.length === 0) return () => {};
+        const onEdited = (): void => this._markDirty();
+        const keys = names.map(n => resolveKey(node, undefined, n));
+        for (const k of keys) node.AddPropertyChangedListener(k, onEdited);
+        return () => { for (const k of keys) node.RemovePropertyChangedListener(k, onEdited); };
+    }
+
+    // Track the connector's user-editable route inputs, plus each endpoint's
+    // connection fields (rewired when Source / Target swap). PortSide / PortIndex
+    // are deliberately NOT tracked — those are baked / rebalanced automatically
+    // as a route settles, which would falsely dirty a freshly opened document;
+    // a genuine endpoint reconnect still dirties through the endpoint's Node.
+    private _wireConnectorDirty(conn: Connector): () => void
+    {
+        const onEdited = (): void => this._markDirty();
+        conn.AddPropertyChangedListener(Connector.WaypointsKey,   onEdited);
+        conn.AddPropertyChangedListener(Connector.RoutingModeKey, onEdited);
+        conn.AddPropertyChangedListener(Connector.SourceKey,      onEdited);
+        conn.AddPropertyChangedListener(Connector.TargetKey,      onEdited);
+
+        let offSrc = this._wireEndpointDirty(conn.Source, onEdited);
+        let offTgt = this._wireEndpointDirty(conn.Target, onEdited);
+        const rewireSrc = (): void => { offSrc(); offSrc = this._wireEndpointDirty(conn.Source, onEdited); };
+        const rewireTgt = (): void => { offTgt(); offTgt = this._wireEndpointDirty(conn.Target, onEdited); };
+        conn.AddPropertyChangedListener(Connector.SourceKey, rewireSrc);
+        conn.AddPropertyChangedListener(Connector.TargetKey, rewireTgt);
+
+        return () => {
+            conn.RemovePropertyChangedListener(Connector.WaypointsKey,   onEdited);
+            conn.RemovePropertyChangedListener(Connector.RoutingModeKey, onEdited);
+            conn.RemovePropertyChangedListener(Connector.SourceKey,      onEdited);
+            conn.RemovePropertyChangedListener(Connector.TargetKey,      onEdited);
+            conn.RemovePropertyChangedListener(Connector.SourceKey,      rewireSrc);
+            conn.RemovePropertyChangedListener(Connector.TargetKey,      rewireTgt);
+            offSrc(); offTgt();
+        };
+    }
+
+    private _wireEndpointDirty(ep: ConnectorEndpoint | undefined, onEdited: () => void): () => void
+    {
+        if (ep === undefined) return () => {};
+        const keys = [
+            ConnectorEndpoint.NodeKey,
+            ConnectorEndpoint.FreePointKey,
+            ConnectorEndpoint.PortNameKey,
+        ];
+        for (const k of keys) ep.AddPropertyChangedListener(k, onEdited);
+        return () => { for (const k of keys) ep.RemovePropertyChangedListener(k, onEdited); };
+    }
 
     // ── ICommandTarget surface — the diagram as a command dispatch target ──
     // The ToolbarService reads CommandContexts to decide which commands show,
