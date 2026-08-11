@@ -32,6 +32,7 @@ import type { DiagramMutator } from './behaviors/attach-standard-mutations.js';
 import { Connector } from './connector.js';
 import { waypoint } from './route-waypoint.js';
 import { ConnectorEndpoint } from './connector-endpoint.js';
+import { PortSide } from './port.js';
 import type { IDocument } from '../shell/services/documents-content-host-service.js';
 import type { ICommandTarget } from '../shell/commands/command-target.js';
 import type { CommandDefinition } from '../shell/commands/command-definition.js';
@@ -90,6 +91,12 @@ interface SerializedConnectorEndpoint
 {
     readonly nodeId?:   string;
     readonly portName?: string;
+    // The side of the node the connector attaches to (N/S/E/W), and the slot
+    // within that side, when the user pinned them by dragging the endpoint to a
+    // side. Without these, a reloaded endpoint is bare and the router re-derives
+    // a geometry-optimal side, discarding the user's choice.
+    readonly portSide?:  PortSide;
+    readonly portIndex?: number;
     readonly freeX?:    number;
     readonly freeY?:    number;
 }
@@ -1011,24 +1018,38 @@ function serializeEndpoint(ep: ConnectorEndpoint): SerializedConnectorEndpoint
     const node = ep.Node;
     if ((node instanceof Figure || node instanceof NodeViewModel) && node.Id !== undefined && node.Id !== '')
     {
-        const out: SerializedConnectorEndpoint = { nodeId: node.Id };
-        if (ep.PortName !== undefined) return { ...out, portName: ep.PortName };
-        return out;
+        return nodeEndpoint(node.Id, ep);
     }
     // A reference whose node wasn't present at the last load: preserve the id
     // (and any port) so the endpoint re-binds on a later, correct load rather
     // than being silently rewritten to a free point (which destroys it).
     if (ep.UnresolvedNodeId !== undefined)
     {
-        const out: SerializedConnectorEndpoint = { nodeId: ep.UnresolvedNodeId };
-        if (ep.PortName !== undefined) return { ...out, portName: ep.PortName };
-        return out;
+        return nodeEndpoint(ep.UnresolvedNodeId, ep);
     }
     const fp = ep.FreePoint;
     if (fp !== undefined) return { freeX: fp.X, freeY: fp.Y };
     // Endpoint without a usable anchor — serialize as empty; rehydrate
     // will produce a default endpoint with FreePoint(0,0).
     return {};
+}
+
+// A node-anchored serialized endpoint, carrying the port addressing the user
+// pinned: PortName, or the PortSide (+ slot PortIndex) chosen by dragging the
+// endpoint onto a side. PortSide.Auto is the "derive from geometry" sentinel —
+// not a user choice — so it is omitted, letting the side re-derive on load.
+function nodeEndpoint(nodeId: string, ep: ConnectorEndpoint): SerializedConnectorEndpoint
+{
+    const out: {
+        nodeId: string; portName?: string; portSide?: PortSide; portIndex?: number;
+    } = { nodeId };
+    if (ep.PortName !== undefined) out.portName = ep.PortName;
+    if (ep.PortSide !== undefined && ep.PortSide !== PortSide.Auto)
+    {
+        out.portSide = ep.PortSide;
+        if (ep.PortIndex !== undefined) out.portIndex = ep.PortIndex;
+    }
+    return out;
 }
 
 function rehydrateEndpoint(
@@ -1042,8 +1063,10 @@ function rehydrateEndpoint(
         if (node !== undefined)
         {
             return new ConnectorEndpoint({
-                Node:     node,
-                PortName: s.portName,
+                Node:      node,
+                PortName:  s.portName,
+                PortSide:  s.portSide,
+                PortIndex: s.portIndex,
             });
         }
         // Node absent from THIS load (e.g. a node type whose serializer wasn't
@@ -1056,6 +1079,8 @@ function rehydrateEndpoint(
         return new ConnectorEndpoint({
             UnresolvedNodeId: s.nodeId,
             PortName:         s.portName,
+            PortSide:         s.portSide,
+            PortIndex:        s.portIndex,
         });
     }
     if (typeof s.freeX === 'number' && typeof s.freeY === 'number')

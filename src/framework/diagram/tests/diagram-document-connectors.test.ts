@@ -222,6 +222,27 @@ describe('DiagramDocument — Save / Load round-trips connectors', () => {
         assert.equal(rC.Target!.FreePoint!.Y, 17);
     });
 
+    test('endpoint PortSide / PortIndex round-trip (a hand-placed side is kept)', () => {
+        const storage = new MemoryStorage();
+        const doc = newDoc(storage);
+        const a = doc.CreateNode('ellipse',   0,   0)!;
+        const b = doc.CreateNode('rectangle', 300, 0)!;
+        const c = doc.CreateConnector(new ConnectorEndpoint({ Node: a }), new ConnectorEndpoint({ Node: b }))!;
+        // Simulate the user dragging each endpoint onto a specific side.
+        c.Source!.PortSide = PortSide.E;
+        c.Target!.PortSide = PortSide.N;
+        c.Target!.PortIndex = 1;
+        doc.Save();
+
+        const restored = newDoc(storage);
+        restored.Storage = storage;
+        restored.Load();
+        const rC = restored.Connectors.Get(0)!;
+        assert.equal(rC.Source!.PortSide, PortSide.E, 'source side preserved');
+        assert.equal(rC.Target!.PortSide, PortSide.N, 'target side preserved');
+        assert.equal(rC.Target!.PortIndex, 1, 'target slot preserved');
+    });
+
     test('an endpoint whose node is absent on load PRESERVES its nodeId (no origin collapse)', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
