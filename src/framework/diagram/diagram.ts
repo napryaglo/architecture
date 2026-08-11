@@ -74,6 +74,7 @@ import {
     type ConnectorInteractionsHandlers,
 } from './behaviors/connector-interactions-behavior.js';
 import { Connector } from './connector.js';
+import { type RouteWaypoint, waypoint, hasPinned } from './route-waypoint.js';
 import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-connector-drag.js';
 import { DiagramSettings } from './diagram-settings.js';
 
@@ -479,18 +480,18 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     {
         const connectors = this.Connectors;
         if (connectors === undefined) return undefined;
-        const tracked: { connector: Connector; snapshot: readonly Point[] }[] = [];
+        const tracked: { connector: Connector; snapshot: readonly RouteWaypoint[] }[] = [];
         for (let i = 0; i < connectors.Count; i++)
         {
             const c = connectors.Get(i);
             if (!(c instanceof Connector)) continue;
             const wps = c.Waypoints;
-            if (wps === undefined || wps.length === 0) continue;   // nothing to preserve
+            if (!hasPinned(wps)) continue;   // only pins need rigid carry; auto re-minimises on the per-figure reroute
             const sn = c.Source?.Node;
             const tn = c.Target?.Node;
             if (sn === undefined || tn === undefined) continue;
             if (!movingSet.has(sn) || !movingSet.has(tn)) continue; // internal only
-            tracked.push({ connector: c, snapshot: wps.slice() });
+            tracked.push({ connector: c, snapshot: wps!.slice() });
         }
         if (tracked.length === 0) return undefined;
 
@@ -502,7 +503,8 @@ export class Diagram extends Selector implements RigidConnectorDragHost
                 totalDy += dy;
                 for (const t of tracked)
                 {
-                    t.connector.Waypoints = t.snapshot.map(p => new Point(p.X + totalDx, p.Y + totalDy));
+                    t.connector.Waypoints = t.snapshot.map(w =>
+                        waypoint(new Point(w.point.X + totalDx, w.point.Y + totalDy), w.userAltered));
                 }
             },
             End: (): void => { tracked.length = 0; },
