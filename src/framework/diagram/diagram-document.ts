@@ -28,6 +28,7 @@ import {
 import { GeometryCombineMode } from './commands/combine.js';
 import type { DiagramMutator } from './behaviors/attach-standard-mutations.js';
 import { Connector } from './connector.js';
+import { waypoint } from './route-waypoint.js';
 import { ConnectorEndpoint } from './connector-endpoint.js';
 import type { IDocument } from '../shell/services/documents-content-host-service.js';
 import type { ICommandTarget } from '../shell/commands/command-target.js';
@@ -95,7 +96,7 @@ interface SerializedConnector
 {
     readonly source:      SerializedConnectorEndpoint;
     readonly target:      SerializedConnectorEndpoint;
-    readonly waypoints?:  ReadonlyArray<{ readonly x: number; readonly y: number }>;
+    readonly waypoints?:  ReadonlyArray<{ readonly x: number; readonly y: number; readonly userAltered?: boolean }>;
     readonly routingMode?: string;
     // Connector label (Slice 5). `text` reuses the node text block form;
     // `labelPos` is the arc-length fraction, omitted when the default 0.5.
@@ -723,7 +724,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 source:      serializeEndpoint(src),
                 target:      serializeEndpoint(tgt),
                 waypoints:   c.Waypoints !== undefined && c.Waypoints.length > 0
-                    ? c.Waypoints.map(p => ({ x: p.X, y: p.Y }))
+                    ? c.Waypoints.map(w => ({ x: w.point.X, y: w.point.Y, userAltered: w.userAltered }))
                     : undefined,
                 routingMode: c.RoutingMode,
                 text:        serializeShapeText(c.Text),
@@ -840,7 +841,8 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             c.Target = rehydrateEndpoint(sc.target, byId);
             if (sc.waypoints !== undefined && sc.waypoints.length > 0)
             {
-                c.Waypoints = sc.waypoints.map(p => new Point(p.x, p.y));
+                // Legacy entries (no userAltered) were all hand-routed intent → pin them.
+                c.Waypoints = sc.waypoints.map(p => waypoint(new Point(p.x, p.y), p.userAltered ?? true));
             }
             if (sc.text !== undefined) applySerializedText(c.Text, sc.text);
             if (typeof sc.labelPos === 'number') c.LabelPosition = sc.labelPos;

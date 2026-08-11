@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 
 import { Application, ObservableCollection } from '../../../runtime/index.js';
 import { Point } from '../../../visual-engine/index.js';
+import { waypoint } from '../route-waypoint.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Diagram } from '../diagram.js';
@@ -138,7 +139,7 @@ describe('DiagramDocument — Save / Load round-trips connectors', () => {
             new ConnectorEndpoint({ Node: a, PortName: 'out' }),
             new ConnectorEndpoint({ Node: b }))!;
         c.RoutingMode = RoutingMode.Straight;
-        c.Waypoints = [new Point(200, 50)];
+        c.Waypoints = [waypoint(new Point(200, 50), true)];
 
         doc.Save();
 
@@ -157,8 +158,50 @@ describe('DiagramDocument — Save / Load round-trips connectors', () => {
         assert.equal(rC.Target!.Node, rB);
         assert.equal(rC.RoutingMode, RoutingMode.Straight);
         assert.equal(rC.Waypoints!.length, 1);
-        assert.equal(rC.Waypoints![0]!.X, 200);
-        assert.equal(rC.Waypoints![0]!.Y, 50);
+        assert.equal(rC.Waypoints![0]!.point.X, 200);
+        assert.equal(rC.Waypoints![0]!.point.Y, 50);
+        assert.equal(rC.Waypoints![0]!.userAltered, true, 'pin flag round-trips');
+    });
+
+    test('mixed pinned/auto waypoints round-trip with flags intact', () => {
+        const storage = new MemoryStorage();
+        const doc = newDoc(storage);
+        const a = doc.CreateNode('rectangle', 0, 0)!;
+        const b = doc.CreateNode('ellipse', 200, 0)!;
+        const c = doc.CreateConnector(new ConnectorEndpoint({ Node: a }), new ConnectorEndpoint({ Node: b }))!;
+        c.Waypoints = [waypoint(new Point(60, 40), true), waypoint(new Point(120, 40))];
+        doc.Save();
+
+        const restored = newDoc(storage);
+        restored.Storage = storage;
+        restored.Load();
+        const wps = restored.Connectors.Get(0)!.Waypoints!;
+        assert.deepEqual(
+            wps.map(w => [w.point.X, w.point.Y, w.userAltered]),
+            [[60, 40, true], [120, 40, false]]);
+    });
+
+    test('legacy waypoints without userAltered load as pinned', () => {
+        const storage = new MemoryStorage();
+        const doc = newDoc(storage);
+        const a = doc.CreateNode('rectangle', 0, 0)!;
+        const b = doc.CreateNode('ellipse', 200, 0)!;
+        const c = doc.CreateConnector(new ConnectorEndpoint({ Node: a }), new ConnectorEndpoint({ Node: b }))!;
+        c.Waypoints = [waypoint(new Point(70, 8))];
+        doc.Save();
+
+        // Simulate a pre-flag scene: strip userAltered from the persisted waypoints.
+        const KEY = 'mural-diagram-state-v1';
+        const raw = JSON.parse(storage.GetItem(KEY)!) as { connectors: { waypoints: { x: number; y: number }[] }[] };
+        raw.connectors[0]!.waypoints = raw.connectors[0]!.waypoints.map(w => ({ x: w.x, y: w.y }));
+        storage.SetItem(KEY, JSON.stringify(raw));
+
+        const restored = newDoc(storage);
+        restored.Storage = storage;
+        restored.Load();
+        const w = restored.Connectors.Get(0)!.Waypoints![0]!;
+        assert.equal(w.point.X, 70);
+        assert.equal(w.userAltered, true, 'legacy waypoint pins');
     });
 
     test('free-floating endpoints round-trip through FreePoint', () => {
