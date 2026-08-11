@@ -1391,6 +1391,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
                 node.set_property_value(Figure.TopKey,    new Binding(item, 'Top',    BindingMode.TwoWay) as unknown as number);
                 node.set_property_value(Visual.WidthKey,  new Binding(item, 'Width',  BindingMode.TwoWay) as unknown as number);
                 node.set_property_value(Visual.HeightKey, new Binding(item, 'Height', BindingMode.TwoWay) as unknown as number);
+                // Content-sizing mode + the user-resized latch travel with the VM
+                // so a content node (icon+label tile) fits its content and a
+                // hand-resize pins it. Geometric shapes leave SizeToContent false.
+                node.set_property_value(Figure.SizeToContentKey, new Binding(item, 'SizeToContent', BindingMode.OneWay) as unknown as boolean);
+                node.set_property_value(Figure.UserSizedKey,     new Binding(item, 'UserSized',     BindingMode.TwoWay) as unknown as boolean);
             }
         }
         else

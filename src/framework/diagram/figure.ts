@@ -141,6 +141,18 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public static readonly TextKey = Model.RegisterProperty<ShapeText | undefined>(
         Figure, 'Text', undefined, MetaData.Measure);
 
+    // Content-sizing mode (mirrors the bound VM's SizeToContent). A content
+    // node — an icon+label tile with no geometry — has no meaningful box to
+    // fix; it sizes to its rendered content (see _applyContentFit), and the
+    // two-way Width/Height bind carries that back to the VM. Geometric shapes
+    // leave this false and stay fixed-size + resizable.
+    public static readonly SizeToContentKey = Model.RegisterProperty<boolean>(
+        Figure, 'SizeToContent', false, MetaData.Measure);
+    // Set once the user hand-resizes the node: content auto-fit stops so the
+    // explicit size sticks.
+    public static readonly UserSizedKey = Model.RegisterProperty<boolean>(
+        Figure, 'UserSized', false, MetaData.None);
+
     // Stable identifier — used by serialize / deserialize and by external
     // consumers that need to refer back to a specific figure after Load.
     public static readonly IdKey = Model.RegisterProperty<string | undefined>(
@@ -363,6 +375,52 @@ export class Figure extends ContentControl implements ISideEndpointHost
         if (needH > this.Height) this.Height = needH;
     }
 
+    // Re-entrancy guard for _applyContentFit — setting Width/Height re-invalidates
+    // measure, and the fit runs again on the next pass; the guard keeps a single
+    // pass from recursing while it writes.
+    private _fittingContent = false;
+
+    // Content-node sizing (SizeToContent). A tile with no geometry has no box to
+    // fix, so its size follows its rendered content: measure PART_Content at its
+    // natural size and write Width/Height to match (both grow AND shrink). The
+    // two-way Width/Height bind carries this to the bound VM, so the selection
+    // adorner, connectors, layout and serialization all see the true tile bounds.
+    // Skipped once the user hand-resizes (UserSized) so the explicit size sticks.
+    //
+    // Convergence: PART_Content is measured UNCONSTRAINED, so its desired size is
+    // independent of this Figure's Width/Height — once they equal it, the next
+    // pass writes nothing and layout settles. The tile's own label caps its width
+    // (its MaxWidth), so an unconstrained measure still wraps to a bounded size.
+    private _applyContentFit(): void
+    {
+        if (!this.SizeToContent || this.UserSized || this._fittingContent) return;
+        // PART_Content is sized to the Figure's box (Width=$$Width), so measure
+        // its materialized child — the tile — for the natural content size.
+        const presenter = this.GetTemplateChild('PART_Content') as Element | undefined;
+        const content = presenter?.visualChildren[0] as Element | undefined;
+        if (content === undefined) return;
+        content.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
+        const d = content.DesiredSize;
+        if (d.Width <= 0 && d.Height <= 0) return;   // not rendered yet
+        this._fittingContent = true;
+        try
+        {
+            if (Math.abs(d.Width  - this.Width)  > 0.5) this.Width  = d.Width;
+            if (Math.abs(d.Height - this.Height) > 0.5) this.Height = d.Height;
+        }
+        finally
+        {
+            this._fittingContent = false;
+        }
+    }
+
+    protected override MeasureOverride(available: Size): Size
+    {
+        const measured = super.MeasureOverride(available);
+        this._applyContentFit();
+        return measured;
+    }
+
     // Resolve every {field} in the label against this figure's live values.
     private _refreshLabelFields(): void
     {
@@ -397,6 +455,10 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public set Fill(value: Brush | undefined)  { this.set_property_value(Figure.FillKey, value); }
     public get Stroke(): Pen | undefined       { return this.get_property_value(Figure.StrokeKey); }
     public set Stroke(value: Pen | undefined)  { this.set_property_value(Figure.StrokeKey, value); }
+    public get SizeToContent(): boolean        { return this.get_property_value(Figure.SizeToContentKey); }
+    public set SizeToContent(value: boolean)   { this.set_property_value(Figure.SizeToContentKey, value); }
+    public get UserSized(): boolean            { return this.get_property_value(Figure.UserSizedKey); }
+    public set UserSized(value: boolean)       { this.set_property_value(Figure.UserSizedKey, value); }
     // The text block itself. Always present (seeded in the ctor).
     public get Text(): ShapeText               { return this.get_property_value(Figure.TextKey)!; }
     // LabelText — sugar over Text.Content for the common "just set a caption"

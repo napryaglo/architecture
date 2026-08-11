@@ -34,6 +34,9 @@ interface FigureSnapshot {
     topKey:  PropertyKey<unknown>;
     wKey:    PropertyKey<unknown>;
     hKey:    PropertyKey<unknown>;
+    // Present only for nodes that carry a UserSized latch (content nodes). A
+    // hand-resize sets it so their content auto-fit stops and the size sticks.
+    userSizedKey?: PropertyKey<unknown>;
     left: number; top: number; w: number; h: number;
     // True iff every geometry DP is read-only — skip this entry in
     // applyResize (we can't write through). Groups land here.
@@ -96,12 +99,14 @@ export class DiagramSelectionSource implements SelectionSource
             const hDesc    = findDescriptor(klass, 'Height');
             if (leftDesc === undefined || topDesc === undefined || wDesc === undefined || hDesc === undefined) continue;
             const isReadOnly = wDesc.IsReadOnly === true || hDesc.IsReadOnly === true;
+            const hasUserSized = findDescriptor(klass, 'UserSized') !== undefined;
             snaps.push({
                 item,
                 leftKey: resolveKey(item, undefined, 'Left'),
                 topKey:  resolveKey(item, undefined, 'Top'),
                 wKey:    resolveKey(item, undefined, 'Width'),
                 hKey:    resolveKey(item, undefined, 'Height'),
+                userSizedKey: hasUserSized ? resolveKey(item, undefined, 'UserSized') : undefined,
                 left: (item as unknown as { Left: number }).Left,
                 top:  (item as unknown as { Top:  number }).Top,
                 w:    (item as unknown as { Width:  number }).Width,
@@ -132,6 +137,9 @@ export class DiagramSelectionSource implements SelectionSource
             const newLeft = (xAnchor === HorizontalAnchor.Right)  ? s.left + s.w - newW : s.left;
             const newTop  = (yAnchor === VerticalAnchor.Bottom) ? s.top  + s.h - newH : s.top;
 
+            // Latch UserSized so a content node stops auto-fitting and keeps the
+            // hand-set size (no-op for nodes without the DP).
+            if (s.userSizedKey !== undefined) s.item.set_property_value_with_key(s.userSizedKey, true);
             s.item.set_property_value_with_key(s.leftKey, newLeft);
             s.item.set_property_value_with_key(s.topKey,  newTop);
             s.item.set_property_value_with_key(s.wKey,    newW);
