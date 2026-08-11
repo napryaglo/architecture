@@ -10,7 +10,7 @@ import {
     type ServiceToken,
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
-import { Point, TextAlignment } from '../../visual-engine/index.js';
+import { Pen, Point, TextAlignment } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Group } from './group.js';
 import { NodeViewModel } from './node-view-model.js';
@@ -357,17 +357,46 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         }
     }
 
-    // A move (Left / Top) or resize (Width / Height) is a persisted edit. Skip
-    // any node lacking those DPs (e.g. a bare Group) — nothing to observe.
+    // A move / resize (Left / Top / Width / Height) or a format edit (Fill /
+    // Stroke, from the Format Shape pane) is a persisted change. Fill and the
+    // Stroke pen reference swap fire the node's own DP; the Stroke pen's paint
+    // is ALSO edited in place (FormatMirror mutates Brush / Thickness on the
+    // existing Pen), which fires on the Pen, so track the current pen too and
+    // rewire it when the Stroke reference swaps. Skip any DP the node lacks
+    // (a bare Group has none — nothing to observe).
     private _wireNodeDirty(node: Figure | Group | NodeViewModel): () => void
     {
         const ctor = node.constructor;
-        const names = (['Left', 'Top', 'Width', 'Height'] as const).filter(n => Model.HasProperty(ctor, n));
-        if (names.length === 0) return () => {};
         const onEdited = (): void => this._markDirty();
+        const names = (['Left', 'Top', 'Width', 'Height', 'Fill', 'Stroke'] as const)
+            .filter(n => Model.HasProperty(ctor, n));
         const keys = names.map(n => resolveKey(node, undefined, n));
         for (const k of keys) node.AddPropertyChangedListener(k, onEdited);
-        return () => { for (const k of keys) node.RemovePropertyChangedListener(k, onEdited); };
+
+        // In-place Stroke-pen tracking, rewired on a Stroke reference swap.
+        const strokeHost = node as { Stroke?: Pen };
+        let offPen = this._wirePenDirty(strokeHost.Stroke, onEdited);
+        const rewirePen = (): void => { offPen(); offPen = this._wirePenDirty(strokeHost.Stroke, onEdited); };
+        const hasStroke = Model.HasProperty(ctor, 'Stroke');
+        const strokeKey = hasStroke ? resolveKey(node, undefined, 'Stroke') : undefined;
+        if (strokeKey !== undefined) node.AddPropertyChangedListener(strokeKey, rewirePen);
+
+        return () => {
+            for (const k of keys) node.RemovePropertyChangedListener(k, onEdited);
+            if (strokeKey !== undefined) node.RemovePropertyChangedListener(strokeKey, rewirePen);
+            offPen();
+        };
+    }
+
+    private _wirePenDirty(pen: Pen | undefined, onEdited: () => void): () => void
+    {
+        if (pen === undefined) return () => {};
+        pen.AddPropertyChangedListener(Pen.BrushKey,     onEdited);
+        pen.AddPropertyChangedListener(Pen.ThicknessKey, onEdited);
+        return () => {
+            pen.RemovePropertyChangedListener(Pen.BrushKey,     onEdited);
+            pen.RemovePropertyChangedListener(Pen.ThicknessKey, onEdited);
+        };
     }
 
     // Track the connector's user-editable route inputs, plus each endpoint's

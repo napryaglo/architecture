@@ -11,7 +11,7 @@
 // imports this module and may also import individual helpers exported here
 // (serializeShapeText, applySerializedText, placeNode).
 
-import { FontStyle, FontWeight, pathGeometryFromSvgD, pathGeometryToSvgD, TextAlignment, VerticalAlignment } from '../../visual-engine/index.js';
+import { type Brush, Color, FontStyle, FontWeight, pathGeometryFromSvgD, pathGeometryToSvgD, Pen, SolidColorBrush, TextAlignment, VerticalAlignment } from '../../visual-engine/index.js';
 import { Point } from '../../runtime/index.js';
 import { TextAutoFit, TextPlacement, type ShapeText } from './shape-text.js';
 import {
@@ -26,6 +26,13 @@ import { TextNodeVM } from './text-node-vm.js';
 import { CalloutNodeVM } from './callout-node-vm.js';
 import { SHAPE_CATALOG_MAP } from './shape-catalog.js';
 import { registerNodeSerializer, type NodeBaseRecord } from './node-serialization.js';
+
+// A solid brush's colour as a hex string, or undefined for a non-solid
+// (gradient / image) brush that this serializer doesn't capture.
+function solidHex(brush: Brush | undefined): string | undefined
+{
+    return brush instanceof SolidColorBrush ? brush.Color.ToHex() : undefined;
+}
 
 // ── SerializedText — internal type shared between text + callout ──────
 
@@ -123,10 +130,23 @@ registerNodeSerializer({
     {
         const vm = node as ShapeNodeVM;
         const source = vm._getSource();
-        return {
+        const out: Record<string, unknown> = {
             kind: vm.Kind,
             d:    source !== undefined ? pathGeometryToSvgD(source) : '',
         };
+        // Persist the user-editable Fill / Stroke (Format Shape pane). Only
+        // solid colours are captured; a gradient / image brush falls back to
+        // the constructed default on reload (documented gap).
+        const fillHex = solidHex(vm.Fill);
+        if (fillHex !== undefined) out.fill = fillHex;
+        const stroke = vm.Stroke;
+        if (stroke !== undefined)
+        {
+            const strokeHex = solidHex(stroke.Brush);
+            if (strokeHex !== undefined) out.stroke = strokeHex;
+            out.strokeWidth = stroke.Thickness;
+        }
+        return out;
     },
 
     deserialize(data: Record<string, unknown>, base: NodeBaseRecord): ShapeNodeVM
@@ -152,6 +172,16 @@ registerNodeSerializer({
             vm = ShapeNodeVM.fromKind('rectangle', base.left, base.top, { width: base.w, height: base.h });
         }
         vm.Id = base.id;
+        // Restore Fill / Stroke over the constructed defaults.
+        if (typeof data.fill === 'string') vm.Fill = new SolidColorBrush(Color.FromHex(data.fill));
+        const strokeHex   = typeof data.stroke      === 'string' ? data.stroke      : undefined;
+        const strokeWidth = typeof data.strokeWidth === 'number' ? data.strokeWidth : undefined;
+        if (strokeHex !== undefined || strokeWidth !== undefined)
+        {
+            const width = strokeWidth ?? vm.Stroke?.Thickness ?? 1;
+            const brush = strokeHex !== undefined ? new SolidColorBrush(Color.FromHex(strokeHex)) : vm.Stroke?.Brush;
+            vm.Stroke = new Pen(brush, width);
+        }
         return vm;
     },
 });

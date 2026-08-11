@@ -8,7 +8,7 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Application } from '../../../runtime/index.js';
-import { Point } from '../../../visual-engine/index.js';
+import { Color, Pen, Point, SolidColorBrush } from '../../../visual-engine/index.js';
 import { waypoint } from '../route-waypoint.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
@@ -56,6 +56,27 @@ describe('DiagramDocument — dirty-on-edit', () => {
         // Endpoint drag reattach mutates the SAME endpoint object's Node.
         c.Target!.Node = cc;
         assert.equal(doc.IsDirty, true, 'an endpoint reconnect dirties the document');
+    });
+
+    test('a fill-colour change marks the document dirty', () => {
+        const doc = newDoc(new MemoryStorage());
+        const s = doc.CreateNode('ellipse', 0, 0)!;
+        doc.Save();
+        assert.equal(doc.IsDirty, false);
+
+        s.Fill = new SolidColorBrush(Color.FromHex('#00ff00'));
+        assert.equal(doc.IsDirty, true, 'a Format-Shape fill edit dirties the document');
+    });
+
+    test('a stroke edit (in-place pen mutation) marks the document dirty', () => {
+        const doc = newDoc(new MemoryStorage());
+        const s = doc.CreateNode('ellipse', 0, 0)!;
+        doc.Save();
+        assert.equal(doc.IsDirty, false);
+
+        // FormatMirror mutates the existing pen in place rather than swapping it.
+        s.Stroke!.Thickness = 5;
+        assert.equal(doc.IsDirty, true, 'an in-place stroke edit dirties the document');
     });
 
     test('moving a node marks the document dirty', () => {
