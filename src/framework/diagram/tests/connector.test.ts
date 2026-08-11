@@ -11,6 +11,7 @@ import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { AnchorClip, Connector } from '../connector.js';
 import { Figure } from '../figure.js';
 import { Port, PortSide } from '../port.js';
+import { waypoint } from '../route-waypoint.js';
 import { RoutingMode } from '../routing/router.js';
 // Side-effect imports — register the routers under their RoutingMode names.
 import '../routing/straight-router.js';
@@ -676,7 +677,7 @@ describe('Connector reactivity — source / target node moves', () => {
         c.RoutingMode = RoutingMode.Orthogonal;
         c.Source = new ConnectorEndpoint({ Node: src, PortSide: PortSide.E });
         c.Target = new ConnectorEndpoint({ Node: tgt, PortSide: PortSide.W });
-        c.Waypoints = [new Point(250, 100), new Point(250, 300)];
+        c.Waypoints = [waypoint(new Point(250, 100)), waypoint(new Point(250, 300))];   // auto (unpinned)
         assert.equal(c.Waypoints!.length, 2, 'waypoints set before the move');
 
         src.Left = 150;                       // move the source figure
@@ -691,7 +692,7 @@ describe('Connector reactivity — source / target node moves', () => {
         c.RoutingMode = RoutingMode.Orthogonal;
         c.Source = new ConnectorEndpoint({ Node: src, PortSide: PortSide.E });
         c.Target = new ConnectorEndpoint({ Node: tgt, PortSide: PortSide.W });
-        c.Waypoints = [new Point(250, 100)];
+        c.Waypoints = [waypoint(new Point(250, 100))];   // auto (unpinned)
 
         tgt.Top = 250;
         assert.equal(c.Waypoints, undefined, 'waypoints cleared when the target figure moves');
@@ -748,8 +749,29 @@ describe('Connector — waypoints', () => {
         c.Target = tgt;
         assert.equal((c.Geometry as PathGeometry).Figures[0]!.Segments.length, 1);
 
-        c.Waypoints = [new Point(100, 50)];
+        c.Waypoints = [waypoint(new Point(100, 50))];
         // One waypoint → 2 segments through the polyline.
         assert.equal((c.Geometry as PathGeometry).Figures[0]!.Segments.length, 2);
+    });
+
+    test('a pinned waypoint appears in the route; a collinear auto waypoint is minimised out', () => {
+        const src = new ConnectorEndpoint({ FreePoint: new Point(0,   0) });
+        const tgt = new ConnectorEndpoint({ FreePoint: new Point(200, 0) });
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        c.Source = src;
+        c.Target = tgt;
+
+        // A pinned bend off the src->tgt line: kept, so the route has 2 segments
+        // and the rendered polyline passes through it.
+        c.Waypoints = [waypoint(new Point(100, 50), true)];
+        assert.equal(c.Waypoints![0]!.userAltered, true);
+        assert.equal((c.Geometry as PathGeometry).Figures[0]!.Segments.length, 2);
+        assert.ok(c.CurrentRoutePoints!.some(p => p.X === 100 && p.Y === 50), 'route passes through the pin');
+
+        // An AUTO waypoint sitting on the straight line is redundant → the
+        // minimiser drops it from the fed route → 1 segment (no bend).
+        c.Waypoints = [waypoint(new Point(100, 0))];
+        assert.equal((c.Geometry as PathGeometry).Figures[0]!.Segments.length, 1);
     });
 });

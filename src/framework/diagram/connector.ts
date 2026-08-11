@@ -50,6 +50,8 @@ import {
     shortenPolyline,
 } from './caps/cap-inset.js';
 import { DiagramSettings } from './diagram-settings.js';
+import { type RouteWaypoint, routePoints, hasPinned } from './route-waypoint.js';
+import { minimiseRoute } from './route-minimiser.js';
 
 // Self-register the three default routers so a consumer that imports a
 // Connector — or anything that transitively imports Connector — gets
@@ -110,7 +112,7 @@ export class Connector extends Shape
         Connector, 'Source',      undefined,             MetaData.None);
     public static readonly TargetKey      = Model.RegisterProperty<ConnectorEndpoint | undefined>(
         Connector, 'Target',      undefined,             MetaData.None);
-    public static readonly WaypointsKey   = Model.RegisterProperty<readonly Point[] | undefined>(
+    public static readonly WaypointsKey   = Model.RegisterProperty<readonly RouteWaypoint[] | undefined>(
         Connector, 'Waypoints',   undefined,             MetaData.None);
     public static readonly RoutingModeKey = Model.RegisterProperty<string>(
         Connector, 'RoutingMode', RoutingMode.Orthogonal, MetaData.None);
@@ -164,8 +166,8 @@ export class Connector extends Shape
     public set Source(v:       ConnectorEndpoint | undefined) { this.set_property_value(Connector.SourceKey, v); }
     public get Target():       ConnectorEndpoint | undefined { return this.get_property_value(Connector.TargetKey); }
     public set Target(v:       ConnectorEndpoint | undefined) { this.set_property_value(Connector.TargetKey, v); }
-    public get Waypoints():    readonly Point[] | undefined  { return this.get_property_value(Connector.WaypointsKey); }
-    public set Waypoints(v:    readonly Point[] | undefined) { this.set_property_value(Connector.WaypointsKey, v); }
+    public get Waypoints():    readonly RouteWaypoint[] | undefined  { return this.get_property_value(Connector.WaypointsKey); }
+    public set Waypoints(v:    readonly RouteWaypoint[] | undefined) { this.set_property_value(Connector.WaypointsKey, v); }
     public get RoutingMode():  string                        { return this.get_property_value(Connector.RoutingModeKey); }
     public set RoutingMode(v:  string)                       { this.set_property_value(Connector.RoutingModeKey, v); }
     public get AnchorClip():   AnchorClip                    { return this.get_property_value(Connector.AnchorClipKey); }
@@ -909,11 +911,14 @@ export class Connector extends Shape
             this._currentRoutePoints = undefined;
             return;
         }
-        const waypoints = this.Waypoints ?? EMPTY_WAYPOINTS;
+        // Raw bare points drive anchor direction (waypoint-aware side picking);
+        // the router is fed the MINIMISED projection (pins kept, collinear auto
+        // dropped) so a moved node re-routes to the fewest bends through the pins.
+        const rawPoints = routePoints(this.Waypoints);
 
         let srcAnchor: ResolvedAnchor;
         let tgtAnchor: ResolvedAnchor;
-        ({ srcAnchor, tgtAnchor } = this._resolveAnchors(src, tgt, waypoints));
+        ({ srcAnchor, tgtAnchor } = this._resolveAnchors(src, tgt, rawPoints));
 
         // Auto-bake PortSide for legacy bare-{Node} endpoints (no port
         // refs, no FreePoint, no PortSide). The resolved anchor's `side`
@@ -928,7 +933,7 @@ export class Connector extends Shape
         const tgtBaked = bakeSideIfBare(tgt, tgtAnchor.side);
         if (srcBaked || tgtBaked)
         {
-            ({ srcAnchor, tgtAnchor } = this._resolveAnchors(src, tgt, waypoints));
+            ({ srcAnchor, tgtAnchor } = this._resolveAnchors(src, tgt, rawPoints));
         }
         this._currentSrcAnchor = srcAnchor;
         this._currentTgtAnchor = tgtAnchor;
@@ -936,6 +941,11 @@ export class Connector extends Shape
         const router = RouterRegistry.resolve(this.RoutingMode);
         const sourceRect = nodeRect(src.Node) ?? Rect.Zero;
         const targetRect = nodeRect(tgt.Node) ?? Rect.Zero;
+        const waypoints = routePoints(minimiseRoute(
+            this.Waypoints ?? [],
+            new Point(srcAnchor.x, srcAnchor.y),
+            new Point(tgtAnchor.x, tgtAnchor.y),
+        ));
         const spec: RouteSpec = {
             sourceRect,
             sourceAnchor: srcAnchor,
@@ -1143,8 +1153,6 @@ function connectorEndpointId(ep: ConnectorEndpoint | undefined): string
     if (n instanceof NodeViewModel) return n.Id ?? '';
     return '';
 }
-
-const EMPTY_WAYPOINTS: readonly Point[] = Object.freeze([]) as readonly Point[];
 
 // ── Endpoint resolution (§ 3.2 paths 1–5) ────────────────────────────
 
