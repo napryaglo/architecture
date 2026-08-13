@@ -1,6 +1,6 @@
 import { Visual } from './visual.js';
 import { Element, Panel, Single } from './element.js';
-import { Rect, Size } from './primitives.js';
+import { Matrix, Point, Rect, Size } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 
 // Adorner — a Visual that decorates another Visual (the "adorned
@@ -161,35 +161,61 @@ export class AdornerLayer extends Panel
 
     private computeAdornedRectInLayerFrame(adorner: Adorner): Rect
     {
-        // Walk from the adorned element upward through the visual tree,
-        // summing ArrangedRect offsets, until we reach the layer's own
-        // visual parent (an AdornerDecorator, a ScrollContentPresenter,
-        // or any other host that mounted us). The accumulated (x, y) is
-        // the adorned element's top-left in the LAYER PARENT's frame.
-        // To convert into the layer's LOCAL frame we subtract the
-        // layer's own ArrangedRect offset — relevant for SCP-hosted
-        // layers arranged at (-offX, -offY) in clip-and-translate mode.
-        // Decorator-hosted layers sit at (0, 0) in their parent, so the
-        // subtraction is a no-op there.
+        // Build the transform from the adorned element's local space up to the
+        // layer parent's frame, composing each ancestor's effective transform —
+        // its ArrangedRect offset AND its RenderTransform (pivoted by
+        // RenderTransformOrigin), in the same order the SVG renderer applies them
+        // (render transform first, then the arrange translate). Then map the
+        // adorned element's local rect through the accumulated matrix. This lets
+        // adorners track an element that a diagram camera (a scale+translate
+        // RenderTransform on an ancestor) has scaled/panned, while the adorner
+        // glyphs — children of the unscaled layer — stay a constant on-screen
+        // size. With no ancestor RenderTransform every factor is identity, so the
+        // result equals the old offset-sum (backward compatible).
         //
-        // If the walk runs off the top (adorned element not under our
-        // layer's parent), fall back to (0, 0) — the adorner stays at
-        // the layer origin rather than tracking an unreachable target.
+        // If the walk runs off the top (adorned element not under our layer's
+        // parent), fall back to (0, 0).
         const adorned = adorner.AdornedElement;
         const stop = this.GetVisualParent();
-        let x = 0, y = 0;
+        let m = Matrix.Identity;
         let cur: Visual | undefined = adorned;
         while (cur !== undefined && cur !== stop)
         {
-            x += cur.ArrangedRect.X;
-            y += cur.ArrangedRect.Y;
+            const rect = cur.ArrangedRect;
+            // Effective local transform: renderTransform (about its origin) THEN
+            // the arrange offset (renderer emits `translate(rect) … matrix …`, so
+            // the matrix applies first to a child point, the offset last).
+            let local = Matrix.Translate(rect.X, rect.Y);
+            const rt = cur.RenderTransform;
+            if (rt !== undefined && !rt.Matrix.IsIdentity)
+            {
+                const origin = cur.RenderTransformOrigin;
+                const ox = origin.X * rect.Width;
+                const oy = origin.Y * rect.Height;
+                const pivoted = Matrix.Translate(-ox, -oy).Multiply(rt.Matrix).Multiply(Matrix.Translate(ox, oy));
+                local = pivoted.Multiply(local);
+            }
+            // child-first accumulation (leftmost Multiply factor applies first)
+            m = m.Multiply(local);
             cur = cur.GetVisualParent();
         }
         if (cur === undefined) return new Rect(0, 0, 0, 0);
-        x -= this.ArrangedRect.X;
-        y -= this.ArrangedRect.Y;
+
+        // Map the adorned element's local rect corners and take the bounding box,
+        // then shift into the layer's LOCAL frame (SCP-hosted layers sit at
+        // (-offX, -offY); decorator-hosted layers at (0, 0) — a no-op there).
         const rs = adorned.RenderSize;
-        return new Rect(x, y, rs.Width, rs.Height);
+        const c0 = m.Transform(new Point(0, 0));
+        const c1 = m.Transform(new Point(rs.Width, 0));
+        const c2 = m.Transform(new Point(0, rs.Height));
+        const c3 = m.Transform(new Point(rs.Width, rs.Height));
+        const lx = this.ArrangedRect.X;
+        const ly = this.ArrangedRect.Y;
+        const minX = Math.min(c0.X, c1.X, c2.X, c3.X) - lx;
+        const minY = Math.min(c0.Y, c1.Y, c2.Y, c3.Y) - ly;
+        const maxX = Math.max(c0.X, c1.X, c2.X, c3.X) - lx;
+        const maxY = Math.max(c0.Y, c1.Y, c2.Y, c3.Y) - ly;
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
     }
 
     // Walks up the visual tree from `visual` looking for any ancestor

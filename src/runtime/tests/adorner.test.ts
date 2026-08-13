@@ -6,6 +6,7 @@ import {
     AdornerDecorator,
     AdornerLayer,
     Application,
+    Point,
     Rect,
     Size,
     Element,
@@ -14,6 +15,7 @@ import {
 } from '../index.js';
 import { Border } from '../../basic/border.js';
 import { Canvas } from '../../basic/panels/canvas.js';
+import { ScaleTransform, TranslateTransform, TransformGroup } from '../../visual-engine/drawing/transform.js';
 
 // Concrete leaf for placement/size assertions. Reports the size given
 // to its constructor and paints nothing.
@@ -219,5 +221,45 @@ describe('AdornerLayer arrange', () => {
         const r = adorner.ArrangedRect;
         assert.equal(r.X, 0);
         assert.equal(r.Y, 0);
+    });
+});
+
+describe('AdornerLayer transform-aware arrange', () => {
+    beforeEach(() => { Application.current = null; });
+
+    test('projects the adorned rect through an ancestor RenderTransform (scale+translate)', () => {
+        const { decorator, canvas, squares } = layout({ x: 10, y: 20, side: 30 });
+        // 2x scale + (100,50) translate on the canvas (the adorned element's parent).
+        const g = new TransformGroup();
+        g.Children.Add(new ScaleTransform(2, 2));       // applies first
+        g.Children.Add(new TranslateTransform(100, 50));
+        canvas.RenderTransform = g;
+
+        const adorner = new TestAdorner(squares[0]!);
+        decorator.AdornerLayer.Add(adorner);
+        decorator.InvalidateMeasure();
+        decorator.Measure(new Size(600, 600));
+        decorator.Arrange(new Rect(0, 0, 600, 600));
+
+        const r = adorner.ArrangedRect;
+        // top-left (10,20) -> *2 + (100,50) = (120, 90); size 30 -> 60.
+        assert.equal(r.X, 120);
+        assert.equal(r.Y, 90);
+        assert.equal(r.Width, 60);
+        assert.equal(r.Height, 60);
+    });
+
+    test('identity ancestor transform leaves the adorned rect unchanged (regression)', () => {
+        const { decorator, squares } = layout({ x: 10, y: 20, side: 30 });
+        const adorner = new TestAdorner(squares[0]!);
+        decorator.AdornerLayer.Add(adorner);
+        decorator.InvalidateMeasure();
+        decorator.Measure(new Size(400, 400));
+        decorator.Arrange(new Rect(0, 0, 400, 400));
+        const r = adorner.ArrangedRect;
+        assert.equal(r.X, 10);
+        assert.equal(r.Y, 20);
+        assert.equal(r.Width, 30);
+        assert.equal(r.Height, 30);
     });
 });
