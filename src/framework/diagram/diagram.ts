@@ -11,7 +11,7 @@ import {
     Key,
     type PointerEventArgs,
     type PropertyDescriptor,
-    type RelayCommand,
+    RelayCommand,
     Visual,
     hasModifier,
     ModifierKeys,
@@ -55,8 +55,8 @@ import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js'
 import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
-import { Brush, Pen, Point, Rect, ScaleTransform, Size, TextAlignment, TransformGroup, TranslateTransform } from '../../visual-engine/index.js';
-import { type Camera, clampZoom } from './camera.js';
+import { Brush, Pen, Point, ScaleTransform, Size, TextAlignment, TransformGroup, TranslateTransform } from '../../visual-engine/index.js';
+import { type Camera, clampZoom, fitBounds, zoomAtPoint } from './camera.js';
 import { TextPlacement } from './shape-text.js';
 import { FormatMirror } from './collaborators/format-mirror.js';
 import {
@@ -140,6 +140,14 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly ZoomKey = Model.RegisterProperty<number>(Diagram, 'Zoom', 1, MetaData.None);
     public static readonly PanXKey = Model.RegisterProperty<number>(Diagram, 'PanX', 0, MetaData.None);
     public static readonly PanYKey = Model.RegisterProperty<number>(Diagram, 'PanY', 0, MetaData.None);
+
+    // Zoom commands — RelayCommand DPs the overlay + host keyboard bind. Seeded in
+    // the ctor; behaviour lives in the ZoomIn/Fit/… methods below.
+    public static readonly ZoomInCommandKey         = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'ZoomInCommand', undefined, MetaData.None);
+    public static readonly ZoomOutCommandKey        = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'ZoomOutCommand', undefined, MetaData.None);
+    public static readonly ResetZoomCommandKey      = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'ResetZoomCommand', undefined, MetaData.None);
+    public static readonly FitCommandKey            = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitCommand', undefined, MetaData.None);
+    public static readonly FitToSelectionCommandKey = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitToSelectionCommand', undefined, MetaData.None);
 
     // Selection-bounds DPs — read-only, derived from the union bbox of
     // every IFigure-shaped item in SelectedItems by SelectionBoundsTracker
@@ -441,6 +449,70 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // Fit uses the wider range via a direct DP write (see _applyFit).
     public get Camera(): Camera { return { zoom: this.Zoom, panX: this.PanX, panY: this.PanY }; }
     public SetCamera(c: Camera): void { this.Zoom = clampZoom(c.zoom); this.PanX = c.panX; this.PanY = c.panY; }
+
+    public get ZoomInCommand():         RelayCommand | undefined { return this.get_property_value(Diagram.ZoomInCommandKey); }
+    public get ZoomOutCommand():        RelayCommand | undefined { return this.get_property_value(Diagram.ZoomOutCommandKey); }
+    public get ResetZoomCommand():      RelayCommand | undefined { return this.get_property_value(Diagram.ResetZoomCommandKey); }
+    public get FitCommand():            RelayCommand | undefined { return this.get_property_value(Diagram.FitCommandKey); }
+    public get FitToSelectionCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.FitToSelectionCommandKey); }
+
+    private static readonly ZOOM_STEP = 1.2;
+    private static readonly FIT_PADDING = 24;
+
+    // Zoom about the viewport center by one step, clamped.
+    public ZoomIn(): void  { this.SetCamera(zoomAtPoint(this.Camera, this._centerPivot(), Diagram.ZOOM_STEP)); }
+    public ZoomOut(): void { this.SetCamera(zoomAtPoint(this.Camera, this._centerPivot(), 1 / Diagram.ZOOM_STEP)); }
+    public ResetZoom(): void { this.SetCamera({ zoom: 1, panX: 0, panY: 0 }); }
+
+    // Frame all content; Fit-to-Selection frames the selection (falling back to
+    // all content when nothing is selected).
+    public Fit(): void {
+        const b = this.contentBounds();
+        if (b !== undefined) this._applyFit(fitBounds(b, this._viewportSize(), Diagram.FIT_PADDING));
+    }
+    public FitToSelection(): void {
+        const b = this.selectionBounds() ?? this.contentBounds();
+        if (b !== undefined) this._applyFit(fitBounds(b, this._viewportSize(), Diagram.FIT_PADDING));
+    }
+
+    // Fit can legitimately produce a zoom below the interactive floor; bypass clampZoom.
+    private _applyFit(c: Camera): void { this.Zoom = c.zoom; this.PanX = c.panX; this.PanY = c.panY; }
+    private _centerPivot(): Point { const v = this._viewportSize(); return new Point(v.Width / 2, v.Height / 2); }
+
+    private _viewportSize(): Size {
+        if (this._testViewportSize !== undefined) return this._testViewportSize;
+        const sv = this.GetTemplateChild('PART_Scroll') as unknown as { ViewportWidth?: number; ViewportHeight?: number } | undefined;
+        return new Size(sv?.ViewportWidth ?? this.RenderSize.Width, sv?.ViewportHeight ?? this.RenderSize.Height);
+    }
+
+    // The selection's union bbox (content space) from the tracked Selection* DPs;
+    // undefined when nothing is selected.
+    private selectionBounds(): Rect | undefined {
+        if (this.SelectionCount <= 0) return undefined;
+        return new Rect(this.SelectionLeft, this.SelectionTop, this.SelectionWidth, this.SelectionHeight);
+    }
+
+    // Union of item-container ArrangedRects (content space); undefined when empty.
+    private contentBounds(): Rect | undefined {
+        if (this._testContentBounds !== undefined) return this._testContentBounds;
+        const panel = this.ItemsPanelInstance;
+        if (panel === undefined) return undefined;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const child of panel.visualChildren) {
+            const r = child.ArrangedRect;
+            if (r.Width === 0 && r.Height === 0) continue;
+            minX = Math.min(minX, r.X); minY = Math.min(minY, r.Y);
+            maxX = Math.max(maxX, r.X + r.Width); maxY = Math.max(maxY, r.Y + r.Height);
+        }
+        if (!isFinite(minX)) return undefined;
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    // @internal test seams — inject content/viewport where there is no live layout.
+    private _testContentBounds?: Rect;
+    private _testViewportSize?: Size;
+    public _testContent(r: Rect | undefined): void { this._testContentBounds = r; }
+    public _testViewport(w: number, h: number): void { this._testViewportSize = new Size(w, h); }
 
     public get SelectionLeft():   number { return this.get_property_value(Diagram.SelectionLeftKey); }
     public get SelectionTop():    number { return this.get_property_value(Diagram.SelectionTopKey); }
@@ -924,6 +996,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         // constructed so the Diagram is fully-equipped from the moment
         // the constructor returns.
         new DiagramCommands(this);
+        // Zoom commands — bound by the on-canvas overlay and host keyboard.
+        this.set_property_value(Diagram.ZoomInCommandKey,         new RelayCommand(() => this.ZoomIn()));
+        this.set_property_value(Diagram.ZoomOutCommandKey,        new RelayCommand(() => this.ZoomOut()));
+        this.set_property_value(Diagram.ResetZoomCommandKey,      new RelayCommand(() => this.ResetZoom()));
+        this.set_property_value(Diagram.FitCommandKey,            new RelayCommand(() => this.Fit()));
+        this.set_property_value(Diagram.FitToSelectionCommandKey, new RelayCommand(() => this.FitToSelection()));
         new SelectionBoundsTracker(this);
         this._formatMirror = new FormatMirror(this);
         new SelectionReflector(this);
