@@ -607,25 +607,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         // connector pointing at a detached Visual.
         if (removed > 0)
         {
-            const orphaned: Connector[] = [];
-            for (let i = 0; i < this.Connectors.Count; i++)
-            {
-                const c = this.Connectors.Get(i)!;
-                const sn = c.Source?.Node, tn = c.Target?.Node;
-                if ((sn !== undefined && items.includes(sn))
-                 || (tn !== undefined && items.includes(tn)))
-                {
-                    orphaned.push(c);
-                }
-            }
-            for (const o of orphaned)
-            {
-                const idx = this.Connectors.IndexOf(o);
-                if (idx >= 0) this.Connectors.RemoveAt(idx);
-                // Release the connector's host subscriptions so the siblings
-                // that share a side rebalance to the smaller slot count.
-                o.DetachFromHosts();
-            }
+            const orphanedCount = this._cascadeRemoveConnectorsFor(items);
             // Callout cleanup: detach any removed callout from its target, and
             // clear the leader on any surviving callout whose target was removed
             // (mirrors the connector DetachFromHosts cascade above).
@@ -643,13 +625,58 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                     n.LeaderTargetNode = undefined;
                 }
             }
-            const orphanSuffix = orphaned.length > 0
-                ? ` + ${orphaned.length} orphaned connector${orphaned.length === 1 ? '' : 's'}`
+            const orphanSuffix = orphanedCount > 0
+                ? ` + ${orphanedCount} orphaned connector${orphanedCount === 1 ? '' : 's'}`
                 : '';
             this.Status = `Deleted ${removed} node${removed === 1 ? '' : 's'}${orphanSuffix}. `
                         + `${this.Nodes.Count} remain.`;
             this._markDirty();
         }
+    }
+
+    // Remove every connector whose endpoint references one of `removed`,
+    // matched by node IDENTITY *or* by Id — so a connector pointing at a STALE
+    // node object (e.g. a re-created node that carries the same Id) is caught,
+    // not just an exact-object match. Detaches each removed connector from its
+    // host side-registries so the survivors rebalance. Returns the count.
+    //
+    // Shared by every node-removal path (DeleteNodes / CombineSelection /
+    // Ungroup): a connector left behind after its node is gone can't route, so
+    // it vanishes from the canvas yet lingers in doc.Connectors and gets saved
+    // as a ghost at the origin. Routing all removals through here closes that.
+    private _cascadeRemoveConnectorsFor(removed: readonly unknown[]): number
+    {
+        if (removed.length === 0) return 0;
+        const objs = new Set<unknown>(removed);
+        const ids  = new Set<string>();
+        for (const n of removed)
+        {
+            const id = nodeIdOf(n);
+            if (id !== undefined && id !== '') ids.add(id);
+        }
+        const hits = (ep: ConnectorEndpoint | undefined): boolean =>
+        {
+            const node = ep?.Node;
+            if (node === undefined) return false;
+            if (objs.has(node)) return true;
+            const id = nodeIdOf(node);
+            return id !== undefined && id !== '' && ids.has(id);
+        };
+        const orphaned: Connector[] = [];
+        for (let i = 0; i < this.Connectors.Count; i++)
+        {
+            const c = this.Connectors.Get(i)!;
+            if (hits(c.Source) || hits(c.Target)) orphaned.push(c);
+        }
+        for (const o of orphaned)
+        {
+            const idx = this.Connectors.IndexOf(o);
+            if (idx >= 0) this.Connectors.RemoveAt(idx);
+            // Release the connector's host subscriptions so the siblings that
+            // share a side rebalance to the smaller slot count.
+            o.DetachFromHosts();
+        }
+        return orphaned.length;
     }
 
     public CreateConnector(source: ConnectorEndpoint, target: ConnectorEndpoint): Connector | null
@@ -745,6 +772,11 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             const idx = this.Nodes.IndexOf(g);
             if (idx >= 0) this.Nodes.RemoveAt(idx);
         }
+        // Members lift out and survive, so normally nothing is orphaned; the
+        // cascade runs for uniformity (and to catch any connector that pinned
+        // the group container itself). Keeps every removal path funnelled
+        // through one cleanup so none can leave a ghost.
+        this._cascadeRemoveConnectorsFor(groups);
         this.Status = `Ungrouped ${groups.length} group${groups.length === 1 ? '' : 's'}.`;
         this._markDirty();
     }
@@ -790,7 +822,14 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             if (idx >= 0) this.Nodes.RemoveAt(idx);
         }
         this.Nodes.Add(result);
-        this.Status = `Combined ${leaves.length} shapes (${combineModeName(mode)}).`;
+        // The combined-away leaves are gone from the scene; drop any connector
+        // that was attached to them so none lingers pointing at a removed node
+        // (which would vanish from the canvas but persist as a ghost).
+        const orphaned = this._cascadeRemoveConnectorsFor(leaves);
+        const orphanSuffix = orphaned > 0
+            ? ` (${orphaned} attached connector${orphaned === 1 ? '' : 's'} removed)`
+            : '';
+        this.Status = `Combined ${leaves.length} shapes (${combineModeName(mode)})${orphanSuffix}.`;
         this._markDirty();
     }
 
@@ -862,9 +901,11 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             const c = this.Connectors.Get(i)!;
             const src = c.Source, tgt = c.Target;
             if (src === undefined || tgt === undefined) continue;   // half-set connectors are not persisted
+            const sSrc = serializeEndpoint(src);
+            const sTgt = serializeEndpoint(tgt);
             connectors.push({
-                source:      serializeEndpoint(src),
-                target:      serializeEndpoint(tgt),
+                source:      sSrc,
+                target:      sTgt,
                 waypoints:   c.Waypoints !== undefined && c.Waypoints.length > 0
                     ? c.Waypoints.map(w => ({ x: w.point.X, y: w.point.Y, userAltered: w.userAltered }))
                     : undefined,
@@ -1013,6 +1054,17 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     }
 }
 
+// A node's stable Id for cascade matching. Figure and NodeViewModel both carry
+// an Id; other Model kinds (e.g. a Group container) have none → undefined, so
+// they match by object identity only. Kept in sync with serializeEndpoint's
+// node-kind test.
+function nodeIdOf(n: unknown): string | undefined
+{
+    if (n instanceof Figure)        return n.Id;
+    if (n instanceof NodeViewModel) return n.Id;
+    return undefined;
+}
+
 function serializeEndpoint(ep: ConnectorEndpoint): SerializedConnectorEndpoint
 {
     const node = ep.Node;
@@ -1029,9 +1081,22 @@ function serializeEndpoint(ep: ConnectorEndpoint): SerializedConnectorEndpoint
     }
     const fp = ep.FreePoint;
     if (fp !== undefined) return { freeX: fp.X, freeY: fp.Y };
-    // Endpoint without a usable anchor — serialize as empty; rehydrate
-    // will produce a default endpoint with FreePoint(0,0).
-    return {};
+    // An endpoint with NO usable anchor — no persistable node, no
+    // UnresolvedNodeId to preserve, no FreePoint. There is nothing to write
+    // that could round-trip; the old behaviour serialized `{}`, which reloads
+    // as FreePoint(0,0) and self-perpetuates a ghost connector at the origin.
+    // This is an unexpected, unpredictable state (a connector whose end is
+    // wired to a node that has no id / isn't in the scene), so fail loudly at
+    // the source instead of silently corrupting the file. The caller
+    // (_serialize) is responsible for never persisting such a connector.
+    const nodeDesc = node === undefined
+        ? 'undefined'
+        : `${(node as { constructor: { name: string } }).constructor.name}(Id=${JSON.stringify((node as { Id?: string }).Id)})`;
+    throw new Error(
+        `serializeEndpoint: connector endpoint has no persistable anchor `
+        + `(node=${nodeDesc}, FreePoint=undefined, UnresolvedNodeId=undefined). `
+        + `A connected endpoint must reference a node with a non-empty Id, or be a free point.`,
+    );
 }
 
 // A node-anchored serialized endpoint, carrying the port addressing the user
@@ -1087,6 +1152,8 @@ function rehydrateEndpoint(
     {
         return new ConnectorEndpoint({ FreePoint: new Point(s.freeX, s.freeY) });
     }
+    // The origin fallback: the serialized endpoint had NO nodeId and NO
+    // freeX/freeY → it deserializes to (0,0).
     return new ConnectorEndpoint({ FreePoint: new Point(0, 0) });
 }
 

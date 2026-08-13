@@ -71,4 +71,13 @@ export class SideConnectableNodeVM extends NodeViewModel implements ISideEndpoin
     {
         this._sideHost._unregisterSideEndpoint(side, endpoint);
     }
+
+    // Delegates to the shared registry's optimizer so a box/arch/shape VM
+    // fans its side connectors out to minimise crossings on attach and on
+    // move — the same behaviour Figure gets. Previously only Figure carried
+    // this method, so connectors on VM-backed nodes were never optimised.
+    public _optimizeSideIntersections(side: ResolvedPortSide): void
+    {
+        this._sideHost.optimizeIntersections(side);
+    }
 }

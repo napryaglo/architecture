@@ -144,6 +144,42 @@ describe('ConnectorEditAdorner — endpoint drag (re-anchor)', () => {
         adorner.Abort();
         assert.equal(c.Source!.Node, original);
     });
+
+    test('EndDragOverTarget(undefined) restores the pre-drag anchor — never leaves the endpoint node-less', () => {
+        // A drop that resolves NO target (released over empty space / a
+        // non-Figure item) must restore the endpoint, not clear FreePoint while
+        // assigning an undefined Node — which left a node-less orphan routing to
+        // the origin.
+        newApplication();
+        const original = fig(50, 50);
+        const c = makeConnector();
+        c.Target = new ConnectorEndpoint({ Node: original, PortSide: PortSide.E });
+        const adorner = new ConnectorEditAdorner();
+        adorner.BeginEndpointDrag(c, ConnectorEnd.Target, new Point(150, 0));
+        adorner.EndDragOverTarget(undefined as unknown as Figure, PortSide.E);
+        assert.equal(c.Target!.Node, original, 'the pre-drag node is restored');
+        assert.equal(
+            c.Target!.Node === undefined && c.Target!.FreePoint === undefined,
+            false,
+            'the endpoint is never left without an anchor');
+        assert.equal(adorner.IsActive, false);
+    });
+});
+
+describe('Connector — unanchored-endpoint invariant', () => {
+    test('a node-less + free-less endpoint hides the connector instead of routing to the origin', () => {
+        newApplication();
+        const c = makeConnector();          // both ends are FreePoints → routable
+        c.RecomputeRoute();
+        assert.notEqual(c.Geometry, undefined, 'a valid connector routes');
+
+        // Orphan the target — no Node, no FreePoint. Path 1 would resolve it to
+        // (0,0); the invariant must leave the connector un-drawn instead.
+        c.Target = new ConnectorEndpoint();
+        c.RecomputeRoute();
+        assert.equal(c.Geometry, undefined,
+            'an unanchored endpoint leaves the connector un-drawn, not snapped to (0,0)');
+    });
 });
 
 // ── Waypoint drag (existing waypoint) ────────────────────────────────

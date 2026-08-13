@@ -134,7 +134,10 @@ export class ConnectorCreateBehavior
 // A container Figure wraps a node VM (its DataContext); connectors should
 // reference that VM so routing/serialize/delete track the data item. Text/
 // callout figures have no VM DataContext and reference the Figure itself.
-function itemOf(figure: Figure): Model
+// Shared with the edit adorner so a REPOSITIONED endpoint binds to the same
+// object a CREATED one does — otherwise the two live on different side
+// registries (container vs item) and connectors stack instead of fanning.
+export function itemOf(figure: Figure): Model
 {
     const dc = figure.DataContext;
     return dc instanceof NodeViewModel ? dc : figure;

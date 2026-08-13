@@ -5,6 +5,7 @@ import type { Figure } from '../figure.js';
 import { type PortSide, type ResolvedPortSide } from '../port.js';
 import { ConnectorEnd } from '../routing/router.js';
 import { DiagramSettings } from '../diagram-settings.js';
+import { itemOf } from './connector-create-behavior.js';
 import { type RouteWaypoint, waypoint, routePoints } from '../route-waypoint.js';
 
 // Snapshot of a ConnectorEndpoint's 5 DPs taken at the start of a
@@ -113,9 +114,12 @@ export class ConnectorEditAdorner
             PortIndex: ep.PortIndex,
             FreePoint: ep.FreePoint,
         };
-        // § 4.2: PointerDown immediately clears port-ref + sets
-        // FreePoint. The connector re-routes the affected end to the
-        // cursor on the next OnPropertyChanged flush.
+        // § 4.2: PointerDown clears the node/port refs and re-anchors the end
+        // to the cursor. Node is cleared BEFORE FreePoint is set: the recompute
+        // invariant clears a FreePoint written while a Node is still present
+        // (it's vestigial then), so the free anchor must be set only once Node
+        // is gone. The one-recompute node-less window in between is hidden by
+        // the connector's unanchored guard (no origin flash).
         ep.Node      = undefined;
         ep.PortName  = undefined;
         ep.PortSide  = undefined;
@@ -315,11 +319,29 @@ export class ConnectorEditAdorner
             this._state = { kind: 'idle' };
             return;
         }
-        ep.FreePoint = undefined;
+        // A missing target must NEVER leave the endpoint node-less. Restore the
+        // pre-drag anchor instead — identical to releasing over empty space.
+        if (targetFigure === undefined || targetFigure === null)
+        {
+            applyEndpointSnapshot(ep, this._state.snapshot);
+            this._state = { kind: 'idle' };
+            return;
+        }
+        // Assign the node/side FIRST, THEN clear the transient free/port refs.
+        // Each DP write re-routes synchronously; clearing FreePoint before Node
+        // is set would route through a node-less state (→ origin). With Node set
+        // first, FreePoint is already ignored by resolution, so its clear is safe.
+        //
+        // Bind to the container's data ITEM (the node VM), NOT the container
+        // Figure — this is what the CREATE path does (makeSideEndpoint →
+        // itemOf). A created endpoint and a repositioned one must reference the
+        // same object, else they land on DIFFERENT per-object side registries
+        // (VM vs container) and stack at the side centre instead of fanning.
+        ep.Node      = itemOf(targetFigure);
+        ep.PortSide  = targetSide;
         ep.PortName  = undefined;
         ep.PortIndex = undefined;
-        ep.Node      = targetFigure;
-        ep.PortSide  = targetSide;
+        ep.FreePoint = undefined;
         this._state = { kind: 'idle' };
     }
 

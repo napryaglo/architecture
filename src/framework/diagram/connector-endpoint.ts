@@ -60,6 +60,7 @@ export class ConnectorEndpoint extends Model
     public set PortIndex(v: number | undefined)  { this.set_property_value(ConnectorEndpoint.PortIndexKey, v); }
     public get FreePoint(): Point | undefined    { return this.get_property_value(ConnectorEndpoint.FreePointKey); }
     public set FreePoint(v: Point | undefined)   { this.set_property_value(ConnectorEndpoint.FreePointKey, v); }
+
     public get UnresolvedNodeId(): string | undefined  { return this.get_property_value(ConnectorEndpoint.UnresolvedNodeIdKey); }
     public set UnresolvedNodeId(v: string | undefined) { this.set_property_value(ConnectorEndpoint.UnresolvedNodeIdKey, v); }
 

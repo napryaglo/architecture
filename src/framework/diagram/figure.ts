@@ -8,7 +8,7 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { Brush, type Geometry, type PathGeometry, type Point, Pen, SolidColorBrush } from '../../visual-engine/index.js';
+import { Brush, type PathGeometry, type Point, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { Color } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { Border } from '../../basic/border.js';
@@ -23,7 +23,7 @@ import { type Port, type ResolvedPortSide } from './port.js';
 import type { IPortProvider } from './port-providers/port-provider.js';
 import { resolveDefaultPortProvider } from './port-providers/default-port-providers.js';
 import type { ConnectorEndpoint } from './connector-endpoint.js';
-import { SideEndpointRegistry, type ISideEndpointHost } from './side-endpoint-host.js';
+import { SideEndpointRegistry, type ISideAnchoredConnector, type ISideEndpointHost } from './side-endpoint-host.js';
 import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-connector-drag.js';
 import { DiagramSettings } from './diagram-settings.js';
 
@@ -500,12 +500,6 @@ export class Figure extends ContentControl implements ISideEndpointHost
     private readonly _sideHost = new SideEndpointRegistry(
         () => new Rect(this.Left, this.Top, this.Width, this.Height),
     );
-    // Re-entry guard for _optimizeSideIntersections. The optimizer calls
-    // _fireSideRebalance to re-route after each swap; the re-route
-    // cascades back through Connector recompute paths that themselves
-    // call _optimizeSideIntersections. Without the guard the optimizer
-    // recurses indefinitely.
-    private _optimizing: boolean = false;
 
     /** @internal — called by Connector when an endpoint settles on this Figure + side. */
     public _registerSideEndpoint(
@@ -566,7 +560,11 @@ export class Figure extends ContentControl implements ISideEndpointHost
     /** Move `endpoint` to slot `toIndex` on `side`, firing a rebalance so
      *  every connector on the side re-routes at its new slot. The index is
      *  clamped to the list; a no-op move (same index) skips the rebalance.
-     *  Backs the position-based segment-drag reorder + its abort restore. */
+     *  Backs the position-based segment-drag reorder + its abort restore.
+     *
+     *  This is a HAND placement, so it freezes the side against the auto
+     *  crossing-optimizer — otherwise the optimizer would immediately undo the
+     *  user's drag when the new order happens to read as a crossing. */
     public MoveSideEndpoint(side: ResolvedPortSide, endpoint: ConnectorEndpoint, toIndex: number): void
     {
         const list = this._sideHost.getSideList(side);
@@ -578,6 +576,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
         if (to === from) return;
         list.splice(from, 1);
         list.splice(to, 0, endpoint);
+        this._sideHost.markUserOrdered(side);
         this._fireSideRebalance(side);
     }
 
@@ -612,68 +611,15 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public AddSideEndpointsChangedListener   (listener: () => void): void { this._sideEndpointsChangedListeners.add(listener); }
     public RemoveSideEndpointsChangedListener(listener: () => void): void { this._sideEndpointsChangedListeners.delete(listener); }
 
-    /** @internal — greedy pairwise swap pass that re-orders the side's
-     *  endpoint list to eliminate intersections between connectors that
-     *  both attach to `side`. Triggered by Connector._scheduleRecompute
-     *  after every recompute (registration changes AND figure moves both
-     *  reach this entry point). Bounded iteration so an unbreakable
-     *  intersection topology (e.g., a waypoint pinning the route through
-     *  another connector's path) doesn't loop forever. */
+    /** @internal — re-orders the side's endpoint slots to minimise crossings
+     *  between the connectors that both attach to `side`. Triggered by
+     *  Connector._scheduleRecompute after every recompute (registration
+     *  changes AND figure moves both reach this entry point). Delegates to
+     *  the shared registry, which owns the hill-climb + its re-entry guard so
+     *  Figure and SideConnectableNodeVM run the identical optimisation. */
     public _optimizeSideIntersections(side: ResolvedPortSide): void
     {
-        if (this._optimizing) return;
-        const list = this._sideHost.getSideList(side);
-        if (list.length < 2) return;
-        const owners: ISideAnchoredConnector[] = [];
-        for (const ep of list)
-        {
-            const o = this._sideHost.getOwner(ep);
-            if (o === undefined) return;  // mixed-ownership side — skip
-            owners.push(o);
-        }
-        this._optimizing = true;
-        try
-        {
-            let improved = true;
-            let iter = 0;
-            // Per-iteration cap: a full pairwise sweep already restores
-            // invariants for typical N ≤ 4. The outer cap of 4 iterations
-            // gives the algorithm room to converge if a swap that helped
-            // pair (i, j) accidentally breaks pair (i, k); rarely needed
-            // in practice but bounds worst-case work.
-            while (improved && iter++ < 4)
-            {
-                improved = false;
-                for (let i = 0; i < list.length - 1; i++)
-                {
-                    for (let j = i + 1; j < list.length; j++)
-                    {
-                        if (!connectorsConflict(owners[i]!, owners[j]!)) continue;
-                        // Try the swap. _fireSideRebalance re-routes
-                        // every endpoint on the side at the new slot
-                        // positions.
-                        [list[i], list[j]] = [list[j]!, list[i]!];
-                        [owners[i], owners[j]] = [owners[j]!, owners[i]!];
-                        this._fireSideRebalance(side);
-                        if (connectorsConflict(owners[i]!, owners[j]!))
-                        {
-                            // Didn't help — revert.
-                            [list[i], list[j]] = [list[j]!, list[i]!];
-                            [owners[i], owners[j]] = [owners[j]!, owners[i]!];
-                            this._fireSideRebalance(side);
-                        }
-                        else
-                        {
-                            improved = true;
-                        }
-                    }
-                }
-            }
-        }
-        finally
-        {
-            this._optimizing = false;
-        }
+        this._sideHost.optimizeIntersections(side);
     }
 
     private _rebuildGeometry(): void
@@ -1064,160 +1010,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
     }
 }
 
-// Duck-typed shape of a Connector for the side-intersection optimizer.
-// Avoids a hard import of Connector into figure.ts (Connector already
-// imports Figure — the reverse would close the cycle). The optimizer
-// only needs the resolved Geometry to extract a polyline; anything
-// else stays out of the contract.
-export interface ISideAnchoredConnector
-{
-    readonly Geometry: Geometry | undefined;
-}
-
-// Polyline-vs-polyline crossing detector for the side optimizer. Walks
-// each PathFigure of both connectors' Geometry, pairwise-checks every
-// segment for a proper crossing (no shared endpoint counts as crossing,
-// matching the "do they visually intersect mid-route" question the
-// user is solving). Returns false on undefined Geometry — a connector
-// with no resolved route can't intersect anything.
-// Two connectors "conflict" on a shared side when their routes either
-// cross transversally OR run collinearly on top of each other. The side
-// optimizer treats both as a swap trigger — a crossing reads as an X, an
-// overlap reads as a single stacked line hiding a second route; both are
-// fixed by reordering the slots so the routes fan out cleanly.
-function connectorsConflict(a: ISideAnchoredConnector, b: ISideAnchoredConnector): boolean
-{
-    return connectorsCross(a, b) || connectorsOverlap(a, b);
-}
-
-function connectorsCross(a: ISideAnchoredConnector, b: ISideAnchoredConnector): boolean
-{
-    return anySegmentPair(a, b, segmentsProperlyCross);
-}
-
-// Collinear-overlap sibling of connectorsCross — true iff any segment of A
-// shares a positive-length collinear span with any segment of B (the two
-// routes paint over each other). segmentsProperlyCross explicitly excludes
-// this case (its `o !== 0` guards), so it needs its own predicate.
-function connectorsOverlap(a: ISideAnchoredConnector, b: ISideAnchoredConnector): boolean
-{
-    return anySegmentPair(a, b, segmentsOverlap);
-}
-
-// Shared driver: run `pred` over every (A-segment, B-segment) pair and
-// short-circuit on the first hit. Both crossing and overlap walk the two
-// polylines identically — only the per-pair predicate differs.
-function anySegmentPair(
-    a: ISideAnchoredConnector,
-    b: ISideAnchoredConnector,
-    pred: (ax: number, ay: number, bx: number, by: number,
-           cx: number, cy: number, dx: number, dy: number) => boolean,
-): boolean
-{
-    const polyA = polylineOf(a.Geometry);
-    const polyB = polylineOf(b.Geometry);
-    if (polyA.length < 2 || polyB.length < 2) return false;
-    for (let i = 0; i < polyA.length - 1; i++)
-    {
-        for (let j = 0; j < polyB.length - 1; j++)
-        {
-            if (pred(
-                polyA[i]!.x, polyA[i]!.y, polyA[i + 1]!.x, polyA[i + 1]!.y,
-                polyB[j]!.x, polyB[j]!.y, polyB[j + 1]!.x, polyB[j + 1]!.y,
-            )) return true;
-        }
-    }
-    return false;
-}
-
-// Extract a flat sequence of points from a PathGeometry. The orthogonal
-// router emits one PathFigure with LineSegment children; bezier emits
-// PathFigure with BezierSegment children (we treat the segment's anchor
-// endpoint as the polyline vertex — adequate for the crossing question
-// since adjacent bezier arcs share endpoints with their neighbours).
-function polylineOf(geo: Geometry | undefined): readonly { x: number; y: number }[]
-{
-    if (geo === undefined) return [];
-    // Duck-type the PathGeometry interface — avoids importing the
-    // concrete class while staying type-checked at use sites below.
-    const pg = geo as unknown as Partial<PathGeometry>;
-    if (pg.Figures === undefined) return [];
-    const out: { x: number; y: number }[] = [];
-    for (const fig of pg.Figures)
-    {
-        out.push({ x: fig.StartPoint.X, y: fig.StartPoint.Y });
-        for (const seg of fig.Segments)
-        {
-            // LineSegment exposes .Point; BezierSegment exposes
-            // .Point3 (the arc endpoint). Tolerate either via duck
-            // typing.
-            const p = (seg as unknown as { Point?: { X: number; Y: number }; Point3?: { X: number; Y: number } });
-            const tip = p.Point ?? p.Point3;
-            if (tip !== undefined) out.push({ x: tip.X, y: tip.Y });
-        }
-    }
-    return out;
-}
-
-// Classic 2D "proper" segment-segment crossing — returns true iff the
-// segments share a single point that is strictly interior to BOTH (no
-// shared endpoint, no collinear overlap). The cross-product orientation
-// check is faster than computing intersection coordinates and avoids
-// the floating-point edge case where two segments touch at exactly one
-// endpoint (which doesn't visually read as a "crossing").
-function segmentsProperlyCross(
-    ax: number, ay: number, bx: number, by: number,
-    cx: number, cy: number, dx: number, dy: number,
-): boolean
-{
-    const o1 = orient(ax, ay, bx, by, cx, cy);
-    const o2 = orient(ax, ay, bx, by, dx, dy);
-    const o3 = orient(cx, cy, dx, dy, ax, ay);
-    const o4 = orient(cx, cy, dx, dy, bx, by);
-    // Both orientation pairs must differ in sign (strict crossing).
-    // Zero on either side means a shared endpoint or collinear case —
-    // not a proper crossing.
-    return (o1 > 0) !== (o2 > 0)
-        && (o3 > 0) !== (o4 > 0)
-        && o1 !== 0 && o2 !== 0 && o3 !== 0 && o4 !== 0;
-}
-
-function orient(ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number
-{
-    return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
-}
-
-// True iff segment AB and segment CD are COLLINEAR and their overlap along
-// that shared line has strictly positive length (i.e. they paint over one
-// another, not merely touch at an endpoint). Complements
-// segmentsProperlyCross, which rejects the collinear case outright.
-//
-//   1. Both endpoints of CD must lie on the infinite line through AB
-//      (orientation ≈ 0), and both segments must be non-degenerate.
-//   2. Project all four points onto AB's dominant axis (X for a mostly-
-//      horizontal segment, Y for a mostly-vertical one — robust when one
-//      axis span is zero, as it is for axis-aligned orthogonal routes) and
-//      test the 1-D intervals for a positive-length intersection.
-function segmentsOverlap(
-    ax: number, ay: number, bx: number, by: number,
-    cx: number, cy: number, dx: number, dy: number,
-): boolean
-{
-    const EPS = 1e-6;
-    const abx = bx - ax;
-    const aby = by - ay;
-    // Degenerate segments (a point) can't overlap a span.
-    if (Math.abs(abx) < EPS && Math.abs(aby) < EPS) return false;
-    if (Math.abs(dx - cx) < EPS && Math.abs(dy - cy) < EPS) return false;
-    // C and D must both sit on line AB → all four collinear.
-    if (Math.abs(orient(ax, ay, bx, by, cx, cy)) > EPS) return false;
-    if (Math.abs(orient(ax, ay, bx, by, dx, dy)) > EPS) return false;
-    // Project onto the dominant axis and intersect the intervals.
-    const useX = Math.abs(abx) >= Math.abs(aby);
-    const a1 = useX ? ax : ay, b1 = useX ? bx : by;
-    const c1 = useX ? cx : cy, d1 = useX ? dx : dy;
-    const lo = Math.max(Math.min(a1, b1), Math.min(c1, d1));
-    const hi = Math.min(Math.max(a1, b1), Math.max(c1, d1));
-    return hi - lo > EPS;
-}
+// The side-intersection optimizer + its crossing/overlap geometry helpers
+// moved to side-endpoint-host.ts so Figure and SideConnectableNodeVM share
+// one implementation via the SideEndpointRegistry.
 

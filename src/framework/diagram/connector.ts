@@ -904,19 +904,32 @@ export class Connector extends Shape
         {
             this._recomputing = false;
         }
+        // Optimize AFTER the guard is released so the optimizer can re-route
+        // this connector too (it swaps slots and re-measures crossings on live
+        // geometry). Re-entry is bounded: the rebalance re-enters
+        // _scheduleRecompute, but the registry's `_optimizing` flag makes the
+        // nested _optimizeAnchoredSides a no-op.
+        this._optimizeAnchoredSides();
     }
 
     private _scheduleRecomputeBody(): void
     {
         const src = this.Source;
         const tgt = this.Target;
-        // An endpoint carrying an UnresolvedNodeId points at a node that wasn't
-        // present at load time (its serializer hadn't registered). It has no
-        // anchor to route to, so leave the connector un-drawn — NOT snapped to
-        // the origin — until a later load re-binds it. The id is preserved on
-        // the endpoint, so nothing is lost while it's hidden.
+        // Leave the connector un-drawn (NOT snapped to the origin) when an
+        // endpoint has no anchor to route to:
+        //   * UnresolvedNodeId — points at a node absent at load time (its
+        //     serializer hadn't registered); a later load re-binds it.
+        //   * node-less AND free-less — an orphaned/invalid endpoint (e.g. a
+        //     target whose node was removed, or a drop that left no anchor).
+        //     Path 1 would resolve it to (0,0); rendering that draws a stray
+        //     line to the diagram corner. Hiding it is the runtime invariant:
+        //     an endpoint MUST reference a node or a free point to be drawn.
+        // Endpoint state is preserved, so nothing is lost while it's hidden.
         if (src === undefined || tgt === undefined
-            || src.UnresolvedNodeId !== undefined || tgt.UnresolvedNodeId !== undefined)
+            || src.UnresolvedNodeId !== undefined || tgt.UnresolvedNodeId !== undefined
+            || (src.Node === undefined && src.FreePoint === undefined)
+            || (tgt.Node === undefined && tgt.FreePoint === undefined))
         {
             this.Geometry = undefined;
             this._currentSrcAnchor = undefined;
@@ -924,6 +937,17 @@ export class Connector extends Shape
             this._currentRoutePoints = undefined;
             return;
         }
+        // A FreePoint is meaningful ONLY when Node is undefined (resolution
+        // path 1). Once an endpoint has a Node, its FreePoint is vestigial —
+        // paths 2-5 read the node's ports/geometry and ignore it. Worse, a
+        // lingering FreePoint makes endpointSideSlot bail, so the endpoint
+        // drops to a geometric-clip CENTER instead of joining the side-slot
+        // fan (connectors then stack on the same center point). Clear it here
+        // so the fan engages and the stale value isn't re-serialized. The
+        // write re-enters _scheduleRecompute but the _recomputing guard makes
+        // that a no-op; this pass continues with the cleaned endpoint.
+        if (src.Node !== undefined && src.FreePoint !== undefined) src.FreePoint = undefined;
+        if (tgt.Node !== undefined && tgt.FreePoint !== undefined) tgt.FreePoint = undefined;
         // Raw bare points drive anchor direction (waypoint-aware side picking);
         // the router is fed the MINIMISED projection (pins kept, collinear auto
         // dropped) so a moved node re-routes to the fewest bends through the pins.
@@ -1010,32 +1034,39 @@ export class Connector extends Shape
         placeCap(this._sourceCapInstance, srcAnchor, router.tangentAt(spec, ConnectorEnd.Source), ConnectorEnd.Source, this.SourceCapScale);
         placeCap(this._targetCapInstance, tgtAnchor, router.tangentAt(spec, ConnectorEnd.Target), ConnectorEnd.Target, this.TargetCapScale);
 
-        // Side-intersection optimization. Now that this connector's
-        // Geometry is current, ask each side it's anchored to whether
-        // a slot swap between its registered connectors would clear up
-        // a crossing. Figure._optimizeSideIntersections is guarded
-        // against re-entry: when the optimizer's swap fires
-        // _fireSideRebalance, every connector on the side calls back
-        // into this method, but the figure's `_optimizing` flag short-
-        // circuits the recursive optimize calls. Same flag covers the
-        // figure-move trigger (move → connector re-route → this point)
-        // and the registration trigger (register → _fireSideRebalance
-        // → connector recompute → this point).
-        if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined)
-        {
-            const sf = this._trackedSourceFigure as unknown as { _optimizeSideIntersections?: (side: ResolvedPortSide) => void };
-            sf._optimizeSideIntersections?.(this._trackedSourceSide);
-        }
-        if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined)
-        {
-            const tf = this._trackedTargetFigure as unknown as { _optimizeSideIntersections?: (side: ResolvedPortSide) => void };
-            tf._optimizeSideIntersections?.(this._trackedTargetSide);
-        }
-
         // Re-place the label on the freshly-computed route (§ Slice 5) and
         // refresh its {Length}/{SourceId}/… fields (§ Slice 6).
         this._placeLabel();
         this._refreshLabelFields();
+        // NOTE: side-intersection optimization is NOT run here. It must run
+        // only AFTER this connector's `_recomputing` guard is released (see
+        // _scheduleRecompute) — otherwise the optimizer's re-route of THIS
+        // connector is suppressed by the guard, so it would measure crossings
+        // against this connector's stale (pre-swap) geometry and settle on a
+        // wrong order. Deferring past the guard lets every connector on the
+        // side, including this one, re-route at its trial slot.
+    }
+
+    // Ask each side this connector anchors to whether a slot reorder between
+    // its registered connectors would reduce crossings. Runs OUTSIDE the
+    // `_recomputing` guard (called from _scheduleRecompute after the body) so
+    // the optimizer's tentative re-routes take effect for every connector on
+    // the side — including this one. _optimizeSideIntersections is part of the
+    // ISideEndpointHost contract (every side-host — Figure AND every
+    // SideConnectableNodeVM — implements it), so these are plain typed calls:
+    // a host missing it is a compile error, NOT a silently-swallowed no-op.
+    // The registry's own `_optimizing` flag short-circuits the re-entrant
+    // optimize calls the rebalance triggers.
+    private _optimizeAnchoredSides(): void
+    {
+        if (this._trackedSourceFigure !== undefined && this._trackedSourceSide !== undefined)
+        {
+            this._trackedSourceFigure._optimizeSideIntersections(this._trackedSourceSide);
+        }
+        if (this._trackedTargetFigure !== undefined && this._trackedTargetSide !== undefined)
+        {
+            this._trackedTargetFigure._optimizeSideIntersections(this._trackedTargetSide);
+        }
     }
 
     // Resolve every {field} in the label against this connector's live route.
@@ -1269,6 +1300,9 @@ function tryResolveSideSlot(
     // Figure.ArrangedRect defaults to Rect.Zero, which would collapse
     // every slot onto the origin and silently break unit-test fixtures.
     const r = nodeRect(host as unknown as Model);
+    // A zero-size host (e.g. an arch node whose SizeToContent measure hasn't
+    // written Width/Height yet) would collapse every slot onto the origin;
+    // bail so the caller falls through to the standard anchor paths instead.
     if (r === undefined || r.Width === 0 || r.Height === 0) return undefined;
     const t = (info.index + 1) / (info.count + 1);
     const x = side === PortSide.E ? r.X + r.Width
