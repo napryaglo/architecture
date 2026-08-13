@@ -118,6 +118,10 @@ interface SerializedDiagram
     readonly nodes:       readonly SerializedNode[];
     readonly connectors?: readonly SerializedConnector[];
     readonly nextId:      number;
+    // Opaque, app-owned document metadata (mural neither reads nor validates
+    // the keys). Omitted when empty so diagrams that don't use it keep their
+    // existing on-disk shape. Round-trips through save/load unchanged.
+    readonly metadata?:   Record<string, unknown>;
 }
 
 const STORAGE_KEY = 'mural-diagram-state-v1';
@@ -268,6 +272,14 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         DiagramDocument, 'ConnectorsModePinned', false, MetaData.None);
 
     private _nextId = 1;
+
+    // Opaque, app-owned document metadata persisted inside the serialized
+    // diagram (see SerializedDiagram.metadata). mural never reads the keys;
+    // a consumer stores data that must travel WITH the .diagram file. Get
+    // returns a shallow copy; set replaces.
+    private _metadata: Record<string, unknown> = {};
+    public get Metadata(): Record<string, unknown> { return { ...this._metadata }; }
+    public set Metadata(v: Record<string, unknown>) { this._metadata = { ...v }; }
 
     // Per-item teardown thunks for the dirty-on-edit listeners (see _trackEdits).
     // A route drag, endpoint reconnect, or node move mutates a Connector / node
@@ -914,7 +926,8 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 labelPos:    c.LabelPosition !== 0.5 ? c.LabelPosition : undefined,
             });
         }
-        return { nodes, connectors, nextId: this._nextId };
+        const hasMetadata = Object.keys(this._metadata).length > 0;
+        return { nodes, connectors, nextId: this._nextId, ...(hasMetadata ? { metadata: { ...this._metadata } } : {}) };
     }
 
     private _deserialize(payload: SerializedDiagram): void
@@ -1032,6 +1045,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             this.Connectors.Add(c);
         }
         if (typeof payload.nextId === 'number') this._nextId = Math.max(this._nextId, payload.nextId);
+        this._metadata = payload.metadata !== undefined ? { ...payload.metadata } : {};
     }
 
     // Reduce items to the unique set of outermost ancestors (walks
