@@ -252,11 +252,18 @@ resources Toggles {
     Template x:key="DefaultRadioButtonItem" [TargetType = RadioButtonItem] {
         Border x:name="PART_Row"
             [ Background      = #00000000,
-              CornerRadius    = @ShapeFull,
+              CornerRadius    = @ShapeSmall,
               Padding         = (@Spacing2,@Spacing1,@Spacing3,@Spacing1) ] {
-            StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
+            // DockPanel (not a horizontal StackPanel): a horizontal StackPanel
+            // measures children with INFINITE width, so wrapping row content
+            // (a ContentPresenter hosting a multi-line label + description) never
+            // wraps — it runs full-length and gets clipped. Docking the ring Left
+            // and letting the ContentPresenter fill gives it a FINITE width, so
+            // TextWrapping engages and tall rows grow instead of overflowing.
+            DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_Ring"
-                    [ Background          = #00000000,
+                    [ DockPanel.Dock      = Left,
+                      Background          = #00000000,
                       BorderBrush         = @OnSurfaceVariant,
                       BorderThickness     = (2),
                       CornerRadius        = @ShapeFull,

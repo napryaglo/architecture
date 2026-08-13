@@ -1,10 +1,11 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
-import { Model, ModifierKeys } from '../../runtime/index.js';
+import { Model, ModifierKeys, Visual } from '../../runtime/index.js';
+import { HeadlessTarget } from '../../visual-engine/index.js';
 import { RadioButtonGroup, RadioButtonItem } from '../toggles/radio-button-group.js';
 import { SelectionMode, Selector } from '../list/selector.js';
-import { TextBlock } from '../../basic/text-block.js';
+import { TextBlock, TextWrapping } from '../../basic/text-block.js';
 
 const NoMods: ModifierKeys = { Ctrl: false, Shift: false, Alt: false, Meta: false };
 
@@ -13,6 +14,17 @@ const NoMods: ModifierKeys = { Ctrl: false, Shift: false, Alt: false, Meta: fals
 function rows(g: RadioButtonGroup): RadioButtonItem[]
 {
     return (g as unknown as { logicalChildren: RadioButtonItem[] }).logicalChildren;
+}
+
+function firstLongTextBlock(root: Visual): TextBlock | undefined
+{
+    if (root instanceof TextBlock && (root.Text ?? '').length > 20) return root;
+    for (const k of (root as unknown as { visualChildren: Iterable<Visual> }).visualChildren)
+    {
+        const f = firstLongTextBlock(k);
+        if (f !== undefined) return f;
+    }
+    return undefined;
 }
 
 describe('RadioButtonGroup defaults', () => {
@@ -64,6 +76,34 @@ describe('RadioButtonGroup item generation', () => {
         const cs = rows(g);
         assert.equal(cs[0], a);
         assert.equal(cs[1], b);
+    });
+});
+
+describe('RadioButtonGroup row layout', () => {
+
+    // Regression: the row template must give its content a FINITE width so a
+    // wrapping label wraps instead of running full-length and being clipped.
+    // A horizontal StackPanel (the prior template) measured content with
+    // infinite width — wrap never engaged. DockPanel/LastChildFill fixes it.
+    test('long row content wraps within a width-constrained group', () => {
+        initTestApp();
+        const g = new RadioButtonGroup();
+        g.Width = 220;
+        const long = new TextBlock(
+            'A fairly long option description that must wrap onto several lines '
+            + 'when the row is narrow, rather than overflow past the card edge.');
+        long.TextWrapping = TextWrapping.Wrap;
+        g.Items = [new RadioButtonItem(long)];
+
+        new HeadlessTarget(1400, 800, g).Flush();
+
+        const tb = firstLongTextBlock(g);
+        assert.ok(tb !== undefined, 'the row content rendered as a TextBlock');
+        // Fits inside the 220px group (minus ring + padding) and spans >1 line.
+        assert.ok(tb!.ArrangedRect.Width <= 220,
+            `content fit within the group width (got ${tb!.ArrangedRect.Width})`);
+        assert.ok(tb!.ArrangedRect.Height > 24,
+            `content wrapped to multiple lines (got ${tb!.ArrangedRect.Height})`);
     });
 });
 
