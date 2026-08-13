@@ -184,11 +184,12 @@ resources Buttons {
     // at construction time or via a later set both flow through the
     // same trigger pipeline.
     Style [TargetType = Button] {
-        // M3 pill default, theme-token driven (a theme can retune the
-        // shape family). Templates TemplateBind PART_Border.CornerRadius
-        // to this via `$$CornerRadius`; a per-instance Local set (e.g. a
-        // segmented bank's left/right-rounded halves) overrides it.
-        CornerRadius = @ShapeFull;
+        // Rounded-rect default (@ShapeSmall = 8dp), theme-token driven (a
+        // theme can retune the shape family). Templates TemplateBind
+        // PART_Border.CornerRadius to this via `$$CornerRadius`; a per-instance
+        // Local set (e.g. a segmented bank's left/right-rounded halves)
+        // overrides it.
+        CornerRadius = @ShapeSmall;
         Template = @DefaultFilledButton;
         when ( Variant = Elevated ) { Template = @DefaultElevatedButton; }
         when ( Variant = Tonal ) { Template = @DefaultTonalButton; }

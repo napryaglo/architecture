@@ -159,23 +159,23 @@ resources ToolBars {
         StackPanel [ Orientation = Horizontal ] {
             Border x:name="PART_Primary"
                 [ Background      = @SurfaceContainerHigh,
-                  CornerRadius    = (@ShapeFull,0,0,@ShapeFull),
+                  CornerRadius    = (@ShapeSmall,0,0,@ShapeSmall),
                   BorderThickness = (0) ] {
                 Border x:name="PART_PrimaryState"
                     [ Background   = #00000000,
-                      CornerRadius = (@ShapeFull,0,0,@ShapeFull),
+                      CornerRadius = (@ShapeSmall,0,0,@ShapeSmall),
                       Padding      = (12,8,10,8) ] {
                     Border x:name="PART_Content" [ HorizontalAlignment = Center, VerticalAlignment = Center ]
                 }
             }
             Border x:name="PART_Arrow"
                 [ Background      = @SurfaceContainerHigh,
-                  CornerRadius    = (0,@ShapeFull,@ShapeFull,0),
+                  CornerRadius    = (0,@ShapeSmall,@ShapeSmall,0),
                   BorderThickness = (1,0,0,0),
                   BorderBrush     = @OutlineVariant ] {
                 Border x:name="PART_ArrowState"
                     [ Background   = #00000000,
-                      CornerRadius = (0,@ShapeFull,@ShapeFull,0),
+                      CornerRadius = (0,@ShapeSmall,@ShapeSmall,0),
                       Padding      = (6,8,8,8) ] {
                     Shape [ Geometry = @ChevronDown, Fill = @OnSurfaceVariant, Width = 12, Height = 12, VerticalAlignment = Center ]
                 }
@@ -198,11 +198,11 @@ resources ToolBars {
     Template x:key="DefaultToolBarDropdownTrigger" [TargetType = ToolBarSplitButton] {
         Border x:name="PART_Primary"
             [ Background      = @SurfaceContainerHigh,
-              CornerRadius    = @ShapeFull,
+              CornerRadius    = @ShapeSmall,
               BorderThickness = (0) ] {
             Border x:name="PART_PrimaryState"
                 [ Background   = #00000000,
-                  CornerRadius = @ShapeFull,
+                  CornerRadius = @ShapeSmall,
                   Padding      = (12,8,10,8) ] {
                 StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
                     Border x:name="PART_Content" [ HorizontalAlignment = Center, VerticalAlignment = Center ]

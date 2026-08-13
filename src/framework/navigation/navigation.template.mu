@@ -22,7 +22,7 @@ resources Navigation {
 
     // ── NavigationItem: a single rail/bar destination row ──────────
     // Anatomy per M3 spec:
-    //   * Icon container — 56dp × 32dp pill (CornerRadius=@ShapeFull).
+    //   * Icon container — 56dp × 32dp pill (CornerRadius=@ShapeSmall).
     //     Background flips @SecondaryContainer when selected, transparent
     //     at rest. Houses PART_IconSlot, the consumer's Icon Visual.
     //   * Label — single-line text below the icon container with the
@@ -48,13 +48,13 @@ resources Navigation {
             StackPanel [ Orientation = Vertical, HorizontalAlignment = Center ] {
                 Border x:name="PART_IconContainer"
                     [ Background          = #00000000,
-                      CornerRadius        = @ShapeFull,
+                      CornerRadius        = @ShapeSmall,
                       Width               = 56,
                       Height              = 32,
                       HorizontalAlignment = Center ] {
                     Border x:name="PART_IconStateLayer"
                         [ Background   = #00000000,
-                          CornerRadius = @ShapeFull ] {
+                          CornerRadius = @ShapeSmall ] {
                         // PART_IconSlot is locked to the M3-spec 24×24dp
                         // icon box (centred inside the 56×32dp pill).
                         // Fixing the slot size matters because some

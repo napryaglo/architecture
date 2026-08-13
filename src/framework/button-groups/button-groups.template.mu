@@ -51,11 +51,11 @@ resources ButtonGroups {
 
         // ── Position triggers — corner / border shape ────────────────
         when ( Position = Single ) {
-            PART_Border.CornerRadius = @ShapeFull;
+            PART_Border.CornerRadius = @ShapeSmall;
             PART_Border.BorderThickness = (1,1,1,1);
         }
         when ( Position = Start ) {
-            PART_Border.CornerRadius = (@ShapeFull,0,0,@ShapeFull);
+            PART_Border.CornerRadius = (@ShapeSmall,0,0,@ShapeSmall);
             PART_Border.BorderThickness = (1,1,0,1);
         }
         when ( Position = Middle ) {
@@ -63,7 +63,7 @@ resources ButtonGroups {
             PART_Border.BorderThickness = (1,1,0,1);
         }
         when ( Position = End ) {
-            PART_Border.CornerRadius = (0,@ShapeFull,@ShapeFull,0);
+            PART_Border.CornerRadius = (0,@ShapeSmall,@ShapeSmall,0);
             PART_Border.BorderThickness = (1,1,1,1);
         }
 
@@ -119,14 +119,14 @@ resources ButtonGroups {
         StackPanel [ Orientation = Horizontal ] {
             Border x:name="PART_PrimaryButton"
                 [ Background      = @Primary,
-                  CornerRadius    = (@ShapeFull,0,0,@ShapeFull),
+                  CornerRadius    = (@ShapeSmall,0,0,@ShapeSmall),
                   Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2),
                   BorderThickness = (0) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
             Border x:name="PART_TriggerButton"
                 [ Background      = @Primary,
-                  CornerRadius    = (0,@ShapeFull,@ShapeFull,0),
+                  CornerRadius    = (0,@ShapeSmall,@ShapeSmall,0),
                   Padding         = (@Spacing2,@Spacing2,@Spacing2,@Spacing2),
                   BorderThickness = (1,0,0,0),
                   BorderBrush     = @PrimaryContainer ] {

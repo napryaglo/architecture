@@ -348,20 +348,21 @@ describe('Button — Variant DP', () => {
 describe('Button — CornerRadius DP (18.2)', () => {
     beforeEach(() => { initTestApp(); });
 
-    test('CornerRadius default is the M3 Full pill sentinel', () => {
+    test('CornerRadius default is @ShapeSmall (8dp rounded rect)', () => {
         const btn = new Button();
-        // Default Style setter (`CornerRadius = @ShapeFull`) resolves to
-        // CornerRadius.Full, matching the DP default_value safety net.
-        assert.equal(btn.CornerRadius, CornerRadius.Full);
+        // Default Style setter (`CornerRadius = @ShapeSmall`) resolves to 8dp —
+        // the M3 pill was retired for a rounded rectangle. The DP default_value
+        // (CornerRadius.Full) remains only as the style-less safety net.
+        assert.equal(btn.CornerRadius, 8);
     });
 
-    test('default CornerRadius TemplateBinds Full onto PART_Border + PART_StateLayer', () => {
+    test('default CornerRadius TemplateBinds @ShapeSmall (8) onto PART_Border + PART_StateLayer', () => {
         const btn = new Button();
         const border = btn.visualChildren[0] as Border;
         const stateLayer = border.child as Border;
-        assert.equal(border.CornerRadius, CornerRadius.Full,
-            'PART_Border corner should ride $$CornerRadius from the Full default');
-        assert.equal(stateLayer.CornerRadius, CornerRadius.Full,
+        assert.equal(border.CornerRadius, 8,
+            'PART_Border corner should ride $$CornerRadius from the @ShapeSmall default');
+        assert.equal(stateLayer.CornerRadius, 8,
             'PART_StateLayer corner should match PART_Border via the same binding');
     });
 

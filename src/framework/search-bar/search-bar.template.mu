@@ -12,7 +12,7 @@ resources SearchBars {
     // findFirstContentPresenter doesn't need to walk past them — TextBox
     // doesn't use the ContentPresenter slot, so there's no contest.
     //
-    // ShapeFull gives the M3 stadium-shape SearchBar look; the resting
+    // @ShapeSmall (8dp) gives a rounded-rect SearchBar; the resting
     // background is @SurfaceContainerHigh so the field reads as
     // elevated against neutral surrounding chrome.
     Template x:key="DefaultSearchBar" [TargetType = SearchBar] {
@@ -20,7 +20,7 @@ resources SearchBars {
             [ Background      = @SurfaceContainerHigh,
               BorderBrush     = #00000000,
               BorderThickness = (0),
-              CornerRadius    = @ShapeFull,
+              CornerRadius    = @ShapeSmall,
               Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2),
               Height          = 56 ] {
             DockPanel [ LastChildFill = true ] {
