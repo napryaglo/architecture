@@ -2,7 +2,10 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 import { Rect } from '../../../visual-engine/primitives.js';
+import { Model, ObservableCollection } from '../../../runtime/index.js';
+import { Shape } from '../../../basic/shapes/shape.js';
 import { Diagram } from '../diagram.js';
+import { Connector } from '../connector.js';
 
 describe('Diagram camera', () => {
     beforeEach(() => { initTestApp(); });
@@ -66,5 +69,16 @@ describe('Diagram camera', () => {
         assert.ok(d.ResetZoomCommand !== undefined);
         assert.ok(d.FitCommand !== undefined);
         assert.ok(d.FitToSelectionCommand !== undefined);
+    });
+
+    test('connector hit band scales inversely with zoom', () => {
+        const d = new Diagram();
+        const c = new Connector();
+        const connectors = new ObservableCollection<Model>();
+        connectors.Add(c);
+        d.Connectors = connectors;
+        d.SetCamera({ zoom: 2, panX: 0, panY: 0 });
+        const w = c.get_property_value(Shape.HitTestStrokeWidthKey);
+        assert.ok(Math.abs(w - 14 / 2) < 1e-6, `expected 7, got ${w}`);   // base 14 / zoom 2
     });
 });

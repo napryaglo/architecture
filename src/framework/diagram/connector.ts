@@ -162,6 +162,15 @@ export class Connector extends Shape
     public static GetCapInset(v: Visual): number { return v.get_property_value(Connector.CapInsetKey); }
     public static SetCapInset(v: Visual, value: number): void { v.set_property_value(Connector.CapInsetKey, value); }
 
+    // Keep the invisible click/hover band a constant ON-SCREEN width regardless of
+    // the diagram camera zoom (the route geometry is scaled by the camera transform,
+    // so the band must be divided by the zoom to render at a constant pixel width).
+    // Called by the owning Diagram on zoom change.
+    public applyCameraZoom(zoom: number): void
+    {
+        this.set_property_value(Shape.HitTestStrokeWidthKey, DiagramSettings.ConnectorHitWidth() / Math.max(zoom, 0.0001));
+    }
+
     public get Source():       ConnectorEndpoint | undefined { return this.get_property_value(Connector.SourceKey); }
     public set Source(v:       ConnectorEndpoint | undefined) { this.set_property_value(Connector.SourceKey, v); }
     public get Target():       ConnectorEndpoint | undefined { return this.get_property_value(Connector.TargetKey); }

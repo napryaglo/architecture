@@ -1137,6 +1137,17 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // @internal test seam — the same path OnPointerWheel uses, without live routing.
     public _dispatchWheel(args: WheelEventArgs): void { this._cameraHandlers?.OnWheel(args); }
 
+    private _applyCameraToConnectors(): void
+    {
+        const connectors = this.Connectors;
+        if (connectors === undefined) return;
+        for (let i = 0; i < connectors.Count; i++)
+        {
+            const c = connectors.Get(i);
+            if (c instanceof Connector) c.applyCameraZoom(this.Zoom);
+        }
+    }
+
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
         oldValue:   unknown,
@@ -1147,6 +1158,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         if (descriptor.Name === 'Zoom' || descriptor.Name === 'PanX' || descriptor.Name === 'PanY')
         {
             this._syncCameraTransform();
+        }
+        if (descriptor.Name === 'Zoom')
+        {
+            // Keep connector click-bands a constant on-screen width under zoom.
+            this._applyCameraToConnectors();
         }
         if (descriptor.Name === 'CameraEnabled')
         {
