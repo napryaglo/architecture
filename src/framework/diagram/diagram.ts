@@ -55,7 +55,8 @@ import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js'
 import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
-import { Brush, Pen, Point, TextAlignment } from '../../visual-engine/index.js';
+import { Brush, Pen, Point, Rect, ScaleTransform, Size, TextAlignment, TransformGroup, TranslateTransform } from '../../visual-engine/index.js';
+import { type Camera, clampZoom } from './camera.js';
 import { TextPlacement } from './shape-text.js';
 import { FormatMirror } from './collaborators/format-mirror.js';
 import {
@@ -132,6 +133,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // rect's X / Y for its position write.
     public static readonly PositionSnapKey = Model.RegisterProperty<DiagramPositionSnap | undefined>(
         Diagram, 'PositionSnap', undefined, MetaData.None);
+
+    // Camera DPs — the infinite-canvas view transform (screen = content*Zoom + Pan,
+    // Pan in screen px). Applied as PART_Camera.RenderTransform; the host persists
+    // them per diagram. Identity default (Zoom 1, Pan 0). See camera.ts.
+    public static readonly ZoomKey = Model.RegisterProperty<number>(Diagram, 'Zoom', 1, MetaData.None);
+    public static readonly PanXKey = Model.RegisterProperty<number>(Diagram, 'PanX', 0, MetaData.None);
+    public static readonly PanYKey = Model.RegisterProperty<number>(Diagram, 'PanY', 0, MetaData.None);
 
     // Selection-bounds DPs — read-only, derived from the union bbox of
     // every IFigure-shaped item in SelectedItems by SelectionBoundsTracker
@@ -421,6 +429,18 @@ export class Diagram extends Selector implements RigidConnectorDragHost
 
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
     public set PositionSnap(v: DiagramPositionSnap | undefined) { this.set_property_value(Diagram.PositionSnapKey, v); }
+
+    public get Zoom(): number { return this.get_property_value(Diagram.ZoomKey); }
+    public set Zoom(v: number) { this.set_property_value(Diagram.ZoomKey, v); }
+    public get PanX(): number { return this.get_property_value(Diagram.PanXKey); }
+    public set PanX(v: number) { this.set_property_value(Diagram.PanXKey, v); }
+    public get PanY(): number { return this.get_property_value(Diagram.PanYKey); }
+    public set PanY(v: number) { this.set_property_value(Diagram.PanYKey, v); }
+
+    // The camera as a value. SetCamera clamps zoom to the interactive range;
+    // Fit uses the wider range via a direct DP write (see _applyFit).
+    public get Camera(): Camera { return { zoom: this.Zoom, panX: this.PanX, panY: this.PanY }; }
+    public SetCamera(c: Camera): void { this.Zoom = clampZoom(c.zoom); this.PanX = c.panX; this.PanY = c.panY; }
 
     public get SelectionLeft():   number { return this.get_property_value(Diagram.SelectionLeftKey); }
     public get SelectionTop():    number { return this.get_property_value(Diagram.SelectionTopKey); }
@@ -972,6 +992,35 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         this._connectorInteractionsHandlers?.OnPointerLeave(args);
     }
 
+    // ── Camera (view transform on PART_Camera) ─────────────────────────────
+    private _camScale?: ScaleTransform;
+    private _camTranslate?: TranslateTransform;
+
+    // Lazily build the camera transform on PART_Camera (the template is applied in
+    // the ctor, so GetTemplateChild resolves once a camera write first arrives).
+    private _ensureCameraTransform(): void
+    {
+        if (this._camScale !== undefined) return;
+        const host = this.GetTemplateChild('PART_Camera');
+        if (host === undefined) return;
+        this._camScale = new ScaleTransform(this.Zoom, this.Zoom);
+        this._camTranslate = new TranslateTransform(this.PanX, this.PanY);
+        const group = new TransformGroup();
+        group.Children.Add(this._camScale);      // scale first
+        group.Children.Add(this._camTranslate);  // then translate
+        host.RenderTransform = group;
+    }
+
+    private _syncCameraTransform(): void
+    {
+        this._ensureCameraTransform();
+        if (this._camScale === undefined || this._camTranslate === undefined) return;
+        this._camScale.ScaleX = this.Zoom;
+        this._camScale.ScaleY = this.Zoom;
+        this._camTranslate.X = this.PanX;
+        this._camTranslate.Y = this.PanY;
+    }
+
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
         oldValue:   unknown,
@@ -979,6 +1028,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     ): void
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
+        if (descriptor.Name === 'Zoom' || descriptor.Name === 'PanX' || descriptor.Name === 'PanY')
+        {
+            this._syncCameraTransform();
+        }
         if (descriptor.Name === 'AlignmentGuidesEnabled')
         {
             if (newValue === true) this._attachAlignmentGuides();

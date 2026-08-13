@@ -258,9 +258,21 @@ resources Diagrams {
     // coords — which keeps side bars on figures past page 1
     // reachable after scrolling.
     Template x:key="DefaultDiagram" [TargetType = Diagram] {
-        ScrollViewer x:name="PART_Scroll" [ IsAutoHideScrollBars = false ] {
+        // Scroll is neutralized (both axes disabled) — the diagram camera pans via
+        // PART_Camera's RenderTransform, so the wheel bubbles to the Diagram
+        // unconsumed. The ScrollViewer stays for its structural roles: the viewport
+        // clip and the drop bubble-path. AdornerDecorator wraps PART_Camera (not the
+        // items) so selection adorners live OUTSIDE the camera transform and stay a
+        // constant on-screen size (the adorner layer composes the camera transform
+        // when positioning them — see adorner.ts).
+        ScrollViewer x:name="PART_Scroll"
+            [ IsAutoHideScrollBars    = false,
+              HorizontalScrollEnabled = false,
+              VerticalScrollEnabled   = false ] {
             AdornerDecorator {
-                ItemsPresenter
+                Border x:name="PART_Camera" [ Background = #00000000 ] {
+                    ItemsPresenter
+                }
             }
         }
     }
