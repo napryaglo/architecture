@@ -15,6 +15,7 @@ import {
     Visual,
     hasModifier,
     ModifierKeys,
+    type WheelEventArgs,
 } from '../../runtime/index.js';
 import { NodeViewModel } from './node-view-model.js';
 import type { DataTemplate } from '../../basic/templates/data-template.js';
@@ -57,6 +58,16 @@ import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
 import { Brush, Pen, Point, ScaleTransform, Size, TextAlignment, TransformGroup, TranslateTransform } from '../../visual-engine/index.js';
 import { type Camera, clampZoom, fitBounds, zoomAtPoint } from './camera.js';
+import { attachZoomPan } from './behaviors/zoom-pan-behavior.js';
+
+// Gesture handlers the ZoomPanBehavior installs on a Diagram: wheel is delivered
+// via OnPointerWheel; grab-pan rides the preview-pointer overrides.
+interface CameraGestureHandlers {
+    OnWheel(args: WheelEventArgs): void;
+    OnGrabStart(args: PointerEventArgs): void;
+    OnGrabMove(args: PointerEventArgs): void;
+    OnGrabEnd(args: PointerEventArgs): void;
+}
 import { TextPlacement } from './shape-text.js';
 import { FormatMirror } from './collaborators/format-mirror.js';
 import {
@@ -148,6 +159,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly ResetZoomCommandKey      = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'ResetZoomCommand', undefined, MetaData.None);
     public static readonly FitCommandKey            = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitCommand', undefined, MetaData.None);
     public static readonly FitToSelectionCommandKey = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitToSelectionCommand', undefined, MetaData.None);
+
+    // Opt-in gate: when true, the ZoomPanBehavior is attached (wheel-zoom-at-cursor,
+    // wheel/two-finger pan, middle-drag grab-pan). Default false so existing
+    // diagrams are unaffected until a host enables the camera.
+    public static readonly CameraEnabledKey = Model.RegisterProperty<boolean>(Diagram, 'CameraEnabled', false, MetaData.None);
 
     // Selection-bounds DPs — read-only, derived from the union bbox of
     // every IFigure-shaped item in SelectedItems by SelectionBoundsTracker
@@ -455,6 +471,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public get ResetZoomCommand():      RelayCommand | undefined { return this.get_property_value(Diagram.ResetZoomCommandKey); }
     public get FitCommand():            RelayCommand | undefined { return this.get_property_value(Diagram.FitCommandKey); }
     public get FitToSelectionCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.FitToSelectionCommandKey); }
+
+    public get CameraEnabled(): boolean { return this.get_property_value(Diagram.CameraEnabledKey); }
+    public set CameraEnabled(v: boolean) { this.set_property_value(Diagram.CameraEnabledKey, v); }
 
     private static readonly ZOOM_STEP = 1.2;
     private static readonly FIT_PADDING = 24;
@@ -1053,21 +1072,25 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     {
         super.OnPreviewPointerDown(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerDown(args);
+        this._cameraHandlers?.OnGrabStart(args);
     }
     protected override OnPreviewPointerMove(args: PointerEventArgs): void
     {
         super.OnPreviewPointerMove(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerMove(args);
+        this._cameraHandlers?.OnGrabMove(args);
     }
     protected override OnPreviewPointerUp(args: PointerEventArgs): void
     {
         super.OnPreviewPointerUp(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerUp(args);
+        this._cameraHandlers?.OnGrabEnd(args);
     }
     protected override OnPointerLeave(args: PointerEventArgs): void
     {
         super.OnPointerLeave(args);
         this._connectorInteractionsHandlers?.OnPointerLeave(args);
+        this._cameraHandlers?.OnGrabEnd(args);
     }
 
     // ── Camera (view transform on PART_Camera) ─────────────────────────────
@@ -1099,6 +1122,21 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         this._camTranslate.Y = this.PanY;
     }
 
+    // Camera gesture handlers (installed by attachZoomPan when CameraEnabled flips).
+    private _cameraHandlers?: CameraGestureHandlers;
+    private _cameraDetach?: () => void;
+    public _setCameraHandlers(h: CameraGestureHandlers | undefined): void { this._cameraHandlers = h; }
+
+    protected override OnPointerWheel(args: WheelEventArgs): void
+    {
+        super.OnPointerWheel(args);
+        // The ScrollViewer's scroll is disabled, so the wheel bubbles here unconsumed.
+        this._cameraHandlers?.OnWheel(args);
+    }
+
+    // @internal test seam — the same path OnPointerWheel uses, without live routing.
+    public _dispatchWheel(args: WheelEventArgs): void { this._cameraHandlers?.OnWheel(args); }
+
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
         oldValue:   unknown,
@@ -1109,6 +1147,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         if (descriptor.Name === 'Zoom' || descriptor.Name === 'PanX' || descriptor.Name === 'PanY')
         {
             this._syncCameraTransform();
+        }
+        if (descriptor.Name === 'CameraEnabled')
+        {
+            if (newValue === true) { this._cameraDetach ??= attachZoomPan(this); }
+            else { this._cameraDetach?.(); this._cameraDetach = undefined; }
         }
         if (descriptor.Name === 'AlignmentGuidesEnabled')
         {
