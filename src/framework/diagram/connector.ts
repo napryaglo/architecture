@@ -50,7 +50,7 @@ import {
     shortenPolyline,
 } from './caps/cap-inset.js';
 import { DiagramSettings } from './diagram-settings.js';
-import { type RouteWaypoint, routePoints, hasPinned } from './route-waypoint.js';
+import { type RouteWaypoint, routePoints } from './route-waypoint.js';
 import { minimiseRoute } from './route-minimiser.js';
 
 // Self-register the three default routers so a consumer that imports a
@@ -309,25 +309,18 @@ export class Connector extends Shape
     private readonly _onTargetNodeMoved = (): void => { this._onAttachedNodeMoved(); };
 
     // An attached figure moved (Left / Top changed). Waypoints are absolute
-    // canvas coordinates, so they don't follow the figure — a manually
-    // routed / segment-dragged bend would be left stranded and the router
-    // would bend the new route awkwardly around it. Clear them so the
-    // route is recomputed clean to the figure's new position. Clearing the
-    // Waypoints DP itself schedules the recompute; with no waypoints to
-    // clear, recompute directly for the endpoint move.
+    // canvas coordinates, so they don't follow the figure — a manually routed /
+    // segment-dragged bend would be left stranded and the router would bend the
+    // new route awkwardly around it. A moved figure therefore reroutes FULLY:
+    // every waypoint is recomputed against the figure's new position, including
+    // the user-pinned (userAltered) vertices — moving a node discards the manual
+    // route so the connector re-routes clean. Clearing the Waypoints DP itself
+    // schedules the recompute; with nothing to clear, recompute directly.
     private _onAttachedNodeMoved(): void
     {
-        const wps = this.Waypoints;
-        if (hasPinned(wps))
+        if (this.Waypoints !== undefined)
         {
-            // Pins are absolute — keep them where the user put them; drop only
-            // the auto vertices so the moved port re-routes cleanly through the
-            // pins. Setting Waypoints schedules the recompute.
-            this.Waypoints = wps!.filter(w => w.userAltered);
-        }
-        else if (wps !== undefined && wps.length > 0)
-        {
-            this.Waypoints = undefined;   // no pins → clean reroute (legacy behaviour)
+            this.Waypoints = undefined;   // drop auto AND pinned vertices → clean reroute
         }
         else
         {
