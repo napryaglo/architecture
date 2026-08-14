@@ -56,17 +56,17 @@ import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js'
 import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
-import { Brush, Pen, Point, ScaleTransform, Size, TextAlignment, TransformGroup, TranslateTransform } from '../../visual-engine/index.js';
+import { Brush, Pen, Point, ScaleTransform, Size, TextAlignment } from '../../visual-engine/index.js';
+import type { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { type Camera, clampZoom, fitBounds, zoomAtPoint } from './camera.js';
 import { attachZoomPan } from './behaviors/zoom-pan-behavior.js';
 
-// Gesture handlers the ZoomPanBehavior installs on a Diagram: wheel is delivered
-// via OnPointerWheel; grab-pan rides the preview-pointer overrides.
+// Gesture handlers the ZoomPanBehavior installs on a Diagram: Ctrl+wheel zoom is
+// delivered via the tunnel OnPreviewPointerWheel override (so it pre-empts the
+// ScrollViewer's bubble-phase scroll). Plain/Shift wheel and scrollbars are the
+// ScrollViewer's own.
 interface CameraGestureHandlers {
     OnWheel(args: WheelEventArgs): void;
-    OnGrabStart(args: PointerEventArgs): void;
-    OnGrabMove(args: PointerEventArgs): void;
-    OnGrabEnd(args: PointerEventArgs): void;
 }
 import { TextPlacement } from './shape-text.js';
 import { FormatMirror } from './collaborators/format-mirror.js';
@@ -145,12 +145,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly PositionSnapKey = Model.RegisterProperty<DiagramPositionSnap | undefined>(
         Diagram, 'PositionSnap', undefined, MetaData.None);
 
-    // Camera DPs — the infinite-canvas view transform (screen = content*Zoom + Pan,
-    // Pan in screen px). Applied as PART_Camera.RenderTransform; the host persists
-    // them per diagram. Identity default (Zoom 1, Pan 0). See camera.ts.
+    // Camera DP — the infinite-canvas zoom. Applied as PART_Camera's
+    // LayoutTransform scale (grows the measured footprint); pan is the
+    // ScrollViewer's scroll offset (see ScrollX/ScrollY). Identity default
+    // (Zoom 1). The host persists zoom + scroll offset per diagram. See camera.ts.
     public static readonly ZoomKey = Model.RegisterProperty<number>(Diagram, 'Zoom', 1, MetaData.None);
-    public static readonly PanXKey = Model.RegisterProperty<number>(Diagram, 'PanX', 0, MetaData.None);
-    public static readonly PanYKey = Model.RegisterProperty<number>(Diagram, 'PanY', 0, MetaData.None);
 
     // Zoom commands — RelayCommand DPs the overlay + host keyboard bind. Seeded in
     // the ctor; behaviour lives in the ZoomIn/Fit/… methods below.
@@ -160,9 +159,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly FitCommandKey            = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitCommand', undefined, MetaData.None);
     public static readonly FitToSelectionCommandKey = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitToSelectionCommand', undefined, MetaData.None);
 
-    // Opt-in gate: when true, the ZoomPanBehavior is attached (wheel-zoom-at-cursor,
-    // wheel/two-finger pan, middle-drag grab-pan). Default false so existing
-    // diagrams are unaffected until a host enables the camera.
+    // Opt-in gate: when true, the ZoomPanBehavior is attached (Ctrl+wheel
+    // zoom-at-cursor). Plain/Shift wheel and scrollbars are the ScrollViewer's.
+    // Default false so existing diagrams are unaffected until a host enables it.
     public static readonly CameraEnabledKey = Model.RegisterProperty<boolean>(Diagram, 'CameraEnabled', false, MetaData.None);
 
     // Selection-bounds DPs — read-only, derived from the union bbox of
@@ -456,15 +455,33 @@ export class Diagram extends Selector implements RigidConnectorDragHost
 
     public get Zoom(): number { return this.get_property_value(Diagram.ZoomKey); }
     public set Zoom(v: number) { this.set_property_value(Diagram.ZoomKey, v); }
-    public get PanX(): number { return this.get_property_value(Diagram.PanXKey); }
-    public set PanX(v: number) { this.set_property_value(Diagram.PanXKey, v); }
-    public get PanY(): number { return this.get_property_value(Diagram.PanYKey); }
-    public set PanY(v: number) { this.set_property_value(Diagram.PanYKey, v); }
 
     // The camera as a value. SetCamera clamps zoom to the interactive range;
     // Fit uses the wider range via a direct DP write (see _applyFit).
-    public get Camera(): Camera { return { zoom: this.Zoom, panX: this.PanX, panY: this.PanY }; }
-    public SetCamera(c: Camera): void { this.Zoom = clampZoom(c.zoom); this.PanX = c.panX; this.PanY = c.panY; }
+    public get Camera(): Camera { return { zoom: this.Zoom, offsetX: this.ScrollX, offsetY: this.ScrollY }; }
+    public SetCamera(c: Camera): void { this.Zoom = clampZoom(c.zoom); this.ScrollX = c.offsetX; this.ScrollY = c.offsetY; }
+
+    // The enclosing ScrollViewer (PART_Scroll); pan lives on its scroll offset.
+    public get ScrollHost(): ScrollViewer | undefined {
+        return this.GetTemplateChild('PART_Scroll') as unknown as ScrollViewer | undefined;
+    }
+    public get ScrollX(): number { return this.ScrollHost?.HorizontalOffset ?? 0; }
+    public set ScrollX(v: number) { const sh = this.ScrollHost; if (sh !== undefined) sh.HorizontalOffset = Math.max(0, v); }
+    public get ScrollY(): number { return this.ScrollHost?.VerticalOffset ?? 0; }
+    public set ScrollY(v: number) { const sh = this.ScrollHost; if (sh !== undefined) sh.VerticalOffset = Math.max(0, v); }
+
+    // Host (viewport) point -> content (item) point. The ArrangedRect chain from
+    // the items panel to the root already equals -offset (the SCP arranges its
+    // content at -effectiveOffset), so dividing by Zoom (the LayoutTransform
+    // scale) yields the content point. Single source of truth for the drop,
+    // connector-hover, and figure-drag coordinate conversions.
+    public HostToContent(hostX: number, hostY: number): Point {
+        let ox = 0, oy = 0;
+        let cur: Visual | undefined = this.ItemsPanelInstance;
+        while (cur !== undefined) { ox += cur.ArrangedRect.X; oy += cur.ArrangedRect.Y; cur = cur.GetVisualParent(); }
+        const z = this.Zoom || 1;
+        return new Point((hostX - ox) / z, (hostY - oy) / z);
+    }
 
     public get ZoomInCommand():         RelayCommand | undefined { return this.get_property_value(Diagram.ZoomInCommandKey); }
     public get ZoomOutCommand():        RelayCommand | undefined { return this.get_property_value(Diagram.ZoomOutCommandKey); }
@@ -481,7 +498,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // Zoom about the viewport center by one step, clamped.
     public ZoomIn(): void  { this.SetCamera(zoomAtPoint(this.Camera, this._centerPivot(), Diagram.ZOOM_STEP)); }
     public ZoomOut(): void { this.SetCamera(zoomAtPoint(this.Camera, this._centerPivot(), 1 / Diagram.ZOOM_STEP)); }
-    public ResetZoom(): void { this.SetCamera({ zoom: 1, panX: 0, panY: 0 }); }
+    public ResetZoom(): void { this.SetCamera({ zoom: 1, offsetX: 0, offsetY: 0 }); }
 
     // Frame all content; Fit-to-Selection frames the selection (falling back to
     // all content when nothing is selected).
@@ -495,7 +512,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     }
 
     // Fit can legitimately produce a zoom below the interactive floor; bypass clampZoom.
-    private _applyFit(c: Camera): void { this.Zoom = c.zoom; this.PanX = c.panX; this.PanY = c.panY; }
+    private _applyFit(c: Camera): void { this.Zoom = c.zoom; this.ScrollX = c.offsetX; this.ScrollY = c.offsetY; }
     private _centerPivot(): Point { const v = this._viewportSize(); return new Point(v.Width / 2, v.Height / 2); }
 
     private _viewportSize(): Size {
@@ -1072,54 +1089,46 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     {
         super.OnPreviewPointerDown(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerDown(args);
-        this._cameraHandlers?.OnGrabStart(args);
     }
     protected override OnPreviewPointerMove(args: PointerEventArgs): void
     {
         super.OnPreviewPointerMove(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerMove(args);
-        this._cameraHandlers?.OnGrabMove(args);
     }
     protected override OnPreviewPointerUp(args: PointerEventArgs): void
     {
         super.OnPreviewPointerUp(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerUp(args);
-        this._cameraHandlers?.OnGrabEnd(args);
     }
     protected override OnPointerLeave(args: PointerEventArgs): void
     {
         super.OnPointerLeave(args);
         this._connectorInteractionsHandlers?.OnPointerLeave(args);
-        this._cameraHandlers?.OnGrabEnd(args);
     }
 
-    // ── Camera (view transform on PART_Camera) ─────────────────────────────
+    // ── Camera (LayoutTransform scale on PART_Camera) ──────────────────────
     private _camScale?: ScaleTransform;
-    private _camTranslate?: TranslateTransform;
 
-    // Lazily build the camera transform on PART_Camera (the template is applied in
-    // the ctor, so GetTemplateChild resolves once a camera write first arrives).
+    // Lazily set PART_Camera's LayoutTransform (the template is applied in the
+    // ctor, so GetTemplateChild resolves once a camera write first arrives).
+    // A LayoutTransform grows the measured footprint, so the ScrollViewer sizes
+    // its scrollbars to the zoomed content; pan is the scroll offset, not a
+    // translate on this transform.
     private _ensureCameraTransform(): void
     {
         if (this._camScale !== undefined) return;
         const host = this.GetTemplateChild('PART_Camera');
         if (host === undefined) return;
         this._camScale = new ScaleTransform(this.Zoom, this.Zoom);
-        this._camTranslate = new TranslateTransform(this.PanX, this.PanY);
-        const group = new TransformGroup();
-        group.Children.Add(this._camScale);      // scale first
-        group.Children.Add(this._camTranslate);  // then translate
-        host.RenderTransform = group;
+        host.LayoutTransform = this._camScale;
     }
 
     private _syncCameraTransform(): void
     {
         this._ensureCameraTransform();
-        if (this._camScale === undefined || this._camTranslate === undefined) return;
+        if (this._camScale === undefined) return;
         this._camScale.ScaleX = this.Zoom;
         this._camScale.ScaleY = this.Zoom;
-        this._camTranslate.X = this.PanX;
-        this._camTranslate.Y = this.PanY;
     }
 
     // Camera gesture handlers (installed by attachZoomPan when CameraEnabled flips).
@@ -1127,14 +1136,17 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     private _cameraDetach?: () => void;
     public _setCameraHandlers(h: CameraGestureHandlers | undefined): void { this._cameraHandlers = h; }
 
-    protected override OnPointerWheel(args: WheelEventArgs): void
+    // Ctrl+wheel zoom must pre-empt the ScrollViewer, which scrolls in the
+    // bubble phase — so the camera handler runs in the TUNNEL phase and marks
+    // the event Handled, suppressing the ScrollViewer's bubble scroll. Plain /
+    // Shift wheel is left unhandled and bubbles to the ScrollViewer.
+    protected override OnPreviewPointerWheel(args: WheelEventArgs): void
     {
-        super.OnPointerWheel(args);
-        // The ScrollViewer's scroll is disabled, so the wheel bubbles here unconsumed.
+        super.OnPreviewPointerWheel(args);
         this._cameraHandlers?.OnWheel(args);
     }
 
-    // @internal test seam — the same path OnPointerWheel uses, without live routing.
+    // @internal test seam — same path OnPreviewPointerWheel uses, without live routing.
     public _dispatchWheel(args: WheelEventArgs): void { this._cameraHandlers?.OnWheel(args); }
 
     private _applyCameraToConnectors(): void
@@ -1155,12 +1167,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     ): void
     {
         super.OnPropertyChanged(descriptor, oldValue, newValue);
-        if (descriptor.Name === 'Zoom' || descriptor.Name === 'PanX' || descriptor.Name === 'PanY')
-        {
-            this._syncCameraTransform();
-        }
         if (descriptor.Name === 'Zoom')
         {
+            this._syncCameraTransform();
             // Keep connector click-bands a constant on-screen width under zoom.
             this._applyCameraToConnectors();
         }
