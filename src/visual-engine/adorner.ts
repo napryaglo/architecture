@@ -195,6 +195,11 @@ export class AdornerLayer extends Panel
                 const pivoted = Matrix.Translate(-ox, -oy).Multiply(rt.Matrix).Multiply(Matrix.Translate(ox, oy));
                 local = pivoted.Multiply(local);
             }
+            // LayoutTransform is INNER to the RenderTransform + offset (it applies
+            // to a child point first), matching the emitter's
+            // `translate(rect) … matrix(layout)`.
+            const lm = cur.EffectiveLayoutMatrix;
+            if (lm !== undefined && !lm.IsIdentity) local = lm.Multiply(local);
             // child-first accumulation (leftmost Multiply factor applies first)
             m = m.Multiply(local);
             cur = cur.GetVisualParent();

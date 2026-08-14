@@ -262,4 +262,20 @@ describe('AdornerLayer transform-aware arrange', () => {
         assert.equal(r.Width, 30);
         assert.equal(r.Height, 30);
     });
+
+    test('projects the adorned rect through an ancestor LayoutTransform (scale)', () => {
+        const { decorator, canvas, squares } = layout({ x: 10, y: 20, side: 30 });
+        canvas.LayoutTransform = new ScaleTransform(2, 2);   // layout-scale the adorned element's parent
+        const adorner = new TestAdorner(squares[0]!);
+        decorator.AdornerLayer.Add(adorner);
+        decorator.InvalidateMeasure();
+        decorator.Measure(new Size(600, 600));
+        decorator.Arrange(new Rect(0, 0, 600, 600));
+        const r = adorner.ArrangedRect;
+        // square local (10,20,30,30) under a 2x layout scale on the canvas -> (20,40,60,60)
+        assert.equal(r.X, 20);
+        assert.equal(r.Y, 40);
+        assert.equal(r.Width, 60);
+        assert.equal(r.Height, 60);
+    });
 });
