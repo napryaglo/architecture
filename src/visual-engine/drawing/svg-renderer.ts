@@ -99,6 +99,14 @@ export interface SvgRendererOptions
     document?: Document;
 }
 
+// Structural 2D affine — matches the Matrix class without importing it (the
+// renderer stays dependency-free of runtime/visual-engine).
+type MatrixLike = {
+    M11: number; M12: number; M21: number; M22: number;
+    OffsetX: number; OffsetY: number;
+    IsIdentity: boolean;
+};
+
 // Companion accessors the renderer needs from each Visual. Declared as
 // a structural interface so this file doesn't depend on the concrete
 // Visual class (which would cycle through runtime/visual-engine).
@@ -120,20 +128,61 @@ interface RenderableVisual extends BackrefHost
     // undefined means identity (skip the matrix factor entirely so the
     // outer <g>'s transform attribute stays minimal). The renderer
     // never mutates the transform.
-    readonly RenderTransform: { readonly Matrix: {
-        M11: number; M12: number; M21: number; M22: number;
-        OffsetX: number; OffsetY: number;
-        IsIdentity: boolean;
-    } } | undefined;
+    readonly RenderTransform: { readonly Matrix: MatrixLike } | undefined;
     // Visual.RenderTransformOrigin — fraction of RenderSize used as the
     // pivot for RenderTransform. (0, 0) = top-left; (0.5, 0.5) = center.
     readonly RenderTransformOrigin: { X: number; Y: number };
+    // Visual.EffectiveLayoutMatrix — the composed LayoutTransform (shifted so
+    // its transformed bbox min sits at the local origin), or undefined when
+    // there's no LayoutTransform. Emitted INNER to RenderTransform so the layout
+    // scale applies to content first, matching the measure/arrange footprint.
+    readonly EffectiveLayoutMatrix: MatrixLike | undefined;
     // Optional live DOM element (DomHost) to host inside a <foreignObject>.
     // Present only on DOM-hosting visuals; undefined for every ordinary
     // painted visual, so the renderer skips the foreignObject path for them.
     readonly ForeignElement?: HTMLElement;
     readonly visualChildren: Iterable<RenderableVisual>;
     Render(dc: SvgDomDrawingContext): void;
+}
+
+// Compose the outer <g> `transform` attribute from the arrange offset, an
+// optional RenderTransform (pivoted by RenderTransformOrigin × ArrangedRect),
+// and an optional LayoutTransform (EffectiveLayoutMatrix). SVG applies a
+// transform list right-to-left to a point, so the emitted order is
+// `translate(offset)  RenderTransform-block  matrix(layout)` — layout innermost
+// (applied to content first), render outer, offset outermost. Returns undefined
+// when nothing applies (keeps the DOM clean). Pure + unit-tested.
+export function buildTransformAttr(
+    rect: { X: number; Y: number; Width: number; Height: number },
+    layout: MatrixLike | undefined,
+    render: MatrixLike | undefined,
+    origin: { X: number; Y: number },
+): string | undefined
+{
+    const hasRender = render !== undefined && !render.IsIdentity;
+    const hasLayout = layout !== undefined && !layout.IsIdentity;
+    const hasOffset = rect.X !== 0 || rect.Y !== 0;
+    if (!hasRender && !hasLayout && !hasOffset) return undefined;
+    const parts: string[] = [];
+    if (hasOffset)
+    {
+        parts.push(`translate(${formatNumber(rect.X)},${formatNumber(rect.Y)})`);
+    }
+    if (hasRender)
+    {
+        const ox = origin.X * rect.Width;
+        const oy = origin.Y * rect.Height;
+        const m  = render!;
+        if (ox !== 0 || oy !== 0) parts.push(`translate(${formatNumber(ox)},${formatNumber(oy)})`);
+        parts.push(`matrix(${formatNumber(m.M11)},${formatNumber(m.M12)},${formatNumber(m.M21)},${formatNumber(m.M22)},${formatNumber(m.OffsetX)},${formatNumber(m.OffsetY)})`);
+        if (ox !== 0 || oy !== 0) parts.push(`translate(${formatNumber(-ox)},${formatNumber(-oy)})`);
+    }
+    if (hasLayout)
+    {
+        const m = layout!;
+        parts.push(`matrix(${formatNumber(m.M11)},${formatNumber(m.M12)},${formatNumber(m.M21)},${formatNumber(m.M22)},${formatNumber(m.OffsetX)},${formatNumber(m.OffsetY)})`);
+    }
+    return parts.length > 0 ? parts.join(' ') : undefined;
 }
 
 export class SvgRenderer
@@ -482,39 +531,14 @@ export class SvgRenderer
     // transform) keeps the DOM clean for the common case.
     private applyTransform(outer: SVGGElement, visual: RenderableVisual): void
     {
-        const rect = visual.ArrangedRect;
-        const rt   = visual.RenderTransform;
-        const hasMatrix = rt !== undefined && !rt.Matrix.IsIdentity;
-        const hasOffset = rect.X !== 0 || rect.Y !== 0;
-        if (!hasMatrix && !hasOffset)
-        {
-            outer.removeAttribute('transform');
-            return;
-        }
-        const parts: string[] = [];
-        if (hasOffset)
-        {
-            parts.push(`translate(${formatNumber(rect.X)},${formatNumber(rect.Y)})`);
-        }
-        if (hasMatrix)
-        {
-            const origin = visual.RenderTransformOrigin;
-            const ox = origin.X * rect.Width;
-            const oy = origin.Y * rect.Height;
-            const m  = rt.Matrix;
-            if (ox !== 0 || oy !== 0)
-            {
-                parts.push(`translate(${formatNumber(ox)},${formatNumber(oy)})`);
-            }
-            parts.push(
-                `matrix(${formatNumber(m.M11)},${formatNumber(m.M12)},${formatNumber(m.M21)},${formatNumber(m.M22)},${formatNumber(m.OffsetX)},${formatNumber(m.OffsetY)})`,
-            );
-            if (ox !== 0 || oy !== 0)
-            {
-                parts.push(`translate(${formatNumber(-ox)},${formatNumber(-oy)})`);
-            }
-        }
-        outer.setAttribute('transform', parts.join(' '));
+        const attr = buildTransformAttr(
+            visual.ArrangedRect,
+            visual.EffectiveLayoutMatrix,
+            visual.RenderTransform?.Matrix,
+            visual.RenderTransformOrigin,
+        );
+        if (attr === undefined) outer.removeAttribute('transform');
+        else outer.setAttribute('transform', attr);
     }
 
     // Resize the hit pad to mirror the visual's ArrangedRect so the
