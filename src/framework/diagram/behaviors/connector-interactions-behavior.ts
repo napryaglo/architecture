@@ -751,25 +751,11 @@ function findConnectorAncestor(visual: unknown): Connector | undefined
 
 function localPosition(args: PointerEventArgs, diagram: Diagram): Point
 {
-    const panel = diagram.ItemsPanelInstance;
-    if (panel === undefined) return new Point(0, 0);
-    // Sum ArrangedRect.X/Y from the panel up to the root. The SCP arranges
-    // its content (ItemsPresenter) at (-offX, -offY) when in clip-and-
-    // translate mode, so the scroll offset is already baked into the
-    // ArrangedRect chain — adding HorizontalOffset / VerticalOffset on
-    // top would double-count and shift cursor coords by an extra +offX
-    // each scroll, which is why hovered side bars stopped appearing
-    // after scrolling the canvas into a new page.
-    let ox = 0, oy = 0;
-    let cur: Visual | undefined = panel;
-    while (cur !== undefined)
-    {
-        const r = cur.ArrangedRect;
-        ox += r.X;
-        oy += r.Y;
-        cur = cur.GetVisualParent();
-    }
-    return new Point(args.HostX - ox, args.HostY - oy);
+    // Diagram.HostToContent sums the panel's ArrangedRect chain (already
+    // carrying the SCP's -offset in clip-and-translate mode) and divides by the
+    // zoom (PART_Camera's LayoutTransform scale), so hovered side bars track the
+    // cursor after scrolling AND at any zoom level.
+    return diagram.HostToContent(args.HostX, args.HostY);
 }
 
 function findFigureAtCanvasPoint(diagram: Diagram, p: Point): Figure | undefined

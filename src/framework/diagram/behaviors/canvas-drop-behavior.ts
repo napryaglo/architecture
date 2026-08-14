@@ -28,43 +28,17 @@ import type { Diagram } from '../diagram.js';
 //   * diagram      — the Diagram whose ItemsPanel defines (0,0) of the
 //                    canvas-local coordinate frame. Always required.
 //
-// Scroll compensation: the ArrangedRect chain walk doesn't include
-// the ScrollViewer's content translation. A drop at host position H
-// translates to canvas-local position
-//   H - panelHost + scrollOffset
-// where scrollOffset is the enclosing ScrollViewer's offset at drop
-// time. Without this, a drop inside the visible viewport AFTER the
-// user has scrolled lands at the wrong canvas coordinate.
+// Coordinate conversion delegates to Diagram.HostToContent, which sums the
+// ArrangedRect chain (already carrying the ScrollViewer's -offset) and divides
+// by the zoom (PART_Camera's LayoutTransform scale) — so a drop lands correctly
+// after the user has scrolled AND at any zoom level.
 
 /** @internal */
 export function attachCanvasDropBehavior(receiver: Visual, diagram: Diagram): () => void
 {
     (receiver as unknown as { AllowDrop: boolean }).AllowDrop = true;
 
-    const panelHost = (): { x: number; y: number } => {
-        const panel = diagram.ItemsPanelInstance;
-        if (panel === undefined) return { x: 0, y: 0 };
-        let x = 0, y = 0;
-        let cur: Visual | undefined = panel;
-        while (cur !== undefined)
-        {
-            const r = cur.ArrangedRect;
-            x += r.X;
-            y += r.Y;
-            cur = cur.GetVisualParent();
-        }
-        return { x, y };
-    };
-
-    // The SCP arranges its content (ItemsPresenter) at (-offX, -offY) in
-    // clip-and-translate mode, so the scroll offset is already in the
-    // ArrangedRect chain that panelHost() sums. Adding HorizontalOffset
-    // again would double-count — see the matching note in
-    // connector-interactions-behavior.ts.
-    const localPosition = (args: DragEventArgs): Point => {
-        const o = panelHost();
-        return new Point(args.HostX - o.x, args.HostY - o.y);
-    };
+    const localPosition = (args: DragEventArgs): Point => diagram.HostToContent(args.HostX, args.HostY);
 
     const onDragOver = (args: DragEventArgs): void => {
         // Accept any drop carrying a toolbox-item payload. Consumers wanting
