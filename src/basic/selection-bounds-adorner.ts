@@ -254,6 +254,18 @@ export class SelectionBoundsAdorner extends Adorner
         return new Rect(minX, minY, maxX - minX, maxY - minY);
     }
 
+    // Screen-space handle-drag deltas (host px) -> content-space resize deltas,
+    // dividing out the camera scale the adorned element sits under (read off the
+    // adorned->layer matrix). Guards a zero/degenerate scale to 1 so a resize
+    // never divides by zero. Identity matrix (zoom 1) leaves the deltas as-is.
+    private _screenToContentDelta(dxScreen: number, dyScreen: number): { dx: number; dy: number }
+    {
+        const m = this.AdornedToLayerMatrix;
+        const sx = m.M11 !== 0 ? m.M11 : 1;
+        const sy = m.M22 !== 0 ? m.M22 : 1;
+        return { dx: dxScreen / sx, dy: dyScreen / sy };
+    }
+
     private _wireHandle(visual: Border, spec: HandleSpec): void
     {
         visual.AddRoutedEventListener('PointerDown', ((args: PointerEventArgs) => {
@@ -266,8 +278,11 @@ export class SelectionBoundsAdorner extends Adorner
         }) as (a: unknown) => void);
         visual.AddRoutedEventListener('PointerMove', ((args: PointerEventArgs) => {
             if (this._dragSpec !== spec) return;
-            const dx = args.HostX - this._pressHostX;
-            const dy = args.HostY - this._pressHostY;
+            // Handle drags arrive in host (screen) px; divide out the camera
+            // scale the adorned element sits under so the resize tracks the
+            // cursor 1:1 on screen at any zoom (identity/zoom-1 → unchanged).
+            const { dx, dy } = this._screenToContentDelta(
+                args.HostX - this._pressHostX, args.HostY - this._pressHostY);
             const dw = spec.dwDir * dx;
             const dh = spec.dhDir * dy;
             // §19.4 — route through the animated variant when the

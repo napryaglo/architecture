@@ -4,14 +4,27 @@ import { initTestApp } from './test-app.js';
 
 import {
     AdornerDecorator,
+    NoModifiers,
+    PointerButton,
     Rect,
     Size,
     Element,
     Visual,
     type DrawingContext,
+    type PointerEventInit,
 } from '../../runtime/index.js';
+import { InputManager } from '../../framework/index.js';
 import { Border } from '../border.js';
 import { ScaleTransform } from '../../visual-engine/drawing/transform.js';
+
+function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
+{
+    return {
+        HostX: 0, HostY: 0, Button: PointerButton.Left, Buttons: 1,
+        Modifiers: NoModifiers, PointerId: 0, Pressure: 0, PointerType: 'mouse',
+        ...overrides,
+    };
+}
 import {
     SelectionBoundsAdorner,
     type SelectionSource,
@@ -156,6 +169,43 @@ describe('SelectionBoundsAdorner', () => {
         assert.equal(nw.Y,      100 - half);
         assert.equal(nw.Width,  adorner.HandleSize);
         assert.equal(nw.Height, adorner.HandleSize);
+    });
+
+    test('resize-handle drag deltas are divided by the camera scale (zoom)', () => {
+        // Same zoomed setup: AdornerDecorator > camera[Scale2] > adorned. A 100px
+        // screen drag on the E handle must resize by 50 content units (100/2), so
+        // the edge tracks the cursor 1:1 on screen instead of outrunning it.
+        const decorator = new AdornerDecorator();
+        const camera = new Border();
+        camera.LayoutTransform = new ScaleTransform(2, 2);
+        const target = new TestVisual();
+        camera.SetChild(target);
+        decorator.Child = camera;
+        const host = new Border();
+        host.SetChild(decorator);
+        host.Measure(new Size(2000, 2000));
+        host.Arrange(new Rect(0, 0, 2000, 2000));
+
+        const source = new FakeSource();
+        source.count  = 1;
+        source.bounds = new Rect(0, 0, 100, 100);
+        const layer = decorator.AdornerLayer;
+        const adorner = new SelectionBoundsAdorner(target, source);
+        layer.Add(adorner);
+        layer.Measure(new Size(2000, 2000));
+        layer.Arrange(new Rect(0, 0, 2000, 2000));
+
+        // visualChildren = [bbox, NW, N, NE, W, E, SW, S, SE] → E is index 5.
+        const eHandle = adorner.visualChildren[5]! as Element;
+        const im = new InputManager();
+        im.InjectPointerDown(eHandle, pointer({ HostX: 300, HostY: 300 }));
+        im.InjectPointerMove(eHandle, pointer({ HostX: 400, HostY: 300 }));   // +100 px screen
+        im.InjectPointerUp  (eHandle, pointer({ HostX: 400, HostY: 300 }));
+
+        assert.ok(source.applies.length >= 1, 'a resize was applied');
+        const last = source.applies[source.applies.length - 1]!;
+        assert.equal(last.dw, 50);   // 100 screen / 2 zoom = 50 content
+        assert.equal(last.dh, 0);
     });
 
     test('source.subscribe listener triggers a re-arrange', () => {
