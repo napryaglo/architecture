@@ -138,6 +138,14 @@ resources Diagrams {
                       FontStyle           = $$FontStyle,
                       TextDecorations     = $$TextDecorations,
                       Foreground          = $$Foreground,
+                      // A node's border sizes to this label, so measure it with
+                      // the paint engine's own SVG <text> layout — Canvas
+                      // measureText disagrees with the painted glyphs by a small
+                      // amount that the diagram's LayoutTransform zoom magnifies
+                      // (a node at 400% pushed its last glyph past the border).
+                      // Same reason Chip / markers use Exact. See
+                      // TextBlock.MeasurementFidelity.
+                      MeasurementFidelity = Exact,
                       HorizontalAlignment = Stretch,
                       VerticalAlignment   = $$VerticalTextAlignment ]
                 RichTextBlock x:name="PART_RichText"

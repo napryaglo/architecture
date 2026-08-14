@@ -4,7 +4,7 @@ import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import { FontWeight, FontStyle, RotateTransform, ScaleTransform, TextAlignment, TextDecorations, TransformGroup, VerticalAlignment } from '../../../visual-engine/index.js';
 import { Key, KeyEventArgs, ModifierKeys, Point, Rect, Size } from '../../../runtime/index.js';
-import { TextBlock } from '../../../basic/text-block.js';
+import { TextBlock, MeasurementFidelity } from '../../../basic/text-block.js';
 import { RichTextBox } from '../../../basic/rich-text-box.js';
 import { Border } from '../../../basic/border.js';
 import { FlowDocument } from '../../../basic/documents/flow-document.js';
@@ -92,6 +92,14 @@ describe('ShapeText — reactive rendering', () => {
         assert.equal(partText(f).Text, 'Hi', 'initial content rendered');
         f.LabelText = 'Bye';
         assert.equal(partText(f).Text, 'Bye', 'a Content edit repaints via TemplateBinding');
+    });
+
+    test('the label measures with Exact fidelity (node border sizes to painted text)', () => {
+        // The node border sizes to this label; under the diagram's zoom
+        // LayoutTransform a Canvas-vs-paint width gap gets magnified, so the
+        // label opts into the paint-engine (SVG) measurer — same as Chip/markers.
+        const f = new Figure();
+        assert.equal(partText(f).MeasurementFidelity, MeasurementFidelity.Exact);
     });
 
     test('character formatting flows through to the TextBlock', () => {
