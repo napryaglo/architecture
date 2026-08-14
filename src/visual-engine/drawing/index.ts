@@ -9,7 +9,6 @@ export {
     SkewTransform,
     MatrixTransform,
     TransformGroup,
-    transformBounds,
 } from './transform.js';
 export {
     Brush,

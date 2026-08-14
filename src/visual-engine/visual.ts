@@ -7,7 +7,7 @@ import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } fro
 
 import { NameScope } from './namescope.js';
 import { ObservableCollection } from '../runtime/observable-collection.js';
-import { Matrix, Point, Rect, Size, Thickness } from './primitives.js';
+import { Matrix, Point, Rect, Size, Thickness, transformBounds } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
 import { Storyboard } from './animation/storyboard.js';
@@ -612,6 +612,15 @@ export class Visual extends Model
     private _previousAvailableSize: Size = Size.Empty;
     private _isMeasureValid: boolean = false;
     private _isArrangeValid: boolean = false;
+    // The child's local (untransformed) desired size, recorded during Measure
+    // when a LayoutTransform is set, so Arrange can lay the child out in local
+    // space. Only read when _layoutMatrix() is defined.
+    private _layoutLocalSize: Size = Size.Zero;
+    // The effective layout matrix (LayoutTransform shifted so its transformed
+    // bbox min sits at the local origin), recorded during Arrange. Consumed by
+    // the SVG emitter and the adorner layer. Undefined when there's no
+    // LayoutTransform. See EffectiveLayoutMatrix.
+    private _effectiveLayout: Matrix | undefined = undefined;
 
     // ------------------------------------------------------------------
     // Tree + host
@@ -1174,7 +1183,20 @@ export class Visual extends Model
             Visual.clamp(inner.Height, mm.minH, mm.maxH),
         );
 
-        const measured = this.MeasureOverride(constrained);
+        // LayoutTransform (WPF FrameworkElement.LayoutTransform): measure the
+        // child in its OWN (untransformed) space, then report the child's desired
+        // size TRANSFORMED to its bounding box as this element's footprint. The
+        // available budget is mapped into local space by the inverse first.
+        // Undefined/identity → M is undefined and both steps are no-ops (the
+        // pre-existing path runs verbatim).
+        const M = this._layoutMatrix();
+        let measureAvail = constrained;
+        if (M !== undefined) {
+            const inv = M.Invert();
+            if (inv !== undefined) measureAvail = transformBounds(constrained, inv);
+        }
+
+        const measured = this.MeasureOverride(measureAvail);
 
         // Clamp MeasureOverride's result to the same range — Min/Max
         // act as floor/ceiling on the natural content size. With Width
@@ -1184,11 +1206,18 @@ export class Visual extends Model
             Visual.clamp(measured.Height, mm.minH, mm.maxH),
         );
 
+        // Remember the child's local size so Arrange can lay it out unscaled.
+        this._layoutLocalSize = clamped;
+
+        // The parent-space footprint is the transformed bounding box (== clamped
+        // when there is no LayoutTransform, so DesiredSize is unchanged).
+        const footprint = M !== undefined ? transformBounds(clamped, M) : clamped;
+
         // Add Margin back so the parent reserves the full bounding box
         // (inner content + outer spacing) for this Visual.
         this._desiredSize = new Size(
-            clamped.Width  + marginH,
-            clamped.Height + marginV,
+            footprint.Width  + marginH,
+            footprint.Height + marginV,
         );
         this._isMeasureValid = true;
         // A new desired size invalidates any prior arrangement that was

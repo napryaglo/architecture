@@ -4,7 +4,7 @@ import {
     ObservableCollection,
 } from '../../runtime/index.js';
 import { Freezable } from '../../runtime/freezable.js';
-import { Matrix, Point, Size } from '../primitives.js';
+import { Matrix } from '../primitives.js';
 
 // Renderer-agnostic transform node. Drops into Visual.RenderTransform —
 // the SVG renderer reads `Matrix` and composes it with ArrangedRect +
@@ -349,20 +349,4 @@ export class TransformGroup extends Transform
             if (c !== undefined) this._children.Add(c.Clone());
         }
     }
-}
-
-// The axis-aligned bounding-box SIZE of Rect(0,0,size) mapped through `m`.
-// Used by LayoutTransform to report an element's transformed footprint (a
-// scaled element measures larger; a rotated one measures to its rotated bbox).
-export function transformBounds(size: Size, m: Matrix): Size
-{
-    const c0 = m.Transform(new Point(0, 0));
-    const c1 = m.Transform(new Point(size.Width, 0));
-    const c2 = m.Transform(new Point(0, size.Height));
-    const c3 = m.Transform(new Point(size.Width, size.Height));
-    const minX = Math.min(c0.X, c1.X, c2.X, c3.X);
-    const minY = Math.min(c0.Y, c1.Y, c2.Y, c3.Y);
-    const maxX = Math.max(c0.X, c1.X, c2.X, c3.X);
-    const maxY = Math.max(c0.Y, c1.Y, c2.Y, c3.Y);
-    return new Size(maxX - minX, maxY - minY);
 }

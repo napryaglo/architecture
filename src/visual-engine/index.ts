@@ -13,7 +13,7 @@ export * from './text/index.js';
 export * from './targets/index.js';
 
 // Display / layout primitives.
-export { Point, Size, Rect, Color, Matrix, Thickness } from './primitives.js';
+export { Point, Size, Rect, Color, Matrix, Thickness, transformBounds } from './primitives.js';
 export { CornerRadius } from './corner-radius.js';
 export {
     Visual,

@@ -15,7 +15,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { RectangleGeometry, SolidColorBrush } from '../../visual-engine/index.js';
+import { RectangleGeometry, SolidColorBrush, ScaleTransform } from '../../visual-engine/index.js';
 import { DataTemplate, VirtualizingStackPanel } from '../../basic/index.js';
 import { ItemsControl, ScrollViewer } from '@pragmatic-lab/mural/framework';
 
@@ -53,6 +53,16 @@ describe('ScrollViewer — clip-and-translate mode (plain content)', () => {
         assert.equal(sv.ViewportHeight, 200);
         assert.equal(sv.ScrollableWidth, 400);
         assert.equal(sv.ScrollableHeight, 600);
+    });
+
+    test('a LayoutTransform-scaled child grows the extent (scrollbars follow zoom)', () => {
+        const sv = new ScrollViewer();
+        const content = new FixedRect(new Size(500, 800));
+        content.LayoutTransform = new ScaleTransform(2, 2);
+        sv.Content = content;
+        sv.Measure(new Size(100, 200));
+        assert.equal(sv.ExtentWidth, 1000);
+        assert.equal(sv.ExtentHeight, 1600);
     });
 
     test('Content is arranged at (-offset.X, -offset.Y) with full extent size', () => {

@@ -28,4 +28,25 @@ describe('Visual.LayoutTransform DP', () => {
         t.ScaleX = 3;   // inner change must dirty the owner
         assert.equal(host.IsMeasureValid, false);
     });
+
+    test('measure reports the child desired size transformed to its bounding box', () => {
+        const host = new Border();
+        const child = new Border();
+        child.Width = 100; child.Height = 50;
+        host.SetChild(child);
+        host.LayoutTransform = new ScaleTransform(2, 3);
+        host.Measure(new Size(1000, 1000));
+        assert.equal(host.DesiredSize.Width, 200);
+        assert.equal(host.DesiredSize.Height, 150);
+    });
+
+    test('identity/undefined LayoutTransform leaves DesiredSize at natural size (regression)', () => {
+        const host = new Border();
+        const child = new Border();
+        child.Width = 100; child.Height = 50;
+        host.SetChild(child);
+        host.Measure(new Size(1000, 1000));
+        assert.equal(host.DesiredSize.Width, 100);
+        assert.equal(host.DesiredSize.Height, 50);
+    });
 });
