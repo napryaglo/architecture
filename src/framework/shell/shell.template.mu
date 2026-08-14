@@ -369,8 +369,15 @@ resources Shells {
                 Border x:name="PART_NavHost"
                     [ DockPanel.Dock = Left,
                       DataContext    = $service(NavigationService) ]
+                // ReuseContentViews: the nav service resolves the SAME
+                // ActiveService instance on switch-back (its scope cache), so
+                // reuse hands back that capability's existing view — preserving
+                // its state and skipping a rebuild — instead of rebuilding on
+                // every rail switch. (A ContentControl nav host gets this by
+                // default; a bare ContentPresenter must opt in.)
                 ContentPresenter x:name="PART_ContentHost"
-                    [ Content = $service(NavigationService).ActiveService ]
+                    [ Content = $service(NavigationService).ActiveService,
+                      ReuseContentViews = true ]
             }
         }
     }

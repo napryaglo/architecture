@@ -47,6 +47,23 @@ export class ContentControl extends Control
         ContentControl, 'BorderThickness', Thickness.Zero,
         MetaData.Measure | MetaData.Arrange | MetaData.Render);
 
+    // Reuse the view built for a content object instead of rebuilding it every
+    // time that object is presented. DEFAULT ON — the inverse of
+    // ContentPresenter (which defaults OFF because it is the recycled
+    // ItemsControl item container, where per-object caching would accumulate a
+    // view per row). A ContentControl hosts ONE content at a time from a small,
+    // stable set (the shell's capability side pane bound to the nav service's
+    // ActiveService; a document tab body), so re-presentation is a navigation
+    // "back", not row recycling: handing back the same view preserves its in-view
+    // state (tree expansion, scroll, unsaved textbox edits) AND skips the rebuild
+    // of a heavy view (Project Explorer et al. rebuilt on every rail switch).
+    // Set false for strict WPF rebuild-on-reset semantics.
+    public static readonly ReuseContentViewsKey = Model.RegisterProperty<boolean>(
+        ContentControl, 'ReuseContentViews', true, MetaData.None);
+
+    public get ReuseContentViews(): boolean { return this.get_property_value(ContentControl.ReuseContentViewsKey); }
+    public set ReuseContentViews(v: boolean) { this.set_property_value(ContentControl.ReuseContentViewsKey, v); }
+
     public get BorderBrush(): Brush | undefined  { return this.get_property_value(ContentControl.BorderBrushKey); }
     public set BorderBrush(v: Brush | undefined) { this.set_property_value(ContentControl.BorderBrushKey, v); }
 
@@ -60,6 +77,14 @@ export class ContentControl extends Control
     // Content-change / Template-change paths detach it cleanly without
     // touching the data Model.
     private _resolvedContent: Visual | undefined;
+
+    // Per-content view cache, honoured when ReuseContentViews is on (the
+    // default). WeakMap so a dropped content object's view is collected with it;
+    // it survives a Content clear because applyContent unslots the view but the
+    // map keeps it alive while the content object is still referenced (the nav
+    // service / tab list holds it), so the next presentation returns the SAME
+    // view — same rationale + shape as ContentPresenter._viewCache.
+    private readonly _viewCache = new WeakMap<object, Visual>();
 
     public get Content(): Visual | Model | undefined
     {
@@ -137,11 +162,23 @@ export class ContentControl extends Control
         const template = findDataTemplateForType(value.constructor, this);
         if (template !== undefined)
         {
+            // Reuse this object's existing view when opted in (the default) —
+            // re-presenting the same content (a nav-rail switch back, a tab
+            // re-activation) returns its one view with its state intact rather
+            // than rebuilding. value is a non-Visual, non-null Model here, so it
+            // is always an object we can weak-key.
+            if (this.ReuseContentViews)
+            {
+                const cached = this._viewCache.get(value as object);
+                if (cached !== undefined) return cached;
+            }
             const visual = template.Apply(value);
             visual.DataContext = value;
+            if (this.ReuseContentViews) this._viewCache.set(value as object, visual);
             // Optional VM hook: when the data exposes an `OnViewMounted`
             // function, hand the freshly-built visual to it so VM-driven
-            // imperative setup can run once per resolution.
+            // imperative setup can run once per resolution — on the BUILD only,
+            // not on a cache-hit re-presentation (the reuse short-circuits above).
             const hook = (value as { OnViewMounted?: (v: Visual) => void }).OnViewMounted;
             if (typeof hook === 'function') hook.call(value, visual);
             return visual;
