@@ -1,6 +1,7 @@
 import {
     Color,
     CornerRadius,
+    Matrix,
     Point,
     Rect,
     Size,
@@ -21,6 +22,7 @@ import {
     Pen,
     SolidColorBrush,
 } from '../../../visual-engine/index.js';
+import { MatrixTransform } from '../../../visual-engine/drawing/transform.js';
 import { Border, Shape } from '../../../basic/index.js';
 import { SelectionMode } from '../../list/list-box.js';
 import { Connector } from '../connector.js';
@@ -91,6 +93,20 @@ const POOL_SEGS  = 16;
 const POOL_PORTS_PER_SIDE = 8;
 const POOL_PORTS = POOL_SIDES * POOL_PORTS_PER_SIDE;
 const HIDE_OFFSCREEN = -10000;
+
+// Project a CONTENT-space point into an adorner's OWN local frame via the
+// adorned->layer matrix the AdornerLayer hands each adorner every arrange pass
+// (see adorner.ts). Under the diagram's LayoutTransform camera the AdornerLayer
+// sits OUTSIDE PART_Camera, so chrome positioned from content coordinates —
+// side bars, endpoint/waypoint/segment handles, port markers — must map through
+// this to hug the zoomed figures/connectors instead of drifting to raw canvas
+// coords. Identity (zoom 1, no pan baked in) passes the point through unchanged.
+// Same mechanism SelectionBoundsAdorner._mapBounds uses. Handle SIZES are left
+// untouched so the chrome stays a constant on-screen size — only positions map.
+function projectToLayer(m: Matrix, x: number, y: number): Point
+{
+    return m.IsIdentity ? new Point(x, y) : m.Transform(new Point(x, y));
+}
 
 // Proximity buffer for figure hover + drop-target detection. Cursor
 // within this many DIPs of a figure's bbox edge counts as "near" the
@@ -221,7 +237,9 @@ interface SharedState
 // the same way, giving the user a clear release target. Bars are pooled
 // at one set per adorner — only the currently-hovered figure has visible
 // bars; transitions to a different figure re-bind the pool.
-class SideBarsAdorner extends Adorner
+// Exported for the adorner-zoom regression test only — NOT part of the
+// package's public surface (no barrel re-exports this module).
+export class SideBarsAdorner extends Adorner
 {
     private readonly _state: SharedState;
     private readonly _pool:      Border[] = [];
@@ -295,13 +313,13 @@ class SideBarsAdorner extends Adorner
         }
         const t      = sideBarThickness();
         const half   = t / 2;
+        // Content -> layer projection (camera zoom) the AdornerLayer handed us.
+        const m      = this.AdornedToLayerMatrix;
         // Bars span 90% of the side, centered — 5% inset on each end
         // keeps them visually distinct from the corners and clarifies
         // which side the cursor is over near a vertex.
         const inX    = width  * SIDE_BAR_INSET_RATIO;
         const inY    = height * SIDE_BAR_INSET_RATIO;
-        const barW   = width  - 2 * inX;
-        const barH   = height - 2 * inY;
         // Show the bar for the active side only; park the other three
         // offscreen and drop their handle tags so a stray hit can't start
         // a gesture against a hidden side.
@@ -316,16 +334,37 @@ class SideBarsAdorner extends Adorner
                 continue;
             }
             HANDLE_TAGS.set(v, { kind: 'side', figure: fig, side });
+            // Project the bar's two long-axis endpoints through the camera so
+            // it hugs the ZOOMED figure edge; keep thickness `t` constant so the
+            // bar stays a constant on-screen chrome size. The camera never
+            // rotates, so a horizontal (N/S) bar stays horizontal and a vertical
+            // (E/W) bar stays vertical after projection.
             switch (side)
             {
                 case PortSide.N:
-                    v.Arrange(new Rect(left + inX,         top - half,          barW, t)); break;
+                {
+                    const a = projectToLayer(m, left + inX,          top);
+                    const b = projectToLayer(m, left + width - inX,  top);
+                    v.Arrange(new Rect(a.X, a.Y - half, b.X - a.X, t)); break;
+                }
                 case PortSide.S:
-                    v.Arrange(new Rect(left + inX,         top + height - half, barW, t)); break;
+                {
+                    const a = projectToLayer(m, left + inX,          top + height);
+                    const b = projectToLayer(m, left + width - inX,  top + height);
+                    v.Arrange(new Rect(a.X, a.Y - half, b.X - a.X, t)); break;
+                }
                 case PortSide.E:
-                    v.Arrange(new Rect(left + width - half, top + inY,          t, barH)); break;
+                {
+                    const a = projectToLayer(m, left + width, top + inY);
+                    const b = projectToLayer(m, left + width, top + height - inY);
+                    v.Arrange(new Rect(a.X - half, a.Y, t, b.Y - a.Y)); break;
+                }
                 case PortSide.W:
-                    v.Arrange(new Rect(left - half,        top + inY,           t, barH)); break;
+                {
+                    const a = projectToLayer(m, left, top + inY);
+                    const b = projectToLayer(m, left, top + height - inY);
+                    v.Arrange(new Rect(a.X - half, a.Y, t, b.Y - a.Y)); break;
+                }
             }
         }
 
@@ -335,8 +374,8 @@ class SideBarsAdorner extends Adorner
         // side — the same formula Path 3a uses in
         // [connector.ts](../connector.ts), kept in lockstep so the
         // markers always match where connectors actually land.
-        const m = portMarkerSize();
-        const mHalf = m / 2;
+        const mk = portMarkerSize();
+        const mkHalf = mk / 2;
         let portIdx = 0;
         const count = Math.min(fig.GetSideEndpointCount(activeSide), POOL_PORTS_PER_SIDE);
         for (let i = 0; i < count && portIdx < this._portPool.length; i++)
@@ -350,7 +389,10 @@ class SideBarsAdorner extends Adorner
                 case PortSide.E: cx = left + width;              cy = top + u * height;     break;
                 case PortSide.W: cx = left;                      cy = top + u * height;     break;
             }
-            this._portPool[portIdx]!.Arrange(new Rect(cx - mHalf, cy - mHalf, m, m));
+            // Project the slot centre through the camera; marker size stays
+            // constant (constant on-screen chrome).
+            const p = projectToLayer(m, cx, cy);
+            this._portPool[portIdx]!.Arrange(new Rect(p.X - mkHalf, p.Y - mkHalf, mk, mk));
             portIdx++;
         }
         for (let i = portIdx; i < this._portPool.length; i++)
@@ -375,7 +417,9 @@ class SideBarsAdorner extends Adorner
 }
 
 // ── EditHandlesAdorner ───────────────────────────────────────────
-class EditHandlesAdorner extends Adorner
+// Exported for the adorner-zoom regression test only — NOT part of the
+// package's public surface (no barrel re-exports this module).
+export class EditHandlesAdorner extends Adorner
 {
     private readonly _diagram: Diagram;
     private readonly _state:   SharedState;
@@ -437,6 +481,10 @@ class EditHandlesAdorner extends Adorner
     {
         const selected = this._diagram.SelectedConnectors;
         const live = this._diagram.Connectors;
+        // Content -> layer projection (camera zoom) the AdornerLayer handed us.
+        // Anchor / waypoint / segment centres are in content space; project them
+        // so the dots track the zoomed connectors. Dot SIZES stay constant.
+        const m = this.AdornedToLayerMatrix;
         let epUsed = 0, wpUsed = 0, segUsed = 0;
         for (const conn of selected)
         {
@@ -449,18 +497,20 @@ class EditHandlesAdorner extends Adorner
             {
                 const v = this._epPool[epUsed++]!;
                 HANDLE_TAGS.set(v, { kind: 'endpoint', connector: conn, end: ConnectorEnd.Source });
+                const c = projectToLayer(m, src.x, src.y);
                 v.Arrange(new Rect(
-                    src.x - epHandleSize() / 2,
-                    src.y - epHandleSize() / 2,
+                    c.X - epHandleSize() / 2,
+                    c.Y - epHandleSize() / 2,
                     epHandleSize(), epHandleSize()));
             }
             if (epUsed < this._epPool.length)
             {
                 const v = this._epPool[epUsed++]!;
                 HANDLE_TAGS.set(v, { kind: 'endpoint', connector: conn, end: ConnectorEnd.Target });
+                const c = projectToLayer(m, tgt.x, tgt.y);
                 v.Arrange(new Rect(
-                    tgt.x - epHandleSize() / 2,
-                    tgt.y - epHandleSize() / 2,
+                    c.X - epHandleSize() / 2,
+                    c.Y - epHandleSize() / 2,
                     epHandleSize(), epHandleSize()));
             }
             const wps = routePoints(conn.Waypoints);
@@ -469,13 +519,14 @@ class EditHandlesAdorner extends Adorner
                 const v = this._wpPool[wpUsed++]!;
                 HANDLE_TAGS.set(v, { kind: 'waypoint', connector: conn, index: i });
                 const p = wps[i]!;
+                const c = projectToLayer(m, p.X, p.Y);
                 v.Arrange(new Rect(
-                    p.X - wpHandleSize() / 2,
-                    p.Y - wpHandleSize() / 2,
+                    c.X - wpHandleSize() / 2,
+                    c.Y - wpHandleSize() / 2,
                     wpHandleSize(), wpHandleSize()));
             }
 
-            segUsed = this._placeSegmentPads(conn, segUsed);
+            segUsed = this._placeSegmentPads(conn, segUsed, m);
         }
 
         // Mid-segment pads ALSO show for the hovered (not-selected)
@@ -490,7 +541,7 @@ class EditHandlesAdorner extends Adorner
             && hovered.CurrentSourceAnchor !== undefined
             && hovered.CurrentTargetAnchor !== undefined)
         {
-            segUsed = this._placeSegmentPads(hovered, segUsed);
+            segUsed = this._placeSegmentPads(hovered, segUsed, m);
         }
 
         for (let i = epUsed; i < this._epPool.length; i++)
@@ -524,7 +575,7 @@ class EditHandlesAdorner extends Adorner
     // segment.) The per-handle cursor advertises the perpendicular travel
     // axis (ns for a horizontal segment, ew for a vertical). Returns the
     // advanced pool cursor. Shared by the selected loop and the hovered pass.
-    private _placeSegmentPads(conn: Connector, segUsed: number): number
+    private _placeSegmentPads(conn: Connector, segUsed: number, m: Matrix): number
     {
         const route = conn.CurrentRoutePoints ?? [];
         // Interior segments only: index i in [1, route.length - 3].
@@ -534,10 +585,14 @@ class EditHandlesAdorner extends Adorner
             const b = route[i + 1]!;
             const v = this._segPool[segUsed++]!;
             HANDLE_TAGS.set(v, { kind: 'segment', connector: conn, index: i });
+            // Orientation reads the CONTENT-space segment (the camera never
+            // rotates, so a horizontal segment stays horizontal after scaling);
+            // the pad centre projects through the camera, size stays constant.
             v.Cursor = segmentIsHorizontal(a, b) ? SEG_CURSOR_H : SEG_CURSOR_V;
+            const mid = projectToLayer(m, (a.X + b.X) / 2, (a.Y + b.Y) / 2);
             v.Arrange(new Rect(
-                (a.X + b.X) / 2 - segHandleSize() / 2,
-                (a.Y + b.Y) / 2 - segHandleSize() / 2,
+                mid.X - segHandleSize() / 2,
+                mid.Y - segHandleSize() / 2,
                 segHandleSize(), segHandleSize()));
         }
         return segUsed;
@@ -631,6 +686,14 @@ class HoverHaloAdorner extends Adorner
         // catches that and re-runs this arrange.
         this._halo.Geometry = conn.Geometry;
         this._halo.Stroke   = makeHaloPen(conn);
+        // Scale the painted route by the camera. The halo paints the connector's
+        // content-space Geometry verbatim, but this adorner lives in the UNSCALED
+        // layer frame (outside PART_Camera). A RenderTransform = the adorned->layer
+        // matrix maps the route onto the zoomed connector it decorates (pivot at
+        // the default 0,0 origin, so it's a plain content->layer apply). Identity
+        // at zoom 1 → no transform, verbatim as before.
+        const m = this.AdornedToLayerMatrix;
+        this._halo.RenderTransform = m.IsIdentity ? undefined : new MatrixTransform(m);
         // Arrange spanning the full adorner-layer extent so the halo's
         // Geometry coordinates (absolute canvas space) land in the same
         // canvas-local frame the connector renders into (offset 0,0). The
