@@ -44,6 +44,18 @@ export abstract class Adorner extends Element
 
     public get AdornedElement(): Visual { return this._adornedElement; }
 
+    // The composed transform from the adorned element's local space into THIS
+    // adorner's own local frame — set by the hosting AdornerLayer each arrange
+    // pass. Identity when the adorned element sits in the layer's frame
+    // unscaled. Subclasses that position chrome from EXTERNAL coordinates (not
+    // the adorned element's own rect) must map those coordinates through this so
+    // the chrome tracks an ancestor transform, e.g. a diagram camera's
+    // LayoutTransform scale. Adorners that just fill the adorned rect ignore it.
+    private _adornedToLayer: Matrix = Matrix.Identity;
+    /** @internal — set by AdornerLayer.ArrangeOverride. */
+    public _setAdornedToLayerMatrix(m: Matrix): void { this._adornedToLayer = m; }
+    protected get AdornedToLayerMatrix(): Matrix { return this._adornedToLayer; }
+
     // Returns the rect (in the layer's local coordinate space) where
     // this adorner should be arranged. Default: the adorned element's
     // rect as computed by the layer. Override to offset (e.g. a tooltip
@@ -152,39 +164,62 @@ export class AdornerLayer extends Panel
         for (const child of this.visualChildren)
         {
             if (!(child instanceof Adorner)) continue;
-            const adornedRect = this.computeAdornedRectInLayerFrame(child);
+            const m = this.computeAdornedToLayerMatrix(child);
+            const adornedRect = this.rectFromMatrix(m, child.AdornedElement.RenderSize);
             const place = child.Placement(adornedRect, child.DesiredSize);
+            // Hand the adorner the transform from the adorned element's local
+            // space into the adorner's OWN local frame (layer-local minus the
+            // adorner's arranged origin). Chrome positioned from external
+            // coordinates (e.g. SelectionBoundsAdorner's selection bounds) maps
+            // through this to track an ancestor camera transform.
+            const toOwn = (m ?? Matrix.Identity).Multiply(Matrix.Translate(-place.X, -place.Y));
+            child._setAdornedToLayerMatrix(toOwn);
             child.Arrange(place);
         }
         return finalSize;
     }
 
-    private computeAdornedRectInLayerFrame(adorner: Adorner): Rect
+    // The bounding box (in the layer's local frame) of the adorned element's
+    // local rect mapped through the composed adorned->layer matrix. `undefined`
+    // matrix (adorned element not under this layer) yields a zero rect.
+    private rectFromMatrix(m: Matrix | undefined, rs: Size): Rect
     {
-        // Build the transform from the adorned element's local space up to the
-        // layer parent's frame, composing each ancestor's effective transform —
-        // its ArrangedRect offset AND its RenderTransform (pivoted by
-        // RenderTransformOrigin), in the same order the SVG renderer applies them
-        // (render transform first, then the arrange translate). Then map the
-        // adorned element's local rect through the accumulated matrix. This lets
-        // adorners track an element that a diagram camera (a scale+translate
-        // RenderTransform on an ancestor) has scaled/panned, while the adorner
-        // glyphs — children of the unscaled layer — stay a constant on-screen
-        // size. With no ancestor RenderTransform every factor is identity, so the
-        // result equals the old offset-sum (backward compatible).
-        //
-        // If the walk runs off the top (adorned element not under our layer's
-        // parent), fall back to (0, 0).
-        const adorned = adorner.AdornedElement;
+        if (m === undefined) return new Rect(0, 0, 0, 0);
+        const c0 = m.Transform(new Point(0, 0));
+        const c1 = m.Transform(new Point(rs.Width, 0));
+        const c2 = m.Transform(new Point(0, rs.Height));
+        const c3 = m.Transform(new Point(rs.Width, rs.Height));
+        const minX = Math.min(c0.X, c1.X, c2.X, c3.X);
+        const minY = Math.min(c0.Y, c1.Y, c2.Y, c3.Y);
+        const maxX = Math.max(c0.X, c1.X, c2.X, c3.X);
+        const maxY = Math.max(c0.Y, c1.Y, c2.Y, c3.Y);
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
+    }
+
+    // Builds the transform from the adorned element's local space into THIS
+    // layer's LOCAL frame, composing each ancestor's effective transform up to
+    // the layer's parent — its ArrangedRect offset, its RenderTransform (pivoted
+    // by RenderTransformOrigin), AND its EffectiveLayoutMatrix — in the same
+    // order the SVG renderer applies them (layout/render inner, arrange offset
+    // outer). This lets adorners track an element a diagram camera (a
+    // RenderTransform or LayoutTransform on an ancestor) has scaled/panned, while
+    // adorner glyphs — children of the unscaled layer — stay a constant
+    // on-screen size. With no ancestor transform every factor is identity, so it
+    // reduces to the old offset-sum (backward compatible). The trailing Translate
+    // shifts into the layer's own local frame (SCP-hosted layers sit at
+    // (-offX,-offY); decorator-hosted layers at (0,0) — a no-op there). Returns
+    // undefined when the adorned element is not under this layer's parent.
+    private computeAdornedToLayerMatrix(adorner: Adorner): Matrix | undefined
+    {
         const stop = this.GetVisualParent();
         let m = Matrix.Identity;
-        let cur: Visual | undefined = adorned;
+        let cur: Visual | undefined = adorner.AdornedElement;
         while (cur !== undefined && cur !== stop)
         {
             const rect = cur.ArrangedRect;
-            // Effective local transform: renderTransform (about its origin) THEN
-            // the arrange offset (renderer emits `translate(rect) … matrix …`, so
-            // the matrix applies first to a child point, the offset last).
+            // Effective local transform: layout/render transform THEN the arrange
+            // offset (renderer emits `translate(rect) … matrix …`, so the matrix
+            // applies first to a child point, the offset last).
             let local = Matrix.Translate(rect.X, rect.Y);
             const rt = cur.RenderTransform;
             if (rt !== undefined && !rt.Matrix.IsIdentity)
@@ -195,32 +230,13 @@ export class AdornerLayer extends Panel
                 const pivoted = Matrix.Translate(-ox, -oy).Multiply(rt.Matrix).Multiply(Matrix.Translate(ox, oy));
                 local = pivoted.Multiply(local);
             }
-            // LayoutTransform is INNER to the RenderTransform + offset (it applies
-            // to a child point first), matching the emitter's
-            // `translate(rect) … matrix(layout)`.
             const lm = cur.EffectiveLayoutMatrix;
             if (lm !== undefined && !lm.IsIdentity) local = lm.Multiply(local);
-            // child-first accumulation (leftmost Multiply factor applies first)
-            m = m.Multiply(local);
+            m = m.Multiply(local);   // child-first accumulation
             cur = cur.GetVisualParent();
         }
-        if (cur === undefined) return new Rect(0, 0, 0, 0);
-
-        // Map the adorned element's local rect corners and take the bounding box,
-        // then shift into the layer's LOCAL frame (SCP-hosted layers sit at
-        // (-offX, -offY); decorator-hosted layers at (0, 0) — a no-op there).
-        const rs = adorned.RenderSize;
-        const c0 = m.Transform(new Point(0, 0));
-        const c1 = m.Transform(new Point(rs.Width, 0));
-        const c2 = m.Transform(new Point(0, rs.Height));
-        const c3 = m.Transform(new Point(rs.Width, rs.Height));
-        const lx = this.ArrangedRect.X;
-        const ly = this.ArrangedRect.Y;
-        const minX = Math.min(c0.X, c1.X, c2.X, c3.X) - lx;
-        const minY = Math.min(c0.Y, c1.Y, c2.Y, c3.Y) - ly;
-        const maxX = Math.max(c0.X, c1.X, c2.X, c3.X) - lx;
-        const maxY = Math.max(c0.Y, c1.Y, c2.Y, c3.Y) - ly;
-        return new Rect(minX, minY, maxX - minX, maxY - minY);
+        if (cur === undefined) return undefined;
+        return m.Multiply(Matrix.Translate(-this.ArrangedRect.X, -this.ArrangedRect.Y));
     }
 
     // Walks up the visual tree from `visual` looking for any ancestor

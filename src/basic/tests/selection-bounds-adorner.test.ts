@@ -11,6 +11,7 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import { Border } from '../border.js';
+import { ScaleTransform } from '../../visual-engine/drawing/transform.js';
 import {
     SelectionBoundsAdorner,
     type SelectionSource,
@@ -116,6 +117,45 @@ describe('SelectionBoundsAdorner', () => {
         const half = adorner.HandleSize / 2;
         assert.equal(nw.X, 100 - half);
         assert.equal(nw.Y, 200 - half);
+    });
+
+    test('bbox + handles track the selection through an ancestor LayoutTransform (zoom)', () => {
+        // Reproduces the diagram: AdornerDecorator > PART_Camera[LayoutTransform
+        // Scale] > adorned. The selection bounds are content-space; the chrome
+        // must be projected through the camera scale so it hugs the zoomed node.
+        const decorator = new AdornerDecorator();
+        const camera = new Border();
+        camera.LayoutTransform = new ScaleTransform(2, 2);
+        const target = new TestVisual();
+        camera.SetChild(target);
+        decorator.Child = camera;
+        const host = new Border();
+        host.SetChild(decorator);
+        host.Measure(new Size(2000, 2000));
+        host.Arrange(new Rect(0, 0, 2000, 2000));
+
+        const source = new FakeSource();
+        source.count  = 1;
+        source.bounds = new Rect(100, 50, 40, 30);   // content-space selection
+        const layer = decorator.AdornerLayer;
+        const adorner = new SelectionBoundsAdorner(target, source);
+        layer.Add(adorner);
+        layer.Measure(new Size(2000, 2000));
+        layer.Arrange(new Rect(0, 0, 2000, 2000));
+
+        // Bbox scaled 2× in position AND size (tracks the zoomed node).
+        const bbox = adorner.visualChildren[0]!.ArrangedRect;
+        assert.equal(bbox.X,      200);
+        assert.equal(bbox.Y,      100);
+        assert.equal(bbox.Width,  80);
+        assert.equal(bbox.Height, 60);
+        // NW handle anchors on the SCALED corner but stays constant-size.
+        const half = adorner.HandleSize / 2;
+        const nw = adorner.visualChildren[1]!.ArrangedRect;
+        assert.equal(nw.X,      200 - half);
+        assert.equal(nw.Y,      100 - half);
+        assert.equal(nw.Width,  adorner.HandleSize);
+        assert.equal(nw.Height, adorner.HandleSize);
     });
 
     test('source.subscribe listener triggers a re-arrange', () => {

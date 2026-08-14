@@ -22,6 +22,7 @@ import {
     AdornerLayer,
     MetaData,
     Model,
+    Point,
     Rect,
     Size,
     Thickness,
@@ -199,7 +200,12 @@ export class SelectionBoundsAdorner extends Adorner
 
     public override ArrangeOverride(finalSize: Size): Size
     {
-        const b    = this._source.Bounds;
+        // The selection bounds are in the adorned element's (content) space; map
+        // them into this adorner's own local frame so the chrome tracks an
+        // ancestor camera transform (e.g. the diagram's PART_Camera
+        // LayoutTransform scale). Identity when unscaled — the box + handles then
+        // sit at the raw bounds exactly as before.
+        const b    = this._mapBounds(this._source.Bounds);
         const hide = this._source.Count === 0;
         const hSize = this.HandleSize;
         const half  = hSize / 2;
@@ -226,6 +232,26 @@ export class SelectionBoundsAdorner extends Adorner
             h.visual.Arrange(new Rect(ax - half, ay - half, hSize, hSize));
         }
         return finalSize;
+    }
+
+    // Map a content-space rect into this adorner's own local frame via the
+    // adorned->layer matrix the AdornerLayer hands us. Under a pure camera scale
+    // this scales position + size (the box hugs the zoomed node); the axis-
+    // aligned bounding box of the four mapped corners keeps the chrome
+    // axis-aligned. Identity matrix → the rect passes through unchanged.
+    private _mapBounds(b: Rect): Rect
+    {
+        const m = this.AdornedToLayerMatrix;
+        if (m.IsIdentity) return b;
+        const c0 = m.Transform(new Point(b.X,           b.Y));
+        const c1 = m.Transform(new Point(b.X + b.Width, b.Y));
+        const c2 = m.Transform(new Point(b.X,           b.Y + b.Height));
+        const c3 = m.Transform(new Point(b.X + b.Width, b.Y + b.Height));
+        const minX = Math.min(c0.X, c1.X, c2.X, c3.X);
+        const minY = Math.min(c0.Y, c1.Y, c2.Y, c3.Y);
+        const maxX = Math.max(c0.X, c1.X, c2.X, c3.X);
+        const maxY = Math.max(c0.Y, c1.Y, c2.Y, c3.Y);
+        return new Rect(minX, minY, maxX - minX, maxY - minY);
     }
 
     private _wireHandle(visual: Border, spec: HandleSpec): void
