@@ -7,7 +7,7 @@ import { MetaData, affectsArrange, affectsMeasure, affectsRender, inherits } fro
 
 import { NameScope } from './namescope.js';
 import { ObservableCollection } from '../runtime/observable-collection.js';
-import { Point, Rect, Size, Thickness } from './primitives.js';
+import { Matrix, Point, Rect, Size, Thickness } from './primitives.js';
 import type { DrawingContext } from './drawing-context.js';
 import type { TextMeasurer } from './text-measurer.js';
 import { Storyboard } from './animation/storyboard.js';
@@ -280,6 +280,20 @@ export class Visual extends Model
     // its own center rather than around its top-left corner.
     public static readonly RenderTransformOriginKey = Model.RegisterProperty<Point>(
         Visual, 'RenderTransformOrigin', Point.Zero, MetaData.Render);
+
+    // Affine transform that participates in LAYOUT (WPF parity —
+    // FrameworkElement.LayoutTransform). Unlike RenderTransform, this is applied
+    // BEFORE measure/arrange settle: a 100×40 element with LayoutTransform =
+    // Scale(2) measures 200×80 and reserves 200×80 in its parent's slot, so a
+    // containing ScrollViewer grows real scrollbars. MetaData.Measure | Arrange so
+    // a whole-DP swap re-lays-out; inner-property changes on the Transform (a
+    // ScaleTransform's ScaleX) reach layout through the same Freezable owner
+    // mechanism as RenderTransform (rewireFreezableOwner dispatches by MetaData,
+    // so measure/arrange are invalidated). Default undefined ≡ identity ≡ no layout
+    // effect (the pre-existing code path runs verbatim). See EffectiveLayoutMatrix
+    // for the render/adorner-facing composed matrix.
+    public static readonly LayoutTransformKey = Model.RegisterProperty<Transform | undefined>(
+        Visual, 'LayoutTransform', undefined, MetaData.Measure | MetaData.Arrange);
 
     // Per-subtree paint opacity. Default 1 = fully opaque. The SVG
     // renderer mirrors this onto the outer <g>'s `opacity` attribute, so
@@ -718,6 +732,19 @@ export class Visual extends Model
      *  for semantics. Default undefined (identity). */
     public get RenderTransform(): Transform | undefined { return this.get_property_value(Visual.RenderTransformKey); }
     public set RenderTransform(value: Transform | undefined) { this.set_property_value(Visual.RenderTransformKey, value); }
+
+    /** Layout-affecting affine transform. See LayoutTransformKey. */
+    public get LayoutTransform(): Transform | undefined { return this.get_property_value(Visual.LayoutTransformKey); }
+    public set LayoutTransform(value: Transform | undefined) { this.set_property_value(Visual.LayoutTransformKey, value); }
+
+    // The LayoutTransform's matrix when set and non-identity, else undefined —
+    // the fast-path guard used by measure/arrange so the default path is
+    // byte-for-byte unchanged.
+    protected _layoutMatrix(): Matrix | undefined {
+        const lt = this.LayoutTransform;
+        if (lt === undefined || lt.Matrix.IsIdentity) return undefined;
+        return lt.Matrix;
+    }
 
     /** Origin point for RenderTransform, as a fraction of RenderSize.
      *  See RenderTransformOriginKey for semantics. Default (0, 0). */
