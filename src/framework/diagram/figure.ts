@@ -283,18 +283,14 @@ export class Figure extends ContentControl implements ISideEndpointHost
     private _grabOffsetX: number  = 0;
     private _grabOffsetY: number  = 0;
 
-    // Drag-time ScrollViewer state — populated at PointerDown with the
-    // nearest enclosing ScrollViewer and its scroll offsets at press
-    // time. Used by PointerMove to (a) feed the cursor position into
-    // the SV's auto-scroll evaluator (the canvas pulls along when the
-    // cursor approaches the viewport edge) and (b) compensate the node
-    // position for any scroll delta that happened mid-drag so the node
-    // tracks the cursor instead of lagging behind by the scroll amount.
-    // undefined when the node lives outside a ScrollViewer — both
-    // features no-op in that case.
+    // Drag-time ScrollViewer state — the nearest enclosing ScrollViewer,
+    // snapshotted at PointerDown so PointerMove can feed the cursor position
+    // into the SV's edge auto-scroll evaluator (the canvas pulls along when the
+    // cursor nears the viewport edge). Scroll-delta compensation is no longer
+    // tracked here: moveSelfToCursor maps through Diagram.HostToContent, which
+    // reads the live ArrangedRect chain (already carrying the current -offset).
+    // undefined when the node lives outside a ScrollViewer.
     private _dragScrollViewer:     ScrollViewer | undefined;
-    private _pressScrollOffsetX:   number = 0;
-    private _pressScrollOffsetY:   number = 0;
 
     // Group-drag partners — snapshotted at PointerDown when `this` is
     // part of the enclosing Selector's multi-selection. PointerMove
@@ -686,20 +682,12 @@ export class Figure extends ContentControl implements ISideEndpointHost
         this._moved       = false;
         this._pressHostX  = args.HostX;
         this._pressHostY  = args.HostY;
-        this._grabOffsetX = args.HostX - this.Left;
-        this._grabOffsetY = args.HostY - this.Top;
-        // Snapshot the enclosing ScrollViewer (if any) + its press-time
-        // offsets — auto-scroll pulses + scroll-delta compensation in
-        // OnPointerMove read these.
+        // Grab offset is stored in CONTENT space (computed after the selector is
+        // resolved, below) so the node tracks the cursor at any zoom. The
+        // enclosing ScrollViewer is snapshotted only for edge auto-scroll —
+        // scroll-delta compensation is automatic now: HostToContent reads the
+        // live ArrangedRect chain, which already carries the current -offset.
         this._dragScrollViewer   = Figure.findScrollViewer(this);
-        // Snapshot the EFFECTIVE (clamped) offsets, not the raw DP values.
-        // The raw HorizontalOffset / VerticalOffset DPs are never auto-
-        // clamped on assignment (raw stays queryable so two-way bindings
-        // see what they wrote). The canvas-origin-in-host is driven by
-        // the effective offset, so OnPointerMove's scroll compensation
-        // must be in the same frame.
-        this._pressScrollOffsetX = this._dragScrollViewer?.effectiveHorizontalOffset() ?? 0;
-        this._pressScrollOffsetY = this._dragScrollViewer?.effectiveVerticalOffset()   ?? 0;
         // Snapshot group-drag partners. The press-time snapshot pins
         // the partner set for the whole gesture — selection mutations
         // mid-drag (rare, but routed-event ordering is finicky) won't
@@ -710,6 +698,13 @@ export class Figure extends ContentControl implements ISideEndpointHost
         this._dragPartners = undefined;
         const selector = Selector.FromContainer<Selector>(
             this, (v: Visual): v is Selector => v instanceof Selector);
+        // Content-space grab offset via the enclosing Diagram (which IS the
+        // Selector). Falls back to screen coords when no coordinate host is in
+        // scope (e.g. a bare Figure in a unit test) — identity at zoom 1.
+        const coord = selector as unknown as { HostToContent?(x: number, y: number): Point } | undefined;
+        const grab = coord?.HostToContent?.(args.HostX, args.HostY);
+        this._grabOffsetX = (grab?.X ?? args.HostX) - this.Left;
+        this._grabOffsetY = (grab?.Y ?? args.HostY) - this.Top;
         const partners: Figure[] = [];
         // Selection-based partners — if `this` is selected, every other
         // selected container drags along with it (PowerPoint multi-select
@@ -828,7 +823,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
 
         // First pass: write this.Left / this.Top using the current effective
         // scroll offset.
-        this.moveSelfToCursor(args.HostX, args.HostY, sv);
+        this.moveSelfToCursor(args.HostX, args.HostY);
 
         // Cascade-correct loop. When the canvas (PaginatedCanvas) shrinks
         // because our write reduced the union extent, the ScrollViewer's
@@ -853,7 +848,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
                 if (curEffX === lastEffX && curEffY === lastEffY) break;
                 lastEffX = curEffX;
                 lastEffY = curEffY;
-                this.moveSelfToCursor(args.HostX, args.HostY, sv);
+                this.moveSelfToCursor(args.HostX, args.HostY);
             }
         }
 
@@ -891,31 +886,28 @@ export class Figure extends ContentControl implements ISideEndpointHost
         args.Handled = true;
     }
 
-    // Single self-move sub-step used by OnPointerMove. Reads the
-    // ScrollViewer's EFFECTIVE (post-clamp) offsets so a shrink-driven
-    // canvas-origin shift gets compensated correctly. Writes Left / Top
-    // at the Local tier — the Figure IS the data now (no Style binding
-    // sitting underneath), so the write stays at Local and the value
-    // sticks for the next Arrange pass.
-    private moveSelfToCursor(hostX: number, hostY: number, sv: ScrollViewer | undefined): void
+    // Single self-move sub-step used by OnPointerMove. Maps the cursor to a
+    // content point via the enclosing Diagram's HostToContent — which divides by
+    // the zoom and sums the live ArrangedRect chain (carrying the current scroll
+    // -offset), so the node tracks the cursor at any zoom and after a mid-drag
+    // auto-scroll / shrink-driven origin shift. Writes Left / Top at the Local
+    // tier — the Figure IS the data now (no Style binding underneath), so the
+    // write stays at Local and sticks for the next Arrange pass.
+    private moveSelfToCursor(hostX: number, hostY: number): void
     {
-        const effX = sv?.effectiveHorizontalOffset() ?? 0;
-        const effY = sv?.effectiveVerticalOffset()   ?? 0;
-        const scrollDx = sv !== undefined ? effX - this._pressScrollOffsetX : 0;
-        const scrollDy = sv !== undefined ? effY - this._pressScrollOffsetY : 0;
-        let candidateLeft = hostX - this._grabOffsetX + scrollDx;
-        let candidateTop  = hostY - this._grabOffsetY + scrollDy;
-        // §19.3 — apply the enclosing Diagram's PositionSnap callback
-        // before writing. The callback returns a snapped rect; we
-        // honour its X / Y (the rect's top-left in canvas coords) but
-        // keep the candidate's Width / Height (snap is positional, not
-        // dimensional). Imports the Diagram class lazily to avoid the
-        // diagram.ts → figure.ts cycle visible to TS.
+        const selector = Selector.FromContainer<Selector>(
+            this, (v: Visual): v is Selector => v instanceof Selector);
+        const coord = selector as unknown as { HostToContent?(x: number, y: number): Point } | undefined;
+        const cp = coord?.HostToContent?.(hostX, hostY) ?? { X: hostX, Y: hostY };
+        let candidateLeft = cp.X - this._grabOffsetX;
+        let candidateTop  = cp.Y - this._grabOffsetY;
+        // §19.3 — apply the enclosing Diagram's PositionSnap callback before
+        // writing. The callback returns a snapped rect; we honour its X / Y (the
+        // rect's top-left in canvas coords) but keep the candidate's Width /
+        // Height (snap is positional, not dimensional).
         const ar = this.ArrangedRect;
         const w = ar?.Width  ?? 0;
         const h = ar?.Height ?? 0;
-        const selector = Selector.FromContainer<Selector>(
-            this, (v: Visual): v is Selector => v instanceof Selector);
         const snap = (selector as unknown as { PositionSnap?: (r: Rect) => Rect } | undefined)?.PositionSnap;
         if (snap !== undefined)
         {
