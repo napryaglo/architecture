@@ -1318,15 +1318,42 @@ export class Visual extends Model
         const offsetX = Visual.computeOffsetX(hAlign, marginedRect.Width,  renderW);
         const offsetY = Visual.computeOffsetY(vAlign, marginedRect.Height, renderH);
 
-        this._arrangedRect = new Rect(
-            marginedRect.X + offsetX,
-            marginedRect.Y + offsetY,
-            renderW,
-            renderH,
-        );
-        this._renderSize = this.ArrangeOverride(renderSize);
+        // LayoutTransform: ArrangeOverride runs in the child's LOCAL
+        // (untransformed) space; the element's parent-space footprint becomes the
+        // transformed bounding box, and _effectiveLayout maps local content into
+        // that footprint (the transform, shifted so its bbox min is at the local
+        // origin). Undefined/identity → the pre-existing path runs verbatim.
+        const M = this._layoutMatrix();
+        if (M !== undefined) {
+            this._renderSize = this.ArrangeOverride(this._layoutLocalSize);
+            const rs = this._renderSize;
+            const p0 = M.Transform(new Point(0, 0));
+            const p1 = M.Transform(new Point(rs.Width, 0));
+            const p2 = M.Transform(new Point(0, rs.Height));
+            const p3 = M.Transform(new Point(rs.Width, rs.Height));
+            const bx = Math.min(p0.X, p1.X, p2.X, p3.X);
+            const by = Math.min(p0.Y, p1.Y, p2.Y, p3.Y);
+            const fw = Math.max(p0.X, p1.X, p2.X, p3.X) - bx;
+            const fh = Math.max(p0.Y, p1.Y, p2.Y, p3.Y) - by;
+            this._effectiveLayout = M.Multiply(Matrix.Translate(-bx, -by));
+            this._arrangedRect = new Rect(marginedRect.X + offsetX, marginedRect.Y + offsetY, fw, fh);
+        } else {
+            this._effectiveLayout = undefined;
+            this._arrangedRect = new Rect(
+                marginedRect.X + offsetX,
+                marginedRect.Y + offsetY,
+                renderW,
+                renderH,
+            );
+            this._renderSize = this.ArrangeOverride(renderSize);
+        }
         this._isArrangeValid = true;
     }
+
+    /** The composed layout matrix (LayoutTransform shifted so its transformed
+     *  bbox min sits at the local origin), or undefined when there's no
+     *  LayoutTransform. Consumed by the SVG emitter and the adorner layer. */
+    public get EffectiveLayoutMatrix(): Matrix | undefined { return this._effectiveLayout; }
 
     // ------------------------------------------------------------------
     // Layout helpers
