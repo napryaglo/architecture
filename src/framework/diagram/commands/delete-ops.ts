@@ -21,6 +21,10 @@ export interface DeleteRequestedArgs
 {
     readonly Items:      readonly unknown[];
     readonly Connectors: readonly Connector[];
+    // Whether Shift was held — lets a consumer distinguish a plain delete
+    // (remove from view) from Shift+Delete (a harder/destructive variant, e.g.
+    // removing the underlying model entity). The standard mutator ignores it.
+    readonly Shift:      boolean;
 }
 
 export type DeleteRequestedListener = (args: DeleteRequestedArgs) => void;

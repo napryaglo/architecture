@@ -1506,6 +1506,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             this._fireDeleteRequested({
                 Items:      [...this.SelectedItems],
                 Connectors: [...this._selectedConnectors],
+                Shift:      hasModifier(args.Modifiers, ModifierKeys.Shift),
             });
             args.Handled = true;
             return;

@@ -106,6 +106,19 @@ function dispatchKeyDown(diagram: Diagram, key: Key): KeyEventArgs
     return args;
 }
 
+function dispatchKeyDownMod(diagram: Diagram, key: Key, mods: ModifierKeys): KeyEventArgs
+{
+    const args = new KeyEventArgs('KeyDown', diagram, {
+        Key:       key,
+        KeyText:   key,
+        Code:      key,
+        Modifiers: mods,
+        IsRepeat:  false,
+    });
+    (diagram as unknown as { OnKeyDown(a: KeyEventArgs): void }).OnKeyDown(args);
+    return args;
+}
+
 function makeConnector(): Connector
 {
     const c = new Connector();
@@ -277,6 +290,26 @@ describe('Diagram — Delete with mixed selection fires DeleteRequested with bot
         assert.equal(captured!.Connectors.length, 2);
         assert.ok(captured!.Items.includes(a) && captured!.Items.includes(b));
         assert.ok(captured!.Connectors.includes(conn1) && captured!.Connectors.includes(conn2));
+    });
+
+    test('Delete without Shift fires with Shift=false', () => {
+        const a = new LeafVM();
+        const { diagram } = setup([a]);
+        let captured: DeleteRequestedArgs | undefined;
+        diagram.AddDeleteRequestedListener(args => { captured = args; });
+        selectFigure(diagram, a);
+        dispatchKeyDownMod(diagram, Key.Delete, ModifierKeys.None);
+        assert.equal(captured?.Shift, false);
+    });
+
+    test('Shift+Delete fires with Shift=true', () => {
+        const a = new LeafVM();
+        const { diagram } = setup([a]);
+        let captured: DeleteRequestedArgs | undefined;
+        diagram.AddDeleteRequestedListener(args => { captured = args; });
+        selectFigure(diagram, a);
+        dispatchKeyDownMod(diagram, Key.Delete, ModifierKeys.Shift);
+        assert.equal(captured?.Shift, true);
     });
 
     test('empty Items + empty Connectors → no fire, not handled', () => {
