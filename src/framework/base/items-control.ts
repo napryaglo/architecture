@@ -1393,7 +1393,19 @@ export class ItemsControl extends Control
             this._realizationDeferred = true;
             return;
         }
-        if (this._itemsPanel !== undefined && !(this._itemsPanel instanceof VirtualizingPanel))
+        if (this._itemsPanel instanceof VirtualizingPanel)
+        {
+            // A virtualizing panel owns its own realized-container set
+            // (not mirrored in _containers the way the non-virtual path
+            // below assumes). Drop that set in lockstep with the
+            // generator Clear() right below — otherwise the stale
+            // realized entries outlive the cleared mappings and desync
+            // (rows shown twice, then a later "not a logical child"
+            // throw when the sweep double-detaches). See
+            // VirtualizingPanel.ResetRealization.
+            this._itemsPanel.ResetRealization();
+        }
+        else if (this._itemsPanel !== undefined)
         {
             // Snapshot first — DetachContainer mutates _containers.
             for (const c of [...this._containers])

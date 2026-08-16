@@ -83,6 +83,25 @@ export abstract class VirtualizingPanel extends Panel
         this.InvalidateMeasure();
     }
 
+    // Drop every realized container (detach + recycle) while KEEPING the
+    // current owner. Called by ItemsControl.rebuildContainers on a full
+    // Items reset: that path clears the owner's Generator, so the panel's
+    // realized map must be dropped in lockstep. If it isn't, the stale
+    // entries outlive the cleared generator mappings and desync — the
+    // panel keeps arranging the old containers (a recycled TreeViewItem
+    // reused for a different node shows both rows overlapping), and a
+    // later measure pass serves a generator-registered-but-never-attached
+    // container into `realized`, which the next recycle sweep hands to
+    // ItemsControl.DetachContainer → DetachLogical with a logical parent
+    // of undefined → "Cannot detach an Element that is not a logical
+    // child of this." Distinct from SetItemsOwner(undefined), which also
+    // drops the owner (used only on a panel swap / teardown).
+    public ResetRealization(): void
+    {
+        this.RecycleAll();
+        this.InvalidateMeasure();
+    }
+
     // Called by ItemsControl on every CollectionChange to Items
     // (insert / remove / replace / move / clear). Dispatches the
     // change kind through the per-kind protected hooks so realized
