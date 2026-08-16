@@ -488,9 +488,13 @@ resources Shells {
 
                 // Header bar: title fills, commands docked right. A DockPanel
                 // (not a Grid) so it sizes to content without needing row defs.
+                // A 1dp bottom rule separates the title/commands from the pane
+                // body (the same delineation the right dock's rail carries).
                 Border x:name="PART_Header"
-                    [ Grid.Row = 0,
-                      Padding  = (@Spacing3,@Spacing2,@Spacing2,@Spacing2) ] {
+                    [ Grid.Row       = 0,
+                      BorderBrush     = @OutlineVariant,
+                      BorderThickness = (0,0,0,1),
+                      Padding         = (@Spacing3,@Spacing2,@Spacing2,@Spacing2) ] {
                     DockPanel [ LastChildFill = true ] {
                         ContentPresenter x:name="PART_Commands"
                             [ DockPanel.Dock    = Right,
