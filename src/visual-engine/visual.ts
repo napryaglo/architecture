@@ -17,7 +17,22 @@ import { PropertyTransition } from './animation/property-transition.js';
 import type { DragStartCallback } from './drag-drop.js';
 import type { Effect } from './drawing/effect.js';
 import type { Transform } from './drawing/transform.js';
-import { RectangleGeometry, type Geometry } from './geometry/geometry.js';
+import type { Geometry } from './geometry/geometry.js';
+
+// Builds the base ClipToBounds geometry (a bounds rectangle) for
+// Visual.buildClipGeometry. Injected by geometry.ts at load via
+// registerBoundsClipFactory so Visual (runtime tier) never value-imports the
+// Geometry classes — a visual → geometry → runtime-barrel → visual import cycle
+// would TDZ-crash ("Cannot access 'Visual' before initialization"). Undefined
+// until the visual-engine barrel (which pulls geometry.ts) is loaded.
+let boundsClipFactory: ((width: number, height: number) => Geometry) | undefined;
+
+/** Register the bounds-rectangle factory for Visual.buildClipGeometry. Called
+ *  once by geometry.ts at module load; see boundsClipFactory. */
+export function registerBoundsClipFactory(factory: (width: number, height: number) => Geometry): void
+{
+    boundsClipFactory = factory;
+}
 
 
 // Routed event names that map to the per-instance _routedListeners
@@ -1144,10 +1159,19 @@ export class Visual extends Model
     // The clip geometry for ClipToBounds, in this Visual's local space. Base
     // returns a rectangle of the arranged bounds; subclasses override to shape
     // the clip (e.g. Border's rounded rect). Called only with a positive size —
-    // the degenerate guard lives in syncClipToBounds.
+    // the degenerate guard lives in syncClipToBounds. The bounds rect is built
+    // through an injected factory (see registerBoundsClipFactory): Visual is the
+    // runtime tier and must NOT value-import the Geometry classes, which would
+    // close a visual → geometry → runtime-barrel → visual initialization cycle.
     protected buildClipGeometry(size: Size): Geometry
     {
-        return new RectangleGeometry(new Rect(0, 0, size.Width, size.Height));
+        if (boundsClipFactory === undefined)
+        {
+            throw new Error(
+                'Visual.buildClipGeometry: bounds-clip factory not registered — ' +
+                'import the visual-engine barrel so geometry.ts registers it.');
+        }
+        return boundsClipFactory(size.Width, size.Height);
     }
 
     // Reconcile Clip with ClipToBounds at arrange time. When on, build + apply

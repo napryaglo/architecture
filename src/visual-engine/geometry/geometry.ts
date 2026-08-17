@@ -6,6 +6,7 @@ import { Cubic } from './pathops/cubic.js';
 import { Quad } from './pathops/quad.js';
 import { Point as DPoint } from './pathops/point.js';
 import { arcToCubics } from './pathops/arc-to-cubic.js';
+import { registerBoundsClipFactory } from '../visual.js';
 
 // SVG / Canvas fill-rule for shapes with self-intersecting or overlapping
 // subpaths. String values match the SVG `fill-rule` attribute so the
@@ -568,3 +569,10 @@ function rayCastCubic(a: Point, b: Point, c: Point, d: Point,
         acc.crossings += 1;
     }
 }
+
+// Give Visual its base ClipToBounds geometry factory. Registered here (not in
+// visual.ts) so the runtime tier never value-imports the Geometry classes — that
+// would close a visual → geometry → runtime-barrel → visual init cycle. Runs
+// once at module load; the visual-engine barrel pulls this module, so the
+// factory is registered before any ClipToBounds arrange.
+registerBoundsClipFactory((width, height) => new RectangleGeometry(new Rect(0, 0, width, height)));
