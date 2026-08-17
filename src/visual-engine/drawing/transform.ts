@@ -1,8 +1,6 @@
-import {
-    MetaData,
-    Model,
-    ObservableCollection,
-} from '../../runtime/index.js';
+import { MetaData } from '../../runtime/metadata.js';
+import { Model } from '../../runtime/model.js';
+import { ObservableCollection } from '../../runtime/observable-collection.js';
 import { Freezable } from '../../runtime/freezable.js';
 import { Matrix } from '../primitives.js';
 
