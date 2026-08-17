@@ -17,7 +17,7 @@ import { PropertyTransition } from './animation/property-transition.js';
 import type { DragStartCallback } from './drag-drop.js';
 import type { Effect } from './drawing/effect.js';
 import type { Transform } from './drawing/transform.js';
-import type { Geometry } from './geometry/geometry.js';
+import { RectangleGeometry, type Geometry } from './geometry/geometry.js';
 
 
 // Routed event names that map to the per-instance _routedListeners
@@ -315,7 +315,14 @@ export class Visual extends Model
     // doesn't depend on visual-engine's Geometry class — the host's
     // DrawingContext.PushClip is what reads it. MetaData.Render so
     // changes re-render.
-    public static readonly ClipKey = Model.RegisterProperty<unknown>(Visual, 'Clip', undefined, MetaData.Render);
+    public static readonly ClipKey = Model.RegisterProperty<Geometry | undefined>(Visual, 'Clip', undefined, MetaData.Render);
+
+    // When true, clip this Visual and its subtree to its arranged bounds at
+    // render time. Off by default (WPF parity). The clip geometry comes from
+    // buildClipGeometry (base: a bounds rectangle; subclasses override to shape
+    // it), applied at the tail of Arrange via syncClipToBounds — which owns the
+    // Clip DP only while this flag is on, so a hand-set Clip is never clobbered.
+    public static readonly ClipToBoundsKey = Model.RegisterProperty<boolean>(Visual, 'ClipToBounds', false, MetaData.Arrange);
 
     // DataContext DP + accessor moved to `Element` (§ Phase B / B5.2) —
     // FE-tier ambient-data root. The DP fires inheritance through the
@@ -1125,8 +1132,41 @@ export class Visual extends Model
     // after children. Typed as `unknown` so runtime stays decoupled
     // from visual-engine's Geometry class; whatever shape DC.PushClip
     // accepts works here.
-    public get Clip(): unknown | undefined { return this.get_property_value(Visual.ClipKey); }
-    public set Clip(value: unknown | undefined) { this.set_property_value(Visual.ClipKey, value); }
+    public get Clip(): Geometry | undefined { return this.get_property_value(Visual.ClipKey); }
+    public set Clip(value: Geometry | undefined) { this.set_property_value(Visual.ClipKey, value); }
+
+    public get ClipToBounds(): boolean { return this.get_property_value(Visual.ClipToBoundsKey); }
+    public set ClipToBounds(value: boolean) { this.set_property_value(Visual.ClipToBoundsKey, value); }
+
+    // Owns the Clip DP only while ClipToBounds is on (see syncClipToBounds).
+    private _clipToBoundsApplied = false;
+
+    // The clip geometry for ClipToBounds, in this Visual's local space. Base
+    // returns a rectangle of the arranged bounds; subclasses override to shape
+    // the clip (e.g. Border's rounded rect). Called only with a positive size —
+    // the degenerate guard lives in syncClipToBounds.
+    protected buildClipGeometry(size: Size): Geometry
+    {
+        return new RectangleGeometry(new Rect(0, 0, size.Width, size.Height));
+    }
+
+    // Reconcile Clip with ClipToBounds at arrange time. When on, build + apply
+    // the clip and latch ownership; when off, clear only a clip we applied. A
+    // hand-set Clip (ClipToBounds off) is never touched.
+    private syncClipToBounds(size: Size): void
+    {
+        if (this.ClipToBounds)
+        {
+            if (size.Width <= 0 || size.Height <= 0) return;   // wait for a real arranged size
+            this.Clip = this.buildClipGeometry(size);
+            this._clipToBoundsApplied = true;
+        }
+        else if (this._clipToBoundsApplied)
+        {
+            this.Clip = undefined;
+            this._clipToBoundsApplied = false;
+        }
+    }
 
     public get DesiredSize(): Size  { return this._desiredSize; }
     public get RenderSize(): Size   { return this._renderSize; }
@@ -1348,6 +1388,7 @@ export class Visual extends Model
             this._renderSize = this.ArrangeOverride(renderSize);
         }
         this._isArrangeValid = true;
+        this.syncClipToBounds(this._renderSize);
     }
 
     /** The composed layout matrix (LayoutTransform shifted so its transformed

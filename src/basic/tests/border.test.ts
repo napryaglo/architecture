@@ -160,12 +160,13 @@ describe('Border ClipToBounds', () => {
         assert.equal(b.Clip, undefined);
     });
 
-    test('a CornerRadius change refreshes the clip radius without a re-arrange', () => {
+    test('a CornerRadius change refreshes the clip radius on re-arrange', () => {
         const b = new Border(new FixedSize(new Size(40, 20)));
         b.CornerRadius = 6;
         b.ClipToBounds = true;
         arranged(b, 40, 20);
-        b.CornerRadius = 10;
+        b.CornerRadius = 10;                 // Arrange-metadata → invalidates arrange
+        b.Arrange(new Rect(0, 0, 40, 20));   // re-arrange refreshes the clip
         assert.equal((b.Clip as RectangleGeometry).RadiusX, 10);
     });
 });
