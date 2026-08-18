@@ -251,7 +251,15 @@ describe('Border layout — Arrange positions child after insets', () => {
     });
 });
 
-describe('Border render — Fill fill and stroke', () => {
+// Read the Rect + corner radii from a RectangleGeometry emitted via
+// DrawGeometry (Border's uniform paint path lowers to one of these).
+function rectOf(g: CapturedGeometry): { rect: Rect; rx: number; ry: number }
+{
+    const rg = g.geometry as RectangleGeometry;
+    return { rect: rg.Rect, rx: rg.RadiusX, ry: rg.RadiusY };
+}
+
+describe('Border render — Fill + Stroke via base paint', () => {
     test('no Fill and no BorderBrush emits no draw calls', () => {
         const b = new Border();
         b.Measure(new Size(100, 100));
@@ -259,9 +267,10 @@ describe('Border render — Fill fill and stroke', () => {
         const dc = new CapturingContext();
         b.Render(dc);
         assert.deepEqual(dc.rects, []);
+        assert.deepEqual(dc.geometries, []);
     });
 
-    test('Fill-only paints a single fill rect covering the full RenderSize', () => {
+    test('Fill-only paints one geometry covering the full RenderSize', () => {
         const b = new Border();
         b.Fill = new SolidColorBrush(Color.Red);
         b.Measure(new Size(100, 100));
@@ -270,14 +279,15 @@ describe('Border render — Fill fill and stroke', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects.length, 1);
-        const r = dc.rects[0]!;
-        assert.equal(r.brush, b.Fill);
-        assert.equal(r.pen, undefined);
-        assert.ok(r.rect.Equals(new Rect(0, 0, 100, 100)));
+        assert.equal(dc.geometries.length, 1);
+        const g = dc.geometries[0]!;
+        assert.equal(g.brush, b.Fill);
+        assert.equal(g.pen, undefined);
+        // No stroke ⇒ inset 0 ⇒ the outline is the full slot.
+        assert.ok(rectOf(g).rect.Equals(new Rect(0, 0, 100, 100)));
     });
 
-    test('BorderBrush + non-zero BorderThickness emits a stroke rect inset by half-thickness', () => {
+    test('BorderBrush + non-zero BorderThickness strokes a geometry inset by half-thickness', () => {
         const b = new Border();
         b.BorderBrush = new SolidColorBrush(Color.Black);
         b.BorderThickness = new Thickness(4);
@@ -287,17 +297,17 @@ describe('Border render — Fill fill and stroke', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        // Fill absent → one draw call (stroke only).
-        assert.equal(dc.rects.length, 1);
-        const r = dc.rects[0]!;
-        assert.equal(r.brush, undefined);
-        assert.equal(r.pen!.Brush, b.BorderBrush);
-        assert.equal(r.pen!.Thickness, 4);
-        // Stroke centered on path → inset by 2 (half of 4) on each side.
-        assert.ok(r.rect.Equals(new Rect(2, 2, 96, 96)));
+        // Fill absent → one geometry (stroke only).
+        assert.equal(dc.geometries.length, 1);
+        const g = dc.geometries[0]!;
+        assert.equal(g.brush, undefined);
+        assert.equal(g.pen!.Brush, b.BorderBrush);
+        assert.equal(g.pen!.Thickness, 4);
+        // Centred stroke → geometry inset by 2 (half of 4) on each side.
+        assert.ok(rectOf(g).rect.Equals(new Rect(2, 2, 96, 96)));
     });
 
-    test('Fill + Border emits two draws in fill-then-stroke order', () => {
+    test('Fill + Border emits ONE geometry carrying both fill and stroke', () => {
         const b = new Border();
         b.Fill     = new SolidColorBrush(Color.White);
         b.BorderBrush    = new SolidColorBrush(Color.Black);
@@ -309,12 +319,10 @@ describe('Border render — Fill fill and stroke', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects.length, 2);
-        // Order matters: background under stroke.
-        assert.equal(dc.rects[0]!.brush, b.Fill);
-        assert.equal(dc.rects[0]!.pen, undefined);
-        assert.equal(dc.rects[1]!.brush, undefined);
-        assert.equal(dc.rects[1]!.pen!.Brush, b.BorderBrush);
+        // Base paint draws Fill + Stroke over a single geometry (one call).
+        assert.equal(dc.geometries.length, 1);
+        assert.equal(dc.geometries[0]!.brush, b.Fill);
+        assert.equal(dc.geometries[0]!.pen!.Brush, b.BorderBrush);
     });
 
     test('BorderBrush set but BorderThickness zero emits no stroke', () => {
@@ -327,6 +335,7 @@ describe('Border render — Fill fill and stroke', () => {
         const dc = new CapturingContext();
         b.Render(dc);
         assert.deepEqual(dc.rects, []);
+        assert.deepEqual(dc.geometries, []);
     });
 });
 
@@ -373,7 +382,7 @@ describe('Border render — per-side BorderThickness', () => {
         assert.equal(dc.rects.length, 3);
     });
 
-    test('asymmetric thickness with Fill paints Fill full, then sides on top', () => {
+    test('asymmetric thickness with Fill paints Fill (base geometry), then sides on top', () => {
         const b = new Border();
         b.Fill      = new SolidColorBrush(Color.White);
         b.BorderBrush     = new SolidColorBrush(Color.Black);
@@ -384,19 +393,19 @@ describe('Border render — per-side BorderThickness', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        // 1 background + 4 side rects = 5 emits.
-        assert.equal(dc.rects.length, 5);
-        // Fill first.
-        assert.equal(dc.rects[0]!.brush, b.Fill);
-        assert.ok(dc.rects[0]!.rect.Equals(new Rect(0, 0, 100, 100)));
-        // Sides follow.
-        for (let i = 1; i < 5; i++)
+        // Base paints the Fill as one geometry (outer slot, Stroke undefined
+        // for the non-uniform case), then 4 side rects form the frame.
+        assert.equal(dc.geometries.length, 1);
+        assert.equal(dc.geometries[0]!.brush, b.Fill);
+        assert.ok(rectOf(dc.geometries[0]!).rect.Equals(new Rect(0, 0, 100, 100)));
+        assert.equal(dc.rects.length, 4);
+        for (const r of dc.rects)
         {
-            assert.equal(dc.rects[i]!.brush, b.BorderBrush);
+            assert.equal(r.brush, b.BorderBrush);
         }
     });
 
-    test('uniform thickness still uses the single stroked-rect path', () => {
+    test('uniform thickness strokes one base geometry (not four fills)', () => {
         const b = new Border();
         b.BorderBrush     = new SolidColorBrush(Color.Black);
         b.BorderThickness = new Thickness(3); // uniform
@@ -406,15 +415,16 @@ describe('Border render — per-side BorderThickness', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        // One stroke, not four fills.
-        assert.equal(dc.rects.length, 1);
-        assert.equal(dc.rects[0]!.brush, undefined);
-        assert.equal(dc.rects[0]!.pen!.Thickness, 3);
+        // One stroked geometry via the base paint; no per-side rects.
+        assert.equal(dc.rects.length, 0);
+        assert.equal(dc.geometries.length, 1);
+        assert.equal(dc.geometries[0]!.brush, undefined);
+        assert.equal(dc.geometries[0]!.pen!.Thickness, 3);
     });
 });
 
 describe('Border render — CornerRadius', () => {
-    test('CornerRadius=0 uses DrawRectangle (no radii on captured payload)', () => {
+    test('CornerRadius=0 → geometry with zero corner radius', () => {
         const b = new Border();
         b.Fill = new SolidColorBrush(Color.Red);
         b.Measure(new Size(100, 100));
@@ -423,12 +433,11 @@ describe('Border render — CornerRadius', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects.length, 1);
-        assert.equal(dc.rects[0]!.radiusX, undefined,
-            'no radius field — DrawRectangle path was taken');
+        assert.equal(dc.geometries.length, 1);
+        assert.equal(rectOf(dc.geometries[0]!).rx, 0, 'square corners');
     });
 
-    test('CornerRadius>0 routes Fill through DrawRoundedRectangle', () => {
+    test('CornerRadius>0 fills a rounded geometry at the outer radius', () => {
         const b = new Border();
         b.Fill = new SolidColorBrush(Color.Red);
         b.CornerRadius = 12;
@@ -438,13 +447,15 @@ describe('Border render — CornerRadius', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects.length, 1);
-        const r = dc.rects[0]!;
-        assert.equal(r.brush, b.Fill);
-        assert.equal(r.pen, undefined);
-        assert.equal(r.radiusX, 12);
-        assert.equal(r.radiusY, 12);
-        assert.ok(r.rect.Equals(new Rect(0, 0, 100, 100)));
+        assert.equal(dc.geometries.length, 1);
+        const g = dc.geometries[0]!;
+        assert.equal(g.brush, b.Fill);
+        assert.equal(g.pen, undefined);
+        const { rect, rx, ry } = rectOf(g);
+        // Fill-only ⇒ inset 0 ⇒ outer radius, full slot.
+        assert.equal(rx, 12);
+        assert.equal(ry, 12);
+        assert.ok(rect.Equals(new Rect(0, 0, 100, 100)));
     });
 
     test('CornerRadius>0 with stroke insets the corner by half the thickness', () => {
@@ -458,16 +469,16 @@ describe('Border render — CornerRadius', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects.length, 1);
-        const r = dc.rects[0]!;
-        // Stroke-only call: no fill, pen with thickness=4.
-        assert.equal(r.brush, undefined);
-        assert.equal(r.pen!.Thickness, 4);
-        // Inner radius = outer 12 - half-stroke 2 = 10.
-        assert.equal(r.radiusX, 10);
-        assert.equal(r.radiusY, 10);
-        // Inner rect inset by 2 on each side.
-        assert.ok(r.rect.Equals(new Rect(2, 2, 96, 96)));
+        assert.equal(dc.geometries.length, 1);
+        const g = dc.geometries[0]!;
+        // Stroke-only geometry: no fill, pen thickness 4.
+        assert.equal(g.brush, undefined);
+        assert.equal(g.pen!.Thickness, 4);
+        const { rect, rx, ry } = rectOf(g);
+        // Inner radius = outer 12 - half-stroke 2 = 10; rect inset by 2.
+        assert.equal(rx, 10);
+        assert.equal(ry, 10);
+        assert.ok(rect.Equals(new Rect(2, 2, 96, 96)));
     });
 
     test('CornerRadius smaller than half-stroke clamps inner radius to 0', () => {
@@ -481,11 +492,11 @@ describe('Border render — CornerRadius', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects[0]!.radiusX, 0,
+        assert.equal(rectOf(dc.geometries[0]!).rx, 0,
             'inner radius clamped to zero — corner becomes sharp');
     });
 
-    test('CornerRadius with both Fill and Stroke emits two rounded calls', () => {
+    test('CornerRadius with both Fill and Stroke emits ONE geometry, radius inset by half', () => {
         const b = new Border();
         b.Fill      = new SolidColorBrush(Color.White);
         b.BorderBrush     = new SolidColorBrush(Color.Black);
@@ -497,11 +508,11 @@ describe('Border render — CornerRadius', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects.length, 2);
-        // Fill first (radius=8 outer).
-        assert.equal(dc.rects[0]!.radiusX, 8);
-        // Stroke second (radius=8 - half=1 = 7).
-        assert.equal(dc.rects[1]!.radiusX, 7);
+        // Single base-paint geometry carrying fill + stroke; radius = 8 - half(1) = 7.
+        assert.equal(dc.geometries.length, 1);
+        assert.equal(dc.geometries[0]!.brush, b.Fill);
+        assert.equal(dc.geometries[0]!.pen!.Brush, b.BorderBrush);
+        assert.equal(rectOf(dc.geometries[0]!).rx, 7);
     });
 
     test('CornerRadius.Full clamps to min(width, height)/2 — wide rect → stadium', () => {
@@ -514,11 +525,11 @@ describe('Border render — CornerRadius', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects.length, 1);
-        const r = dc.rects[0]!;
+        assert.equal(dc.geometries.length, 1);
+        const { rx, ry } = rectOf(dc.geometries[0]!);
         // Half the shorter side — height was 40, so radius = 20.
-        assert.equal(r.radiusX, 20);
-        assert.equal(r.radiusY, 20);
+        assert.equal(rx, 20);
+        assert.equal(ry, 20);
     });
 
     test('CornerRadius.Full on a square rect produces a circle', () => {
@@ -531,8 +542,8 @@ describe('Border render — CornerRadius', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects[0]!.radiusX, 32);
-        assert.equal(dc.rects[0]!.radiusY, 32);
+        assert.equal(rectOf(dc.geometries[0]!).rx, 32);
+        assert.equal(rectOf(dc.geometries[0]!).ry, 32);
     });
 
     test('CornerRadius.Full with stroke insets the inner radius by half the thickness', () => {
@@ -546,10 +557,10 @@ describe('Border render — CornerRadius', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        assert.equal(dc.rects.length, 1);
+        assert.equal(dc.geometries.length, 1);
         // Outer radius = min(80,40)/2 = 20. Inner = 20 - 4/2 = 18.
-        assert.equal(dc.rects[0]!.radiusX, 18);
-        assert.equal(dc.rects[0]!.radiusY, 18);
+        assert.equal(rectOf(dc.geometries[0]!).rx, 18);
+        assert.equal(rectOf(dc.geometries[0]!).ry, 18);
     });
 
     test('CornerRadius.Full is a CornerRadius with every corner Number.POSITIVE_INFINITY', () => {

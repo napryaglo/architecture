@@ -8,6 +8,7 @@ import {
     Size,
     Thickness,
     type DrawingContext,
+    type PropertyDescriptor,
 } from '../runtime/index.js';
 import type { Visual } from '../runtime/index.js';
 import {
@@ -218,122 +219,87 @@ export class Border extends Single
         };
     }
 
-    protected override RenderOverride(dc: DrawingContext): void
+    // Keep the synthesized base Stroke in sync with the border inputs. A
+    // uniform-thickness border paints through Visual's base Fill+Stroke path
+    // (RenderOverride → super): the pen is BorderPen when set, else
+    // Pen(BorderBrush, BorderThickness.Top). Non-uniform thickness leaves
+    // Stroke undefined and paints the bespoke four-rect frame directly.
+    // Markup writes bypass the TS setters and go through the descriptor, so
+    // the sync lives here to catch parser-driven writes too.
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor,
+        oldValue:   unknown,
+        newValue:   unknown,
+    ): void
     {
-        const size = this.RenderSize;
-        // Widen `number` to all-equal corners so the paint paths below
-        // see a single shape regardless of how the consumer authored
-        // the value. A non-finite per-corner radius is the M3 "Full"
-        // sentinel — folded down to half the shorter side at paint
-        // time so a wide rect renders as a stadium / pill, a square
-        // as a circle. Each corner is clamped independently so an
-        // asymmetric CornerRadius mixing Full + 0 (the connected-bar
-        // shape) produces sharp inner corners and rounded outer caps.
-        const { tl, tr, br, bl } = this.resolveCorners(size);
-        const isUniformRadius = tl === tr && tr === br && br === bl;
-        const radius = tl;  // only meaningful when isUniformRadius
-
-        // Fill fills the entire border rect (under the stroke).
-        // Snapshot once into a local so the undefined-guard below
-        // narrows for every subsequent draw call.
-        const bg = this.Fill;
-        if (bg !== undefined)
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        const n = descriptor.Name;
+        if (n === 'BorderBrush' || n === 'BorderThickness' || n === 'BorderPen')
         {
-            if (isUniformRadius)
-            {
-                if (radius > 0)
-                {
-                    dc.DrawRoundedRectangle(
-                        bg, undefined,
-                        new Rect(0, 0, size.Width, size.Height),
-                        radius, radius);
-                }
-                else
-                {
-                    dc.DrawRectangle(bg, undefined, new Rect(0, 0, size.Width, size.Height));
-                }
-            }
-            else
-            {
-                // Non-uniform corners can't lower to a primitive rect —
-                // build a path with arc corners and emit via DrawGeometry.
-                const path = buildRoundedRectPath(0, 0, size.Width, size.Height, tl, tr, br, bl);
-                dc.DrawGeometry(bg, undefined, path);
-            }
+            this.syncStroke();
         }
+    }
 
-        // Stroked border. Uniform thickness uses a single stroked rect
-        // (rounded or square); asymmetric thickness uses four filled
-        // rects forming the frame (the four-rect path doesn't lower to
-        // a single stroked rect, so BorderPen has no role there).
-        //
-        // BorderPen, when set, wins over the synthesized
-        // `new Pen(BorderBrush, BorderThickness.Top)` Pen — its Brush /
-        // Thickness / DashStyle / LineCap / LineJoin / MiterLimit all
-        // come through unchanged. Sticky details:
-        //   * Stroke thickness for the inset math comes from the
-        //     SOURCE OF TRUTH that's drawing the stroke (Pen.Thickness
-        //     when BorderPen is set, BorderThickness.Top otherwise) so
-        //     the stroke sits inside its own width.
-        //   * BorderBrush is ignored when BorderPen is set, even if
-        //     BorderPen.Brush is undefined — that lets a consumer
-        //     intentionally suppress a stroke by passing a Pen with no
-        //     Brush, instead of clearing BorderBrush.
+    // Uniform thickness → the base Stroke pen; non-uniform → undefined (the
+    // four-rect frame owns the paint). BorderPen wins over the synthesized
+    // Pen(BorderBrush, thickness); a zero-width or brush-less pen suppresses
+    // the stroke entirely (matching the old explicit guards).
+    private syncStroke(): void
+    {
         const bt = this.BorderThickness;
-        const customPen = this.BorderPen;
-        const isUniform = bt.Left === bt.Top && bt.Top === bt.Right && bt.Right === bt.Bottom;
-        if (customPen === undefined && this.BorderBrush === undefined) return;
-
-        if (isUniform)
+        const uniform = bt.Left === bt.Top && bt.Top === bt.Right && bt.Right === bt.Bottom;
+        if (!uniform) { this.Stroke = undefined; return; }
+        const custom = this.BorderPen;
+        if (custom !== undefined)
         {
-            const pen = customPen ?? new Pen(this.BorderBrush, bt.Top);
-            const thickness = pen.Thickness;
-            if (thickness <= 0 || pen.Brush === undefined) return;
-            const half = thickness / 2;
-            const innerRect = new Rect(
-                half, half,
-                Math.max(0, size.Width  - thickness),
-                Math.max(0, size.Height - thickness),
-            );
-            if (isUniformRadius)
-            {
-                if (radius > 0)
-                {
-                    // Inset the corner radius by the same half-thickness so
-                    // the stroke sits exactly on the rounded outline. Clamp
-                    // to zero so very thick borders with small radii degrade
-                    // to a sharp inner corner instead of going negative.
-                    const innerR = Math.max(0, radius - half);
-                    dc.DrawRoundedRectangle(undefined, pen, innerRect, innerR, innerR);
-                }
-                else
-                {
-                    dc.DrawRectangle(undefined, pen, innerRect);
-                }
-            }
-            else
-            {
-                // Stroke a per-corner path inset by half the thickness on
-                // every side; each corner's effective radius shrinks by
-                // the same amount (clamped to zero).
-                const innerTl = Math.max(0, tl - half);
-                const innerTr = Math.max(0, tr - half);
-                const innerBr = Math.max(0, br - half);
-                const innerBl = Math.max(0, bl - half);
-                const path = buildRoundedRectPath(
-                    half, half,
-                    innerRect.Width, innerRect.Height,
-                    innerTl, innerTr, innerBr, innerBl);
-                dc.DrawGeometry(undefined, pen, path);
-            }
+            this.Stroke = (custom.Thickness > 0 && custom.Brush !== undefined) ? custom : undefined;
             return;
         }
+        this.Stroke = (this.BorderBrush !== undefined && bt.Top > 0)
+            ? new Pen(this.BorderBrush, bt.Top)
+            : undefined;
+    }
 
-        // Asymmetric path — fill one rect per side. Top and Bottom span
-        // the full width; Left and Right sit between Top and Bottom so
-        // corner pixels are owned by Top/Bottom (a single deterministic
-        // assignment instead of overlapping corners that double up the
-        // alpha when the brush is translucent).
+    // The painted rounded-rect geometry inset by `inset` on every edge, each
+    // corner radius reduced by the same. Uniform corners lower to a
+    // RectangleGeometry; asymmetric corners trace a per-corner path. Visual's
+    // base RenderOverride fills + strokes this (inset = Stroke.Thickness/2 so
+    // the centred stroke sits inside the layout rect). ClipToBounds keeps
+    // using buildClipGeometry (the outer outline).
+    protected override buildPaintGeometry(size: Size, inset: number): Geometry
+    {
+        const { tl, tr, br, bl } = this.resolveCorners(size);
+        const w = Math.max(0, size.Width  - 2 * inset);
+        const h = Math.max(0, size.Height - 2 * inset);
+        const uniform = tl === tr && tr === br && br === bl;
+        if (uniform)
+        {
+            const r = Math.max(0, tl - inset);
+            return new RectangleGeometry(new Rect(inset, inset, w, h), r, r);
+        }
+        return buildRoundedRectPath(
+            inset, inset, w, h,
+            Math.max(0, tl - inset), Math.max(0, tr - inset),
+            Math.max(0, br - inset), Math.max(0, bl - inset));
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        // Uniform thickness: Visual's base paint draws Fill + the synthesized
+        // Stroke over buildPaintGeometry. Non-uniform thickness: base paints
+        // the Fill (Stroke is undefined) and the four-rect frame goes on top.
+        super.RenderOverride(dc);
+
+        const bt = this.BorderThickness;
+        const uniform = bt.Left === bt.Top && bt.Top === bt.Right && bt.Right === bt.Bottom;
+        if (uniform) return;
+
+        // Asymmetric frame — one filled rect per side. Top and Bottom span the
+        // full width; Left and Right sit between them so corner pixels are
+        // owned by Top/Bottom (a single deterministic assignment instead of
+        // overlapping corners that double the alpha for a translucent brush).
+        // CornerRadius is intentionally ignored for this case.
+        const size = this.RenderSize;
         const innerY = bt.Top;
         const innerH = Math.max(0, size.Height - bt.Top - bt.Bottom);
         if (bt.Top > 0)
