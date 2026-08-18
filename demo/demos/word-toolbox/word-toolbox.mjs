@@ -37,7 +37,7 @@ function buildInsertionLineTemplate() {
         const { Color } = runtimeRef;
         const { SolidColorBrush } = visualEngineRef;
         const line = new Border();
-        line.Background = new SolidColorBrush(Color.FromHex('#2563eb'));
+        line.Fill = new SolidColorBrush(Color.FromHex('#2563eb'));
         line.BorderThickness = new Thickness(0);
         return line;
     });
@@ -88,7 +88,7 @@ function attachExtras(view, vm) {
     // on a single handler. The selection-chrome + cell-stretching
     // wiring that used to live here moved to declarative `.mu`:
     // WordTileItemStyle/WordTileItemTemplate with a
-    // `when(IsSelected) { PART_Border.Background = … }` trigger
+    // `when(IsSelected) { PART_Border.Fill = … }` trigger
     // applies via ItemContainerStyle and covers freshly-realized
     // tiles automatically (including virtualized ones).
     const detachCopy = attachToolboxCopyReceiver(listBox, vm);

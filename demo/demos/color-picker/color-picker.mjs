@@ -27,7 +27,7 @@ function attachBehaviors(view, vm) {
 
         const apply = () => {
             try {
-                preview.Background = new SolidColorBrush(Color.FromHex(vm[hexProp]));
+                preview.Fill = new SolidColorBrush(Color.FromHex(vm[hexProp]));
             } catch { /* partial hex during typing */ }
         };
         apply();

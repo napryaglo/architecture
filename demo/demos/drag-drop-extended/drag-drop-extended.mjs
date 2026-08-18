@@ -42,7 +42,7 @@ function buildInsertionLineTemplate() {
         const { SolidColorBrush } = importVisualEngine();
         const line = new Border();
         line.Height = 2;
-        line.Background = new SolidColorBrush(Color.FromHex('#2563eb'));
+        line.Fill = new SolidColorBrush(Color.FromHex('#2563eb'));
         line.BorderThickness = new Thickness(0);
         return line;
     });
