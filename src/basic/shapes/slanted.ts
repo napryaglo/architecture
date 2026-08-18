@@ -2,9 +2,10 @@ import {
     Matrix,
     MetaData,
     Model,
+    Size,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { MatrixTransform, PathGeometry } from '../../visual-engine/index.js';
+import { MatrixTransform, PathGeometry, type Geometry } from '../../visual-engine/index.js';
 import { Squircle, buildSquircleFigure } from './squircle.js';
 
 // M3 Slanted — a Squircle leaning to one side via a horizontal shear
@@ -26,6 +27,37 @@ export class Slanted extends Squircle
 
     public get LeanAngle(): number { return this.get_property_value(Slanted.LeanAngleKey); }
     public set LeanAngle(v: number) { this.set_property_value(Slanted.LeanAngleKey, v); }
+
+    // Hit outline: the same sheared squircle the renderer draws, with the
+    // shear baked into the geometry's Transform (Contains inverts it).
+    // RenderOverride keeps its own dc.PushTransform — do NOT delegate.
+    protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
+
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
+        const half = t / 2;
+        const w    = Math.max(0, size.Width  - t);
+        const h    = Math.max(0, size.Height - t);
+
+        const lean = this.LeanAngle * Math.PI / 180;
+        const tan  = Math.tan(lean);
+        const shift = h * Math.abs(tan);
+
+        const innerWidth = Math.max(0, w - shift);
+        const innerXL    = half + shift / 2;
+
+        const geom = new PathGeometry([
+            buildSquircleFigure(innerXL, half, innerWidth, h, this.Superness)]);
+
+        if (tan !== 0)
+        {
+            const yBottom = half + h;
+            geom.Transform = new MatrixTransform(new Matrix(1, 0, -tan, 1, yBottom * tan, 0));
+        }
+        return geom;
+    }
 
     protected override RenderOverride(dc: DrawingContext): void
     {

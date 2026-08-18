@@ -13,6 +13,7 @@ import {
     PathFigure,
     PathGeometry,
     SweepDirection,
+    type Geometry,
 } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
@@ -51,6 +52,46 @@ export class Puffy extends Shape
 
     public get Base(): PuffyBase { return this.get_property_value(Puffy.BaseKey); }
     public set Base(v: PuffyBase) { this.set_property_value(Puffy.BaseKey, v); }
+
+    // Hit outline: the same puffy figure the renderer draws, with the
+    // diamond rotation baked into the geometry's Transform so
+    // Geometry.Contains (which inverts Transform) matches the drawn shape.
+    // RenderOverride keeps its own dc.PushTransform — do NOT delegate, or
+    // the rotation would apply twice.
+    protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
+
+        const stroke = this.Stroke;
+        const t      = stroke?.Thickness ?? 0;
+        const half = t / 2;
+        const w    = Math.max(0, size.Width  - t);
+        const h    = Math.max(0, size.Height - t);
+
+        const isDiamond = this.Base === PuffyBase.Diamond;
+        const scale  = isDiamond ? Math.SQRT1_2 : 1;
+        const innerW = w * scale;
+        const innerH = h * scale;
+        const offX   = half + (w - innerW) / 2;
+        const offY   = half + (h - innerH) / 2;
+
+        const geom = new PathGeometry([buildPuffyFigure(
+            offX, offY, innerW, innerH,
+            Math.max(1, Math.floor(this.BumpsPerSide)))]);
+
+        if (isDiamond)
+        {
+            const cx = half + w / 2;
+            const cy = half + h / 2;
+            const a  = Math.PI / 4;
+            const c  = Math.cos(a);
+            const s  = Math.sin(a);
+            const ox = cx - (cx * c + cy * s);
+            const oy = cy - (cx * (-s) + cy * c);
+            geom.Transform = new MatrixTransform(new Matrix(c, -s, s, c, ox, oy));
+        }
+        return geom;
+    }
 
     protected override RenderOverride(dc: DrawingContext): void
     {
