@@ -1,11 +1,13 @@
 import {
     Point,
+    Size,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     CubicBezierSegment,
     PathFigure,
     PathGeometry,
+    type Geometry,
 } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
@@ -21,10 +23,10 @@ import { Shape } from './shape.js';
 // Stroke insets by half-thickness.
 export class Heart extends Shape
 {
-    protected override RenderOverride(dc: DrawingContext): void
+    // Outline = the drawn silhouette; single source for paint + hit.
+    protected override buildGeometry(size: Size): Geometry | undefined
     {
-        const size = this.RenderSize;
-        if (size.Width <= 0 || size.Height <= 0) return;
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
 
         const stroke = this.Stroke;
         const t      = stroke?.Thickness ?? 0;
@@ -59,6 +61,13 @@ export class Heart extends Shape
             new CubicBezierSegment(ctrl1RT, ctrl2RT, valley), // lobeR → valley
         ], true);
 
-        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
+        return new PathGeometry([figure]);
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const geom = this.buildGeometry(this.RenderSize);
+        if (geom === undefined) return;
+        dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }
 }

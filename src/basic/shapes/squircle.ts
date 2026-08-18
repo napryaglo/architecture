@@ -2,12 +2,14 @@ import {
     MetaData,
     Model,
     Point,
+    Size,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     CubicBezierSegment,
     PathFigure,
     PathGeometry,
+    type Geometry,
 } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
@@ -40,10 +42,10 @@ export class Squircle extends Shape
     public get Superness(): number { return this.get_property_value(Squircle.SupernessKey); }
     public set Superness(v: number) { this.set_property_value(Squircle.SupernessKey, v); }
 
-    protected override RenderOverride(dc: DrawingContext): void
+    // Outline = the drawn silhouette; single source for paint + hit.
+    protected override buildGeometry(size: Size): Geometry | undefined
     {
-        const size = this.RenderSize;
-        if (size.Width <= 0 || size.Height <= 0) return;
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
 
         const stroke = this.Stroke;
         const t      = stroke?.Thickness ?? 0;
@@ -53,7 +55,14 @@ export class Squircle extends Shape
 
         const figure = buildSquircleFigure(half, half, w, h, this.Superness);
 
-        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
+        return new PathGeometry([figure]);
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const geom = this.buildGeometry(this.RenderSize);
+        if (geom === undefined) return;
+        dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }
 }
 

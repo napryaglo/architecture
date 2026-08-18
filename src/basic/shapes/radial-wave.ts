@@ -2,12 +2,14 @@ import {
     MetaData,
     Model,
     Point,
+    Size,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     LineSegment,
     PathFigure,
     PathGeometry,
+    type Geometry,
 } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
@@ -55,10 +57,10 @@ export class RadialWave extends Shape
     public get Samples(): number { return this.get_property_value(RadialWave.SamplesKey); }
     public set Samples(v: number) { this.set_property_value(RadialWave.SamplesKey, v); }
 
-    protected override RenderOverride(dc: DrawingContext): void
+    // Outline = the drawn silhouette; single source for paint + hit.
+    protected override buildGeometry(size: Size): Geometry | undefined
     {
-        const size = this.RenderSize;
-        if (size.Width <= 0 || size.Height <= 0) return;
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
 
         const stroke = this.Stroke;
         const t      = stroke?.Thickness ?? 0;
@@ -102,7 +104,14 @@ export class RadialWave extends Shape
         for (let i = 1; i < samples.length; i++) segs.push(new LineSegment(samples[i]!));
         const figure = new PathFigure(samples[0]!, segs, true);
 
-        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
+        return new PathGeometry([figure]);
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const geom = this.buildGeometry(this.RenderSize);
+        if (geom === undefined) return;
+        dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }
 }
 
