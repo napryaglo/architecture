@@ -1501,9 +1501,32 @@ export class Visual extends Model
     // Children are rendered separately by the renderer's tree walk —
     // RenderOverride should only emit primitives belonging to this Visual.
     //
-    // Default is empty — most container Visuals (Single, Panel) are pure
-    // composition and contribute nothing; their children do the drawing.
-    protected RenderOverride(_dc: DrawingContext): void { }
+    // Base behaviour paints the Visual's shape geometry: Fill + Stroke over
+    // buildPaintGeometry (the outline inset by half the pen so a centred
+    // stroke lands fully inside the outline). No-op when both Fill and
+    // Stroke are undefined, so pure-composition Visuals (Panel, Single,
+    // ContentControl) contribute nothing unless painted. Subclasses that
+    // override this call super.RenderOverride(dc) first, then draw on top.
+    protected RenderOverride(dc: DrawingContext): void
+    {
+        const fill = this.Fill, stroke = this.Stroke;
+        if (fill === undefined && stroke === undefined) return;
+        const s = this._renderSize;
+        if (s.Width <= 0 || s.Height <= 0) return;
+        const half = (stroke?.Thickness ?? 0) / 2;
+        dc.DrawGeometry(fill, stroke, this.buildPaintGeometry(s, half));
+    }
+
+    // The shape to PAINT: the outline (buildClipGeometry) inset by `inset`
+    // px so a centred stroke stays inside the outline. Kept separate from
+    // buildClipGeometry (the outline used for clip / hit) so those consume
+    // the un-inset shape. Base insets its bounds rect; shape subclasses
+    // inset their silhouette.
+    protected buildPaintGeometry(size: Size, inset: number): Geometry
+    {
+        return new RectangleGeometry(
+            new Rect(inset, inset, size.Width - 2 * inset, size.Height - 2 * inset));
+    }
 
     // ------------------------------------------------------------------
     // Input handlers — moved to Element
