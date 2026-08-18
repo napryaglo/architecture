@@ -1,5 +1,5 @@
-import { Point, type DrawingContext } from '../../runtime/index.js';
-import { EllipseGeometry } from '../../visual-engine/index.js';
+import { Point, Size, type DrawingContext } from '../../runtime/index.js';
+import { EllipseGeometry, type Geometry } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
 // Ellipse shape — fills its arranged rect with an ellipse, optionally
@@ -15,6 +15,16 @@ import { Shape } from './shape.js';
 // stroke sits inside the layout rect, matching Border's convention).
 export class Ellipse extends Shape
 {
+    // Hit outline: the UN-inset slot ellipse, so the whole shape including
+    // its stroke is grabbable (RenderOverride draws the stroke-inset
+    // ellipse; the stroke's outer edge is exactly this radius).
+    protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        return new EllipseGeometry(
+            new Point(size.Width / 2, size.Height / 2),
+            size.Width / 2, size.Height / 2);
+    }
+
     protected override RenderOverride(dc: DrawingContext): void
     {
         const size = this.RenderSize;

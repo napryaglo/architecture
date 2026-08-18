@@ -2,6 +2,7 @@ import {
     MetaData,
     Model,
     Point,
+    Size,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
@@ -9,6 +10,7 @@ import {
     PathFigure,
     PathGeometry,
     QuadraticBezierSegment,
+    type Geometry,
 } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
@@ -34,10 +36,10 @@ export class Arrow extends Shape
     public get BowDepth(): number { return this.get_property_value(Arrow.BowDepthKey); }
     public set BowDepth(v: number) { this.set_property_value(Arrow.BowDepthKey, v); }
 
-    protected override RenderOverride(dc: DrawingContext): void
+    // Outline = the drawn silhouette; single source for paint + hit.
+    protected override buildGeometry(size: Size): Geometry | undefined
     {
-        const size = this.RenderSize;
-        if (size.Width <= 0 || size.Height <= 0) return;
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
 
         const stroke = this.Stroke;
         const t      = stroke?.Thickness ?? 0;
@@ -96,7 +98,14 @@ export class Arrow extends Shape
 
         const figure = new PathFigure(startPoint, segments, true);
 
-        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
+        return new PathGeometry([figure]);
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const geom = this.buildGeometry(this.RenderSize);
+        if (geom === undefined) return;
+        dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }
 }
 

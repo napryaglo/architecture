@@ -1,8 +1,9 @@
 import {
     Rect,
+    Size,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { RectangleGeometry } from '../../visual-engine/index.js';
+import { RectangleGeometry, type Geometry } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
 // M3 Pill — capsule rectangle. The corner radius is always
@@ -19,10 +20,10 @@ import { Shape } from './shape.js';
 // Stroke insets by half-thickness (Border / Ellipse convention).
 export class Pill extends Shape
 {
-    protected override RenderOverride(dc: DrawingContext): void
+    // Outline = the drawn silhouette; single source for paint + hit.
+    protected override buildGeometry(size: Size): Geometry | undefined
     {
-        const size = this.RenderSize;
-        if (size.Width <= 0 || size.Height <= 0) return;
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
 
         const stroke = this.Stroke;
         const t      = stroke?.Thickness ?? 0;
@@ -33,9 +34,13 @@ export class Pill extends Shape
         // so the capped ends always close cleanly inside the layout rect.
         const r    = Math.min(w, h) / 2;
 
-        dc.DrawGeometry(
-            this.Fill,
-            stroke,
-            new RectangleGeometry(new Rect(half, half, w, h), r, r));
+        return new RectangleGeometry(new Rect(half, half, w, h), r, r);
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const geom = this.buildGeometry(this.RenderSize);
+        if (geom === undefined) return;
+        dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }
 }

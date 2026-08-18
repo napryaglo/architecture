@@ -71,7 +71,39 @@ export class Shape extends Element
 
     protected override ArrangeOverride(finalSize: Size): Size
     {
+        // Confine hit-testing to the shape's own outline: publish the
+        // silhouette as HitTestGeometry so picking consults
+        // Geometry.Contains(localPoint) instead of the AABB `mural-hit`
+        // pad. HitTestGeometry is MetaData.None, so writing it here never
+        // re-invalidates layout. Skip when the slot is degenerate or the
+        // shape opts into the transparent hit band (HitTestStrokeWidth > 0,
+        // used by connectors / hairlines) — a zero-area outline would make
+        // a thin/open route unhittable.
+        //
+        // Use finalSize, NOT this.RenderSize: Visual.Arrange assigns
+        // RenderSize the RETURN of this method, so the getter is still
+        // stale here.
+        const confine = finalSize.Width > 0 && finalSize.Height > 0
+            && this.HitTestStrokeWidth === 0;
+        this.HitTestGeometry = confine ? this.buildGeometry(finalSize) : undefined;
         return finalSize;
+    }
+
+    // The shape's outline in local render coordinates — the single source
+    // of geometry for the hit region (and, for shapes that draw exactly
+    // their outline, for painting). Base implementation covers the
+    // Geometry-DP shapes (Path, icon-bearing Shapes): return this.Geometry
+    // only when it already maps 1:1 to the slot (fitTransform undefined).
+    // A geometry that needs the fit transform (a shared icon authored in a
+    // different box) would require baking the scale into a cloned geometry
+    // to produce a correct local-space hit region — deferred; those keep
+    // the AABB pad. Concrete catalog shapes override this to return their
+    // computed silhouette.
+    protected buildGeometry(size: Size): Geometry | undefined
+    {
+        const g = this.Geometry;
+        if (g === undefined) return undefined;
+        return this.fitTransform(g, size) === undefined ? g : undefined;
     }
 
     // In-place mutations of the current Fill / Stroke / Geometry (PenEditor
@@ -95,7 +127,7 @@ export class Shape extends Element
         // size) or when the slot is degenerate: Connector paints its route
         // in absolute canvas coordinates at Size.Zero and must NOT scale.
         const fill = this.effectiveFill();
-        const fit = this.fitTransform(g);
+        const fit = this.fitTransform(g, this.RenderSize);
         if (fit !== undefined) dc.PushTransform(fit);
         // Invisible hit band first (when enabled) so the visible stroke
         // paints on top of it. Same geometry + fit frame, so the band
@@ -137,9 +169,8 @@ export class Shape extends Element
     // viewBox→slot math the Icon control uses, but driven off the
     // geometry's own bounds (its implicit viewBox) so a plain
     // `Shape [Geometry=@homeIcon]` scales with no extra DP.
-    private fitTransform(g: Geometry): MatrixTransform | undefined
+    private fitTransform(g: Geometry, size: Size): MatrixTransform | undefined
     {
-        const size = this.RenderSize;
         // Degenerate slot → paint as authored. Guards Connector (Size.Zero
         // route in absolute coords) and any unsized Shape.
         if (!(size.Width > 0) || !(size.Height > 0)

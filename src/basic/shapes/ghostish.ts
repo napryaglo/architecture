@@ -11,6 +11,7 @@ import {
     PathFigure,
     PathGeometry,
     SweepDirection,
+    type Geometry,
 } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
@@ -33,10 +34,10 @@ export class Ghostish extends Shape
     public get ScallopCount(): number { return this.get_property_value(Ghostish.ScallopCountKey); }
     public set ScallopCount(v: number) { this.set_property_value(Ghostish.ScallopCountKey, v); }
 
-    protected override RenderOverride(dc: DrawingContext): void
+    // Outline = the drawn silhouette; single source for paint + hit.
+    protected override buildGeometry(size: Size): Geometry | undefined
     {
-        const size = this.RenderSize;
-        if (size.Width <= 0 || size.Height <= 0) return;
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
 
         const stroke = this.Stroke;
         const t      = stroke?.Thickness ?? 0;
@@ -77,6 +78,13 @@ export class Ghostish extends Shape
 
         const figure = new PathFigure(new Point(xL, topY), segs, true);
 
-        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
+        return new PathGeometry([figure]);
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const geom = this.buildGeometry(this.RenderSize);
+        if (geom === undefined) return;
+        dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }
 }

@@ -2,9 +2,10 @@ import {
     MetaData,
     Model,
     Point,
+    Size,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { PathGeometry } from '../../visual-engine/index.js';
+import { PathGeometry, type Geometry } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 import { buildRoundedPolygon } from './polygon-helpers.js';
 
@@ -25,10 +26,10 @@ export class Clamshell extends Shape
     public get CornerRadius(): number { return this.get_property_value(Clamshell.CornerRadiusKey); }
     public set CornerRadius(v: number) { this.set_property_value(Clamshell.CornerRadiusKey, v); }
 
-    protected override RenderOverride(dc: DrawingContext): void
+    // Outline = the drawn silhouette; single source for paint + hit.
+    protected override buildGeometry(size: Size): Geometry | undefined
     {
-        const size = this.RenderSize;
-        if (size.Width <= 0 || size.Height <= 0) return;
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
 
         const stroke = this.Stroke;
         const t      = stroke?.Thickness ?? 0;
@@ -55,6 +56,13 @@ export class Clamshell extends Shape
 
         const figure = buildRoundedPolygon(verts, r);
 
-        dc.DrawGeometry(this.Fill, stroke, new PathGeometry([figure]));
+        return new PathGeometry([figure]);
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const geom = this.buildGeometry(this.RenderSize);
+        if (geom === undefined) return;
+        dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }
 }

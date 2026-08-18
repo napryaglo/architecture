@@ -2,12 +2,14 @@ import {
     MetaData,
     Model,
     Point,
+    Size,
     type DrawingContext,
 } from '../../runtime/index.js';
 import {
     LineSegment,
     PathFigure,
     PathGeometry,
+    type Geometry,
 } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
@@ -43,10 +45,10 @@ export class PixelArt extends Shape
     public get Source(): PixelSource { return this.get_property_value(PixelArt.SourceKey); }
     public set Source(v: PixelSource) { this.set_property_value(PixelArt.SourceKey, v); }
 
-    protected override RenderOverride(dc: DrawingContext): void
+    // Outline = the drawn silhouette; single source for paint + hit.
+    protected override buildGeometry(size: Size): Geometry | undefined
     {
-        const size = this.RenderSize;
-        if (size.Width <= 0 || size.Height <= 0) return;
+        if (size.Width <= 0 || size.Height <= 0) return undefined;
 
         const stroke = this.Stroke;
         const t      = stroke?.Thickness ?? 0;
@@ -84,7 +86,14 @@ export class PixelArt extends Shape
             }
         }
 
-        dc.DrawGeometry(this.Fill, stroke, new PathGeometry(figures));
+        return new PathGeometry(figures);
+    }
+
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        const geom = this.buildGeometry(this.RenderSize);
+        if (geom === undefined) return;
+        dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }
 }
 

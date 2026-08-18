@@ -1,5 +1,5 @@
-import { MetaData, Model, Rect, type DrawingContext } from '../../runtime/index.js';
-import { RectangleGeometry } from '../../visual-engine/index.js';
+import { MetaData, Model, Rect, Size, type DrawingContext } from '../../runtime/index.js';
+import { RectangleGeometry, type Geometry } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
 // Rectangle shape — fills its arranged rect, optionally stroked, with
@@ -23,6 +23,15 @@ export class Rectangle extends Shape
 
     public get RadiusY(): number { return this.get_property_value(Rectangle.RadiusYKey); }
     public set RadiusY(value: number) { this.set_property_value(Rectangle.RadiusYKey, value); }
+
+    // Hit outline: the UN-inset full-slot rect (with the same corner radii),
+    // so the stroke is grabbable. RenderOverride draws the inset rect.
+    protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        return new RectangleGeometry(
+            new Rect(0, 0, size.Width, size.Height),
+            this.RadiusX, this.RadiusY);
+    }
 
     protected override RenderOverride(dc: DrawingContext): void
     {
