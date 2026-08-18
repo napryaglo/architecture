@@ -5,7 +5,7 @@ import CardVM from "./card-vm.mjs"
 // button so the dynamic-binding chain through CardVM is visible.
 //
 // What's exercised:
-//   * Card with each Variant value — Background, BorderThickness, and
+//   * Card with each Variant value — Fill, BorderThickness, and
 //     resting Effect differ per variant; hover bumps Effect +1 and
 //     composites a state-layer overlay; press lowers Effect back.
 //   * Title typography (@TitleMediumXxx) and body typography
@@ -17,10 +17,10 @@ import CardVM from "./card-vm.mjs"
 
 resources CardDemo {
     DataTemplate [DataType = CardVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "Card — M3's content container. Three variants vary container colour, border, and resting elevation.",
                           FontSize   = 15,

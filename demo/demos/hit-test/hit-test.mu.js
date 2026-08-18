@@ -24,11 +24,11 @@ export class HitTestDemo extends ResourceDictionary {
                 let _heartPresenter2;
                 const _border3 = new Border();
                 _border3.SetNameScope(new NameScope());
-                _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Surface"));
+                _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Surface"));
                 const _dockPanel4 = new DockPanel();
                 const _border5 = new Border();
                 _border5.set_property_value(DockPanel.DockKey, Dock.Top);
-                _border5.set_property_value(Border.BackgroundKey, DynamicResource(_border5, "Primary"));
+                _border5.set_property_value(Border.FillKey, DynamicResource(_border5, "Primary"));
                 _border5.set_property_value(Border.PaddingKey, new Thickness(20, 14, 20, 14));
                 const _stackPanel6 = new StackPanel();
                 _stackPanel6.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);

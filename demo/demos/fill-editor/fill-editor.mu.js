@@ -18,11 +18,11 @@ export class FillEditorDemo extends ResourceDictionary {
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
             _border1.SetNameScope(new NameScope());
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Primary"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Primary"));
             _border3.set_property_value(Border.PaddingKey, new Thickness(20, 14, 20, 14));
             const _stackPanel4 = new StackPanel();
             _stackPanel4.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
@@ -42,7 +42,7 @@ export class FillEditorDemo extends ResourceDictionary {
             _dockPanel2.AddChild(_border3);
             const _border7 = new Border();
             _border7.set_property_value(DockPanel.DockKey, Dock.Bottom);
-            _border7.set_property_value(Border.BackgroundKey, DynamicResource(_border7, "SurfaceContainerLow"));
+            _border7.set_property_value(Border.FillKey, DynamicResource(_border7, "SurfaceContainerLow"));
             _border7.set_property_value(Border.BorderBrushKey, DynamicResource(_border7, "OutlineVariant"));
             _border7.set_property_value(Border.BorderThicknessKey, new Thickness(0, 1, 0, 0));
             _border7.set_property_value(Border.PaddingKey, new Thickness(20, 10, 20, 10));
@@ -53,14 +53,14 @@ export class FillEditorDemo extends ResourceDictionary {
             _border7.SetChild(_textBlock8);
             _dockPanel2.AddChild(_border7);
             const _border9 = new Border();
-            _border9.set_property_value(Border.BackgroundKey, DynamicResource(_border9, "SurfaceContainerLowest"));
+            _border9.set_property_value(Border.FillKey, DynamicResource(_border9, "SurfaceContainerLowest"));
             _border9.set_property_value(Border.PaddingKey, new Thickness(20, 20, 20, 20));
             const _stackPanel10 = new StackPanel();
             _stackPanel10.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
             const _border11 = new Border();
             _border11.set_property_value(Border.WidthKey, 380);
             _border11.set_property_value(Border.PaddingKey, new Thickness(16, 16, 16, 16));
-            _border11.set_property_value(Border.BackgroundKey, DynamicResource(_border11, "SurfaceContainerLow"));
+            _border11.set_property_value(Border.FillKey, DynamicResource(_border11, "SurfaceContainerLow"));
             _border11.set_property_value(Border.BorderBrushKey, DynamicResource(_border11, "OutlineVariant"));
             _border11.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border11.set_property_value(Border.CornerRadiusKey, 8);
@@ -83,7 +83,7 @@ export class FillEditorDemo extends ResourceDictionary {
             _border15.set_property_value(Border.WidthKey, 520);
             _border15.set_property_value(Border.HeightKey, 420);
             _border15.set_property_value(Border.PaddingKey, new Thickness(20));
-            _border15.set_property_value(Border.BackgroundKey, DynamicResource(_border15, "SurfaceContainer"));
+            _border15.set_property_value(Border.FillKey, DynamicResource(_border15, "SurfaceContainer"));
             _border15.set_property_value(Border.BorderBrushKey, DynamicResource(_border15, "OutlineVariant"));
             _border15.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border15.set_property_value(Border.CornerRadiusKey, 8);

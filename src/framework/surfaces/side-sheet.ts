@@ -218,7 +218,7 @@ export class SideSheet extends ContentControl
         const host = new SideSheetOverlayHost();
         host.sheet = this;
         const scrim = new ScrimSurface();
-        scrim.Background = this.resolveScrim();
+        scrim.Fill = this.resolveScrim();
         scrim.onClick = (): void =>
         {
             if (this.IsOpen) { this.IsOpen = false; this.fireClosed(); }
@@ -281,7 +281,7 @@ export class SideSheet extends ContentControl
                 this._overlayHost?.InvalidateArrange();
                 break;
             case 'ScrimBrush':
-                if (this._scrim !== undefined) this._scrim.Background = this.resolveScrim();
+                if (this._scrim !== undefined) this._scrim.Fill = this.resolveScrim();
                 break;
         }
     }

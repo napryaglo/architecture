@@ -82,7 +82,7 @@ describe('Border defaults', () => {
     test('a fresh Border has zero insets, no child, no fill, no stroke', () => {
         const b = new Border();
         assert.equal(b.child, undefined);
-        assert.equal(b.Background, undefined);
+        assert.equal(b.Fill, undefined);
         assert.equal(b.BorderBrush, undefined);
         assert.ok(b.BorderThickness.Equals(Thickness.Zero));
         assert.ok(b.Padding.Equals(Thickness.Zero));
@@ -251,8 +251,8 @@ describe('Border layout — Arrange positions child after insets', () => {
     });
 });
 
-describe('Border render — Background fill and stroke', () => {
-    test('no Background and no BorderBrush emits no draw calls', () => {
+describe('Border render — Fill fill and stroke', () => {
+    test('no Fill and no BorderBrush emits no draw calls', () => {
         const b = new Border();
         b.Measure(new Size(100, 100));
         b.Arrange(new Rect(0, 0, 100, 100));
@@ -261,9 +261,9 @@ describe('Border render — Background fill and stroke', () => {
         assert.deepEqual(dc.rects, []);
     });
 
-    test('Background-only paints a single fill rect covering the full RenderSize', () => {
+    test('Fill-only paints a single fill rect covering the full RenderSize', () => {
         const b = new Border();
-        b.Background = new SolidColorBrush(Color.Red);
+        b.Fill = new SolidColorBrush(Color.Red);
         b.Measure(new Size(100, 100));
         b.Arrange(new Rect(0, 0, 100, 100));
 
@@ -272,7 +272,7 @@ describe('Border render — Background fill and stroke', () => {
 
         assert.equal(dc.rects.length, 1);
         const r = dc.rects[0]!;
-        assert.equal(r.brush, b.Background);
+        assert.equal(r.brush, b.Fill);
         assert.equal(r.pen, undefined);
         assert.ok(r.rect.Equals(new Rect(0, 0, 100, 100)));
     });
@@ -287,7 +287,7 @@ describe('Border render — Background fill and stroke', () => {
         const dc = new CapturingContext();
         b.Render(dc);
 
-        // Background absent → one draw call (stroke only).
+        // Fill absent → one draw call (stroke only).
         assert.equal(dc.rects.length, 1);
         const r = dc.rects[0]!;
         assert.equal(r.brush, undefined);
@@ -297,9 +297,9 @@ describe('Border render — Background fill and stroke', () => {
         assert.ok(r.rect.Equals(new Rect(2, 2, 96, 96)));
     });
 
-    test('Background + Border emits two draws in fill-then-stroke order', () => {
+    test('Fill + Border emits two draws in fill-then-stroke order', () => {
         const b = new Border();
-        b.Background     = new SolidColorBrush(Color.White);
+        b.Fill     = new SolidColorBrush(Color.White);
         b.BorderBrush    = new SolidColorBrush(Color.Black);
         b.BorderThickness = new Thickness(1);
 
@@ -311,7 +311,7 @@ describe('Border render — Background fill and stroke', () => {
 
         assert.equal(dc.rects.length, 2);
         // Order matters: background under stroke.
-        assert.equal(dc.rects[0]!.brush, b.Background);
+        assert.equal(dc.rects[0]!.brush, b.Fill);
         assert.equal(dc.rects[0]!.pen, undefined);
         assert.equal(dc.rects[1]!.brush, undefined);
         assert.equal(dc.rects[1]!.pen!.Brush, b.BorderBrush);
@@ -373,9 +373,9 @@ describe('Border render — per-side BorderThickness', () => {
         assert.equal(dc.rects.length, 3);
     });
 
-    test('asymmetric thickness with Background paints Background full, then sides on top', () => {
+    test('asymmetric thickness with Fill paints Fill full, then sides on top', () => {
         const b = new Border();
-        b.Background      = new SolidColorBrush(Color.White);
+        b.Fill      = new SolidColorBrush(Color.White);
         b.BorderBrush     = new SolidColorBrush(Color.Black);
         b.BorderThickness = new Thickness(2, 4, 6, 8);
         b.Measure(new Size(100, 100));
@@ -386,8 +386,8 @@ describe('Border render — per-side BorderThickness', () => {
 
         // 1 background + 4 side rects = 5 emits.
         assert.equal(dc.rects.length, 5);
-        // Background first.
-        assert.equal(dc.rects[0]!.brush, b.Background);
+        // Fill first.
+        assert.equal(dc.rects[0]!.brush, b.Fill);
         assert.ok(dc.rects[0]!.rect.Equals(new Rect(0, 0, 100, 100)));
         // Sides follow.
         for (let i = 1; i < 5; i++)
@@ -416,7 +416,7 @@ describe('Border render — per-side BorderThickness', () => {
 describe('Border render — CornerRadius', () => {
     test('CornerRadius=0 uses DrawRectangle (no radii on captured payload)', () => {
         const b = new Border();
-        b.Background = new SolidColorBrush(Color.Red);
+        b.Fill = new SolidColorBrush(Color.Red);
         b.Measure(new Size(100, 100));
         b.Arrange(new Rect(0, 0, 100, 100));
 
@@ -428,9 +428,9 @@ describe('Border render — CornerRadius', () => {
             'no radius field — DrawRectangle path was taken');
     });
 
-    test('CornerRadius>0 routes Background through DrawRoundedRectangle', () => {
+    test('CornerRadius>0 routes Fill through DrawRoundedRectangle', () => {
         const b = new Border();
-        b.Background = new SolidColorBrush(Color.Red);
+        b.Fill = new SolidColorBrush(Color.Red);
         b.CornerRadius = 12;
         b.Measure(new Size(100, 100));
         b.Arrange(new Rect(0, 0, 100, 100));
@@ -440,7 +440,7 @@ describe('Border render — CornerRadius', () => {
 
         assert.equal(dc.rects.length, 1);
         const r = dc.rects[0]!;
-        assert.equal(r.brush, b.Background);
+        assert.equal(r.brush, b.Fill);
         assert.equal(r.pen, undefined);
         assert.equal(r.radiusX, 12);
         assert.equal(r.radiusY, 12);
@@ -485,9 +485,9 @@ describe('Border render — CornerRadius', () => {
             'inner radius clamped to zero — corner becomes sharp');
     });
 
-    test('CornerRadius with both Background and Stroke emits two rounded calls', () => {
+    test('CornerRadius with both Fill and Stroke emits two rounded calls', () => {
         const b = new Border();
-        b.Background      = new SolidColorBrush(Color.White);
+        b.Fill      = new SolidColorBrush(Color.White);
         b.BorderBrush     = new SolidColorBrush(Color.Black);
         b.BorderThickness = new Thickness(2);
         b.CornerRadius    = 8;
@@ -498,7 +498,7 @@ describe('Border render — CornerRadius', () => {
         b.Render(dc);
 
         assert.equal(dc.rects.length, 2);
-        // Background first (radius=8 outer).
+        // Fill first (radius=8 outer).
         assert.equal(dc.rects[0]!.radiusX, 8);
         // Stroke second (radius=8 - half=1 = 7).
         assert.equal(dc.rects[1]!.radiusX, 7);
@@ -506,7 +506,7 @@ describe('Border render — CornerRadius', () => {
 
     test('CornerRadius.Full clamps to min(width, height)/2 — wide rect → stadium', () => {
         const b = new Border();
-        b.Background   = new SolidColorBrush(Color.Red);
+        b.Fill   = new SolidColorBrush(Color.Red);
         b.CornerRadius = CornerRadius.Full;
         b.Measure(new Size(200, 40));
         b.Arrange(new Rect(0, 0, 200, 40));
@@ -523,7 +523,7 @@ describe('Border render — CornerRadius', () => {
 
     test('CornerRadius.Full on a square rect produces a circle', () => {
         const b = new Border();
-        b.Background   = new SolidColorBrush(Color.Red);
+        b.Fill   = new SolidColorBrush(Color.Red);
         b.CornerRadius = CornerRadius.Full;
         b.Measure(new Size(64, 64));
         b.Arrange(new Rect(0, 0, 64, 64));
@@ -572,7 +572,7 @@ describe('Border render — CornerRadius', () => {
         // so it falls back to a PathGeometry via DrawGeometry. We
         // assert the geometry path was taken (no rounded-rect call).
         const b = new Border();
-        b.Background = new SolidColorBrush(Color.Red);
+        b.Fill = new SolidColorBrush(Color.Red);
         b.CornerRadius = new CornerRadius(
             Number.POSITIVE_INFINITY, 0, 0, Number.POSITIVE_INFINITY);
         b.Measure(new Size(200, 40));
@@ -602,12 +602,12 @@ describe('Border invalidation — property changes route through Visual.OnProper
         assert.equal(b.IsArrangeValid, false);
     });
 
-    test('changing Background leaves measure and arrange valid (Render-only)', () => {
+    test('changing Fill leaves measure and arrange valid (Render-only)', () => {
         const b = new Border();
         b.Measure(new Size(100, 100));
         b.Arrange(new Rect(0, 0, 100, 100));
 
-        b.Background = new SolidColorBrush(Color.Red);
+        b.Fill = new SolidColorBrush(Color.Red);
         assert.equal(b.IsMeasureValid, true);
         assert.equal(b.IsArrangeValid, true);
     });

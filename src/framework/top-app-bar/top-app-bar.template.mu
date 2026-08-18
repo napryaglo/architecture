@@ -33,7 +33,7 @@ resources TopAppBars {
     // (Auto / * / Auto) — nav and actions take their natural width,
     // the title column fills the remaining space.
     Template x:key="DefaultSmallTopAppBar" [TargetType = TopAppBar] {
-        Border x:name="PART_Border" [ Background = @Surface, Height = 64 ] {
+        Border x:name="PART_Border" [ Fill = @Surface, Height = 64 ] {
             Grid {
                 ColumnDefinitions {
                     ColumnDefinition [ Width = GridLength.Auto ]
@@ -66,7 +66,7 @@ resources TopAppBars {
         // container colour switches from @Surface to @SurfaceContainer
         // for differentiation. ScrollSource undefined leaves the bar
         // at @Surface (IsScrolled stays false).
-        when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
+        when ( IsScrolled ) { PART_Border.Fill = @SurfaceContainer; }
         // Density — the bar HEIGHT is M3-spec-fixed (64dp), and the nav /
         // actions are 48dp slots that delegate their own touch targets, so
         // the density response is the title's horizontal inset only.
@@ -86,7 +86,7 @@ resources TopAppBars {
     // compiler didn't accept `ColumnDefinitions { … }` collection-child
     // syntax — that limitation is now lifted.
     Template x:key="DefaultCenterAlignedTopAppBar" [TargetType = TopAppBar] {
-        Border x:name="PART_Border" [ Background = @Surface, Height = 64 ] {
+        Border x:name="PART_Border" [ Fill = @Surface, Height = 64 ] {
             Grid {
                 ColumnDefinitions {
                     ColumnDefinition [ Width = GridLength.Star ]
@@ -115,7 +115,7 @@ resources TopAppBars {
                       Margin              = (4,8,4,8) ]
             }
         }
-        when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
+        when ( IsScrolled ) { PART_Border.Fill = @SurfaceContainer; }
         // Density — title inset only; bar height + 48dp slots stay fixed.
         when ( ThemeManager.Density = Compact ) { PART_TitleText.Margin = (8,0,8,0); }
         when ( ThemeManager.Density = Comfortable ) { PART_TitleText.Margin = (16,0,16,0); }
@@ -124,7 +124,7 @@ resources TopAppBars {
     // Medium — two-row, 112dp tall. Row 1 (64dp) carries nav + actions;
     // Row 2 carries the larger title bottom-aligned.
     Template x:key="DefaultMediumTopAppBar" [TargetType = TopAppBar] {
-        Border x:name="PART_Border" [ Background = @Surface, Height = 112 ] {
+        Border x:name="PART_Border" [ Fill = @Surface, Height = 112 ] {
             DockPanel [ LastChildFill = true ] {
                 DockPanel [ DockPanel.Dock = Top, Height = 64, LastChildFill = true ] {
                     Border x:name="PART_NavSlot"
@@ -141,7 +141,7 @@ resources TopAppBars {
                           Margin            = (4,8,4,8) ]
                     // Empty filler — DockPanel needs a last child to
                     // satisfy LastChildFill. The title is in row 2.
-                    Border [ Background = #00000000 ]
+                    Border [ Fill = #00000000 ]
                 }
                 Border [ Padding = (16,0,16,16) ] {
                     TextBlock x:name="PART_TitleText"
@@ -152,13 +152,13 @@ resources TopAppBars {
                 }
             }
         }
-        when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
+        when ( IsScrolled ) { PART_Border.Fill = @SurfaceContainer; }
     }
 
     // Large — two-row, 152dp tall. Same shape as Medium with a taller
     // title row and HeadlineMedium typography on the title.
     Template x:key="DefaultLargeTopAppBar" [TargetType = TopAppBar] {
-        Border x:name="PART_Border" [ Background = @Surface, Height = 152 ] {
+        Border x:name="PART_Border" [ Fill = @Surface, Height = 152 ] {
             DockPanel [ LastChildFill = true ] {
                 DockPanel [ DockPanel.Dock = Top, Height = 64, LastChildFill = true ] {
                     Border x:name="PART_NavSlot"
@@ -173,7 +173,7 @@ resources TopAppBars {
                           Orientation       = Horizontal,
                           VerticalAlignment = Center,
                           Margin            = (4,8,4,8) ]
-                    Border [ Background = #00000000 ]
+                    Border [ Fill = #00000000 ]
                 }
                 Border [ Padding = (16,0,16,20) ] {
                     TextBlock x:name="PART_TitleText"
@@ -184,7 +184,7 @@ resources TopAppBars {
                 }
             }
         }
-        when ( IsScrolled ) { PART_Border.Background = @SurfaceContainer; }
+        when ( IsScrolled ) { PART_Border.Fill = @SurfaceContainer; }
     }
 
     // Default Style — picks Template by EffectiveVariant (a derived

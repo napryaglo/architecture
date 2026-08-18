@@ -15,13 +15,13 @@ import ToggleButtonVM from "./toggle-button-vm.mjs"
 
 resources ToggleButtonDemo {
     // Re-templated ToggleButton chrome. PART_Border ships a Surface
-    // default Background; the IsChecked trigger overrides to Primary
+    // default Fill; the IsChecked trigger overrides to Primary
     // at TriggerValue tier (which sits above LocalValue under mural's
     // priority order — see effective-value.ts). Same TargetedSetter
     // pattern the default ListBoxItem template uses.
     Template x:key="ToggleChromeTemplate" [TargetType = ToggleButton] {
         Border x:name="PART_Border"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @Outline,
               BorderThickness = (1),
               CornerRadius    = @ShapeSmall ] {
@@ -34,18 +34,18 @@ resources ToggleButtonDemo {
             // token across checked + unchecked (the alpha is low enough
             // that the delta over the Primary fill is negligible).
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeSmall,
                   Padding      = (16,8,16,8) ] {
                 ContentPresenter
             }
         }
         when ( IsChecked ) {
-            PART_Border.Background = @Primary;
+            PART_Border.Fill = @Primary;
             PART_Border.BorderBrush = @PrimaryPress;
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @StateHoverOverlay; }
-        when ( IsPressed ) { PART_StateLayer.Background = @StatePressOverlay; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @StateHoverOverlay; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @StatePressOverlay; }
     }
 
     // The Style owns the chrome Template plus the content-ink flip.
@@ -63,10 +63,10 @@ resources ToggleButtonDemo {
     }
 
     DataTemplate [DataType = ToggleButtonVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "ToggleButton — IsChecked flips on click; TwoWay binding keeps the VM in sync.",
                           FontSize   = 15,
@@ -101,7 +101,7 @@ resources ToggleButtonDemo {
                     // bound through value converters in a richer demo,
                     // but for v1 the demo just shows the state as text.
                     Border
-                        [ Background      = @SurfaceContainerLow,
+                        [ Fill      = @SurfaceContainerLow,
                           Padding         = (12,12,12,12),
                           BorderBrush     = @Outline,
                           BorderThickness = (1) ] {

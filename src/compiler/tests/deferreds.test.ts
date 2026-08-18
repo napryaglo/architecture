@@ -26,8 +26,8 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    Background = #ffffff;
-                    when( not IsEnabled ){ Background = #cccccc; }
+                    Fill = #ffffff;
+                    when( not IsEnabled ){ Fill = #cccccc; }
                 }
             } }
         `);
@@ -41,8 +41,8 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    Background = #ffffff;
-                    when( IsMouseOver or IsFocused ){ Background = #eeeeee; }
+                    Fill = #ffffff;
+                    when( IsMouseOver or IsFocused ){ Fill = #eeeeee; }
                 }
             } }
         `);
@@ -61,7 +61,7 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    when( IsMouseOver and IsFocused ){ Background = #eee; }
+                    when( IsMouseOver and IsFocused ){ Fill = #eee; }
                 }
             } }
         `);
@@ -77,7 +77,7 @@ describe('compile — compound triggers', () => {
             Application{ resources: {
                 Style[TargetType=Border]{
                     when( (IsMouseOver or IsFocused) and IsEnabled ){
-                        Background = #eee;
+                        Fill = #eee;
                     }
                 }
             } }
@@ -93,7 +93,7 @@ describe('compile — compound triggers', () => {
             () => emitted(`
                 Application{ resources: {
                     Style[TargetType=Border]{
-                        when( not Status = "active" ){ Background = #eee; }
+                        when( not Status = "active" ){ Fill = #eee; }
                     }
                 } }
             `),
@@ -105,7 +105,7 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    when( not $IsActive ){ Background = #cccccc; }
+                    when( not $IsActive ){ Fill = #cccccc; }
                 }
             } }
         `);
@@ -119,7 +119,7 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    when( $IsSelected and $IsHot ){ Background = #eee; }
+                    when( $IsSelected and $IsHot ){ Fill = #eee; }
                 }
             } }
         `);
@@ -133,7 +133,7 @@ describe('compile — compound triggers', () => {
         const js = emitted(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    when( ($A or $B) and $C ){ Background = #eee; }
+                    when( ($A or $B) and $C ){ Fill = #eee; }
                 }
             } }
         `);
@@ -146,7 +146,7 @@ describe('compile — compound triggers', () => {
             () => emitted(`
                 Application{ resources: {
                     Style[TargetType=Border]{
-                        when( IsMouseOver and $IsHot ){ Background = #eee; }
+                        when( IsMouseOver and $IsHot ){ Fill = #eee; }
                     }
                 } }
             `),
@@ -239,7 +239,7 @@ describe('compile — macros', () => {
     test('macro is expanded with positional args bound to named params', () => {
         const js = emitted(`
             def panel[#bg, #pad]{
-                Border[Background=#bg, Padding=#pad]{}
+                Border[Fill=#bg, Padding=#pad]{}
             }
 
             Application{ resources: {
@@ -253,7 +253,7 @@ describe('compile — macros', () => {
         // the emit.
         assert.match(
             js,
-            /\.set_property_value\(\w+\.BackgroundKey, new SolidColorBrush\(Color\.FromHex\('#4caf50'\)\)\);/,
+            /\.set_property_value\(\w+\.FillKey, new SolidColorBrush\(Color\.FromHex\('#4caf50'\)\)\);/,
         );
         assert.match(
             js,
@@ -267,7 +267,7 @@ describe('compile — macros', () => {
     test('content slot — #1 splices invocation body into the macro tree', () => {
         const js = emitted(`
             def labeled[#bg, #1]{
-                Border[Background=#bg, Padding=(4)]{
+                Border[Fill=#bg, Padding=(4)]{
                     #1
                 }
             }
@@ -280,28 +280,28 @@ describe('compile — macros', () => {
                 }
             } }
         `);
-        assert.match(js, /\.set_property_value\(\w+\.BackgroundKey, new SolidColorBrush\(Color\.FromHex\('#0000ff'\)\)/);
+        assert.match(js, /\.set_property_value\(\w+\.FillKey, new SolidColorBrush\(Color\.FromHex\('#0000ff'\)\)/);
         assert.match(js, /\.set_property_value\(\w+\.PaddingKey, new Thickness\(4\)\)/);
         assert.match(js, /\.set_property_value\(\w+\.PaddingKey, new Thickness\(2\)\)/);
     });
 
     test('default parameter values fill missing args', () => {
         const js = emitted(`
-            def card[#bg = #ffffff]{ Border[Background=#bg]{} }
+            def card[#bg = #ffffff]{ Border[Fill=#bg]{} }
             Application{ resources: {
                 Border x:root{ card[] }
             } }
         `);
         assert.match(
             js,
-            /\.set_property_value\(\w+\.BackgroundKey, new SolidColorBrush\(Color\.FromHex\('#ffffff'\)\)\);/,
+            /\.set_property_value\(\w+\.FillKey, new SolidColorBrush\(Color\.FromHex\('#ffffff'\)\)\);/,
         );
     });
 
     test('too many positional args is rejected', () => {
         assert.throws(
             () => emitted(`
-                def card[#bg]{ Border[Background=#bg]{} }
+                def card[#bg]{ Border[Fill=#bg]{} }
                 Application{ resources: {
                     Border x:root{ card[#0000ff, "stray"] }
                 } }
@@ -313,7 +313,7 @@ describe('compile — macros', () => {
     test('named-argument invocation is rejected in v0', () => {
         assert.throws(
             () => emitted(`
-                def card[#bg]{ Border[Background=#bg]{} }
+                def card[#bg]{ Border[Fill=#bg]{} }
                 Application{ resources: {
                     Border x:root{ card[bg=#0000ff] }
                 } }
@@ -355,8 +355,8 @@ describe('instantiate — deferreds end-to-end', () => {
         const app = instantiate(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    Background = #ffffff;
-                    when( IsMouseOver or IsFocused ){ Background = #eeeeee; }
+                    Fill = #ffffff;
+                    when( IsMouseOver or IsFocused ){ Fill = #eeeeee; }
                 }
             } }
         `, CTX) as Application;
@@ -433,27 +433,27 @@ describe('instantiate — deferreds end-to-end', () => {
         const app = instantiate(`
             Application{ resources: {
                 Template x:key="MyTmpl"[TargetType=Border]{
-                    Border[Background=$$Background]{}
+                    Border[Fill=$$Fill]{}
                 }
             } }
         `, CTX) as Application;
         const tmpl = app.Resources.Resolve('MyTmpl') as ControlTemplate;
         assert.ok(tmpl instanceof ControlTemplate);
 
-        // Apply with a templated parent that has a Background set.
+        // Apply with a templated parent that has a Fill set.
         const parent = new Border();
         const brush = new engine.SolidColorBrush(runtime.Color.Red);
-        parent.Background = brush;
+        parent.Fill = brush;
         const inst = tmpl.Apply(parent);
-        assert.equal((inst.root as Border).Background, brush);
+        assert.equal((inst.root as Border).Fill, brush);
     });
 
     test('MultiTrigger — AND condition activates only when both watched props match', () => {
         const app = instantiate(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    Background = #ffffff;
-                    when( IsMouseOver and IsFocused ){ Background = #eeeeee; }
+                    Fill = #ffffff;
+                    when( IsMouseOver and IsFocused ){ Fill = #eeeeee; }
                 }
             } }
         `, CTX) as Application;
@@ -469,7 +469,7 @@ describe('instantiate — deferreds end-to-end', () => {
 
     test('Macro inside a rooted Border — expansion becomes its Child', () => {
         const app = instantiate(`
-            def labeled[#bg]{ Border[Background=#bg, Padding=(8)]{} }
+            def labeled[#bg]{ Border[Fill=#bg, Padding=(8)]{} }
             Application{ resources: {
                 Border x:root{
                     labeled[#0000ff]
@@ -479,7 +479,7 @@ describe('instantiate — deferreds end-to-end', () => {
         const outer = app.Resources.Root as Border;
         const inner = outer.child as Border;
         assert.ok(inner instanceof Border);
-        // Inner Border has the macro-provided Background.
-        assert.notEqual(inner.Background, undefined);
+        // Inner Border has the macro-provided Fill.
+        assert.notEqual(inner.Fill, undefined);
     });
 });

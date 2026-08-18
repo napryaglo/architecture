@@ -18,7 +18,7 @@ export class StatusBarDemo extends ResourceDictionary {
         const t = new StatusBarDemo(_gate_StatusBarDemo);
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border1.set_property_value(Border.CornerRadiusKey, 4);
@@ -27,7 +27,7 @@ export class StatusBarDemo extends ResourceDictionary {
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Primary"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Primary"));
             _border3.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock4 = new TextBlock();
             _textBlock4.set_property_value(TextBlock.TextKey, "StatusBar — docked cells with separators.");

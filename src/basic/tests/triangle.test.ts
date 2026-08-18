@@ -42,7 +42,7 @@ function render(t: Triangle, w: number, h: number): CapturingContext
 describe('Triangle', () => {
     test('sharp triangle (CornerRadius=0): 2 line segments + start vertex', () => {
         const t = new Triangle();
-        t.Background = new SolidColorBrush(Color.Red);
+        t.Fill = new SolidColorBrush(Color.Red);
         const dc = render(t, 100, 100);
         const fig = (dc.geoms[0]!.geometry as PathGeometry).Figures[0]!;
         assert.equal(fig.Segments.length, 2);

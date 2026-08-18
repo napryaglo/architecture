@@ -88,7 +88,7 @@ describe('DatePicker', () => {
         dp.SelectedDate = new Date(2026, 6, 10);
         const selected = cells(dp)[9]  as ClickableBorder;   // day 10
         const other    = cells(dp)[11] as ClickableBorder;   // day 12
-        assert.notEqual(selected.Background, other.Background,
+        assert.notEqual(selected.Fill, other.Fill,
             'selected day carries a distinct background brush');
     });
 });

@@ -18,13 +18,13 @@ export class BadgeDemo extends ResourceDictionary {
         const t = new BadgeDemo(_gate_BadgeDemo);
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Primary"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Primary"));
             _border3.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock4 = new TextBlock();
             _textBlock4.set_property_value(TextBlock.TextKey, "Badge — M3's small status flag. Variant picks Dot (no count) vs Numeric (Count-driven pill).");
@@ -56,7 +56,7 @@ export class BadgeDemo extends ResourceDictionary {
             const _border10 = new Border();
             _border10.set_property_value(Border.WidthKey, 40);
             _border10.set_property_value(Border.HeightKey, 40);
-            _border10.set_property_value(Border.BackgroundKey, DynamicResource(_border10, "SurfaceContainerHighest"));
+            _border10.set_property_value(Border.FillKey, DynamicResource(_border10, "SurfaceContainerHighest"));
             _border10.set_property_value(Border.CornerRadiusKey, DynamicResource(_border10, "ShapeMedium"));
             _border10.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border10.set_property_value(Canvas.LeftKey, 0);
@@ -84,7 +84,7 @@ export class BadgeDemo extends ResourceDictionary {
             const _border15 = new Border();
             _border15.set_property_value(Border.WidthKey, 40);
             _border15.set_property_value(Border.HeightKey, 40);
-            _border15.set_property_value(Border.BackgroundKey, DynamicResource(_border15, "SurfaceContainerHighest"));
+            _border15.set_property_value(Border.FillKey, DynamicResource(_border15, "SurfaceContainerHighest"));
             _border15.set_property_value(Border.CornerRadiusKey, DynamicResource(_border15, "ShapeMedium"));
             _border15.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border15.set_property_value(Canvas.LeftKey, 0);

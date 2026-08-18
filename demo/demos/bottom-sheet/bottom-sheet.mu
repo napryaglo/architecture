@@ -19,10 +19,10 @@ import BottomSheetVM from "./bottom-sheet-vm.mjs"
 
 resources BottomSheetDemo {
     DataTemplate [DataType = BottomSheetVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "BottomSheet — M3's bottom-anchored surface. Toggle peek vs expanded posture.",
                           FontSize   = 15,
@@ -39,7 +39,7 @@ resources BottomSheetDemo {
                         Border
                             [ Width               = 32,
                               Height              = 4,
-                              Background          = @OutlineVariant,
+                              Fill          = @OutlineVariant,
                               CornerRadius        = @ShapeFull,
                               BorderThickness     = (0),
                               HorizontalAlignment = Center,
@@ -59,7 +59,7 @@ resources BottomSheetDemo {
                 }
 
                 // Page body (fills the remaining slot).
-                Border [ Background = @Surface, Padding = (24) ] {
+                Border [ Fill = @Surface, Padding = (24) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
                             [ Text       = "The sheet below is bottom-anchored. Toggling posture animates its Height between a peek and an expanded stop.",

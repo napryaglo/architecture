@@ -17,7 +17,7 @@ export class AnimationDeclarativeDemo extends ResourceDictionary {
         const t = new AnimationDeclarativeDemo(_gate_AnimationDeclarativeDemo);
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd2 = _border1.Resources;
@@ -32,7 +32,7 @@ export class AnimationDeclarativeDemo extends ResourceDictionary {
             const _dockPanel7 = new DockPanel();
             const _border8 = new Border();
             _border8.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border8.set_property_value(Border.BackgroundKey, DynamicResource(_border8, "Primary"));
+            _border8.set_property_value(Border.FillKey, DynamicResource(_border8, "Primary"));
             _border8.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock9 = new TextBlock();
             _textBlock9.set_property_value(TextBlock.TextKey, "Declarative animation — on Click { BeginStoryboard { ... } }");

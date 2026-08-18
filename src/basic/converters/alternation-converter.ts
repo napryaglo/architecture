@@ -6,7 +6,7 @@ import type { ValueConverter } from '../../runtime/index.js';
 //
 // Typical use:
 //   * Style targeting ListBoxItem (etc.) sets
-//     `Background = SetterFactory(t => Binding(t, '(ItemsControl.AlternationIndex)', { converter: brushAlt })`
+//     `Fill = SetterFactory(t => Binding(t, '(ItemsControl.AlternationIndex)', { converter: brushAlt })`
 //     where `brushAlt = new AlternationConverter([whiteBrush, lightGrayBrush])`.
 //   * Per-row alternation flips between `Values[0]` and `Values[1]` for
 //     AlternationCount=2 (even and odd rows). With longer Values

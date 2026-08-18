@@ -141,19 +141,19 @@ describe('Visual.AttachOverlayChild — DynamicResource resolves through owner',
         // Install a DynamicResource binding BEFORE attach so the binding
         // captures whatever the resolution chain looks like once we
         // join the owner's logical tree.
-        popup.set_property_value(Border.BackgroundKey, DynamicResource(popup, 'PopupTint'));
+        popup.set_property_value(Border.FillKey, DynamicResource(popup, 'PopupTint'));
 
         owner.AttachOverlayChild(popup);
 
         // Resolution at this point: popup is logically a child of owner,
         // owner.Resources has PopupTint → matches the initial Brush.
-        assert.equal(popup.Background, initial);
+        assert.equal(popup.Fill, initial);
 
         // Live re-resolve: swapping the resource on the owner cascades
         // into the popup's binding via the DynamicResource subscriber.
         const swapped = new SolidColorBrush(Color.FromHex('#55667788'));
         owner.Resources.Set('PopupTint', swapped);
-        assert.equal(popup.Background, swapped);
+        assert.equal(popup.Fill, swapped);
     });
 
     test('owner-side resource walk reaches an ANCESTOR of the owner (no resources on owner itself)', () => {

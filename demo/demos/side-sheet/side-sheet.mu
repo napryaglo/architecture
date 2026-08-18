@@ -14,7 +14,7 @@ import SideSheetVM from "./side-sheet-vm.mjs"
 
 resources SideSheetDemo {
     DataTemplate [DataType = SideSheetVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             Grid {
                 // Page body.
                 StackPanel [ Orientation = Vertical, Margin = (32,32,32,32) ] {

@@ -13,9 +13,9 @@ import SplitButtonVM from "./split-button-vm.mjs"
 
 resources SplitButtonDemo {
     DataTemplate [DataType = SplitButtonVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "SplitButton — M3 dual-target chrome. Primary fires Command; chevron toggles a dropdown.",
                           FontSize   = 15,

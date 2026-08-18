@@ -51,7 +51,7 @@ describe('Puffy', () => {
 
     test('Square base: emits 4·BumpsPerSide ArcSegments (one per lobe)', () => {
         const p = new Puffy();
-        p.Background = new SolidColorBrush(Color.Red);
+        p.Fill = new SolidColorBrush(Color.Red);
         p.BumpsPerSide = 2;
         const dc = render(p, 100, 100);
         const fig = (dc.geoms[0]!.geometry as PathGeometry).Figures[0]!;

@@ -19,13 +19,13 @@ export class TopAppBarDemo extends ResourceDictionary {
         const t = new TopAppBarDemo(_gate_TopAppBarDemo);
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "SurfaceContainerLow"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "SurfaceContainerLow"));
             _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Primary"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Primary"));
             _border3.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock4 = new TextBlock();
             _textBlock4.set_property_value(TextBlock.TextKey, "TopAppBar — M3 screen header. Four variants vary title alignment and row count.");
@@ -45,7 +45,7 @@ export class TopAppBarDemo extends ResourceDictionary {
             _textBlock6.set_property_value(TextBlock.MarginKey, new Thickness(0, 0, 0, 8));
             _stackPanel5.AddChild(_textBlock6);
             const _border7 = new Border();
-            _border7.set_property_value(Border.BackgroundKey, DynamicResource(_border7, "OutlineVariant"));
+            _border7.set_property_value(Border.FillKey, DynamicResource(_border7, "OutlineVariant"));
             _border7.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border7.set_property_value(Border.MarginKey, new Thickness(0, 0, 0, 16));
             const _topAppBar8 = new TopAppBar();
@@ -77,7 +77,7 @@ export class TopAppBarDemo extends ResourceDictionary {
             _textBlock13.set_property_value(TextBlock.MarginKey, new Thickness(0, 0, 0, 8));
             _stackPanel5.AddChild(_textBlock13);
             const _border14 = new Border();
-            _border14.set_property_value(Border.BackgroundKey, DynamicResource(_border14, "OutlineVariant"));
+            _border14.set_property_value(Border.FillKey, DynamicResource(_border14, "OutlineVariant"));
             _border14.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border14.set_property_value(Border.MarginKey, new Thickness(0, 0, 0, 16));
             const _topAppBar15 = new TopAppBar();
@@ -101,7 +101,7 @@ export class TopAppBarDemo extends ResourceDictionary {
             _textBlock18.set_property_value(TextBlock.MarginKey, new Thickness(0, 0, 0, 8));
             _stackPanel5.AddChild(_textBlock18);
             const _border19 = new Border();
-            _border19.set_property_value(Border.BackgroundKey, DynamicResource(_border19, "OutlineVariant"));
+            _border19.set_property_value(Border.FillKey, DynamicResource(_border19, "OutlineVariant"));
             _border19.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border19.set_property_value(Border.MarginKey, new Thickness(0, 0, 0, 16));
             const _topAppBar20 = new TopAppBar();
@@ -133,7 +133,7 @@ export class TopAppBarDemo extends ResourceDictionary {
             _textBlock25.set_property_value(TextBlock.MarginKey, new Thickness(0, 0, 0, 8));
             _stackPanel5.AddChild(_textBlock25);
             const _border26 = new Border();
-            _border26.set_property_value(Border.BackgroundKey, DynamicResource(_border26, "OutlineVariant"));
+            _border26.set_property_value(Border.FillKey, DynamicResource(_border26, "OutlineVariant"));
             _border26.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border26.set_property_value(Border.MarginKey, new Thickness(0, 0, 0, 16));
             const _topAppBar27 = new TopAppBar();

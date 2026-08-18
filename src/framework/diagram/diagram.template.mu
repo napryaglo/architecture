@@ -72,7 +72,7 @@ resources Diagrams {
     // without pinning it, so ancestor-scoped bindings remain live — same
     // rationale as the library-preview gotcha memo.
     DataTemplate [DataType = TextNodeVM] {
-        Border [ Background = $Fill, BorderPen = $Stroke, Width = $Width, Height = $Height ] {
+        Border [ Fill = $Fill, BorderPen = $Stroke, Width = $Width, Height = $Height ] {
             ContentPresenter x:name="PART_LabelHost" [ Content = $Text, Width = $Width, Height = $Height ]
         }
     }
@@ -102,7 +102,7 @@ resources Diagrams {
     // verify ActualClip is unset in a layout pass if in doubt).
     DataTemplate [DataType = CalloutNodeVM] {
         Canvas {
-            Border [ Background = $Fill, BorderPen = $Stroke, Width = $Width, Height = $Height ] {
+            Border [ Fill = $Fill, BorderPen = $Stroke, Width = $Width, Height = $Height ] {
                 ContentPresenter x:name="PART_LabelHost" [ Content = $Text, Width = $Width, Height = $Height ]
             }
             Shape
@@ -121,7 +121,7 @@ resources Diagrams {
     // RichTextBox editor) — §Slice 4. Content / font / alignment ride
     // TemplateBindings so a ShapeText DP write repaints immediately.
     Template x:key="DefaultShapeText" [TargetType = ShapeText] {
-        Border x:name="PART_Bg" [ Background = $$Background, Padding = $$Padding ] {
+        Border x:name="PART_Bg" [ Fill = $$Fill, Padding = $$Padding ] {
             // Three co-located parts share one cell (§ Slice 4): PART_Text is
             // the plain-string display, PART_RichText the FlowDocument display
             // (shown when Document is set), and PART_Edit the RichTextBox
@@ -208,7 +208,7 @@ resources Diagrams {
         // under the cursor (Figure.OnPointerDown then elevates the
         // Selector to the enclosing Group via the Parent chain).
         Border x:name="PART_Border"
-            [ Background       = #00000000,
+            [ Fill       = #00000000,
               BorderBrush      = @Primary,
               BorderThickness  = (0),
               Width            = $$Width,
@@ -277,7 +277,7 @@ resources Diagrams {
               HorizontalScrollEnabled = true,
               VerticalScrollEnabled   = true ] {
             AdornerDecorator {
-                Border x:name="PART_Camera" [ Background = #00000000 ] {
+                Border x:name="PART_Camera" [ Fill = #00000000 ] {
                     ItemsPresenter
                 }
             }

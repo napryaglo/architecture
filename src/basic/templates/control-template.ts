@@ -97,9 +97,9 @@ export class ControlTemplate
         // — IsSelected, IsMouseOver, IsPressed, …) and applies its
         // TargetedSetter setters to named template parts. The runtime
         // takes templatedParent as the default source so the natural
-        // shape `when(IsSelected) { PART_Border.Background = …; }`
+        // shape `when(IsSelected) { PART_Border.Fill = …; }`
         // resolves IsSelected against the ListBoxItem (not the template
-        // root) and writes Background on PART_Border via FindName lookup
+        // root) and writes Fill on PART_Border via FindName lookup
         // in the freshly-built nameScope.
         for (const trigger of this.triggers)
         {
@@ -236,13 +236,13 @@ function findFirstContentPresenter(visual: Visual): ContentPresenter | undefined
 //
 //   new ControlTemplate(tp => {
 //       const border = new Border();
-//       border.set_property_value(Border.BackgroundKey,
-//           TemplateBinding(tp, 'Background'));
+//       border.set_property_value(Border.FillKey,
+//           TemplateBinding(tp, 'Fill'));
 //       return border;
 //   });
 //
 // Same change-notification machinery as any other Binding: when the
-// templated control's Background changes, the new value is pushed
+// templated control's Fill changes, the new value is pushed
 // through to the border.
 export function TemplateBinding(templatedParent: Visual, path: string, opts?: BindingOptions): Binding
 {

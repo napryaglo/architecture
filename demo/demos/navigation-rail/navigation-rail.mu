@@ -12,10 +12,10 @@ import NavigationRailVM from "./navigation-rail-vm.mjs"
 
 resources NavigationRailDemo {
     DataTemplate [DataType = NavigationRailVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "NavigationRail — M3 vertical destination strip with selectable items.",
                           FontSize   = 15,

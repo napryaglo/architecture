@@ -29,7 +29,7 @@ import AnimationNamedVM from "./animation-named-vm.mjs"
 
 resources AnimationNamedDemo {
     DataTemplate [DataType = AnimationNamedVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             resources: {
                 Style [TargetType = Button] {
                     on Loaded {
@@ -43,7 +43,7 @@ resources AnimationNamedDemo {
                 }
             }
             DockPanel {
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "Named storyboards — Begin / Pause / Resume / Stop",
                           FontSize   = 15,

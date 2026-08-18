@@ -158,7 +158,7 @@ export class DatePicker extends TemplatedControl
             cell.Width        = CELL;
             cell.Height       = CELL;
             cell.CornerRadius = new CornerRadius(CELL / 2, CELL / 2, CELL / 2, CELL / 2);
-            cell.Background   = selected ? primary : TRANSPARENT;
+            cell.Fill   = selected ? primary : TRANSPARENT;
             if (isToday)
             {
                 cell.BorderBrush     = primary;

@@ -14,9 +14,9 @@ import FabMenuVM from "./fab-menu-vm.mjs"
 
 resources FabMenuDemo {
     DataTemplate [DataType = FabMenuVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "FabMenu — M3 2024 FAB that reveals secondary actions on tap. Stagger-fade reveal; tap the FAB again or click the scrim to dismiss.",
                           FontSize   = 15,

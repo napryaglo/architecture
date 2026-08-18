@@ -45,7 +45,7 @@ export class AlignmentGuidesAdorner extends Adorner
         for (let i = 0; i < POOL_SIZE; i++)
         {
             const v = new Border();
-            v.Background       = GUIDE_STROKE;
+            v.Fill       = GUIDE_STROKE;
             v.IsHitTestVisible = false;
             v.Width            = 0;
             v.Height           = 0;

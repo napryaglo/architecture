@@ -28,7 +28,7 @@ resources Markers {
     // change).
     Template x:key="DefaultChip" [TargetType = Chip] {
         Border x:name="PART_Chip"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1),
               CornerRadius    = @ShapeSmall,
@@ -52,7 +52,7 @@ resources Markers {
         // conjuncts; the class recomputes it on every Kind / IsChecked
         // edge.
         when ( IsFilterSelected ) {
-            PART_Chip.Background = @SecondaryContainer;
+            PART_Chip.Fill = @SecondaryContainer;
             PART_Chip.BorderBrush = @SecondaryContainer;
         }
 
@@ -61,9 +61,9 @@ resources Markers {
         // BEFORE the Filter-selected trigger so a hovered selected
         // filter chip stays in its @SecondaryContainer tint (the
         // state-layer overlay would otherwise wash it back to neutral).
-        when ( IsMouseOver ) { PART_Chip.Background = @StateHoverOverlay; }
-        when ( IsFocused ) { PART_Chip.Background = @StateFocusOverlay; }
-        when ( IsPressed ) { PART_Chip.Background = @StatePressOverlay; }
+        when ( IsMouseOver ) { PART_Chip.Fill = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Chip.Fill = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Chip.Fill = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_Chip.Opacity = @DisabledContentOpacity; }
 
         // Adaptive layout (§ 18.6) — PART_Chip bears the interactive
@@ -112,14 +112,14 @@ resources Markers {
     // line. The Style picks the matching template based on Orientation.
     Template x:key="DefaultHorizontalDivider" [TargetType = Divider] {
         Border x:name="PART_Rule"
-            [ Background          = @OutlineVariant,
+            [ Fill          = @OutlineVariant,
               Height              = 1,
               HorizontalAlignment = Stretch,
               BorderThickness     = (0) ]
     }
     Template x:key="DefaultVerticalDivider" [TargetType = Divider] {
         Border x:name="PART_Rule"
-            [ Background        = @OutlineVariant,
+            [ Fill        = @OutlineVariant,
               Width             = 1,
               VerticalAlignment = Stretch,
               BorderThickness   = (0) ]
@@ -136,7 +136,7 @@ resources Markers {
     // spec; consumers wanting a non-error tint re-template.
     Template x:key="DefaultDotBadge" [TargetType = Badge] {
         Border x:name="PART_Dot"
-            [ Background      = @Error,
+            [ Fill      = @Error,
               CornerRadius    = @ShapeFull,
               BorderThickness = (0),
               Width           = 6,
@@ -144,7 +144,7 @@ resources Markers {
     }
     Template x:key="DefaultNumericBadge" [TargetType = Badge] {
         Border x:name="PART_Pill"
-            [ Background      = @Error,
+            [ Fill      = @Error,
               CornerRadius    = @ShapeFull,
               BorderThickness = (0),
               Padding         = (@Spacing1,@Spacing0,@Spacing1,@Spacing0),

@@ -18,11 +18,11 @@ export class RichTextBlockDemo extends ResourceDictionary {
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
             _border1.SetNameScope(new NameScope());
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Primary"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Primary"));
             _border3.set_property_value(Border.PaddingKey, new Thickness(20, 14, 20, 14));
             const _stackPanel4 = new StackPanel();
             _stackPanel4.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);

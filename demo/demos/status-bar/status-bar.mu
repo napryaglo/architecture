@@ -19,7 +19,7 @@ import StatusBarVM from "./status-bar-vm.mjs"
 resources StatusBarDemo {
     DataTemplate [DataType = StatusBarVM] {
         Border
-            [ Background        = @Surface,
+            [ Fill        = @Surface,
               BorderBrush       = @OutlineVariant,
               BorderThickness   = (1),
               CornerRadius      = 4,
@@ -34,7 +34,7 @@ resources StatusBarDemo {
 
             DockPanel {
                 // Title strip — the card's header.
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "StatusBar — docked cells with separators.",
                           FontSize   = 15,

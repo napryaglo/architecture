@@ -18,12 +18,12 @@ import TopAppBarVM from "./top-app-bar-vm.mjs"
 resources TopAppBarDemo {
     DataTemplate [DataType = TopAppBarVM] {
         Border
-            [ Background      = @SurfaceContainerLow,
+            [ Fill      = @SurfaceContainerLow,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "TopAppBar — M3 screen header. Four variants vary title alignment and row count.",
                           FontSize   = 15,
@@ -40,7 +40,7 @@ resources TopAppBarDemo {
                           Foreground = @OnSurfaceVariant,
                           Margin     = (0,0,0,8) ]
                     Border
-                        [ Background      = @OutlineVariant,
+                        [ Fill      = @OutlineVariant,
                           BorderThickness = (0),
                           Margin          = (0,0,0,16) ] {
                         TopAppBar [ Variant = $SmallVariant, Title = "Inbox" ] {
@@ -61,7 +61,7 @@ resources TopAppBarDemo {
                           Foreground = @OnSurfaceVariant,
                           Margin     = (0,0,0,8) ]
                     Border
-                        [ Background      = @OutlineVariant,
+                        [ Fill      = @OutlineVariant,
                           BorderThickness = (0),
                           Margin          = (0,0,0,16) ] {
                         TopAppBar [ Variant = $CenterAlignedVariant, Title = "Settings" ] {
@@ -79,7 +79,7 @@ resources TopAppBarDemo {
                           Foreground = @OnSurfaceVariant,
                           Margin     = (0,0,0,8) ]
                     Border
-                        [ Background      = @OutlineVariant,
+                        [ Fill      = @OutlineVariant,
                           BorderThickness = (0),
                           Margin          = (0,0,0,16) ] {
                         TopAppBar [ Variant = $MediumVariant, Title = "Workspace" ] {
@@ -100,7 +100,7 @@ resources TopAppBarDemo {
                           Foreground = @OnSurfaceVariant,
                           Margin     = (0,0,0,8) ]
                     Border
-                        [ Background      = @OutlineVariant,
+                        [ Fill      = @OutlineVariant,
                           BorderThickness = (0),
                           Margin          = (0,0,0,16) ] {
                         TopAppBar [ Variant = $LargeVariant, Title = "Documents" ] {

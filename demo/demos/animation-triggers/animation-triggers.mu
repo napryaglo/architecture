@@ -21,7 +21,7 @@ import AnimationTriggersVM from "./animation-triggers-vm.mjs"
 resources AnimationTriggersDemo {
     DataTemplate [DataType = AnimationTriggersVM] {
         Border x:root
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1) ] {
             // x:root marks this Border as the NameScope owner so the
@@ -49,7 +49,7 @@ resources AnimationTriggersDemo {
                 }
             }
             DockPanel {
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "Trigger actions — enter/exit, Loaded, TargetName",
                           FontSize   = 15,
@@ -100,7 +100,7 @@ resources AnimationTriggersDemo {
                             TextBlock [ Text = "Animate banner" ]
                         }
                         Border x:name="banner"
-                            [ Background   = #ff9800,
+                            [ Fill   = #ff9800,
                               Width        = 80,
                               Height       = 20,
                               CornerRadius = 4 ]

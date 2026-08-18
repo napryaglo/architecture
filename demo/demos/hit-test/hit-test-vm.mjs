@@ -3,7 +3,7 @@
 // white. The heart-hit behaviour (behaviors/heart-hit-behavior.mts) flips
 // this DP on a MouseLeftButtonDown that survives the Border's
 // HitTestGeometry — i.e. a click that lands INSIDE the heart outline. A
-// DataTemplate `when ($IsToggled)` trigger swaps the Background in the
+// DataTemplate `when ($IsToggled)` trigger swaps the Fill in the
 // view. No brushes / geometry live here — those are view concerns (MVVM:
 // no Color / Brush / Geometry in a VM).
 import { MetaData, Model } from '@pragmatic-lab/mural/runtime';

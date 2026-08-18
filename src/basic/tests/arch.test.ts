@@ -42,7 +42,7 @@ function render(a: Arch, w: number, h: number): CapturingContext
 describe('Arch', () => {
     test('emits one figure: arc + two lines, closed', () => {
         const a = new Arch();
-        a.Background = new SolidColorBrush(Color.Red);
+        a.Fill = new SolidColorBrush(Color.Red);
         const dc = render(a, 100, 200);
         const path = dc.geoms[0]!.geometry as PathGeometry;
         const fig = path.Figures[0]!;

@@ -81,16 +81,16 @@ describe('§ 17.1 — Visual.Scheme inherited DP', () => {
             tokens: { CascadeKey: overrideBrush },
         });
 
-        // Bind inner.Background to the dynamic resource BEFORE setting
+        // Bind inner.Fill to the dynamic resource BEFORE setting
         // any ambient scheme. Initial resolution returns undefined
         // (no scheme, no app fallback for CascadeKey).
-        inner.set_property_value(Border.BackgroundKey,
+        inner.set_property_value(Border.FillKey,
             DynamicResource(inner, 'CascadeKey'));
-        assert.equal(inner.Background, undefined);
+        assert.equal(inner.Fill, undefined);
 
         // Sanity: a plain ancestor Resources.Set works (existing path).
         outer.Resources.Set('CascadeKey', startBrush);
-        assert.equal(inner.Background, startBrush);
+        assert.equal(inner.Fill, startBrush);
 
         // Now set Scheme on outer. The cascade fires the dynamic-resource
         // listener; the binding re-resolves. The override Scheme's
@@ -108,11 +108,11 @@ describe('§ 17.1 — Visual.Scheme inherited DP', () => {
         const target2 = new HeadlessTarget(200, 200);
         target2.Content = outer2;
 
-        inner2.set_property_value(Border.BackgroundKey,
+        inner2.set_property_value(Border.FillKey,
             DynamicResource(inner2, 'OtherKey'));
-        assert.equal(inner2.Background, undefined);
+        assert.equal(inner2.Fill, undefined);
         ThemeManager.SetVisualScheme(outer2, scheme2);
-        assert.equal(inner2.Background, overrideBrush,
+        assert.equal(inner2.Fill, overrideBrush,
             'DynamicResource picks up the override Scheme on cascade');
     });
 });

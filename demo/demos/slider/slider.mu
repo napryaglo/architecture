@@ -21,10 +21,10 @@ import SliderVM from "./slider-vm.mjs"
 
 resources SliderDemo {
     DataTemplate [DataType = SliderVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "Slider demo — single-thumb range, horizontal + vertical",
                           FontSize   = 15,

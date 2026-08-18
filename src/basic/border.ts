@@ -41,7 +41,7 @@ import {
 //     remaining size after subtracting the insets.
 //
 // Render:
-//   * Background fills the entire Border rect (under the stroke).
+//   * Fill fills the entire Border rect (under the stroke).
 //   * BorderBrush + BorderThickness produce a stroked rectangle inset
 //     by half the thickness so the stroke sits inside the layout rect.
 //   * CornerRadius rounds both the background fill and the stroke.
@@ -66,8 +66,8 @@ export class Border extends Single
     // get/set_property_value overloads so the accessors below need no
     // `as` casts and a typo on the key name is a compile error rather
     // than a silent `undefined` at runtime. The string name is still the
-    // binding-path identity ('Background' etc.) — that's what the µ-mural
-    // parser / `Binding(t, 'Background')` resolves against.
+    // binding-path identity ('Fill' etc.) — that's what the µ-mural
+    // parser / `Binding(t, 'Fill')` resolves against.
     //
     // Inline static initializers run in declaration order at class-load
     // time, so by the time the first Border instance is constructed every
@@ -75,7 +75,7 @@ export class Border extends Single
     // owner class is fine — class declarations are hoisted, only their
     // statics aren't filled in yet, and only the class identity matters
     // to RegisterProperty.
-    // Background lives on Visual now — Border inherits the DP + accessor
+    // Fill lives on Visual now — Border inherits the DP + accessor
     // and just casts at render sites where Brush is required.
     public static readonly BorderBrushKey = Model.RegisterProperty<Brush | undefined>(
         Border, 'BorderBrush', undefined,
@@ -233,10 +233,10 @@ export class Border extends Single
         const isUniformRadius = tl === tr && tr === br && br === bl;
         const radius = tl;  // only meaningful when isUniformRadius
 
-        // Background fills the entire border rect (under the stroke).
+        // Fill fills the entire border rect (under the stroke).
         // Snapshot once into a local so the undefined-guard below
         // narrows for every subsequent draw call.
-        const bg = this.Background;
+        const bg = this.Fill;
         if (bg !== undefined)
         {
             if (isUniformRadius)

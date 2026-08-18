@@ -9,9 +9,9 @@ import ButtonGroupVM from "./button-group-vm.mjs"
 
 resources ButtonGroupDemo {
     DataTemplate [DataType = ButtonGroupVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "ButtonGroup — M3 2024 hover-expand row of action buttons. Hover a segment to see it widen as neighbours shrink in lockstep.",
                           FontSize   = 15,

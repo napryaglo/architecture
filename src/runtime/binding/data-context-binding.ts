@@ -311,11 +311,11 @@ class DataContextBindingImpl extends Binding
 // can emit both at value-position uses with the same imperative form.
 //
 // Usage:
-//   border.set_property_value(Border.BackgroundKey, DataContextBinding(border, 'AccentBrush'));
+//   border.set_property_value(Border.FillKey, DataContextBinding(border, 'AccentBrush'));
 //
 // In Style setters where the target isn't yet known, wrap in a
 // SetterFactory so each application gets its own per-target binding:
-//   new Setter(Border, 'Background',
+//   new Setter(Border, 'Fill',
 //              new SetterFactory(t => DataContextBinding(t, 'AccentBrush')));
 export function DataContextBinding(target: Visual, path: string, converter?: ValueConverter): Binding
 {

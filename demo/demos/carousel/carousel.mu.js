@@ -40,7 +40,7 @@ export class CarouselDemo extends ResourceDictionary {
         t.Set("CarouselCardTemplate", _tmpl0);
         const _tmpl5 = new DataTemplate((_data) => {
             const _border6 = new Border();
-            _border6.set_property_value(Border.BackgroundKey, DynamicResource(_border6, "Surface"));
+            _border6.set_property_value(Border.FillKey, DynamicResource(_border6, "Surface"));
             _border6.set_property_value(Border.BorderBrushKey, DynamicResource(_border6, "OutlineVariant"));
             _border6.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _stackPanel7 = new StackPanel();

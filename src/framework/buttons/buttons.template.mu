@@ -36,7 +36,7 @@ resources Buttons {
     // the Content via the standard inheritance walk.
     Template x:key="DefaultFilledButton" [TargetType = Button] {
         Border x:name="PART_Border"
-            [ Background           = @Primary,
+            [ Fill           = @Primary,
               BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @OnPrimary,
@@ -46,14 +46,14 @@ resources Buttons {
               TextBlock.LineHeight = @LabelLargeLineHeight,
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = $$CornerRadius,
                   Padding      = (24,10,24,10) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnPrimaryHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnPrimaryPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnPrimaryHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnPrimaryPressLayer; }
         // Adaptive layout — Compact tightens, Comfortable loosens,
         // Coarse pointer bumps the touch target. Padding lives on the
         // state layer so its hit area matches the painted chrome.
@@ -68,7 +68,7 @@ resources Buttons {
     // tinted @Primary (the ink) per M3 spec.
     Template x:key="DefaultElevatedButton" [TargetType = Button] {
         Border x:name="PART_Border"
-            [ Background           = @SurfaceContainerLow,
+            [ Fill           = @SurfaceContainerLow,
               BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               Effect               = @ElevationLevel1,
@@ -79,18 +79,18 @@ resources Buttons {
               TextBlock.LineHeight = @LabelLargeLineHeight,
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = $$CornerRadius,
                   Padding      = (24,10,24,10) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
         when ( IsMouseOver ) {
-            PART_StateLayer.Background = @PrimaryHoverLayer;
+            PART_StateLayer.Fill = @PrimaryHoverLayer;
             PART_Border.Effect = @ElevationLevel2;
         }
         when ( IsPressed ) {
-            PART_StateLayer.Background = @PrimaryPressLayer;
+            PART_StateLayer.Fill = @PrimaryPressLayer;
             PART_Border.Effect = @ElevationLevel1;
         }
     }
@@ -100,7 +100,7 @@ resources Buttons {
     // the M3 emphasis hierarchy. State layer tinted @OnSecondaryContainer.
     Template x:key="DefaultTonalButton" [TargetType = Button] {
         Border x:name="PART_Border"
-            [ Background           = @SecondaryContainer,
+            [ Fill           = @SecondaryContainer,
               BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @OnSecondaryContainer,
@@ -110,14 +110,14 @@ resources Buttons {
               TextBlock.LineHeight = @LabelLargeLineHeight,
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = $$CornerRadius,
                   Padding      = (24,10,24,10) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSecondaryContainerHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSecondaryContainerPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSecondaryContainerHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSecondaryContainerPressLayer; }
     }
 
     // Outlined — transparent surface, 1-DIP outline, @Primary text.
@@ -126,7 +126,7 @@ resources Buttons {
     // surface tint.
     Template x:key="DefaultOutlinedButton" [TargetType = Button] {
         Border x:name="PART_Border"
-            [ Background           = #00000000,
+            [ Fill           = #00000000,
               BorderBrush          = @Outline,
               BorderThickness      = (1),
               CornerRadius         = $$CornerRadius,
@@ -137,14 +137,14 @@ resources Buttons {
               TextBlock.LineHeight = @LabelLargeLineHeight,
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = $$CornerRadius,
                   Padding      = (23,9,23,9) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @PrimaryHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @PrimaryPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @PrimaryHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @PrimaryPressLayer; }
         when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (15,5,15,5); }
         when ( ThemeManager.Density = Comfortable ) { PART_StateLayer.Padding = (27,11,27,11); }
         when ( ThemeManager.Pointer = Coarse ) { PART_StateLayer.Padding = (23,13,23,13); }
@@ -158,7 +158,7 @@ resources Buttons {
     // variants matches the M3 spec.
     Template x:key="DefaultTextButton" [TargetType = Button] {
         Border x:name="PART_Border"
-            [ Background           = #00000000,
+            [ Fill           = #00000000,
               BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @Primary,
@@ -168,14 +168,14 @@ resources Buttons {
               TextBlock.LineHeight = @LabelLargeLineHeight,
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = $$CornerRadius,
                   Padding      = (12,10,12,10) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @PrimaryHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @PrimaryPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @PrimaryHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @PrimaryPressLayer; }
     }
 
     // Default Style — picks the template by Variant via property
@@ -213,21 +213,21 @@ resources Buttons {
     // OnPrimary at 8% / 12% over Primary per M3 strict spec.
     Template x:key="DefaultFilledIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
-            [ Background           = @Primary,
+            [ Fill           = @Primary,
               BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
               TextBlock.Foreground = @OnPrimary ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = $$CornerRadius,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnPrimaryHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnPrimaryPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnPrimaryHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnPrimaryPressLayer; }
         when ( ThemeManager.Pointer = Coarse ) {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
@@ -237,21 +237,21 @@ resources Buttons {
     // Tonal — SecondaryContainer, OnSecondaryContainer glyph.
     Template x:key="DefaultTonalIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
-            [ Background           = @SecondaryContainer,
+            [ Fill           = @SecondaryContainer,
               BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
               TextBlock.Foreground = @OnSecondaryContainer ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = $$CornerRadius,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSecondaryContainerHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSecondaryContainerPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSecondaryContainerHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSecondaryContainerPressLayer; }
         when ( ThemeManager.Pointer = Coarse ) {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
@@ -261,7 +261,7 @@ resources Buttons {
     // Outlined — transparent, 1-DIP outline, OnSurfaceVariant glyph.
     Template x:key="DefaultOutlinedIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
-            [ Background           = #00000000,
+            [ Fill           = #00000000,
               BorderBrush          = @Outline,
               BorderThickness      = (1),
               CornerRadius         = $$CornerRadius,
@@ -269,14 +269,14 @@ resources Buttons {
               Height               = 40,
               TextBlock.Foreground = @OnSurfaceVariant ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = $$CornerRadius,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
         when ( ThemeManager.Pointer = Coarse ) {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
@@ -288,21 +288,21 @@ resources Buttons {
     // The low-emphasis default for toolbar-style icon buttons.
     Template x:key="DefaultStandardIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
-            [ Background           = #00000000,
+            [ Fill           = #00000000,
               BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
               TextBlock.Foreground = @OnSurfaceVariant ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = $$CornerRadius,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
         when ( ThemeManager.Pointer = Coarse ) {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
@@ -346,21 +346,21 @@ resources Buttons {
     // Visual delta is minimal because the alpha is low.
     Template x:key="DefaultFilledIconButtonToggle" [TargetType = IconButtonToggle] {
         Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerHighest,
+            [ Fill      = @SurfaceContainerHighest,
               BorderThickness = (0),
               CornerRadius    = @ShapeFull,
               Width           = 40,
               Height          = 40 ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeFull,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
         }
-        when ( IsChecked ) { PART_Border.Background = @Primary; }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsChecked ) { PART_Border.Fill = @Primary; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
         when ( ThemeManager.Pointer = Coarse ) {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
@@ -370,21 +370,21 @@ resources Buttons {
     // Tonal Toggle — unchecked = SurfaceContainerHighest, checked = SecondaryContainer.
     Template x:key="DefaultTonalIconButtonToggle" [TargetType = IconButtonToggle] {
         Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerHighest,
+            [ Fill      = @SurfaceContainerHighest,
               BorderThickness = (0),
               CornerRadius    = @ShapeFull,
               Width           = 40,
               Height          = 40 ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeFull,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
         }
-        when ( IsChecked ) { PART_Border.Background = @SecondaryContainer; }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsChecked ) { PART_Border.Fill = @SecondaryContainer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
         when ( ThemeManager.Pointer = Coarse ) {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
@@ -395,25 +395,25 @@ resources Buttons {
     // checked = InverseSurface (no border).
     Template x:key="DefaultOutlinedIconButtonToggle" [TargetType = IconButtonToggle] {
         Border x:name="PART_Border"
-            [ Background      = #00000000,
+            [ Fill      = #00000000,
               BorderBrush     = @Outline,
               BorderThickness = (1),
               CornerRadius    = @ShapeFull,
               Width           = 40,
               Height          = 40 ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeFull,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
         }
         when ( IsChecked ) {
-            PART_Border.Background = @InverseSurface;
+            PART_Border.Fill = @InverseSurface;
             PART_Border.BorderThickness = (0);
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
         when ( ThemeManager.Pointer = Coarse ) {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
@@ -426,20 +426,20 @@ resources Buttons {
     // Style-level Foreground trigger is the only visible cue.
     Template x:key="DefaultStandardIconButtonToggle" [TargetType = IconButtonToggle] {
         Border x:name="PART_Border"
-            [ Background      = #00000000,
+            [ Fill      = #00000000,
               BorderThickness = (0),
               CornerRadius    = @ShapeFull,
               Width           = 40,
               Height          = 40 ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeFull,
                   Padding      = (8,8,8,8) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
         when ( ThemeManager.Pointer = Coarse ) {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
@@ -476,7 +476,7 @@ resources Buttons {
     //
     // State-layer overlay follows the same strict-M3 pattern as the
     // Button family: PART_StateLayer is a transparent inner Border that
-    // flips Background to @OnPrimaryContainerHoverLayer /
+    // flips Fill to @OnPrimaryContainerHoverLayer /
     // @OnPrimaryContainerPressLayer on hover / press. Elevation is bumped
     // on hover via PART_Border.Effect in the same trigger body.
 
@@ -499,7 +499,7 @@ resources Buttons {
     // leaving no extra space.
     Template x:key="DefaultFab" [TargetType = FloatingActionButton] {
         Border x:name="PART_Border"
-            [ Background           = @PrimaryContainer,
+            [ Fill           = @PrimaryContainer,
               BorderThickness      = (0),
               CornerRadius         = @ShapeLarge,
               MinWidth             = 56,
@@ -507,7 +507,7 @@ resources Buttons {
               Effect               = @ElevationLevel3,
               TextBlock.Foreground = @OnPrimaryContainer ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeLarge,
                   Padding      = (16,16,16,16) ] {
                 // Icon slot pinned to the M3 24dp spec — same trick the
@@ -529,16 +529,16 @@ resources Buttons {
             }
         }
         when ( IsMouseOver ) {
-            PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
+            PART_StateLayer.Fill = @OnPrimaryContainerHoverLayer;
             PART_Border.Effect = @ElevationLevel4;
         }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnPrimaryContainerPressLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnPrimaryContainerPressLayer; }
     }
 
     // FAB Small — 40dp icon-only, @ShapeMedium corners.
     Template x:key="DefaultFabSmall" [TargetType = FloatingActionButton] {
         Border x:name="PART_Border"
-            [ Background           = @PrimaryContainer,
+            [ Fill           = @PrimaryContainer,
               BorderThickness      = (0),
               CornerRadius         = @ShapeMedium,
               MinWidth             = 40,
@@ -546,7 +546,7 @@ resources Buttons {
               Effect               = @ElevationLevel3,
               TextBlock.Foreground = @OnPrimaryContainer ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeMedium,
                   Padding      = (8,8,8,8) ] {
                 // Icon slot pinned to M3's 24dp icon spec — see DefaultFab
@@ -560,16 +560,16 @@ resources Buttons {
             }
         }
         when ( IsMouseOver ) {
-            PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
+            PART_StateLayer.Fill = @OnPrimaryContainerHoverLayer;
             PART_Border.Effect = @ElevationLevel4;
         }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnPrimaryContainerPressLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnPrimaryContainerPressLayer; }
     }
 
     // FAB Large — 96dp icon-only, @ShapeExtraLarge corners.
     Template x:key="DefaultFabLarge" [TargetType = FloatingActionButton] {
         Border x:name="PART_Border"
-            [ Background           = @PrimaryContainer,
+            [ Fill           = @PrimaryContainer,
               BorderThickness      = (0),
               CornerRadius         = @ShapeExtraLarge,
               MinWidth             = 96,
@@ -577,7 +577,7 @@ resources Buttons {
               Effect               = @ElevationLevel3,
               TextBlock.Foreground = @OnPrimaryContainer ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeExtraLarge,
                   Padding      = (30,30,30,30) ] {
                 // M3 Large FAB icon spec is 36dp (not the 24dp baseline of
@@ -591,10 +591,10 @@ resources Buttons {
             }
         }
         when ( IsMouseOver ) {
-            PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
+            PART_StateLayer.Fill = @OnPrimaryContainerHoverLayer;
             PART_Border.Effect = @ElevationLevel4;
         }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnPrimaryContainerPressLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnPrimaryContainerPressLayer; }
     }
 
     // Extended FAB — 56dp tall, content-driven width, @ShapeLarge corners.
@@ -605,7 +605,7 @@ resources Buttons {
     // No explicit Width — Border auto-sizes to the content's measured width.
     Template x:key="DefaultFabExtended" [TargetType = FloatingActionButton] {
         Border x:name="PART_Border"
-            [ Background           = @PrimaryContainer,
+            [ Fill           = @PrimaryContainer,
               BorderThickness      = (0),
               CornerRadius         = @ShapeLarge,
               MinHeight            = 56,
@@ -617,17 +617,17 @@ resources Buttons {
               TextBlock.LineHeight = @LabelLargeLineHeight,
               TextBlock.LetterSpacing = @LabelLargeTracking ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeLarge,
                   Padding      = (16,0,20,0) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
         when ( IsMouseOver ) {
-            PART_StateLayer.Background = @OnPrimaryContainerHoverLayer;
+            PART_StateLayer.Fill = @OnPrimaryContainerHoverLayer;
             PART_Border.Effect = @ElevationLevel4;
         }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnPrimaryContainerPressLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnPrimaryContainerPressLayer; }
     }
 
     // Default Style — picks Template by Size. Default (56dp) is the

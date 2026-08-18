@@ -171,7 +171,7 @@ function capTemplate(inset: number): DataTemplate
         Connector.SetCapInset(root, inset);
         // Give the cap a token Brush so a downstream renderer would
         // have something to paint — only structural for v1.
-        root.Background = new SolidColorBrush(Color.FromHex('#000000'));
+        root.Fill = new SolidColorBrush(Color.FromHex('#000000'));
         return root;
     });
 }

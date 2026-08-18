@@ -29,7 +29,7 @@ describe('compile — .Member: dotted aggregate-property blocks', () => {
                     .RowDefinitions: {
                         RowDefinition [Height=GridLength.Star]
                     }
-                    Border [Background=#fff]
+                    Border [Fill=#fff]
                 }
             } }
         `).js;
@@ -73,7 +73,7 @@ describe('compile — .Member: dotted aggregate-property blocks', () => {
             Application{ resources: {
                 Grid x:root {
                     .Cells: {
-                        Border x:key="A" [Background=#fff]
+                        Border x:key="A" [Fill=#fff]
                         Border x:key="B"
                     }
                 }
@@ -106,7 +106,7 @@ describe('compile — .Member: dotted aggregate-property blocks', () => {
             Application{ resources: {
                 Border x:root {
                     .Resources: {
-                        Style [TargetType=Border] { Background = #ffffff; }
+                        Style [TargetType=Border] { Fill = #ffffff; }
                     }
                 }
             } }

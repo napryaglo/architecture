@@ -56,7 +56,7 @@ function displayString(item: unknown): string
 //
 // M3 chrome:
 //   * Width: 80dp (default; consumer-overridable via Width)
-//   * Background: @Surface
+//   * Fill: @Surface
 //   * Item slot: vertical StackPanel inside an items area
 //   * Item height: 56dp
 //   * Items area gets the top section; Header sits above as a fixed

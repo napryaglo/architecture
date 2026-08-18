@@ -29,7 +29,7 @@ resources Tooltips {
     // background.
     Template x:key="DefaultTooltip" [TargetType = Tooltip] {
         Border
-            [ Background   = @InverseSurface,
+            [ Fill   = @InverseSurface,
               CornerRadius = @ShapeExtraSmall,
               Padding      = (@Spacing2,@Spacing1,@Spacing2,@Spacing1),
               MinHeight    = 24,

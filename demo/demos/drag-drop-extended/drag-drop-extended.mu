@@ -28,7 +28,7 @@ resources DragDropExtendedDemo {
     }
 
     DataTemplate [DataType = RowVM] {
-        Border [ Background = @Surface, Padding = (12,6,12,6) ] {
+        Border [ Fill = @Surface, Padding = (12,6,12,6) ] {
             TextBlock [ Text = $Label, FontSize = 13, Foreground = @OnSurface ]
         }
     }
@@ -53,7 +53,7 @@ resources DragDropExtendedDemo {
 
     DataTemplate [DataType = DragDropExtendedVM] {
         Border x:root
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1) ] {
             resources: {
@@ -73,7 +73,7 @@ resources DragDropExtendedDemo {
                 // so the bar stays high-contrast against the page.
                 Border
                     [ DockPanel.Dock = Top,
-                      Background     = @InverseSurface,
+                      Fill     = @InverseSurface,
                       Padding        = (16,12,16,12) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
@@ -136,11 +136,11 @@ resources DragDropExtendedDemo {
                           Height          = 280,
                           BorderBrush     = @Outline,
                           BorderThickness = (2),
-                          Background      = @SurfaceContainerLow ] {
+                          Fill      = @SurfaceContainerLow ] {
                         DockPanel {
                             Border
                                 [ DockPanel.Dock = Top,
-                                  Background     = #dbeafe,
+                                  Fill     = #dbeafe,
                                   Padding        = (12,10,12,10) ] {
                                 StackPanel [ Orientation = Vertical ] {
                                     TextBlock

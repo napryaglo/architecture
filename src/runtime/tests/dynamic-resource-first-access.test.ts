@@ -35,7 +35,7 @@ describe('§ 12.1 — DynamicResource picks up an ancestor\'s freshly-allocated 
         // The binding walks the ancestor chain at construction; with
         // _resources undefined, ancestor contributes nothing to the
         // subscription chain.
-        child.set_property_value(Border.BackgroundKey,
+        child.set_property_value(Border.FillKey,
             DynamicResource(child, 'FreshKey'));
 
         // Mount the tree so dynamic-resources cascade has a target.
@@ -44,8 +44,8 @@ describe('§ 12.1 — DynamicResource picks up an ancestor\'s freshly-allocated 
         // The bound DP shouldn't have resolved to anything yet — no
         // dictionary in the chain has the key. Binding's fallback is
         // undefined.
-        assert.equal(child.Background, undefined,
-            'no resource in the chain → Background unbound');
+        assert.equal(child.Fill, undefined,
+            'no resource in the chain → Fill unbound');
 
         // Now first-access ancestor.Resources and Set the key. Without
         // the cascade fix (§ 12.1), Set would notify a dictionary that
@@ -56,7 +56,7 @@ describe('§ 12.1 — DynamicResource picks up an ancestor\'s freshly-allocated 
         const target = new SolidColorBrush(Color.FromHex('#bada55'));
         ancestor.Resources.Set('FreshKey', target);
 
-        assert.equal(child.Background, target,
+        assert.equal(child.Fill, target,
             'descendant DynamicResource resolves through ancestor\'s freshly-allocated Resources');
     });
 
@@ -72,21 +72,21 @@ describe('§ 12.1 — DynamicResource picks up an ancestor\'s freshly-allocated 
         childA.SetChild(childB);
         childB.SetChild(inner);
 
-        childA.set_property_value(Border.BackgroundKey,
+        childA.set_property_value(Border.FillKey,
             DynamicResource(childA, 'SharedToken'));
-        inner.set_property_value(Border.BackgroundKey,
+        inner.set_property_value(Border.FillKey,
             DynamicResource(inner, 'SharedToken'));
 
         new HeadlessTarget(200, 200).Content = ancestor;
 
-        assert.equal(childA.Background, undefined);
-        assert.equal(inner.Background,  undefined);
+        assert.equal(childA.Fill, undefined);
+        assert.equal(inner.Fill,  undefined);
 
         const target = new SolidColorBrush(Color.FromHex('#1e88e5'));
         ancestor.Resources.Set('SharedToken', target);
 
-        assert.equal(childA.Background, target);
-        assert.equal(inner.Background,  target);
+        assert.equal(childA.Fill, target);
+        assert.equal(inner.Fill,  target);
     });
 
     // A resource bound BEFORE any Application exists — the real module-import
@@ -127,7 +127,7 @@ describe('§ 12.1 — DynamicResource picks up an ancestor\'s freshly-allocated 
         // don't re-cascade).
         ancestor.Resources;
 
-        child.set_property_value(Border.BackgroundKey,
+        child.set_property_value(Border.FillKey,
             DynamicResource(child, 'LateKey'));
         new HeadlessTarget(200, 200).Content = ancestor;
 
@@ -138,7 +138,7 @@ describe('§ 12.1 — DynamicResource picks up an ancestor\'s freshly-allocated 
             new SolidColorBrush(Color.FromHex('#ff8800')));
 
         // And the normal Set path still propagates correctly.
-        assert.notEqual(child.Background, undefined,
+        assert.notEqual(child.Fill, undefined,
             'normal subscription path still works after the cascade-once contract');
     });
 });

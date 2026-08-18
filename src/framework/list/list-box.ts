@@ -355,7 +355,7 @@ export class ListBoxItem extends ContentControl
         super();
         // Template flows from the default Style (DefaultStyleKey on
         // this class names ListBoxItem itself). IsSelected /
-        // IsMouseOver → PART_Border.Background ride along declaratively
+        // IsMouseOver → PART_Border.Fill ride along declaratively
         // on `when()` triggers in the bundled template (see
         // controls.template.mu, ListBoxItem block).
         if (content !== undefined) this.Content = content;

@@ -17,10 +17,10 @@ import ToolBarVM from "./tool-bar-vm.mjs"
 
 resources ToolBarDemo {
     DataTemplate [DataType = ToolBarVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "ToolBar — Button rows, separators, and command binding.",
                           FontSize   = 15,

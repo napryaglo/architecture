@@ -10,7 +10,7 @@ import {
 import { Color } from '../primitives.js';
 import { SolidColorBrush } from './brush.js';
 
-// Animation of a Brush-typed DP (Border.Background, BorderBrush, TextBlock.
+// Animation of a Brush-typed DP (Border.Fill, BorderBrush, TextBlock.
 // Foreground, …) that interpolates the brush's COLOUR while emitting a
 // fresh SolidColorBrush each tick. The Brush slot is overwritten by
 // reference, which is what Border's MetaData.Render handler observes —
@@ -19,8 +19,8 @@ import { SolidColorBrush } from './brush.js';
 // Why a per-tick allocation? Mutating an existing brush's Color DP
 // wouldn't notify the Border holding the reference (the Brush instance
 // is identical, so the DP setter short-circuits the change pipeline).
-// A whole-brush swap goes through the Background DP's normal change
-// machinery — that's the same pipeline a single Background = brush write
+// A whole-brush swap goes through the Fill DP's normal change
+// machinery — that's the same pipeline a single Fill = brush write
 // would use, just driven at 60 fps. The GC absorbs the per-frame
 // allocations comfortably.
 //
@@ -40,7 +40,7 @@ export interface SolidColorBrushAnimationProps extends AnimationTimelineProps
 export class SolidColorBrushAnimation extends AnimationTimeline
 {
     /** Starting colour. When undefined, the animation captures the
-     *  current Background's Color (or Color.Transparent if the slot is
+     *  current Fill's Color (or Color.Transparent if the slot is
      *  empty / not a SolidColorBrush). */
     public From: Color | undefined;
 

@@ -17,7 +17,7 @@ resources SearchBars {
     // elevated against neutral surrounding chrome.
     Template x:key="DefaultSearchBar" [TargetType = SearchBar] {
         Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerHigh,
+            [ Fill      = @SurfaceContainerHigh,
               BorderBrush     = #00000000,
               BorderThickness = (0),
               CornerRadius    = @ShapeSmall,
@@ -39,8 +39,8 @@ resources SearchBars {
                 }
             }
         }
-        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHighest; }
-        when ( IsFocused ) { PART_Border.Background = @SurfaceContainerHighest; }
+        when ( IsMouseOver ) { PART_Border.Fill = @SurfaceContainerHighest; }
+        when ( IsFocused ) { PART_Border.Fill = @SurfaceContainerHighest; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
         // Adaptive layout — Compact tightens the field, Comfortable
         // loosens it, Coarse pointer widens the touch target. Padding +

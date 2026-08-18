@@ -197,7 +197,7 @@ export class RibbonDemo extends ResourceDictionary {
             _dockPanel4.AddChild(_ribbon5);
             const _border43 = new Border();
             _border43.set_property_value(DockPanel.DockKey, Dock.Bottom);
-            _border43.set_property_value(Border.BackgroundKey, DynamicResource(_border43, "SurfaceContainerLow"));
+            _border43.set_property_value(Border.FillKey, DynamicResource(_border43, "SurfaceContainerLow"));
             _border43.set_property_value(Border.BorderBrushKey, DynamicResource(_border43, "OutlineVariant"));
             _border43.set_property_value(Border.BorderThicknessKey, new Thickness(0, 1, 0, 0));
             _border43.set_property_value(Border.PaddingKey, new Thickness(12, 6, 12, 6));

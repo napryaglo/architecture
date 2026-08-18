@@ -45,7 +45,7 @@ import type { ICommand } from '../../runtime/command.js';
 //   }
 //
 // MenuStrip is just an ItemsControl whose default Style supplies:
-//   * Background      — surface-container token
+//   * Fill      — surface-container token
 //   * ItemsPanel      — horizontal StackPanel (Orientation DP drives it
 //                       on swap; default Horizontal)
 //   * ItemContainerStyle — MenuStripItemStyle, which sets each
@@ -448,7 +448,7 @@ export class MenuItem extends HeaderedItemsControl
         super.propagate_target_to_visual_children();
         // ItemsControl's cascade only reaches _templateInstance.root (the
         // detached submenu popup). _rowRoot is the inline row chrome and
-        // lives outside that chain — without this hop, Background writes
+        // lives outside that chain — without this hop, Fill writes
         // from IsMouseOver / IsPressed triggers can't reach the renderer
         // (InvalidateVisual finds no target and parks the dirty flag).
         (this._rowRoot as unknown as { SetTarget?: (t: PresentationTarget | undefined) => void } | undefined)

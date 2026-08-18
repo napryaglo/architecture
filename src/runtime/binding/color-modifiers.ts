@@ -15,7 +15,7 @@
 // in the `.mu` file, identical to any custom converter.
 //
 // Modifiers operate in the Color domain. `colorOp` adapts that to the
-// pipe, which on a brush property (Fill/Foreground/Stroke/Background)
+// pipe, which on a brush property (Fill/Foreground/Stroke/Fill)
 // carries a SolidColorBrush: it unwraps to the Color, applies the
 // transform, and rewraps so the target still receives a brush. A
 // non-solid brush (gradient/image/pattern) has no single color to modify

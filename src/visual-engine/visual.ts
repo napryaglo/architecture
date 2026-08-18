@@ -236,13 +236,13 @@ export class Visual extends Model
     // doesn't enforce.
     public static readonly EffectKey = Model.RegisterProperty<Effect | undefined>(Visual, 'Effect', undefined, MetaData.Render);
 
-    // Background is the inherited fill brush — kept on Visual so Border
+    // Fill is the inherited fill brush — kept on Visual so Border
     // / Panel / Canvas / ContentControl all read it from the same slot.
     // Shape primitives expose their own typed `Fill: Brush | undefined`
-    // DP on `Shape` and ignore Visual.Background entirely. Subclasses
-    // that don't paint (Panel, ContentControl, …) leave Background at
+    // DP on `Shape` and ignore Visual.Fill entirely. Subclasses
+    // that don't paint (Panel, ContentControl, …) leave Fill at
     // its default undefined with zero render cost.
-    public static readonly BackgroundKey      = Model.RegisterProperty<Brush | undefined>(Visual, 'Background',      undefined, MetaData.Render);
+    public static readonly FillKey      = Model.RegisterProperty<Brush | undefined>(Visual, 'Fill',      undefined, MetaData.Render);
 
     // Affine transform applied to the Visual's painted output (and the
     // painted output of every descendant) at render time. WPF parity —
@@ -740,8 +740,8 @@ export class Visual extends Model
 
     /** Fill brush. Read by Border + Shape subclasses' RenderOverride.
      *  Default undefined ≡ no fill. */
-    public get Background(): Brush | undefined { return this.get_property_value(Visual.BackgroundKey); }
-    public set Background(value: Brush | undefined) { this.set_property_value(Visual.BackgroundKey, value); }
+    public get Fill(): Brush | undefined { return this.get_property_value(Visual.FillKey); }
+    public set Fill(value: Brush | undefined) { this.set_property_value(Visual.FillKey, value); }
 
     /** Affine transform applied at render time. See RenderTransformKey
      *  for semantics. Default undefined (identity). */
@@ -901,7 +901,7 @@ export class Visual extends Model
         this.propagate_target_to_visual_children();
         // Replay any pending render invalidation queued while detached.
         // Without this, a property change inside a recycle/rebind cycle
-        // (the trigger un-applying a Background while the container
+        // (the trigger un-applying a Fill while the container
         // sits in the pool) silently never reaches the renderer and
         // the SVG keeps the prior binding's paint.
         if (target !== undefined && this._renderInvalidatedWhileDetached)

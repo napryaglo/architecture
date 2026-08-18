@@ -23,11 +23,11 @@ export class ColorPickerDemo extends ResourceDictionary {
             let _border2, _border3, _border4, _border5;
             const _border6 = new Border();
             _border6.SetNameScope(new NameScope());
-            _border6.set_property_value(Border.BackgroundKey, DynamicResource(_border6, "Surface"));
+            _border6.set_property_value(Border.FillKey, DynamicResource(_border6, "Surface"));
             const _dockPanel7 = new DockPanel();
             const _border8 = new Border();
             _border8.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border8.set_property_value(Border.BackgroundKey, DynamicResource(_border8, "Primary"));
+            _border8.set_property_value(Border.FillKey, DynamicResource(_border8, "Primary"));
             _border8.set_property_value(Border.PaddingKey, new Thickness(20, 14, 20, 14));
             const _stackPanel9 = new StackPanel();
             _stackPanel9.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
@@ -54,7 +54,7 @@ export class ColorPickerDemo extends ResourceDictionary {
             _textBlock12.set_property_value(TextBlock.TextKey, "Each picker drops down the Office menu: a No-Color entry, a Colors: button opening the 21-scheme gallery (Office, Blue Warm, Median, Paper, …), a Theme-Colors grid (base row + lighter/darker tint-shade rows built from the active ColorScheme), a fixed Standard-Colors row, a session Recent-Colors row, and More Colors… which opens the 2D hue/saturation box + brightness rail + R/G/B/A sliders + hex (with OK / Cancel). Each picker feeds a preview swatch via SolidColorBrush(Color.FromHex(...)).");
             _dockPanel7.AddChild(_textBlock12);
             const _border13 = new Border();
-            _border13.set_property_value(Border.BackgroundKey, DynamicResource(_border13, "SurfaceContainerLow"));
+            _border13.set_property_value(Border.FillKey, DynamicResource(_border13, "SurfaceContainerLow"));
             _border13.set_property_value(Border.PaddingKey, new Thickness(20, 20, 20, 20));
             const _stackPanel14 = new StackPanel();
             _stackPanel14.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);

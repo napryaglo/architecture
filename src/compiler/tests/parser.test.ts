@@ -56,18 +56,18 @@ describe('Parser — elements and attributes', () => {
     });
 
     test('element with a single named attribute', () => {
-        const el = asElement(firstForm('Border[Background=#blue]'));
+        const el = asElement(firstForm('Border[Fill=#blue]'));
         assert.equal(el.attrs.length, 1);
         const a = el.attrs[0]!;
         assert.equal(a.kind, 'named-attr');
         if (a.kind !== 'named-attr') return;
-        assert.deepEqual(a.path.parts, ['Background']);
+        assert.deepEqual(a.path.parts, ['Fill']);
         assert.equal(a.value.kind, 'color');
         if (a.value.kind === 'color') assert.equal(a.value.raw, 'blue');
     });
 
     test('element with multiple named attributes including a tuple value', () => {
-        const el = asElement(firstForm('Border[Background=#blue, BorderThickness=(3)]'));
+        const el = asElement(firstForm('Border[Fill=#blue, BorderThickness=(3)]'));
         assert.equal(el.attrs.length, 2);
         const second = el.attrs[1]!;
         assert.equal(second.kind, 'named-attr');
@@ -111,7 +111,7 @@ describe('Parser — elements and attributes', () => {
 
     test('mixing positional and named raises a ParseError', () => {
         assert.throws(
-            () => parse('foo[#blue, Background=#red]'),
+            () => parse('foo[#blue, Fill=#red]'),
             ParseError,
             'mixing rejected by parseAttrListBody',
         );
@@ -219,7 +219,7 @@ describe('Parser — values', () => {
 
     test('all four sigil-value families', () => {
         const el = asElement(firstForm(
-            'X[A=$Name, B=$$Background, C=@primary, D=@@accent]',
+            'X[A=$Name, B=$$Fill, C=@primary, D=@@accent]',
         ));
         const kinds = el.attrs.map(a => (a as { value: { kind: string }}).value.kind);
         assert.deepEqual(kinds, [
@@ -244,7 +244,7 @@ describe('Parser — values', () => {
 
 describe('Parser — resource forms', () => {
     test('Style with implicit (keyless) target', () => {
-        const f = firstForm('Style[TargetType=Button]{ Background = #red; }') as ResourceForm;
+        const f = firstForm('Style[TargetType=Button]{ Fill = #red; }') as ResourceForm;
         assert.equal(f.kind,    'resource-form');
         assert.equal(f.keyword, 'Style');
         const meta = f.metaAttrs[0]!;
@@ -257,9 +257,9 @@ describe('Parser — resource forms', () => {
     test('Style with a trigger group', () => {
         const f = firstForm(`
             Style[TargetType=Button]{
-                Background = #green;
+                Fill = #green;
                 when( IsMouseOver and not IsPressed ){
-                    Background = #lightgreen;
+                    Fill = #lightgreen;
                 }
             }
         `) as ResourceForm;
@@ -275,7 +275,7 @@ describe('Parser — resource forms', () => {
     test('Template with x:key and TargetType', () => {
         const f = firstForm(`
             Template x:key="FancyButton"[TargetType=Button]{
-                Border[Background=$$Background]{
+                Border[Fill=$$Fill]{
                     ContentPresenter
                 }
             }
@@ -302,7 +302,7 @@ describe('Parser — macros and imports', () => {
     test('def with mixed positional + named holes', () => {
         const d = firstForm(`
             def card[#bg, #title, #1]{
-                Border[Background=#bg]{ ContentPresenter }
+                Border[Fill=#bg]{ ContentPresenter }
             }
         `);
         assert.equal(d.kind, 'def');
@@ -343,7 +343,7 @@ describe('Parser — end-to-end on a worked Application', () => {
                 resources: {
                     @primary = #4caf50
                     Style[TargetType=Button]{
-                        Background = @primary;
+                        Fill = @primary;
                         Padding = (12, 6);
                     }
 

@@ -18,7 +18,7 @@ describe('binding converter operator `<<`', () => {
             import to_geometry from "./conv.mjs"
             resources T {
                 DataTemplate x:key="t" [DataType=Foo] {
-                    Border x:root [Background=$Name << to_geometry]
+                    Border x:root [Fill=$Name << to_geometry]
                 }
             }
         `);
@@ -33,7 +33,7 @@ describe('binding converter operator `<<`', () => {
             import to_geometry from "./g.mjs"
             resources T {
                 DataTemplate x:key="t" [DataType=Foo] {
-                    Border x:root [Background=$Name << normalize << to_geometry]
+                    Border x:root [Fill=$Name << normalize << to_geometry]
                 }
             }
         `);
@@ -48,7 +48,7 @@ describe('binding converter operator `<<`', () => {
             resources T {
                 DataTemplate x:key="t" [DataType=Foo] {
                     Border x:root {
-                        TextBlock [Background=$pic.Source << to_geometry]
+                        TextBlock [Fill=$pic.Source << to_geometry]
                         Border x:name="pic"
                     }
                 }
@@ -63,7 +63,7 @@ describe('binding converter operator `<<`', () => {
                 import Foo from "./foo.mjs"
                 resources T {
                     DataTemplate x:key="t" [DataType=Foo] {
-                        Border x:root [Background=$Name << mystery_converter]
+                        Border x:root [Fill=$Name << mystery_converter]
                     }
                 }
             `),

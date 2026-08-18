@@ -22,7 +22,7 @@ resources Tabs {
     }
     Template x:key="DefaultTabControl" [TargetType = TabControl] {
         Border x:name="PART_Border"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (0,0,0,1) ] {
             DockPanel [ LastChildFill = true ] {
@@ -65,7 +65,7 @@ resources Tabs {
     //     Foreground unset inherits the selection ink too.
     Template x:key="DefaultTabItem" [TargetType = TabItem] {
         Border x:name="PART_Tab"
-            [ Background      = #00000000,
+            [ Fill      = #00000000,
               BorderBrush     = #00000000,
               BorderThickness = (0,0,0,2),
               Padding         = (@Spacing4,@Spacing1,@Spacing4,@Spacing1),
@@ -77,9 +77,9 @@ resources Tabs {
                   VerticalAlignment   = Center ]
         }
         when ( IsSelected ) { PART_Tab.BorderBrush = @Primary; }
-        when ( IsMouseOver ) { PART_Tab.Background = @StateHoverOverlay; }
-        when ( IsFocused ) { PART_Tab.Background = @StateFocusOverlay; }
-        when ( IsPressed ) { PART_Tab.Background = @StatePressOverlay; }
+        when ( IsMouseOver ) { PART_Tab.Fill = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Tab.Fill = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Tab.Fill = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_Tab.Opacity = @DisabledContentOpacity; }
         // Adaptive layout — Compact tightens the header's padding + height,
         // Comfortable loosens both, Coarse pointer enlarges the touch target

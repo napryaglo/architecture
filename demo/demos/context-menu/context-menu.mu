@@ -44,10 +44,10 @@ resources ContextMenuDemo {
     }
 
     DataTemplate [DataType = ContextMenuVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "ContextMenu — right-click any panel; the nearest ancestor's menu opens at the cursor.",
                           FontSize   = 15,
@@ -58,7 +58,7 @@ resources ContextMenuDemo {
                 StackPanel [ Orientation = Vertical, Margin = (16,16,16,16) ] {
                     StackPanel [ Orientation = Horizontal, Margin = (0,0,0,16) ] {
                         Border
-                            [ Background                     = #ef4444,
+                            [ Fill                     = #ef4444,
                               Width                          = 180,
                               Height                         = 120,
                               Margin                         = (0,0,12,0),
@@ -72,7 +72,7 @@ resources ContextMenuDemo {
                                   VerticalAlignment   = Center ]
                         }
                         Border
-                            [ Background                     = #22c55e,
+                            [ Fill                     = #22c55e,
                               Width                          = 180,
                               Height                         = 120,
                               Margin                         = (0,0,12,0),
@@ -86,7 +86,7 @@ resources ContextMenuDemo {
                                   VerticalAlignment   = Center ]
                         }
                         Border
-                            [ Background                     = #3b82f6,
+                            [ Fill                     = #3b82f6,
                               Width                          = 180,
                               Height                         = 120,
                               ContextMenuService.ContextMenu = @BlueMenu ] {

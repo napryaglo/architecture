@@ -18,14 +18,14 @@ export class DrawerDemo extends ResourceDictionary {
         const t = new DrawerDemo(_gate_DrawerDemo);
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
             _border3.set_property_value(Border.HeightKey, 56);
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Primary"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Primary"));
             _border3.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 0));
             const _stackPanel4 = new StackPanel();
             _stackPanel4.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
@@ -54,7 +54,7 @@ export class DrawerDemo extends ResourceDictionary {
             _drawer8.set_property_value(Drawer.RailSizeKey, 56);
             _drawer8.set_property_value(Drawer.IsOpenKey, DataContextBinding(_drawer8, "NavOpen"));
             const _border9 = new Border();
-            _border9.set_property_value(Border.BackgroundKey, DynamicResource(_border9, "SurfaceContainerLow"));
+            _border9.set_property_value(Border.FillKey, DynamicResource(_border9, "SurfaceContainerLow"));
             _border9.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 1, 0));
             _border9.set_property_value(Border.BorderBrushKey, DynamicResource(_border9, "OutlineVariant"));
             const _stackPanel10 = new StackPanel();
@@ -82,7 +82,7 @@ export class DrawerDemo extends ResourceDictionary {
             _drawer14.set_property_value(Drawer.DrawerSizeKey, 320);
             _drawer14.set_property_value(Drawer.IsOpenKey, DataContextBinding(_drawer14, "OptionsOpen"));
             const _border15 = new Border();
-            _border15.set_property_value(Border.BackgroundKey, DynamicResource(_border15, "Surface"));
+            _border15.set_property_value(Border.FillKey, DynamicResource(_border15, "Surface"));
             _border15.set_property_value(Border.BorderThicknessKey, new Thickness(1, 0, 0, 0));
             _border15.set_property_value(Border.BorderBrushKey, DynamicResource(_border15, "OutlineVariant"));
             _border15.set_property_value(Border.PaddingKey, new Thickness(24));
@@ -112,7 +112,7 @@ export class DrawerDemo extends ResourceDictionary {
             _drawer14.Content = _border15;
             _dockPanel2.AddChild(_drawer14);
             const _border21 = new Border();
-            _border21.set_property_value(Border.BackgroundKey, DynamicResource(_border21, "Surface"));
+            _border21.set_property_value(Border.FillKey, DynamicResource(_border21, "Surface"));
             _border21.set_property_value(Border.PaddingKey, new Thickness(24));
             const _stackPanel22 = new StackPanel();
             const _textBlock23 = new TextBlock();

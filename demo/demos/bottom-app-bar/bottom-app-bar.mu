@@ -17,10 +17,10 @@ import BottomAppBarVM from "./bottom-app-bar-vm.mjs"
 
 resources BottomAppBarDemo {
     DataTemplate [DataType = BottomAppBarVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "BottomAppBar — M3's bottom action strip: a leading icon-button row plus a trailing FAB.",
                           FontSize   = 15,

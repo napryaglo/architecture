@@ -20,10 +20,10 @@ import SpinEditVM from "./spin-edit-vm.mjs"
 
 resources SpinEditDemo {
     DataTemplate [DataType = SpinEditVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "SpinEdit demo — value, range, precision, read-only",
                           FontSize   = 15,

@@ -137,11 +137,11 @@ function displayString(item: unknown): string
 // ComboBoxItem — popup row container. Carries an `IsSelected` DP so a
 // default Style can drive the hover / selected chrome via standard
 // triggers, instead of the historical refreshItemHighlights writing
-// Background imperatively. ComboBox writes IsSelected on every realised
+// Fill imperatively. ComboBox writes IsSelected on every realised
 // row when SelectedIndex changes; the row's Style reacts.
 //
 // Default Style ships in basic.resources.mu under
-// `Style [TargetType=ComboBoxItem]` — Background = @SurfaceContainerHigh
+// `Style [TargetType=ComboBoxItem]` — Fill = @SurfaceContainerHigh
 // at rest, @StateHoverOverlay on hover, @SecondaryContainer when
 // IsSelected. The class overrides DefaultStyleKey to itself so the
 // theme lookup picks the ComboBoxItem entry rather than walking up to
@@ -158,7 +158,7 @@ export class ComboBoxItem extends ClickableBorder
     constructor()
     {
         super();
-        // The default Style sets Background / Padding via setters and
+        // The default Style sets Fill / Padding via setters and
         // hover / selected via triggers. applyDefaultStyle runs the
         // resolver synchronously so the chrome is in place by the time
         // the host adds this container to the popup tree.
@@ -281,7 +281,7 @@ export class ComboBoxItemList extends ItemsControl
 
     public override GetContainerForItemOverride(item: unknown): Visual
     {
-        // ComboBoxItem's default Style fills in Background / Padding /
+        // ComboBoxItem's default Style fills in Fill / Padding /
         // hover / selected chrome via triggers — see
         // `Style [TargetType=ComboBoxItem]` in basic.resources.mu. The
         // label TextBlock is the only content authoring; everything
@@ -755,7 +755,7 @@ export class ComboBox extends Selector
     // Set IsSelected on the realised popup rows according to the
     // current SelectedIndex. The row's default Style (in
     // basic.resources.mu) reacts via triggers — IsSelected → selected
-    // chrome, IsMouseOver → hover chrome, selected wins. No Background
+    // chrome, IsMouseOver → hover chrome, selected wins. No Fill
     // writes from this class.
     private refreshItemHighlights(): void
     {

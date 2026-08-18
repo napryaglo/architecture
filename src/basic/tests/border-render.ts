@@ -10,7 +10,7 @@ import {
 } from '../../visual-engine/index.js';
 import { Border } from '../index.js';
 
-// Smoke / visual test: builds a 100×100 Border with a blue Background
+// Smoke / visual test: builds a 100×100 Border with a blue Fill
 // and a 3px black BorderBrush, mounts it on a HeadlessTarget, drives
 // one render pass through the minimal SvgDrawingContext, and writes
 // the resulting SVG to src/Controls/tests/output/border-100x100.svg.
@@ -20,7 +20,7 @@ import { Border } from '../index.js';
 
 // Build the scene.
 const border = new Border();
-border.Background      = new SolidColorBrush(Color.Blue);
+border.Fill      = new SolidColorBrush(Color.Blue);
 border.BorderBrush     = new SolidColorBrush(Color.Black);
 border.BorderThickness = new Thickness(3);
 border.Width = 100;

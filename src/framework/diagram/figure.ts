@@ -8,7 +8,7 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { Brush, type PathGeometry, type Point, Pen, SolidColorBrush } from '../../visual-engine/index.js';
+import { type PathGeometry, type Point, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { Color } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { Border } from '../../basic/border.js';
@@ -107,10 +107,14 @@ export class Figure extends ContentControl implements ISideEndpointHost
 {
     static {
         Model.OverrideMetadata(Figure, Element.DefaultStyleKeyKey, { default_value: Figure });
+        // Figure's fill is the inherited Visual.Fill; keep Figure's historic
+        // default brush by overriding the metadata for the Figure subtree.
+        Model.OverrideMetadata(Figure, Visual.FillKey, { default_value: DEFAULT_FILL });
     }
 
     public static readonly LeftKey = Model.RegisterProperty<number>(
         Figure, 'Left', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+    
     public static readonly TopKey = Model.RegisterProperty<number>(
         Figure, 'Top', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
 
@@ -126,10 +130,10 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public static readonly GeometryKey = Model.RegisterProperty<PathGeometry | undefined>(
         Figure, 'Geometry', undefined, MetaData.None);
 
-    // Fill brush + stroke pen. Per-instance Pen (PenEditor mutates in
-    // place, so sharing across figures would leak edits).
-    public static readonly FillKey = Model.RegisterProperty<Brush | undefined>(
-        Figure, 'Fill', DEFAULT_FILL, MetaData.None);
+    // Fill brush is inherited from Visual (Visual.Fill); Figure's historic
+    // default rides on the OverrideMetadata in the static block above.
+    // Stroke pen is per-instance (PenEditor mutates in place, so sharing
+    // across figures would leak edits).
     public static readonly StrokeKey = Model.RegisterProperty<Pen | undefined>(
         Figure, 'Stroke', undefined, MetaData.None);
 
@@ -447,8 +451,6 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public set Kind(value: string)             { this.set_property_value(Figure.KindKey, value); }
     public get Geometry(): PathGeometry | undefined  { return this.get_property_value(Figure.GeometryKey); }
     public set Geometry(value: PathGeometry | undefined) { this.set_property_value(Figure.GeometryKey, value); }
-    public get Fill(): Brush | undefined       { return this.get_property_value(Figure.FillKey); }
-    public set Fill(value: Brush | undefined)  { this.set_property_value(Figure.FillKey, value); }
     public get Stroke(): Pen | undefined       { return this.get_property_value(Figure.StrokeKey); }
     public set Stroke(value: Pen | undefined)  { this.set_property_value(Figure.StrokeKey, value); }
     public get SizeToContent(): boolean        { return this.get_property_value(Figure.SizeToContentKey); }

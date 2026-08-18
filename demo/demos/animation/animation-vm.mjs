@@ -81,10 +81,10 @@ export class AnimationVM extends Model {
             // Compose a two-leg Storyboard: blue → green → blue, with
             // BeginTime offsetting the second leg until the first ends.
             colorSb = new Storyboard();
-            colorSb.Add(colorTarget, 'Background', new SolidColorBrushAnimation({
+            colorSb.Add(colorTarget, 'Fill', new SolidColorBrushAnimation({
                 From: blue, To: green, Duration: 500, Easing: easeInOut,
             }));
-            colorSb.Add(colorTarget, 'Background', new SolidColorBrushAnimation({
+            colorSb.Add(colorTarget, 'Fill', new SolidColorBrushAnimation({
                 BeginTime: 500,
                 From: green, To: blue, Duration: 500, Easing: easeInOut,
             }));

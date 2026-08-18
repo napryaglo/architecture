@@ -42,11 +42,11 @@ describe('SvgRenderer — initial paint', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         // Border > TextBlock, both arranged at non-zero offsets so
-        // the transform path also exercises. Border with a Background
+        // the transform path also exercises. Border with a Fill
         // and TextBlock with Text both emit own primitives so each
         // outer ends up with a mural-own child after the lazy-attach.
         const border = new Border();
-        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        border.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
         const child  = new TextBlock('hi');
         border.SetChild(child);
         border.Measure(new Size(200, 80));
@@ -71,12 +71,12 @@ describe('SvgRenderer — initial paint', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         // A bare Canvas paints nothing of its own — it's a pure layout
-        // panel. Border with Background paints a rect; TextBlock with
+        // panel. Border with Fill paints a rect; TextBlock with
         // Text paints text. Expectation: 3 outer groups, 2 mural-own
         // (Border + TextBlock), zero on the Canvas.
         const canvas = new Canvas();
         const border = new Border();
-        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        border.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
         border.Width = 10; border.Height = 10;
         Canvas.SetLeft(border, 0); Canvas.SetTop(border, 0);
         canvas.AddChild(border);
@@ -205,7 +205,7 @@ describe('SvgRenderer — incremental updates', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         const border = new Border();
-        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        border.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
         border.Measure(new Size(100, 30));
         border.Arrange(new Rect(0, 0, 100, 30));
 
@@ -213,9 +213,9 @@ describe('SvgRenderer — incremental updates', () => {
         const firstPass = surface.querySelector('g.mural-visual');
         assert.ok(firstPass);
 
-        // Mark render-dirty: change Background, then re-render with
+        // Mark render-dirty: change Fill, then re-render with
         // an explicit renderDirty Set including this visual.
-        border.Background = new SolidColorBrush(Color.FromHex('#d32f2f'));
+        border.Fill = new SolidColorBrush(Color.FromHex('#d32f2f'));
         renderer.Render(border, undefined, new Set([border]), new Set());
 
         const secondPass = surface.querySelector('g.mural-visual');
@@ -234,7 +234,7 @@ describe('SvgRenderer — incremental updates', () => {
 
         const canvas = new Canvas();
         const tile = new Border();
-        tile.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        tile.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
         Canvas.SetLeft(tile, 0);
         Canvas.SetTop (tile, 0);
         tile.Width = 20;
@@ -308,7 +308,7 @@ describe('SvgRenderer — back-ref → hit-test integration', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         const border = new Border();
-        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        border.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
         border.Width = 40;
         border.Height = 40;
         border.Measure(new Size(40, 40));
@@ -339,7 +339,7 @@ describe('SvgRenderer — visibility gate', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         const border = new Border();
-        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        border.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
         border.Measure(new Size(50, 50));
         border.Arrange(new Rect(0, 0, 50, 50));
 
@@ -372,7 +372,7 @@ describe('SvgRenderer — path-shaped subtree clip', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         const border = new Border();
-        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        border.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
         // Triangle path clip in the Visual's local space.
         const figure = new PathFigure(new Point(0, 0), [
             new LineSegment(new Point(100, 0)),

@@ -74,13 +74,13 @@ export class ContextMenuDemo extends ResourceDictionary {
         t.Set("BlueMenu", _contextMenu10);
         const _tmpl15 = new DataTemplate((_data) => {
             const _border16 = new Border();
-            _border16.set_property_value(Border.BackgroundKey, DynamicResource(_border16, "Surface"));
+            _border16.set_property_value(Border.FillKey, DynamicResource(_border16, "Surface"));
             _border16.set_property_value(Border.BorderBrushKey, DynamicResource(_border16, "OutlineVariant"));
             _border16.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel17 = new DockPanel();
             const _border18 = new Border();
             _border18.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border18.set_property_value(Border.BackgroundKey, DynamicResource(_border18, "Primary"));
+            _border18.set_property_value(Border.FillKey, DynamicResource(_border18, "Primary"));
             _border18.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock19 = new TextBlock();
             _textBlock19.set_property_value(TextBlock.TextKey, "ContextMenu — right-click any panel; the nearest ancestor's menu opens at the cursor.");
@@ -96,7 +96,7 @@ export class ContextMenuDemo extends ResourceDictionary {
             _stackPanel21.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
             _stackPanel21.set_property_value(StackPanel.MarginKey, new Thickness(0, 0, 0, 16));
             const _border22 = new Border();
-            _border22.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#ef4444')));
+            _border22.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#ef4444')));
             _border22.set_property_value(Border.WidthKey, 180);
             _border22.set_property_value(Border.HeightKey, 120);
             _border22.set_property_value(Border.MarginKey, new Thickness(0, 0, 12, 0));
@@ -111,7 +111,7 @@ export class ContextMenuDemo extends ResourceDictionary {
             _border22.SetChild(_textBlock23);
             _stackPanel21.AddChild(_border22);
             const _border24 = new Border();
-            _border24.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#22c55e')));
+            _border24.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#22c55e')));
             _border24.set_property_value(Border.WidthKey, 180);
             _border24.set_property_value(Border.HeightKey, 120);
             _border24.set_property_value(Border.MarginKey, new Thickness(0, 0, 12, 0));
@@ -126,7 +126,7 @@ export class ContextMenuDemo extends ResourceDictionary {
             _border24.SetChild(_textBlock25);
             _stackPanel21.AddChild(_border24);
             const _border26 = new Border();
-            _border26.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#3b82f6')));
+            _border26.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#3b82f6')));
             _border26.set_property_value(Border.WidthKey, 180);
             _border26.set_property_value(Border.HeightKey, 120);
             _border26.set_property_value(ContextMenuService.ContextMenuKey, DynamicResource(_border26, "BlueMenu"));

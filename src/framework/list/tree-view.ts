@@ -717,7 +717,7 @@ export class TreeViewItem extends HeaderedItemsControl
         };
         // Hover + selection chrome ride through the DefaultTreeViewItem
         // template's `when(PART_Row.IsMouseOver)` / `when(IsSelected)`
-        // triggers — both write PART_Row.Background via DynamicResource
+        // triggers — both write PART_Row.Fill via DynamicResource
         // so theme switches re-tint live. No imperative refresh hook.
 
         // Items panel — a CollapsibleStack by default, a nested

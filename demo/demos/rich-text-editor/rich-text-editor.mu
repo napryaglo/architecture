@@ -8,10 +8,10 @@ import RichTextEditorVM from "./rich-text-editor-vm.mjs"
 
 resources RichTextEditorDemo {
     DataTemplate [DataType = RichTextEditorVM] {
-        Border x:root [ Background = @Surface ] {
+        Border x:root [ Fill = @Surface ] {
             DockPanel {
                 // ── Header ─────────────────────────────────────────
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (20,14,20,14) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (20,14,20,14) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
                             [ Text       = "Rich text editor",
@@ -30,7 +30,7 @@ resources RichTextEditorDemo {
                 // ── Formatting toolbar ─────────────────────────────
                 Border
                     [ DockPanel.Dock = Top,
-                      Background      = @SurfaceContainerLow,
+                      Fill      = @SurfaceContainerLow,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,0,0,1),
                       Padding         = (16,8,16,8) ] {

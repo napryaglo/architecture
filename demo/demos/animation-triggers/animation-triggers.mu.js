@@ -19,7 +19,7 @@ export class AnimationTriggersDemo extends ResourceDictionary {
             let _button1, _border2;
             const _border3 = new Border();
             _border3.SetNameScope(new NameScope());
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Surface"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Surface"));
             _border3.set_property_value(Border.BorderBrushKey, DynamicResource(_border3, "OutlineVariant"));
             _border3.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd4 = _border3.Resources;
@@ -54,7 +54,7 @@ export class AnimationTriggersDemo extends ResourceDictionary {
             const _dockPanel20 = new DockPanel();
             const _border21 = new Border();
             _border21.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border21.set_property_value(Border.BackgroundKey, DynamicResource(_border21, "Primary"));
+            _border21.set_property_value(Border.FillKey, DynamicResource(_border21, "Primary"));
             _border21.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock22 = new TextBlock();
             _textBlock22.set_property_value(TextBlock.TextKey, "Trigger actions — enter/exit, Loaded, TargetName");
@@ -125,7 +125,7 @@ export class AnimationTriggersDemo extends ResourceDictionary {
             _stackPanel34.AddChild(_button1);
             _border2 = new Border();
             _border2.Name = "banner";
-            _border2.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#ff9800')));
+            _border2.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#ff9800')));
             _border2.set_property_value(Border.WidthKey, 80);
             _border2.set_property_value(Border.HeightKey, 20);
             _border2.set_property_value(Border.CornerRadiusKey, 4);

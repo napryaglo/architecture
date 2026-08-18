@@ -19,11 +19,11 @@ export class RichTextEditorDemo extends ResourceDictionary {
             let _button1, _button2, _button3, _button4, _button5, _richTextBox6;
             const _border7 = new Border();
             _border7.SetNameScope(new NameScope());
-            _border7.set_property_value(Border.BackgroundKey, DynamicResource(_border7, "Surface"));
+            _border7.set_property_value(Border.FillKey, DynamicResource(_border7, "Surface"));
             const _dockPanel8 = new DockPanel();
             const _border9 = new Border();
             _border9.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border9.set_property_value(Border.BackgroundKey, DynamicResource(_border9, "Primary"));
+            _border9.set_property_value(Border.FillKey, DynamicResource(_border9, "Primary"));
             _border9.set_property_value(Border.PaddingKey, new Thickness(20, 14, 20, 14));
             const _stackPanel10 = new StackPanel();
             _stackPanel10.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
@@ -44,7 +44,7 @@ export class RichTextEditorDemo extends ResourceDictionary {
             _dockPanel8.AddChild(_border9);
             const _border13 = new Border();
             _border13.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border13.set_property_value(Border.BackgroundKey, DynamicResource(_border13, "SurfaceContainerLow"));
+            _border13.set_property_value(Border.FillKey, DynamicResource(_border13, "SurfaceContainerLow"));
             _border13.set_property_value(Border.BorderBrushKey, DynamicResource(_border13, "OutlineVariant"));
             _border13.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
             _border13.set_property_value(Border.PaddingKey, new Thickness(16, 8, 16, 8));

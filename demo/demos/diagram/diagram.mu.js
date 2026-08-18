@@ -68,7 +68,7 @@ export class DiagramDemo extends ResourceDictionary {
             _border5.SetNameScope(new NameScope());
             _border5.set_property_value(Border.IsDraggableKey, true);
             _border5.set_property_value(Border.OnDragStartKey, DataContextBinding(_border5, "BeginDragData"));
-            _border5.set_property_value(Border.BackgroundKey, DynamicResource(_border5, "Surface"));
+            _border5.set_property_value(Border.FillKey, DynamicResource(_border5, "Surface"));
             _border5.set_property_value(Border.BorderBrushKey, DynamicResource(_border5, "OutlineVariant"));
             _border5.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border5.set_property_value(Border.CornerRadiusKey, 4);
@@ -151,14 +151,14 @@ export class DiagramDemo extends ResourceDictionary {
             let _diagram22;
             const _border23 = new Border();
             _border23.SetNameScope(new NameScope());
-            _border23.set_property_value(Border.BackgroundKey, DynamicResource(_border23, "Surface"));
+            _border23.set_property_value(Border.FillKey, DynamicResource(_border23, "Surface"));
             _border23.set_property_value(Border.BorderBrushKey, DynamicResource(_border23, "OutlineVariant"));
             _border23.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel24 = new DockPanel();
             const _border25 = new Border();
             _border25.set_property_value(DockPanel.DockKey, Dock.Top);
             _border25.set_property_value(Border.HeightKey, 44);
-            _border25.set_property_value(Border.BackgroundKey, DynamicResource(_border25, "Primary"));
+            _border25.set_property_value(Border.FillKey, DynamicResource(_border25, "Primary"));
             const _stackPanel26 = new StackPanel();
             _stackPanel26.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
             _stackPanel26.set_property_value(StackPanel.MarginKey, new Thickness(16, 0, 0, 0));
@@ -188,7 +188,7 @@ export class DiagramDemo extends ResourceDictionary {
             _dockPanel24.AddChild(_border25);
             const _border30 = new Border();
             _border30.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border30.set_property_value(Border.BackgroundKey, DynamicResource(_border30, "SurfaceContainer"));
+            _border30.set_property_value(Border.FillKey, DynamicResource(_border30, "SurfaceContainer"));
             _border30.set_property_value(Border.BorderBrushKey, DynamicResource(_border30, "OutlineVariant"));
             _border30.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
             _border30.set_property_value(Border.PaddingKey, new Thickness(8, 4, 8, 4));
@@ -487,7 +487,7 @@ export class DiagramDemo extends ResourceDictionary {
             const _border94 = new Border();
             _border94.set_property_value(DockPanel.DockKey, Dock.Left);
             _border94.set_property_value(Border.WidthKey, 200);
-            _border94.set_property_value(Border.BackgroundKey, DynamicResource(_border94, "SurfaceContainerLow"));
+            _border94.set_property_value(Border.FillKey, DynamicResource(_border94, "SurfaceContainerLow"));
             _border94.set_property_value(Border.BorderBrushKey, DynamicResource(_border94, "OutlineVariant"));
             _border94.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 1, 0));
             _border94.set_property_value(Border.PaddingKey, new Thickness(8));
@@ -539,7 +539,7 @@ export class DiagramDemo extends ResourceDictionary {
             const _border106 = new Border();
             _border106.set_property_value(DockPanel.DockKey, Dock.Right);
             _border106.set_property_value(Border.WidthKey, 320);
-            _border106.set_property_value(Border.BackgroundKey, DynamicResource(_border106, "SurfaceContainerLow"));
+            _border106.set_property_value(Border.FillKey, DynamicResource(_border106, "SurfaceContainerLow"));
             _border106.set_property_value(Border.BorderBrushKey, DynamicResource(_border106, "OutlineVariant"));
             _border106.set_property_value(Border.BorderThicknessKey, new Thickness(1, 0, 0, 0));
             _border106.set_property_value(Border.PaddingKey, new Thickness(12));

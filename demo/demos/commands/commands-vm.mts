@@ -27,7 +27,7 @@ import {
     Color,
     RelayCommand,
 } from '@pragmatic-lab/mural/runtime';
-import { SolidColorBrush } from '@pragmatic-lab/mural/visual-engine';
+import { SolidColorBrush, Visual } from '@pragmatic-lab/mural/visual-engine';
 import { Figure, ShapeNodeVM } from '@pragmatic-lab/mural/framework';
 import { DiagramDocument, type DiagramStorage } from '@pragmatic-lab/mural/framework';
 
@@ -64,7 +64,7 @@ const BG_NOTE    = brush('#fde68a');
 export class RectFigure extends Figure {
     static DemoKind = 'rect';
     static {
-        Model.OverrideMetadata(RectFigure, Figure.FillKey, { default_value: BG_RECT });
+        Model.OverrideMetadata(RectFigure, Visual.FillKey, { default_value: BG_RECT });
     }
     constructor(id: string, left: number, top: number) {
         super();
@@ -81,7 +81,7 @@ export class RectFigure extends Figure {
 export class EllipseFigure extends Figure {
     static DemoKind = 'ellipse';
     static {
-        Model.OverrideMetadata(EllipseFigure, Figure.FillKey, { default_value: BG_ELLIPSE });
+        Model.OverrideMetadata(EllipseFigure, Visual.FillKey, { default_value: BG_ELLIPSE });
     }
     constructor(id: string, left: number, top: number) {
         super();
@@ -98,7 +98,7 @@ export class EllipseFigure extends Figure {
 export class NoteFigure extends Figure {
     static DemoKind = 'note';
     static {
-        Model.OverrideMetadata(NoteFigure, Figure.FillKey, { default_value: BG_NOTE });
+        Model.OverrideMetadata(NoteFigure, Visual.FillKey, { default_value: BG_NOTE });
     }
     constructor(id: string, left: number, top: number) {
         super();

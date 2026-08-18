@@ -23,11 +23,11 @@ export class TextOnPathDemo extends ResourceDictionary {
             let _canvas1;
             const _border2 = new Border();
             _border2.SetNameScope(new NameScope());
-            _border2.set_property_value(Border.BackgroundKey, DynamicResource(_border2, "Surface"));
+            _border2.set_property_value(Border.FillKey, DynamicResource(_border2, "Surface"));
             const _dockPanel3 = new DockPanel();
             const _border4 = new Border();
             _border4.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border4.set_property_value(Border.BackgroundKey, DynamicResource(_border4, "Primary"));
+            _border4.set_property_value(Border.FillKey, DynamicResource(_border4, "Primary"));
             _border4.set_property_value(Border.PaddingKey, new Thickness(20, 14, 20, 14));
             const _stackPanel5 = new StackPanel();
             _stackPanel5.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
@@ -187,10 +187,10 @@ export class TextOnPathDemo extends ResourceDictionary {
             _border9.SetChild(_stackPanel10);
             _dockPanel3.AddChild(_border9);
             const _border36 = new Border();
-            _border36.set_property_value(Border.BackgroundKey, DynamicResource(_border36, "SurfaceContainerLow"));
+            _border36.set_property_value(Border.FillKey, DynamicResource(_border36, "SurfaceContainerLow"));
             _border36.set_property_value(Border.PaddingKey, new Thickness(20, 20, 20, 20));
             const _border37 = new Border();
-            _border37.set_property_value(Border.BackgroundKey, DynamicResource(_border37, "Surface"));
+            _border37.set_property_value(Border.FillKey, DynamicResource(_border37, "Surface"));
             _border37.set_property_value(Border.BorderBrushKey, DynamicResource(_border37, "OutlineVariant"));
             _border37.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border37.set_property_value(Border.PaddingKey, new Thickness(0));

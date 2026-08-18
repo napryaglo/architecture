@@ -16,7 +16,7 @@ function svc(body: string): string {
             .services: {
                 ${body}
             }
-            resources: { Border x:root [Background=#fff] }
+            resources: { Border x:root [Fill=#fff] }
         }
     `).js;
 }

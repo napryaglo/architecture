@@ -14,7 +14,7 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
             Application{ resources: {
                 Style[TargetType=Button]{
                     when( IsMouseOver ){
-                        Background = #2196f3;
+                        Fill = #2196f3;
                         on enter {
                             BeginStoryboard {
                                 DoubleAnimation[TargetProperty=Opacity, To=0.8, Duration=200]
@@ -47,7 +47,7 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
             Application{ resources: {
                 Style[TargetType=Border]{
                     when( IsMouseOver ){
-                        Background = #eeeeee;
+                        Fill = #eeeeee;
                     }
                 }
             }}
@@ -102,7 +102,7 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
                 Template x:key="Tmpl" [TargetType=Border] {
                     Border x:name="PART_Row" {}
                     when ( PART_Row.IsMouseOver ) {
-                        PART_Row.Background = #eeeeee;
+                        PART_Row.Fill = #eeeeee;
                     }
                 }
             }}
@@ -121,7 +121,7 @@ describe('compile — `on enter` / `on exit` inside when(){...}', () => {
                 Template x:key="Tmpl" [TargetType=Border] {
                     Border x:name="PART_Row" {}
                     when ( IsMouseOver ) {
-                        PART_Row.Background = #eeeeee;
+                        PART_Row.Fill = #eeeeee;
                     }
                 }
             }}

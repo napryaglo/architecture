@@ -134,13 +134,13 @@ export class CommandsDemo extends ResourceDictionary {
             const _factory = (_data) => {
                 let _stackPanel33, _border34, _diagram35;
                 const _border36 = new Border();
-                _border36.set_property_value(Border.BackgroundKey, DynamicResource(_border36, "Surface"));
+                _border36.set_property_value(Border.FillKey, DynamicResource(_border36, "Surface"));
                 _border36.set_property_value(Border.BorderBrushKey, DynamicResource(_border36, "OutlineVariant"));
                 _border36.set_property_value(Border.BorderThicknessKey, new Thickness(1));
                 const _dockPanel37 = new DockPanel();
                 const _border38 = new Border();
                 _border38.set_property_value(DockPanel.DockKey, Dock.Top);
-                _border38.set_property_value(Border.BackgroundKey, DynamicResource(_border38, "Primary"));
+                _border38.set_property_value(Border.FillKey, DynamicResource(_border38, "Primary"));
                 _border38.set_property_value(Border.PaddingKey, new Thickness(16, 10, 16, 10));
                 const _dockPanel39 = new DockPanel();
                 _dockPanel39.set_property_value(DockPanel.LastChildFillKey, true);
@@ -163,7 +163,7 @@ export class CommandsDemo extends ResourceDictionary {
                 _stackPanel33.set_property_value(DockPanel.DockKey, Dock.Top);
                 _stackPanel33.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
                 const _border42 = new Border();
-                _border42.set_property_value(Border.BackgroundKey, DynamicResource(_border42, "SurfaceContainerLow"));
+                _border42.set_property_value(Border.FillKey, DynamicResource(_border42, "SurfaceContainerLow"));
                 _border42.set_property_value(Border.BorderBrushKey, DynamicResource(_border42, "OutlineVariant"));
                 _border42.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
                 _border42.set_property_value(Border.PaddingKey, new Thickness(8, 6, 8, 6));
@@ -239,7 +239,7 @@ export class CommandsDemo extends ResourceDictionary {
                 _stackPanel33.AddChild(_border42);
                 const _border59 = new Border();
                 _border59.set_property_value(DockPanel.DockKey, Dock.Top);
-                _border59.set_property_value(Border.BackgroundKey, DynamicResource(_border59, "Surface"));
+                _border59.set_property_value(Border.FillKey, DynamicResource(_border59, "Surface"));
                 _border59.set_property_value(Border.BorderBrushKey, DynamicResource(_border59, "OutlineVariant"));
                 _border59.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
                 const _toolBar60 = new ToolBar();

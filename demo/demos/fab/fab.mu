@@ -20,10 +20,10 @@ import FabVM from "./fab-vm.mjs"
 
 resources FabDemo {
     DataTemplate [DataType = FabVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "FloatingActionButton — M3's primary screen action. Size drives chrome dimensions; Extended slots an icon + label.",
                           FontSize   = 15,

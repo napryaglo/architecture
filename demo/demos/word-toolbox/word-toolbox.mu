@@ -71,7 +71,7 @@ resources WordToolboxDemo {
     //      framework's built-in refreshBackground() writes to a
     //      detached visual. Doing the swap via a `when(IsSelected)`
     //      trigger on this template bypasses the stale cache entirely
-    //      — the trigger drives PART_Border.Background through a
+    //      — the trigger drives PART_Border.Fill through a
     //      TargetedSetter resolved against the NEW template's
     //      NameScope at Apply time.
     //
@@ -83,7 +83,7 @@ resources WordToolboxDemo {
         Border x:name="PART_Border" [ BorderThickness = (0), Padding = (3) ] {
             ContentPresenter
         }
-        when ( IsSelected ) { PART_Border.Background = @SecondaryContainer; }
+        when ( IsSelected ) { PART_Border.Fill = @SecondaryContainer; }
         // @SecondaryContainer is the M3 spec for list-item selection
         // surface — pale lavender in light, dark muted purple in
         // dark — matches the default ListBoxItem trigger and the
@@ -104,7 +104,7 @@ resources WordToolboxDemo {
 
     DataTemplate [DataType = WordToolboxVM] {
         Border x:root
-            [ Background      = @SurfaceContainerLow,
+            [ Fill      = @SurfaceContainerLow,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1) ] {
             resources: {
@@ -130,7 +130,7 @@ resources WordToolboxDemo {
                 // holds in both schemes.
                 Border
                     [ DockPanel.Dock = Top,
-                      Background     = @InverseSurface,
+                      Fill     = @InverseSurface,
                       Padding        = (16,12,16,12) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
@@ -166,7 +166,7 @@ resources WordToolboxDemo {
                         DockPanel {
                             Border
                                 [ DockPanel.Dock = Top,
-                                  Background     = #e0f2fe,
+                                  Fill     = #e0f2fe,
                                   Padding        = (12,8,12,8) ] {
                                 TextBlock
                                     [ Text       = "Toolbox — drag a word to the listbox",
@@ -189,7 +189,7 @@ resources WordToolboxDemo {
                         DockPanel {
                             Border
                                 [ DockPanel.Dock = Top,
-                                  Background     = #dbeafe,
+                                  Fill     = #dbeafe,
                                   Padding        = (12,8,12,8) ] {
                                 TextBlock
                                     [ Text       = "ListBox — drag tiles to reorder; toolbox words land here",

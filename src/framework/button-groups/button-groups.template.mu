@@ -40,7 +40,7 @@ resources ButtonGroups {
     // @SecondaryContainer on the selected case and @Surface otherwise.
     Template x:key="DefaultSegmentedItem" [TargetType = SegmentedItem] {
         Border x:name="PART_Border"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @Outline,
               BorderThickness = (1,1,0,1),
               CornerRadius    = (0),
@@ -68,13 +68,13 @@ resources ButtonGroups {
         }
 
         // ── Selection chrome ────────────────────────────────────────
-        when ( IsSelected ) { PART_Border.Background = @SecondaryContainer; }
+        when ( IsSelected ) { PART_Border.Fill = @SecondaryContainer; }
 
         // ── State layers (ordered after Position + Selected so the
         // pressed/hover tint overlays whichever resting fill applied) ──
-        when ( IsMouseOver ) { PART_Border.Background = @StateHoverOverlay; }
-        when ( IsFocused ) { PART_Border.Background = @StateFocusOverlay; }
-        when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
+        when ( IsMouseOver ) { PART_Border.Fill = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Border.Fill = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Border.Fill = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
 
         // Adaptive layout (§ 18.6) — the hit target is the per-segment
@@ -118,14 +118,14 @@ resources ButtonGroups {
     Template x:key="DefaultSplitButton" [TargetType = SplitButton] {
         StackPanel [ Orientation = Horizontal ] {
             Border x:name="PART_PrimaryButton"
-                [ Background      = @Primary,
+                [ Fill      = @Primary,
                   CornerRadius    = (@ShapeSmall,0,0,@ShapeSmall),
                   Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2),
                   BorderThickness = (0) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
             Border x:name="PART_TriggerButton"
-                [ Background      = @Primary,
+                [ Fill      = @Primary,
                   CornerRadius    = (0,@ShapeSmall,@ShapeSmall,0),
                   Padding         = (@Spacing2,@Spacing2,@Spacing2,@Spacing2),
                   BorderThickness = (1,0,0,0),
@@ -143,16 +143,16 @@ resources ButtonGroups {
         // State-layer ladder — both halves track hover / press
         // independently. M3 spec: hover overlays at 8%, press at 12%.
         when ( PART_PrimaryButton.IsMouseOver ) {
-            PART_PrimaryButton.Background = @StateHoverOverlay;
+            PART_PrimaryButton.Fill = @StateHoverOverlay;
         }
         when ( PART_PrimaryButton.IsPressed ) {
-            PART_PrimaryButton.Background = @StatePressOverlay;
+            PART_PrimaryButton.Fill = @StatePressOverlay;
         }
         when ( PART_TriggerButton.IsMouseOver ) {
-            PART_TriggerButton.Background = @StateHoverOverlay;
+            PART_TriggerButton.Fill = @StateHoverOverlay;
         }
         when ( PART_TriggerButton.IsPressed ) {
-            PART_TriggerButton.Background = @StatePressOverlay;
+            PART_TriggerButton.Fill = @StatePressOverlay;
         }
 
         // Disabled — dim both halves at the M3 content-opacity (38%).
@@ -197,7 +197,7 @@ resources ButtonGroups {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,

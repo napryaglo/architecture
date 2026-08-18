@@ -69,7 +69,7 @@ export enum FillEditorVariant
 export class FillEditor extends TemplatedControl
 {
     // ── Output ─────────────────────────────────────────────────────────
-    public static readonly FillKey    = Model.RegisterProperty<Brush | undefined>(FillEditor, 'Fill',    undefined,                MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static override readonly FillKey    = Model.RegisterProperty<Brush | undefined>(FillEditor, 'Fill',    undefined,                MetaData.None | MetaData.BindsTwoWayByDefault);
     public static readonly VariantKey = Model.RegisterProperty<FillEditorVariant>(FillEditor, 'Variant', FillEditorVariant.Solid,  MetaData.None);
     public static readonly FillOpacityKey = Model.RegisterProperty<number>(       FillEditor, 'FillOpacity', 100,                  MetaData.None);
     // Section header text shown above the variant tabs. Defaults to "Fill";
@@ -107,8 +107,8 @@ export class FillEditor extends TemplatedControl
     public static readonly PictureUriKey   = Model.RegisterProperty<string>(    FillEditor, 'PictureUri',   '',                MetaData.None);
     public static readonly PictureStretchKey = Model.RegisterProperty<Stretch>( FillEditor, 'PictureStretch', Stretch.Uniform, MetaData.None);
 
-    public get Fill():    Brush | undefined  { return this.get_property_value(FillEditor.FillKey); }
-    public set Fill(v:    Brush | undefined) { this.set_property_value(FillEditor.FillKey, v); }
+    public override get Fill():    Brush | undefined  { return this.get_property_value(FillEditor.FillKey); }
+    public override set Fill(v:    Brush | undefined) { this.set_property_value(FillEditor.FillKey, v); }
     public get Variant(): FillEditorVariant  { return this.get_property_value(FillEditor.VariantKey); }
     public set Variant(v: FillEditorVariant) { this.set_property_value(FillEditor.VariantKey, v); }
     public get FillOpacity(): number         { return this.get_property_value(FillEditor.FillOpacityKey); }
@@ -364,7 +364,7 @@ export class FillEditor extends TemplatedControl
     }
 
     // Active-tab highlight is handled by Style triggers in the
-    // template (each tab's Background flips when `Variant=…` matches).
+    // template (each tab's Fill flips when `Variant=…` matches).
     // This method exists for parity with the other refresh hooks but
     // does no imperative work — kept so the OnPropertyChanged path
     // stays explicit when triggers grow later.

@@ -23,21 +23,21 @@ resources Navigation {
     // ── NavigationItem: a single rail/bar destination row ──────────
     // Anatomy per M3 spec:
     //   * Icon container — 56dp × 32dp pill (CornerRadius=@ShapeSmall).
-    //     Background flips @SecondaryContainer when selected, transparent
+    //     Fill flips @SecondaryContainer when selected, transparent
     //     at rest. Houses PART_IconSlot, the consumer's Icon Visual.
     //   * Label — single-line text below the icon container with the
     //     @LabelMedium typography role. Ink: @OnSurfaceVariant at rest,
     //     @OnSurface (Medium weight) when selected.
     //
     // State layer overlay (Standard M3 pattern): a transparent inner
-    // Border whose Background composites @OnSurfaceVariantHoverLayer /
+    // Border whose Fill composites @OnSurfaceVariantHoverLayer /
     // @OnSurfaceVariantPressLayer on hover / press.
     //
     // 56dp item height matches M3 Rail spec; Bar can override Height in
     // the bar template if it wants the slightly taller 80dp Bar item.
     Template x:key="DefaultNavigationItem" [TargetType = NavigationItem] {
         Border x:name="PART_Outer"
-            [ Background          = #00000000,
+            [ Fill          = #00000000,
               Padding             = (4,12,4,12),
               HorizontalAlignment = Stretch ] {
             // 12dp top/bottom matches the M3 spec for nav-rail item
@@ -47,13 +47,13 @@ resources Navigation {
             // room on each side.
             StackPanel [ Orientation = Vertical, HorizontalAlignment = Center ] {
                 Border x:name="PART_IconContainer"
-                    [ Background          = #00000000,
+                    [ Fill          = #00000000,
                       CornerRadius        = @ShapeSmall,
                       Width               = 56,
                       Height              = 32,
                       HorizontalAlignment = Center ] {
                     Border x:name="PART_IconStateLayer"
-                        [ Background   = #00000000,
+                        [ Fill   = #00000000,
                           CornerRadius = @ShapeSmall ] {
                         // PART_IconSlot is locked to the M3-spec 24×24dp
                         // icon box (centred inside the 56×32dp pill).
@@ -90,12 +90,12 @@ resources Navigation {
             }
         }
         when ( IsSelected ) {
-            PART_IconContainer.Background = @SecondaryContainer;
+            PART_IconContainer.Fill = @SecondaryContainer;
             PART_LabelText.Foreground = @OnSurface;
             PART_LabelText.FontWeight = @TypefaceWeightMedium;
         }
-        when ( IsMouseOver ) { PART_IconStateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_IconStateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsMouseOver ) { PART_IconStateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_IconStateLayer.Fill = @OnSurfaceVariantPressLayer; }
         // Adaptive layout — Compact tightens the item's vertical padding,
         // Comfortable loosens it, Coarse pointer enlarges the touch target
         // (wider AND taller than rest). Padding lives on PART_Outer, the
@@ -138,7 +138,7 @@ resources Navigation {
     // vertical StackPanel.
     Template x:key="DefaultNavigationRail" [TargetType = NavigationRail] {
         Border x:name="PART_Border"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (0,0,1,0),
               Width           = 80 ] {
@@ -174,7 +174,7 @@ resources Navigation {
     // M3 (only Rail does).
     Template x:key="DefaultNavigationBar" [TargetType = NavigationBar] {
         Border x:name="PART_Border"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (0,1,0,0),
               Height          = 80 ] {
@@ -218,7 +218,7 @@ resources Navigation {
     // render nothing, so a shell that contributes no actions shows a bare rail.
     Template x:key="ActivityBarRail" [TargetType = NavigationRail] {
         Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerHigh,
+            [ Fill      = @SurfaceContainerHigh,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (0,0,1,0),
               Width           = 48 ] {
@@ -247,13 +247,13 @@ resources Navigation {
     // @OnSurfaceVariant; selected / hovered brightens to @OnSurface; the accent
     // lights @Primary when selected.
     Template x:key="ActivityBarItemTemplate" [TargetType = NavigationItem] {
-        Border x:name="PART_Outer" [ Background = #00000000, Width = 48, Height = 48 ] {
+        Border x:name="PART_Outer" [ Fill = #00000000, Width = 48, Height = 48 ] {
             Grid {
                 Border x:name="PART_Accent"
                     [ Width               = 2,
                       HorizontalAlignment = Left,
                       VerticalAlignment   = Stretch,
-                      Background          = #00000000 ]
+                      Fill          = #00000000 ]
                 // Rest: dimmed (Opacity 0.55) so idle destinations recede,
                 // matching VSCode's shaded inactive activity-bar icons. Select
                 // / hover restore full opacity (and brighten the ink to
@@ -269,7 +269,7 @@ resources Navigation {
             }
         }
         when ( IsSelected ) {
-            PART_Accent.Background = @Primary;
+            PART_Accent.Fill = @Primary;
             PART_Icon.Fill        = @OnSurface;
             PART_Icon.Opacity     = 1;
         }
@@ -277,7 +277,7 @@ resources Navigation {
             PART_Icon.Fill    = @OnSurface;
             PART_Icon.Opacity = 1;
         }
-        when ( IsPressed )   { PART_Outer.Background = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed )   { PART_Outer.Fill = @OnSurfaceVariantHoverLayer; }
         // Adaptive layout — the activity-bar cell is a fixed square hit
         // target (like IconButton), so density / coarse retune the cell
         // size rather than padding. Compact tightens to a denser column,

@@ -90,7 +90,7 @@ export class TopAppBar extends TemplatedControl
 
     // Read-only mirror of `ScrollSource.IsScrolled` (or false when no
     // source is set). Template triggers reach this for the scroll-tint
-    // Background flip.
+    // Fill flip.
     private static readonly _IsScrolledPriv = Model.RegisterReadOnlyProperty<boolean>(
         TopAppBar, 'IsScrolled', false, MetaData.None,
     );

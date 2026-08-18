@@ -18,7 +18,7 @@ resources BottomAppBars {
     // adaptive-trigger pattern the button + list families use.
     Template x:key="DefaultBottomAppBar" [TargetType = BottomAppBar] {
         Border x:name="PART_Border"
-            [ Background = @SurfaceContainer,
+            [ Fill = @SurfaceContainer,
               Height     = 80,
               Effect     = @ElevationLevel2 ] {
             Grid {

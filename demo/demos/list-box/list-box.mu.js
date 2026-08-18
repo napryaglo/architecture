@@ -20,13 +20,13 @@ export class ListBoxDemo extends ResourceDictionary {
             let _button1, _button2, _textBlock3, _listBox4;
             const _border5 = new Border();
             _border5.SetNameScope(new NameScope());
-            _border5.set_property_value(Border.BackgroundKey, DynamicResource(_border5, "Surface"));
+            _border5.set_property_value(Border.FillKey, DynamicResource(_border5, "Surface"));
             _border5.set_property_value(Border.BorderBrushKey, DynamicResource(_border5, "OutlineVariant"));
             _border5.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel6 = new DockPanel();
             const _border7 = new Border();
             _border7.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border7.set_property_value(Border.BackgroundKey, DynamicResource(_border7, "Primary"));
+            _border7.set_property_value(Border.FillKey, DynamicResource(_border7, "Primary"));
             _border7.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock8 = new TextBlock();
             _textBlock8.set_property_value(TextBlock.TextKey, "ListBox demo — declarative vs. Items");
@@ -111,7 +111,7 @@ export class ListBoxDemo extends ResourceDictionary {
             _stackPanel9.AddChild(_stackPanel10);
             const _border34 = new Border();
             _border34.set_property_value(Border.WidthKey, 1);
-            _border34.set_property_value(Border.BackgroundKey, DynamicResource(_border34, "OutlineVariant"));
+            _border34.set_property_value(Border.FillKey, DynamicResource(_border34, "OutlineVariant"));
             _border34.set_property_value(Border.MarginKey, new Thickness(0, 12, 0, 12));
             _stackPanel9.AddChild(_border34);
             const _stackPanel35 = new StackPanel();
@@ -130,7 +130,7 @@ export class ListBoxDemo extends ResourceDictionary {
             _stackPanel9.AddChild(_stackPanel35);
             const _border38 = new Border();
             _border38.set_property_value(Border.WidthKey, 1);
-            _border38.set_property_value(Border.BackgroundKey, DynamicResource(_border38, "OutlineVariant"));
+            _border38.set_property_value(Border.FillKey, DynamicResource(_border38, "OutlineVariant"));
             _border38.set_property_value(Border.MarginKey, new Thickness(0, 12, 0, 12));
             _stackPanel9.AddChild(_border38);
             const _stackPanel39 = new StackPanel();

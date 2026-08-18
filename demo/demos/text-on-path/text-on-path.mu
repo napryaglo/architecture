@@ -28,10 +28,10 @@ resources TextOnPathDemo {
     }
 
     DataTemplate [DataType = TextOnPathVM] {
-        Border x:root [ Background = @Surface ] {
+        Border x:root [ Fill = @Surface ] {
             DockPanel {
                 // ── Header ────────────────────────────────────────
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (20,14,20,14) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (20,14,20,14) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
                             [ Text       = "Text on a path",
@@ -152,9 +152,9 @@ resources TextOnPathDemo {
                 }
 
                 // ── Canvas ────────────────────────────────────────
-                Border [ Background = @SurfaceContainerLow, Padding = (20,20,20,20) ] {
+                Border [ Fill = @SurfaceContainerLow, Padding = (20,20,20,20) ] {
                     Border
-                        [ Background      = @Surface,
+                        [ Fill      = @Surface,
                           BorderBrush     = @OutlineVariant,
                           BorderThickness = (1),
                           Padding         = (0) ] {

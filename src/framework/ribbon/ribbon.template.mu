@@ -30,13 +30,13 @@ resources Ribbons {
     // the chrome (state layers + per-size sizing).
     Template x:key="DefaultRibbonButton" [TargetType = RibbonButton] {
         Border x:name="PART_Border"
-            [ Background   = #00000000,
+            [ Fill   = #00000000,
               CornerRadius = @ShapeExtraSmall,
               Padding      = (@Spacing2,@Spacing1,@Spacing2,@Spacing1) ] {
             ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
         }
-        when ( IsMouseOver ) { PART_Border.Background = @StateHoverOverlay; }
-        when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
+        when ( IsMouseOver ) { PART_Border.Fill = @StateHoverOverlay; }
+        when ( IsPressed ) { PART_Border.Fill = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
         when ( Size = Large ) { PART_Border.MinWidth = 56; PART_Border.MinHeight = 68; PART_Border.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2); }
         // Medium — one icon+label row; three stack to roughly a Large's
@@ -67,14 +67,14 @@ resources Ribbons {
     // chrome so a sticky toggle stays visible in a group.
     Template x:key="DefaultRibbonToggleButton" [TargetType = RibbonToggleButton] {
         Border x:name="PART_Border"
-            [ Background   = #00000000,
+            [ Fill   = #00000000,
               CornerRadius = @ShapeExtraSmall,
               Padding      = (@Spacing2,@Spacing1,@Spacing2,@Spacing1) ] {
             ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
         }
-        when ( IsMouseOver ) { PART_Border.Background = @StateHoverOverlay; }
-        when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
-        when ( IsChecked ) { PART_Border.Background = @SecondaryContainer; }
+        when ( IsMouseOver ) { PART_Border.Fill = @StateHoverOverlay; }
+        when ( IsPressed ) { PART_Border.Fill = @StatePressOverlay; }
+        when ( IsChecked ) { PART_Border.Fill = @SecondaryContainer; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
         when ( Size = Large ) { PART_Border.MinWidth = 56; PART_Border.MinHeight = 68; PART_Border.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2); }
         when ( Size = Medium ) { PART_Border.MinHeight = 24; }
@@ -112,7 +112,7 @@ resources Ribbons {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -148,7 +148,7 @@ resources Ribbons {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -233,7 +233,7 @@ resources Ribbons {
     // with @Primary; hover shows a fainter @Outline underline.
     Template x:key="DefaultRibbonTabHeader" [TargetType = RibbonTabHeader] {
         Border x:name="PART_Border"
-            [ Background      = $$AccentBrush,
+            [ Fill      = $$AccentBrush,
               BorderBrush     = #00000000,
               BorderThickness = (0,0,0,2),
               Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2) ] {
@@ -284,7 +284,7 @@ resources Ribbons {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -307,14 +307,14 @@ resources Ribbons {
     // PART_BodyContainer collapses when IsMinimized.
     Template x:key="DefaultRibbon" [TargetType = Ribbon] {
         Border x:name="PART_Root"
-            [ Background      = @SurfaceContainerLow,
+            [ Fill      = @SurfaceContainerLow,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (0,0,0,1) ] {
             DockPanel [ LastChildFill = true ] {
                 StackPanel x:name="PART_Qat"
                     [ DockPanel.Dock = Top,
                       Orientation    = Horizontal,
-                      Background      = @SurfaceContainer ]
+                      Fill      = @SurfaceContainer ]
                 DockPanel [ DockPanel.Dock = Top, LastChildFill = true ] {
                     Button x:name="PART_MinimizeButton" [ DockPanel.Dock = Right ] {
                         TextBlock [ Text = "⌃" ]
@@ -323,7 +323,7 @@ resources Ribbons {
                 }
                 Border x:name="PART_BodyContainer"
                     [ DockPanel.Dock = Top,
-                      Background      = @Surface,
+                      Fill      = @Surface,
                       Padding         = (@Spacing2) ] {
                     ContentPresenter x:name="PART_Body"
                 }

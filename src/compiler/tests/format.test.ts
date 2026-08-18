@@ -57,13 +57,13 @@ describe('formatter — invariants across constructs', () =>
     const cases: Record<string, string> = {
         'import with/without source': `import Foo\nimport Bar from "baz"\n`,
         'resources block + key-value': `resources D {\n@Red = #ff0000\n@Pad = (1,2,3,4)\n}\n`,
-        'element inline attrs': `resources D {\nBorder [ Background = @Red, Width = 100 ] { }\n}\n`,
-        'element wrapped attrs (= aligned)': `resources D {\nBorder x:name="X" [ Background = @Surface, BorderBrush = @Outline, BorderThickness = (1), CornerRadius = @ShapeExtraSmall, Width = 200 ] { }\n}\n`,
+        'element inline attrs': `resources D {\nBorder [ Fill = @Red, Width = 100 ] { }\n}\n`,
+        'element wrapped attrs (= aligned)': `resources D {\nBorder x:name="X" [ Fill = @Surface, BorderBrush = @Outline, BorderThickness = (1), CornerRadius = @ShapeExtraSmall, Width = 200 ] { }\n}\n`,
         'string body': `resources D {\nTextBox { Hello world }\n}\n`,
-        'triggers inline + block + and/or/not': `Style [TargetType=Button] {\nBackground = @P;\nwhen ( IsMouseOver ) { Background = @H; }\nwhen ( IsPressed and not IsEnabled ) { Opacity = 0.5; Background = @D; }\nwhen ( $Sel or IsFocused ) { BorderBrush = @B; }\n}\n`,
+        'triggers inline + block + and/or/not': `Style [TargetType=Button] {\nFill = @P;\nwhen ( IsMouseOver ) { Fill = @H; }\nwhen ( IsPressed and not IsEnabled ) { Opacity = 0.5; Fill = @D; }\nwhen ( $Sel or IsFocused ) { BorderBrush = @B; }\n}\n`,
         'value forms': `resources D {\n@A = #0d47a1 << Lighten(0.5)\n@B = $path.sub << Conv\n@C = $Self.(TextBlock.Foreground)\n@D = $service(Token).x\n@E = $$TemplatedName\n@F = @@Dynamic\n@G = <100, 200>\n@H = [1, 2, 3]\n}\n`,
         'member block': `resources D {\nCanvas {\n.Children: {\nBorder { }\n}\n}\n}\n`,
-        'def macro': `def Card[#1, #bg: Brush = @Surface] {\nBorder [ Background = #bg ] { }\n}\n`,
+        'def macro': `def Card[#1, #bg: Brush = @Surface] {\nBorder [ Fill = #bg ] { }\n}\n`,
         'theme + scheme': `theme T {\nschemes: [Light, Dark]\ndefaultScheme: Light\ntokens {\n@Primary : Brush "brand"\n@Space1..@Space3 : number "scale"\n}\n}\nscheme Light against T {\n@Primary = #fff\n}\n`,
         'services block': `Application {\n.services: {\nFooService -> IFoo\nscoped BarService { Seed: 3 }\n}\n}\n`,
         'module form': `module Diagram [ Name = "Diagram" ] {\nCapability [ Name = "Shapes" ] { }\n}\n`,
@@ -111,7 +111,7 @@ describe('formatter — comments', () =>
 
     test('comment between sibling triggers stays put (not sunk to the end)', () =>
     {
-        const src = `Style [TargetType=Button] {\nwhen ( IsMouseOver ) { Background = @H; }\n// the pressed state\nwhen ( IsPressed ) { Background = @P; }\n}\n`;
+        const src = `Style [TargetType=Button] {\nwhen ( IsMouseOver ) { Fill = @H; }\n// the pressed state\nwhen ( IsPressed ) { Fill = @P; }\n}\n`;
         const out = check(src);
         assert.match(out, /@H; \}\n\s*\/\/ the pressed state\n\s*when \( IsPressed \)/);
     });
@@ -139,8 +139,8 @@ describe('formatter — layout rules', () =>
 
     test('short single-setter trigger stays inline', () =>
     {
-        const out = format(`Style [TargetType=Button] {\nwhen ( IsMouseOver ) {\nBackground = @H;\n}\n}\n`);
-        assert.match(out, /when \( IsMouseOver \) \{ Background = @H; \}/);
+        const out = format(`Style [TargetType=Button] {\nwhen ( IsMouseOver ) {\nFill = @H;\n}\n}\n`);
+        assert.match(out, /when \( IsMouseOver \) \{ Fill = @H; \}/);
     });
 });
 

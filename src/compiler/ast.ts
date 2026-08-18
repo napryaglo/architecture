@@ -201,7 +201,7 @@ export interface NamedAttr
     span:  SourceSpan;
 }
 
-// `Background` → parts=['Background']
+// `Fill` → parts=['Fill']
 // `Canvas.Left` → parts=['Canvas', 'Left']  (attached property)
 // Always 1 or 2 parts; deeper paths are a static error at bind time.
 export interface AttrPath

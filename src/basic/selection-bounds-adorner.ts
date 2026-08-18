@@ -171,7 +171,7 @@ export class SelectionBoundsAdorner extends Adorner
         for (const spec of HANDLE_SPEC)
         {
             const v = new Border();
-            v.Background       = this.ChromeFill;
+            v.Fill       = this.ChromeFill;
             v.BorderBrush      = this.ChromeStroke;
             v.BorderThickness  = new Thickness(1);
             v.Width            = this.HandleSize;

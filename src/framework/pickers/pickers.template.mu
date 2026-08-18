@@ -13,7 +13,7 @@ resources Pickers {
     // width, keeping their columns aligned.
     Template x:key="DefaultDatePicker" [TargetType = DatePicker] {
         Border x:name="PART_Root"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1),
               CornerRadius    = @ShapeMedium,
@@ -63,7 +63,7 @@ resources Pickers {
     // and the readout/AM-PM parts.
     Template x:key="DefaultTimePicker" [TargetType = TimePicker] {
         Border x:name="PART_Root"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1),
               CornerRadius    = @ShapeMedium,
@@ -72,12 +72,12 @@ resources Pickers {
                 // Digital readout — hour : minute (each a ring-switch) + AM/PM.
                 StackPanel [ Orientation = Horizontal, HorizontalAlignment = Center, Margin = (0,0,0,@Spacing4) ] {
                     ClickableBorder x:name="PART_HourHit"
-                        [ Background = @SurfaceContainerHighest, CornerRadius = @ShapeSmall, Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1) ] {
+                        [ Fill = @SurfaceContainerHighest, CornerRadius = @ShapeSmall, Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1) ] {
                         TextBlock x:name="PART_HourLabel" [ Text = "9", FontSize = 36, Foreground = @OnSurface ]
                     }
                     TextBlock [ Text = ":", FontSize = 36, Foreground = @OnSurface, VerticalAlignment = Center, Margin = (@Spacing1,0,@Spacing1,0) ]
                     ClickableBorder x:name="PART_MinuteHit"
-                        [ Background = @SurfaceContainerHighest, CornerRadius = @ShapeSmall, Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1) ] {
+                        [ Fill = @SurfaceContainerHighest, CornerRadius = @ShapeSmall, Padding = (@Spacing3,@Spacing1,@Spacing3,@Spacing1) ] {
                         TextBlock x:name="PART_MinuteLabel" [ Text = "00", FontSize = 36, Foreground = @OnSurface ]
                     }
                     StackPanel [ Orientation = Vertical, Margin = (@Spacing3,0,0,0), VerticalAlignment = Center ] {
@@ -93,7 +93,7 @@ resources Pickers {
                 }
                 // Clock face — a filled circle hosting the Canvas the control
                 // paints numbers / hand / pivot onto.
-                Border [ Width = 256, Height = 256, CornerRadius = @ShapeFull, Background = @SurfaceContainerHighest ] {
+                Border [ Width = 256, Height = 256, CornerRadius = @ShapeFull, Fill = @SurfaceContainerHighest ] {
                     Canvas x:name="PART_ClockFace" [ Width = 256, Height = 256 ]
                 }
             }

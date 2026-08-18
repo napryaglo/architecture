@@ -62,7 +62,7 @@ export class BrushPicker extends TemplatedControl
     // ── Closed-chrome / popup plumbing ─────────────────────────────────
     public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(BrushPicker, 'IsDropDownOpen', false, MetaData.None);
     public static readonly PopupTemplateKey  = Model.RegisterProperty<ControlTemplate | undefined>(BrushPicker, 'PopupTemplate', undefined, MetaData.None);
-    // Closed-chrome swatch: a Border whose Background mirrors the
+    // Closed-chrome swatch: a Border whose Fill mirrors the
     // current Brush. Per-instance default so the template's
     // `$$PreviewBrush` binding lands on something the picker can mutate
     // in sync (every BrushPicker gets its own preview instance).
@@ -166,7 +166,7 @@ export class BrushPicker extends TemplatedControl
     {
         super();
         // Per-instance preview brush so the closed-chrome swatch's
-        // Background landed by `$$PreviewBrush` is mutable in-place.
+        // Fill landed by `$$PreviewBrush` is mutable in-place.
         this.set_property_value(BrushPicker.PreviewBrushKey, new SolidColorBrush(Color.Black));
         this.applyDefaultStyle();
         // Initial brush rendering — picks up whatever the consumer
@@ -375,7 +375,7 @@ export class BrushPicker extends TemplatedControl
         if (brush instanceof ImageBrush) return;
     }
 
-    // Rebuild the closed-chrome swatch's Background. Always uses a
+    // Rebuild the closed-chrome swatch's Fill. Always uses a
     // fresh Brush instance so SVG renderers see a property change on
     // the swatch Border and re-paint.
     private updatePreviewBrush(): void

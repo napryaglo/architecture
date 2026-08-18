@@ -130,7 +130,7 @@ resources RibbonDemo {
             // ── Status line ─────────────────────────────────────────────
             Border
                 [ DockPanel.Dock  = Bottom,
-                  Background      = @SurfaceContainerLow,
+                  Fill      = @SurfaceContainerLow,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (0,1,0,0),
                   Padding         = (12,6,12,6) ] {

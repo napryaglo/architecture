@@ -735,7 +735,7 @@ function makeDot(size: number, fill: SolidColorBrush, cursor: string): Border
     v.Height = size;
     const r = size / 2;
     v.CornerRadius = new CornerRadius(r, r, r, r);
-    v.Background   = fill;
+    v.Fill   = fill;
     v.IsHitTestVisible = true;
     v.Cursor = cursor;
     return v;
@@ -748,7 +748,7 @@ function makeDot(size: number, fill: SolidColorBrush, cursor: string): Border
 function makeBar(fill: SolidColorBrush, cursor: string): Border
 {
     const v = new Border();
-    v.Background       = fill;
+    v.Fill       = fill;
     v.IsHitTestVisible = true;
     v.Cursor           = cursor;
     return v;
@@ -765,7 +765,7 @@ function makePortMarker(): Border
     v.Height = portMarkerSize();
     const r = portMarkerSize() / 2;
     v.CornerRadius     = new CornerRadius(r, r, r, r);
-    v.Background       = PORT_MARKER_FILL;
+    v.Fill       = PORT_MARKER_FILL;
     v.IsHitTestVisible = false;
     return v;
 }

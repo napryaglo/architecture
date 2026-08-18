@@ -24,7 +24,7 @@ resources DragDropDemo {
     // Demo shell.
     DataTemplate [DataType = DragDropVM] {
         Border x:root
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1) ] {
             resources: {
@@ -43,7 +43,7 @@ resources DragDropDemo {
 
             DockPanel {
                 // Header strip.
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     StackPanel [ Orientation = Horizontal ] {
                         TextBlock
                             [ Text       = "Drag-drop between lists",

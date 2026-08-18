@@ -18,9 +18,9 @@ import SegmentedButtonVM from "./segmented-button-vm.mjs"
 
 resources SegmentedButtonDemo {
     DataTemplate [DataType = SegmentedButtonVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "SegmentedButton — M3's connected-segment selection row. Single-select and Multi-select variants drive off SelectionMode.",
                           FontSize   = 15,

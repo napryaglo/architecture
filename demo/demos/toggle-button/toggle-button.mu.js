@@ -20,13 +20,13 @@ export class ToggleButtonDemo extends ResourceDictionary {
                 let _border1, _border2;
                 _border1 = new Border();
                 _border1.Name = "PART_Border";
-                _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+                _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
                 _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "Outline"));
                 _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
                 _border1.set_property_value(Border.CornerRadiusKey, DynamicResource(_border1, "ShapeSmall"));
                 _border2 = new Border();
                 _border2.Name = "PART_StateLayer";
-                _border2.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#00000000')));
+                _border2.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#00000000')));
                 _border2.set_property_value(Border.CornerRadiusKey, DynamicResource(_border2, "ShapeSmall"));
                 _border2.set_property_value(Border.PaddingKey, new Thickness(16, 8, 16, 8));
                 const _contentPresenter3 = new ContentPresenter();
@@ -34,11 +34,11 @@ export class ToggleButtonDemo extends ResourceDictionary {
                 _border1.SetChild(_border2);
                 return _border1;
             };
-            const _tplSet4 = [new TargetedSetter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "Primary")), "PART_Border"), new TargetedSetter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "PrimaryPress")), "PART_Border")];
+            const _tplSet4 = [new TargetedSetter(Border, "Fill", new SetterFactory((_t) => DynamicResource(_t, "Primary")), "PART_Border"), new TargetedSetter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "PrimaryPress")), "PART_Border")];
             const _tplTrig5 = new TemplatePropertyTrigger(ToggleButton, "IsChecked", true, _tplSet4, undefined);
-            const _tplSet6 = [new TargetedSetter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "StateHoverOverlay")), "PART_StateLayer")];
+            const _tplSet6 = [new TargetedSetter(Border, "Fill", new SetterFactory((_t) => DynamicResource(_t, "StateHoverOverlay")), "PART_StateLayer")];
             const _tplTrig7 = new TemplatePropertyTrigger(ToggleButton, "IsMouseOver", true, _tplSet6, undefined);
-            const _tplSet8 = [new TargetedSetter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "StatePressOverlay")), "PART_StateLayer")];
+            const _tplSet8 = [new TargetedSetter(Border, "Fill", new SetterFactory((_t) => DynamicResource(_t, "StatePressOverlay")), "PART_StateLayer")];
             const _tplTrig9 = new TemplatePropertyTrigger(ToggleButton, "IsPressed", true, _tplSet8, undefined);
             return new ControlTemplate(_factory, [_tplTrig5, _tplTrig7, _tplTrig9]);
         })();
@@ -52,13 +52,13 @@ export class ToggleButtonDemo extends ResourceDictionary {
         t.Set("StyleToggle", _style15);
         const _tmpl16 = new DataTemplate((_data) => {
             const _border17 = new Border();
-            _border17.set_property_value(Border.BackgroundKey, DynamicResource(_border17, "Surface"));
+            _border17.set_property_value(Border.FillKey, DynamicResource(_border17, "Surface"));
             _border17.set_property_value(Border.BorderBrushKey, DynamicResource(_border17, "OutlineVariant"));
             _border17.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel18 = new DockPanel();
             const _border19 = new Border();
             _border19.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border19.set_property_value(Border.BackgroundKey, DynamicResource(_border19, "Primary"));
+            _border19.set_property_value(Border.FillKey, DynamicResource(_border19, "Primary"));
             _border19.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock20 = new TextBlock();
             _textBlock20.set_property_value(TextBlock.TextKey, "ToggleButton — IsChecked flips on click; TwoWay binding keeps the VM in sync.");
@@ -101,7 +101,7 @@ export class ToggleButtonDemo extends ResourceDictionary {
             _stackPanel22.AddChild(_toggleButton27);
             _stackPanel21.AddChild(_stackPanel22);
             const _border29 = new Border();
-            _border29.set_property_value(Border.BackgroundKey, DynamicResource(_border29, "SurfaceContainerLow"));
+            _border29.set_property_value(Border.FillKey, DynamicResource(_border29, "SurfaceContainerLow"));
             _border29.set_property_value(Border.PaddingKey, new Thickness(12, 12, 12, 12));
             _border29.set_property_value(Border.BorderBrushKey, DynamicResource(_border29, "Outline"));
             _border29.set_property_value(Border.BorderThicknessKey, new Thickness(1));

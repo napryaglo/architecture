@@ -18,10 +18,10 @@ import SplitterVM from "./splitter-vm.mjs"
 
 resources SplitterDemo {
     DataTemplate [DataType = SplitterVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip.
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
                             [ Text       = "Splitter demo — standalone draggable bar",
@@ -45,7 +45,7 @@ resources SplitterDemo {
                           Margin     = (0,8,0,8) ]
                     Border [ Height = 140, BorderBrush = @Outline, BorderThickness = (1) ] {
                         StackPanel [ Orientation = Horizontal ] {
-                            Border [ Width = 200, Height = 138, Background = #dbeafe ] {
+                            Border [ Width = 200, Height = 138, Fill = #dbeafe ] {
                                 TextBlock
                                     [ Text                = "Width=200",
                                       FontSize            = 14,
@@ -55,7 +55,7 @@ resources SplitterDemo {
                                       Foreground          = @PrimaryContainer ]
                             }
                             Splitter [ Width = 8, Height = 138 ]
-                            Border [ Width = 300, Height = 138, Background = #e0f2fe ] {
+                            Border [ Width = 300, Height = 138, Fill = #e0f2fe ] {
                                 TextBlock
                                     [ Text                = "Width=300 — drag the gray bar to resize the LEFT pane",
                                       FontSize            = 13,
@@ -75,7 +75,7 @@ resources SplitterDemo {
                           Margin     = (0,24,0,8) ]
                     Border [ Height = 260, BorderBrush = @Outline, BorderThickness = (1) ] {
                         DockPanel {
-                            Border [ DockPanel.Dock = Top, Height = 80, Background = #dcfce7 ] {
+                            Border [ DockPanel.Dock = Top, Height = 80, Fill = #dcfce7 ] {
                                 TextBlock
                                     [ Text                = "Height=80",
                                       FontSize            = 14,
@@ -85,7 +85,7 @@ resources SplitterDemo {
                                       Foreground          = #166534 ]
                             }
                             Splitter [ DockPanel.Dock = Top, Orientation = Horizontal, Height = 8 ]
-                            Border [ Background = #bbf7d0 ] {
+                            Border [ Fill = #bbf7d0 ] {
                                 TextBlock
                                     [ Text                = "Drag the gray bar to resize the TOP pane.",
                                       FontSize            = 13,

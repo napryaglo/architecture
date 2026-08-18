@@ -15,10 +15,10 @@ import MenuVM from "./menu-vm.mjs"
 
 resources MenuDemo {
     DataTemplate [DataType = MenuVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "MenuButton — hamburger fly-out with checkable items and gesture text.",
                           FontSize   = 15,

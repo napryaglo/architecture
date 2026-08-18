@@ -19,8 +19,8 @@ class TemplatedParentWatcher extends Model
 }
 
 // Binding that reads a single property off the templated parent of a
-// ControlTemplate factory. Used to express the `$$Background`-style
-// markup-extension form: `_b.Background = TemplateBinding(_templatedParent, 'Background')`.
+// ControlTemplate factory. Used to express the `$$Fill`-style
+// markup-extension form: `_b.Fill = TemplateBinding(_templatedParent, 'Fill')`.
 //
 // Templated parent's property changes propagate to the binding via a
 // property-changed listener installed at construction. Disposed when
@@ -68,8 +68,8 @@ class TemplateBindingImpl extends Binding
 //
 // Usage from a ControlTemplate factory body:
 //   const border = new Border();
-//   border.set_property_value(Border.BackgroundKey,
-//       TemplateBinding(templatedParent, 'Background'));
+//   border.set_property_value(Border.FillKey,
+//       TemplateBinding(templatedParent, 'Fill'));
 export function TemplateBinding(templatedParent: Visual, property: string): Binding
 {
     return new TemplateBindingImpl(templatedParent, property);

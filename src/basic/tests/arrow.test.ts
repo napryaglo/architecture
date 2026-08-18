@@ -47,7 +47,7 @@ describe('Arrow', () => {
 
     test('sharp arrow: line + quad-bezier (bowed base) + line, closed', () => {
         const a = new Arrow();
-        a.Background = new SolidColorBrush(Color.Red);
+        a.Fill = new SolidColorBrush(Color.Red);
         const dc = render(a, 100, 100);
         const fig = (dc.geoms[0]!.geometry as PathGeometry).Figures[0]!;
         assert.equal(fig.Segments.length, 3);

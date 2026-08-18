@@ -6,7 +6,7 @@ import { Orientation } from '../../basic/panels/orientation.js';
 // the horizontal or vertical axis.
 //
 // Promoted from the historical `Border[BorderThickness=(0,0,0,1),
-// Background=@OutlineVariant]` pattern (called out in
+// Fill=@OutlineVariant]` pattern (called out in
 // docs/m3-modernization-plan.md A.4) so consumers get a proper
 // control + a named token surface for the inset / colour. Reading
 // down from TemplatedControl (not ContentControl) because the Divider

@@ -52,7 +52,7 @@ describe('ItemsPresenter', () => {
         // visual child of the presenter, not of the ItemsControl.
         const template = new ControlTemplate(_tp => {
             const border = new Border();
-            border.Background = new SolidColorBrush(Color.White);
+            border.Fill = new SolidColorBrush(Color.White);
             border.BorderBrush = new SolidColorBrush(Color.Black);
             border.BorderThickness = new Thickness(2);
             const presenter = new ItemsPresenter();

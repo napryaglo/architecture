@@ -242,8 +242,8 @@ describe('Freezable — Visual integration (shared-brush repaint)', () => {
         const brush = new SolidColorBrush(RED);
         const b1 = new CountingBorder();
         const b2 = new CountingBorder();
-        b1.Background = brush;
-        b2.Background = brush;
+        b1.Fill = brush;
+        b2.Fill = brush;
         b1.invalidateVisualCount = 0;
         b2.invalidateVisualCount = 0;
         brush.Color = BLUE;
@@ -255,9 +255,9 @@ describe('Freezable — Visual integration (shared-brush repaint)', () => {
         const brush = new SolidColorBrush(RED);
         const b1 = new CountingBorder();
         const b2 = new CountingBorder();
-        b1.Background = brush;
-        b2.Background = brush;
-        b1.Background = undefined;   // unregister b1
+        b1.Fill = brush;
+        b2.Fill = brush;
+        b1.Fill = undefined;   // unregister b1
         b1.invalidateVisualCount = 0;
         b2.invalidateVisualCount = 0;
         brush.Color = BLUE;
@@ -270,10 +270,10 @@ describe('Freezable — Visual integration (shared-brush repaint)', () => {
         const t = new TranslateTransform();
         brush.Transform = t;
         const b = new CountingBorder();
-        b.Background = brush;
+        b.Fill = brush;
         b.invalidateVisualCount = 0;
         t.X = 5;
         assert.ok(b.invalidateVisualCount > 0,
-            'Background.Transform.X change bubbles through the brush to the Visual');
+            'Fill.Transform.X change bubbles through the brush to the Visual');
     });
 });

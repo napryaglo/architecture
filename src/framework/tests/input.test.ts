@@ -279,14 +279,14 @@ describe('IsPressed semantics', () => {
 describe('end-to-end: pointer → IsMouseOver → Style trigger → DP update', () => {
     beforeEach(() => { initTestApp(); });
 
-    test('hovering a Border with an IsMouseOver style trigger swaps its Background', async () => {
+    test('hovering a Border with an IsMouseOver style trigger swaps its Fill', async () => {
         const { instantiate } = await import('../../compiler/index.js');
         const runtime  = await import('../../runtime/index.js');
         const controls = await import('../../basic/index.js');
         const engine   = await import('../../visual-engine/index.js');
         const ctx: Record<string, unknown> = { ...runtime, ...controls, ...engine };
 
-        // Minimal app: one Border with a Style that swaps Background
+        // Minimal app: one Border with a Style that swaps Fill
         // on IsMouseOver. The Canvas root is needed so the Border has
         // a visual parent for hover-chain routing.
         const app = instantiate(`
@@ -294,8 +294,8 @@ describe('end-to-end: pointer → IsMouseOver → Style trigger → DP update', 
                 @rest  = #4caf50
                 @hover = #ff0000
                 Style x:key="HoverBox"[TargetType=Border]{
-                    Background = @rest;
-                    when( IsMouseOver ){ Background = @hover; }
+                    Fill = @rest;
+                    when( IsMouseOver ){ Fill = @hover; }
                 }
                 Canvas x:root{
                     Border[Style=@HoverBox, Width=50, Height=50]
@@ -305,19 +305,19 @@ describe('end-to-end: pointer → IsMouseOver → Style trigger → DP update', 
         const canvas = app.Resources.Root as InstanceType<typeof controls.Canvas>;
         const border = [...canvas.visualChildren][0]! as InstanceType<typeof controls.Border>;
 
-        const restColour = (border.Background as unknown as { Color: { ToCss(): string } }).Color.ToCss();
+        const restColour = (border.Fill as unknown as { Color: { ToCss(): string } }).Color.ToCss();
         assert.equal(restColour, 'rgb(76,175,80)');   // green
 
         const im = new InputManager();
         im.InjectPointerMove(border, syntheticInit());
 
-        const hoverColour = (border.Background as unknown as { Color: { ToCss(): string } }).Color.ToCss();
+        const hoverColour = (border.Fill as unknown as { Color: { ToCss(): string } }).Color.ToCss();
         assert.equal(hoverColour, 'rgb(255,0,0)');    // red — trigger fired
 
         // Move pointer away — the trigger setter unwinds and the
         // style-tier default (rest) takes over again.
         im.InjectPointerLeave(syntheticInit());
-        const afterLeave = (border.Background as unknown as { Color: { ToCss(): string } }).Color.ToCss();
+        const afterLeave = (border.Fill as unknown as { Color: { ToCss(): string } }).Color.ToCss();
         assert.equal(afterLeave, 'rgb(76,175,80)');
     });
 });

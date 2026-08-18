@@ -19,12 +19,12 @@ resources Notifications {
     // pipeline lands when the converter syntax does.
     Template x:key="DefaultLinearProgressIndicator" [TargetType = ProgressIndicator] {
         Border x:name="PART_Track"
-            [ Background      = @SurfaceContainerHighest,
+            [ Fill      = @SurfaceContainerHighest,
               CornerRadius    = 2,
               BorderThickness = (0),
               Height          = 4 ] {
             Border x:name="PART_Fill"
-                [ Background          = @Primary,
+                [ Fill          = @Primary,
                   CornerRadius        = 2,
                   BorderThickness     = (0),
                   HorizontalAlignment = Left,
@@ -51,7 +51,7 @@ resources Notifications {
 
     Template x:key="DefaultCircularProgressIndicator" [TargetType = ProgressIndicator] {
         Border x:name="PART_OuterFrame"
-            [ Background      = #00000000,
+            [ Fill      = #00000000,
               BorderThickness = (0),
               Width           = 40,
               Height          = 40 ] {
@@ -89,7 +89,7 @@ resources Notifications {
     // trailing actions row anchors right.
     Template x:key="DefaultBanner" [TargetType = Banner] {
         Border x:name="PART_Banner"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (0,0,0,1),
               Padding         = (@Spacing4,@Spacing3,@Spacing4,@Spacing3) ] {
@@ -134,7 +134,7 @@ resources Notifications {
     // backdrop). ExtraSmall corner radius matches the spec.
     Template x:key="DefaultSnackbar" [TargetType = Snackbar] {
         Border x:name="PART_Snackbar"
-            [ Background      = @InverseSurface,
+            [ Fill      = @InverseSurface,
               BorderBrush     = #00000000,
               BorderThickness = (0),
               CornerRadius    = @ShapeExtraSmall,
@@ -184,7 +184,7 @@ resources Notifications {
         Border x:name="PART_Container"
             [ Width               = 48,
               Height              = 48,
-              Background          = #00000000,
+              Fill          = #00000000,
               CornerRadius        = @ShapeFull,
               HorizontalAlignment = Center,
               VerticalAlignment   = Center ] {
@@ -201,7 +201,7 @@ resources Notifications {
                   HorizontalAlignment = Center,
                   VerticalAlignment   = Center ]
         }
-        when ( Variant = Contained ) { PART_Container.Background = @SurfaceContainerHighest; }
+        when ( Variant = Contained ) { PART_Container.Fill = @SurfaceContainerHighest; }
         when ( IsEnabled = false ) { PART_Container.Opacity = @DisabledContentOpacity; }
     }
     Style [TargetType = LoadingIndicator] {

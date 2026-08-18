@@ -27,7 +27,7 @@ import { Canvas } from './canvas.js';
 //   * PageBorderThickness          — stroke thickness in dp. 0 disables
 //                                    the border (just the paper fill).
 //
-// The standard `Background` DP from Visual paints UNDER the page grid;
+// The standard `Fill` DP from Visual paints UNDER the page grid;
 // it shows as the desk color when the surrounding viewport is bigger
 // than the panel.
 
@@ -73,7 +73,7 @@ export class PaginatedCanvas extends Canvas
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        // Paint the desk (Visual.Background) UNDER the pages first. Same
+        // Paint the desk (Visual.Fill) UNDER the pages first. Same
         // call Canvas.RenderOverride would have made — done explicitly
         // here because we override the whole method.
         super.RenderOverride(dc);

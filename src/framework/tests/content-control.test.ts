@@ -352,7 +352,7 @@ describe('ContentControl + ControlTemplate', () => {
 
         const template = new ControlTemplate(tp => {
             const b = new Border();
-            b.set_property_value(resolveKey(b, undefined, 'Background'), TemplateBinding(tp, 'Background'));
+            b.set_property_value(resolveKey(b, undefined, 'Fill'), TemplateBinding(tp, 'Background'));
             b.BorderThickness = new Thickness(1);
             return b;
         });
@@ -364,12 +364,12 @@ describe('ContentControl + ControlTemplate', () => {
         cc.set_property_value(resolveKey(cc, undefined, 'Background'), blue);
 
         const border = cc.visualChildren[0] as Border;
-        assert.equal(border.Background, blue);
+        assert.equal(border.Fill, blue);
 
         // Changing the source pushes the new value to the bound target.
         const red = new SolidColorBrush(Color.Red);
         cc.set_property_value(resolveKey(cc, undefined, 'Background'), red);
-        assert.equal(border.Background, red);
+        assert.equal(border.Fill, red);
     });
 
     // ----------------------------------------------------------------

@@ -27,7 +27,7 @@ export class DragDropDemo extends ResourceDictionary {
             let _listBox3, _listBox4;
             const _border5 = new Border();
             _border5.SetNameScope(new NameScope());
-            _border5.set_property_value(Border.BackgroundKey, DynamicResource(_border5, "Surface"));
+            _border5.set_property_value(Border.FillKey, DynamicResource(_border5, "Surface"));
             _border5.set_property_value(Border.BorderBrushKey, DynamicResource(_border5, "OutlineVariant"));
             _border5.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd6 = _border5.Resources;
@@ -38,7 +38,7 @@ export class DragDropDemo extends ResourceDictionary {
             const _dockPanel10 = new DockPanel();
             const _border11 = new Border();
             _border11.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border11.set_property_value(Border.BackgroundKey, DynamicResource(_border11, "Primary"));
+            _border11.set_property_value(Border.FillKey, DynamicResource(_border11, "Primary"));
             _border11.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _stackPanel12 = new StackPanel();
             _stackPanel12.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);

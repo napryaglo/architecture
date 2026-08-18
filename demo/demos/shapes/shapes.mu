@@ -8,9 +8,9 @@ import ShapesVM from "./shapes-vm.mjs"
 
 resources ShapesDemo {
     DataTemplate [DataType = ShapesVM] {
-        Border [ Background = @Surface ] {
+        Border [ Fill = @Surface ] {
             ScrollViewer {
-                Border [ Padding = (24,24,24,24), Background = @Surface ] {
+                Border [ Padding = (24,24,24,24), Fill = @Surface ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
                             [ Text       = "M3 Expressive Shape Library",

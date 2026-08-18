@@ -7,7 +7,7 @@ import DashboardVM from "./dashboard-vm.mjs"
 // triggers that re-skin each card as the pointer moves over it and
 // presses down. The triggers exercise the runtime input pipeline:
 // DOM PointerEvents → HtmlTarget → InputManager → IsMouseOver / IsPressed
-// DPs → Style triggers fire → Background / BorderThickness setters
+// DPs → Style triggers fire → Fill / BorderThickness setters
 // invalidate render → SvgRenderer repaints the visual incrementally.
 //
 // Packaged as a DataTemplate keyed off DashboardVM. The card styles
@@ -16,7 +16,7 @@ import DashboardVM from "./dashboard-vm.mjs"
 // that merge their own resources into Application.current.Resources.
 
 resources DashboardDemo {
-    // Keyed Border styles. Each carries its own Background +
+    // Keyed Border styles. Each carries its own Fill +
     // BorderBrush so the hover / press triggers can override the
     // style's defaults without colliding with explicit attributes
     // on the Border instance (an attribute set on the instance
@@ -24,49 +24,49 @@ resources DashboardDemo {
     // styles own the brushes instead of the Border attributes
     // setting them).
     Style x:key="DashboardPrimaryCard" [TargetType = Border] {
-        Background = #4caf50;
+        Fill = #4caf50;
         BorderBrush = #1b5e20;
         BorderThickness = (2);
         CornerRadius = (8);
         Padding = (16);
         when ( IsMouseOver ) {
-            Background = #66bb6a;
+            Fill = #66bb6a;
             BorderThickness = (3);
         }
         when ( IsPressed ) {
-            Background = #2e7d32;
+            Fill = #2e7d32;
             BorderThickness = (4);
         }
     }
 
     Style x:key="DashboardDangerCard" [TargetType = Border] {
-        Background = #d32f2f;
+        Fill = #d32f2f;
         BorderBrush = #7f0000;
         BorderThickness = (2);
         CornerRadius = (8);
         Padding = (16);
         when ( IsMouseOver ) {
-            Background = #ef5350;
+            Fill = #ef5350;
             BorderThickness = (3);
         }
         when ( IsPressed ) {
-            Background = #b71c1c;
+            Fill = #b71c1c;
             BorderThickness = (4);
         }
     }
 
     Style x:key="DashboardPaperCard" [TargetType = Border] {
-        Background = @Surface;
+        Fill = @Surface;
         BorderBrush = @OutlineVariant;
         BorderThickness = (1);
         CornerRadius = (6);
         Padding = (20);
         when ( IsMouseOver ) {
-            Background = @SurfaceContainerHigh;
+            Fill = @SurfaceContainerHigh;
             BorderThickness = (2);
         }
         when ( IsPressed ) {
-            Background = @OutlineVariant;
+            Fill = @OutlineVariant;
             BorderThickness = (3);
         }
     }

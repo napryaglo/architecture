@@ -42,7 +42,7 @@ function render(s: Semicircle, w: number, h: number): CapturingContext
 describe('Semicircle', () => {
     test('arc spans the full width and full height of the rect', () => {
         const s = new Semicircle();
-        s.Background = new SolidColorBrush(Color.Red);
+        s.Fill = new SolidColorBrush(Color.Red);
         const dc = render(s, 200, 100);
         const fig = (dc.geoms[0]!.geometry as PathGeometry).Figures[0]!;
         const arc = fig.Segments[0] as ArcSegment;

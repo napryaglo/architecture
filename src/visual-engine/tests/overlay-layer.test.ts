@@ -107,7 +107,7 @@ describe('SvgRenderer — overlay paints after content (top z-order)', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         const content = new Border();
-        content.Background = new SolidColorBrush(Color.FromHex('#10b981'));
+        content.Fill = new SolidColorBrush(Color.FromHex('#10b981'));
         content.Width = 100;
         content.Height = 50;
         content.Measure(new Size(100, 50));
@@ -115,7 +115,7 @@ describe('SvgRenderer — overlay paints after content (top z-order)', () => {
 
         const overlay = new Canvas();
         const overlayChild = new Border();
-        overlayChild.Background = new SolidColorBrush(Color.FromHex('#ef4444'));
+        overlayChild.Fill = new SolidColorBrush(Color.FromHex('#ef4444'));
         Canvas.SetLeft(overlayChild, 25);
         Canvas.SetTop (overlayChild, 25);
         overlayChild.Width = 50;

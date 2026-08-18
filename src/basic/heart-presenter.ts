@@ -32,14 +32,14 @@ export class HeartPresenter extends ContentPresenter
 {
     // Mirror Shape's Fill (interior brush) + Stroke (outline Pen) so the
     // same markup — Fill = <brush>, Stroke = <pen> — drives the heart.
-    public static readonly FillKey   = Model.RegisterProperty<Brush | undefined>(
+    public static override readonly FillKey   = Model.RegisterProperty<Brush | undefined>(
         HeartPresenter, 'Fill',   undefined, MetaData.Render);
     
     public static readonly StrokeKey = Model.RegisterProperty<Pen   | undefined>(
         HeartPresenter, 'Stroke', undefined, MetaData.Render);
 
-    public get Fill(): Brush | undefined { return this.get_property_value(HeartPresenter.FillKey); }
-    public set Fill(value: Brush | undefined) { this.set_property_value(HeartPresenter.FillKey, value); }
+    public override get Fill(): Brush | undefined { return this.get_property_value(HeartPresenter.FillKey); }
+    public override set Fill(value: Brush | undefined) { this.set_property_value(HeartPresenter.FillKey, value); }
 
     public get Stroke(): Pen | undefined { return this.get_property_value(HeartPresenter.StrokeKey); }
     public set Stroke(value: Pen | undefined) { this.set_property_value(HeartPresenter.StrokeKey, value); }

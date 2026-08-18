@@ -22,13 +22,13 @@ import DrawerVM from "./drawer-vm.mjs"
 
 resources DrawerDemo {
     DataTemplate [DataType = DrawerVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // ── Header bar (Top) ───────────────────────────
                 Border
                     [ DockPanel.Dock  = Top,
                       Height          = 56,
-                      Background      = @Primary,
+                      Fill      = @Primary,
                       BorderThickness = (0,0,0,0) ] {
                     StackPanel [ Orientation = Horizontal ] {
                         Button [ Width = 44, Command = $ToggleNav ] {
@@ -52,7 +52,7 @@ resources DrawerDemo {
                       RailSize       = 56,
                       IsOpen         = $NavOpen ] {
                     Border
-                        [ Background      = @SurfaceContainerLow,
+                        [ Fill      = @SurfaceContainerLow,
                           BorderThickness = (0,0,1,0),
                           BorderBrush     = @OutlineVariant ] {
                         StackPanel {
@@ -73,7 +73,7 @@ resources DrawerDemo {
                       DrawerSize = 320,
                       IsOpen     = $OptionsOpen ] {
                     Border
-                        [ Background      = @Surface,
+                        [ Fill      = @Surface,
                           BorderThickness = (1,0,0,0),
                           BorderBrush     = @OutlineVariant,
                           Padding         = (24) ] {
@@ -97,7 +97,7 @@ resources DrawerDemo {
                 }
 
                 // ── Main body (fills via LastChildFill) ────────
-                Border [ Background = @Surface, Padding = (24) ] {
+                Border [ Fill = @Surface, Padding = (24) ] {
                     StackPanel {
                         TextBlock
                             [ Text         = "The left drawer is Persistent —\n                                        the rail is always visible (56\n                                        DIPs); the header button toggles\n                                        the pane open / closed (200 DIPs).",

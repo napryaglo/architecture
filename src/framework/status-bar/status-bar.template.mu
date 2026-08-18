@@ -13,7 +13,7 @@ resources StatusBars {
     // @SurfaceContainerLow.
     Template x:key="DefaultStatusBar" [TargetType = StatusBar] {
         Border
-            [ Background      = @SurfaceContainerLow,
+            [ Fill      = @SurfaceContainerLow,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (0,1,0,0),
               Padding         = (4,2,4,2) ] {

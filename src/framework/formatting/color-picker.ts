@@ -132,7 +132,7 @@ const SWATCH_HOVER_SCALE = 1.15;
 // swatch up around its centre so it pops forward; both revert on leave.
 // Returns a disposer that removes the listener and clears any applied
 // hover state. Shared by the theme grid, the standard row, and the
-// recents — every swatch there is a ClickableBorder whose Background IS
+// recents — every swatch there is a ClickableBorder whose Fill IS
 // the colour it offers, so we can't tint it; the ring/lift stays clear
 // of the colour itself. `onPreview(over)` fires on every enter/leave so
 // the picker can live-preview the swatch's colour while it's hovered.
@@ -639,7 +639,7 @@ export class ColorPicker extends TemplatedControl
                 sw.BorderBrush     = SWATCH_BORDER;
                 sw.BorderThickness = new Thickness(1);
                 sw.Margin = new Thickness(0, 0, col === n - 1 ? 0 : gap, 0);
-                sw.Background = new SolidColorBrush(color);
+                sw.Fill = new SolidColorBrush(color);
                 sw.onClick = (): void => { this.commitColor(color); };
                 // Hover ring + lift plus a live colour preview. Not
                 // disposer-tracked: buildThemeGrid clears every child (and
@@ -719,7 +719,7 @@ export class ColorPicker extends TemplatedControl
         const current = this.ColorScheme;
         // Hover state-layer — the M3 OnSurface @ 8% overlay the menu rows
         // use. Resolved once off the active theme (stable while the gallery
-        // is open); each row tints its Background on IsMouseOver and clears
+        // is open); each row tints its Fill on IsMouseOver and clears
         // it on leave, giving the same hover feedback as a MenuItem.
         const hover = Application.current?.Resources.Resolve('StateHoverOverlay') as Brush | undefined;
         for (const scheme of OFFICE_COLOR_SCHEMES)
@@ -734,7 +734,7 @@ export class ColorPicker extends TemplatedControl
             if (hover !== undefined)
             {
                 const onHover = (): void => {
-                    row.Background = row.IsMouseOver ? hover : undefined;
+                    row.Fill = row.IsMouseOver ? hover : undefined;
                 };
                 row.AddPropertyChangedListener(Element.IsMouseOverKey, onHover);
                 this._galleryListeners.push(
@@ -755,7 +755,7 @@ export class ColorPicker extends TemplatedControl
                 chip.Height = 16;
                 chip.BorderBrush     = SWATCH_BORDER;
                 chip.BorderThickness = new Thickness(1);
-                chip.Background = new SolidColorBrush(color);
+                chip.Fill = new SolidColorBrush(color);
                 preview.AddChild(chip);
             }
             rowContent.AddChild(preview);
@@ -801,7 +801,7 @@ export class ColorPicker extends TemplatedControl
             sw.BorderThickness = new Thickness(1);
             sw.Margin = new Thickness(0, 0, 2, 2);
             const c = Color.FromHex(hex);
-            sw.Background = new SolidColorBrush(c);
+            sw.Fill = new SolidColorBrush(c);
             sw.onClick = (): void => { this.commitColor(c); };
             // Hover ring + lift plus a live colour preview. Not
             // disposer-tracked: populateRecents clears every child (and its
@@ -1014,7 +1014,7 @@ export class ColorPicker extends TemplatedControl
 
     // Wire the Office-style 2D hue/saturation box and the vertical
     // brightness rail. Both are Canvas-rooted; the static rainbow + the
-    // white desaturation overlay paint via Border.Background, and the
+    // white desaturation overlay paint via Border.Fill, and the
     // rail's gradient gets rebuilt whenever Hue or Saturation moves.
     private adoptGradientBoxParts(host: MenuPopupHost): void
     {
@@ -1026,8 +1026,8 @@ export class ColorPicker extends TemplatedControl
         this._vRailFill    = host.FindName('PART_VRailFill')    as Border | undefined;
         this._vRailCursor  = host.FindName('PART_VRailCursor')  as Border | undefined;
 
-        if (hsBoxHue !== undefined)           hsBoxHue.Background           = buildHueRainbowBrush();
-        if (this._hsBoxOverlay !== undefined) this._hsBoxOverlay.Background = buildWhiteOverlayBrush();
+        if (hsBoxHue !== undefined)           hsBoxHue.Fill           = buildHueRainbowBrush();
+        if (this._hsBoxOverlay !== undefined) this._hsBoxOverlay.Fill = buildWhiteOverlayBrush();
 
         this.refreshGradientBox();
         this.wireGradientBoxPointer();
@@ -1145,7 +1145,7 @@ export class ColorPicker extends TemplatedControl
         }
         if (this._vRailFill !== undefined)
         {
-            this._vRailFill.Background = buildRailBrush(this.Hue, this.Saturation);
+            this._vRailFill.Fill = buildRailBrush(this.Hue, this.Saturation);
         }
     }
 
@@ -1194,11 +1194,11 @@ function collectSwatches(root: Visual, out: ClickableBorder[]): void
     }
 }
 
-// The resolved colour a swatch paints, or undefined when its Background
+// The resolved colour a swatch paints, or undefined when its Fill
 // isn't a solid colour (e.g. a token that resolved to a non-solid brush).
 function colorOfSwatch(sw: Border): Color | undefined
 {
-    const bg = sw.Background;
+    const bg = sw.Fill;
     return bg instanceof SolidColorBrush ? bg.Color : undefined;
 }
 

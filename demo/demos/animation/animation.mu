@@ -21,14 +21,14 @@ import AnimationVM from "./animation-vm.mjs"
 resources AnimationDemo {
     DataTemplate [DataType = AnimationVM] {
         Border x:root
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1) ] {
             // x:root owns the NameScope so the inner x:names register and
             // the VM's OnViewMounted FindName resolves them.
             DockPanel {
                 // Header
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "Animation — From/To, AutoReverse + Repeat, keyframes",
                           FontSize   = 15,
@@ -50,7 +50,7 @@ resources AnimationDemo {
                                 TextBlock [ Text = "Play" ]
                             }
                             Border x:name="slideTarget"
-                                [ Background   = #4caf50,
+                                [ Fill   = #4caf50,
                                   Width        = 100,
                                   Height       = 24,
                                   CornerRadius = 4,
@@ -75,7 +75,7 @@ resources AnimationDemo {
                                 TextBlock [ Text = "Start" ]
                             }
                             Border x:name="loopTarget"
-                                [ Background   = @Primary,
+                                [ Fill   = @Primary,
                                   Width        = 100,
                                   Height       = 24,
                                   CornerRadius = 4,
@@ -100,7 +100,7 @@ resources AnimationDemo {
                                 TextBlock [ Text = "Play" ]
                             }
                             Border x:name="pulseTarget"
-                                [ Background      = #4caf50,
+                                [ Fill      = #4caf50,
                                   BorderBrush     = @Primary,
                                   BorderThickness = (1),
                                   CornerRadius    = 4,
@@ -119,7 +119,7 @@ resources AnimationDemo {
                     // ── Brush colour fade ──
                     StackPanel [ Orientation = Vertical, Margin = (0,0,0,24) ] {
                         TextBlock
-                            [ Text       = "Brush colour fade — SolidColorBrushAnimation on Background, cubic-bezier easing.",
+                            [ Text       = "Brush colour fade — SolidColorBrushAnimation on Fill, cubic-bezier easing.",
                               FontSize   = 12,
                               FontWeight = Bold,
                               Margin     = (0,0,0,8) ]
@@ -128,14 +128,14 @@ resources AnimationDemo {
                                 TextBlock [ Text = "Play" ]
                             }
                             Border x:name="colorTarget"
-                                [ Background   = @Primary,
+                                [ Fill   = @Primary,
                                   Width        = 140,
                                   Height       = 24,
                                   CornerRadius = 4,
                                   Margin       = (20,4,0,0) ]
                         }
                         TextBlock
-                            [ Text       = "Background brush fades blue → green → blue using CSS-style ease-in-out.",
+                            [ Text       = "Fill brush fades blue → green → blue using CSS-style ease-in-out.",
                               FontSize   = 11,
                               Foreground = @OnSurfaceVariant,
                               Margin     = (0,8,0,0) ]
@@ -154,13 +154,13 @@ resources AnimationDemo {
                             }
                             StackPanel [ Orientation = Vertical, Margin = (20,0,0,0) ] {
                                 Border x:name="bezierA"
-                                    [ Background   = @Primary,
+                                    [ Fill   = @Primary,
                                       Width        = 100,
                                       Height       = 14,
                                       CornerRadius = 2,
                                       Margin       = (0,2,0,2) ]
                                 Border x:name="bezierB"
-                                    [ Background   = #4caf50,
+                                    [ Fill   = #4caf50,
                                       Width        = 100,
                                       Height       = 14,
                                       CornerRadius = 2,

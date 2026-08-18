@@ -62,7 +62,7 @@ import {
 //     captions never turn "rich" behind the user's back.
 //
 // Default Template (diagram.template.mu, @DefaultShapeText): a Border
-// (Background + Padding) hosting a TextBlock whose Text / alignment / font
+// (Fill + Padding) hosting a TextBlock whose Text / alignment / font
 // ride TemplateBindings to the DPs below. Placement / Offset / Angle are
 // NOT template bindings — ShapeText positions + rotates the template root
 // itself in MeasureOverride / ArrangeOverride so an off-centre or rotated
@@ -230,7 +230,7 @@ export class ShapeText extends Control
     public static readonly PaddingKey = Model.RegisterProperty<Thickness>(
         ShapeText, 'Padding', new Thickness(2), MetaData.Measure);
     // The optional fill behind the text (Visio's text background, for
-    // readability over a busy shape fill) reuses the inherited Visual.Background
+    // readability over a busy shape fill) reuses the inherited Visual.Fill
     // — it IS this control's background. Undefined → transparent.
 
     // ── Text-block transform (§ diagram-text Slice 3) ───────────────
@@ -767,7 +767,7 @@ export class ShapeText extends Control
     public get AutoFit(): TextAutoFit { return this.get_property_value(ShapeText.AutoFitKey); }
     public set AutoFit(v: TextAutoFit) { this.set_property_value(ShapeText.AutoFitKey, v); }
 
-    // Background (the text-readability fill) is inherited from Visual.
+    // Fill (the text-readability fill) is inherited from Visual.
 
     // Convenience: true when there's nothing to paint. Holders can skip
     // hosting an empty block if they want (the Figure hosts it always —

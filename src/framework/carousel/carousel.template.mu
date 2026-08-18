@@ -14,7 +14,7 @@ resources Carousels {
     // inside PART_ItemsPresenter). Cards come from the consumer's Items +
     // ItemTemplate; the control fixes each card's width/height.
     Template x:key="DefaultCarousel" [TargetType = Carousel] {
-        Border x:name="PART_Root" [ Background = @Surface ] {
+        Border x:name="PART_Root" [ Fill = @Surface ] {
             DockPanel [ LastChildFill = true ] {
                 IconButton x:name="PART_PrevButton"
                     [ Variant = Standard, DockPanel.Dock = Left, VerticalAlignment = Center ] {

@@ -4,7 +4,7 @@ import ColorPickerVM from "./color-picker-vm.mjs"
 //
 // Four rows, each pairing a ColorPicker with a live preview swatch that
 // mirrors the hex value. Behaviour-free: the previews are plain Borders
-// whose Background lands via a SolidColorBrush built from the VM hex in
+// whose Fill lands via a SolidColorBrush built from the VM hex in
 // the bootstrap (so this template stays pure markup).
 
 resources ColorPickerDemo {
@@ -17,10 +17,10 @@ resources ColorPickerDemo {
           Colors = [#0F172A, #2563EB, #7C3AED, #DB2777, #059669, #EA580C] ]
 
     DataTemplate [DataType = ColorPickerVM] {
-        Border x:root [ Background = @Surface ] {
+        Border x:root [ Fill = @Surface ] {
             DockPanel {
                 // ── Header ────────────────────────────────────────
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (20,14,20,14) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (20,14,20,14) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
                             [ Text       = "Office-style color picker",
@@ -45,7 +45,7 @@ resources ColorPickerDemo {
                       Text           = "Each picker drops down the Office menu: a No-Color entry, a Colors: button opening the 21-scheme gallery (Office, Blue Warm, Median, Paper, …), a Theme-Colors grid (base row + lighter/darker tint-shade rows built from the active ColorScheme), a fixed Standard-Colors row, a session Recent-Colors row, and More Colors… which opens the 2D hue/saturation box + brightness rail + R/G/B/A sliders + hex (with OK / Cancel). Each picker feeds a preview swatch via SolidColorBrush(Color.FromHex(...))." ]
 
                 // ── Body ──────────────────────────────────────────
-                Border [ Background = @SurfaceContainerLow, Padding = (20,20,20,20) ] {
+                Border [ Fill = @SurfaceContainerLow, Padding = (20,20,20,20) ] {
                     StackPanel [ Orientation = Vertical ] {
                         StackPanel [ Orientation = Horizontal, Margin = (0,0,0,16) ] {
                             StackPanel [ Orientation = Vertical, Margin = (0,0,24,0) ] {

@@ -56,7 +56,7 @@ resources Shells {
     }
 
     Template x:key="DefaultEditorShell" [TargetType = EditorShell] {
-        Border [ Background = @Surface ] {
+        Border [ Fill = @Surface ] {
             AdornerDecorator {
                 DockPanel [ LastChildFill = true ] {
                     Border x:name="PART_HeaderHost" [ DockPanel.Dock = Top ]
@@ -68,7 +68,7 @@ resources Shells {
                     // registers commands + a command-target document is active.
                     Border x:name="PART_CommandHost"
                         [ DockPanel.Dock  = Top,
-                          Background      = @SurfaceContainer,
+                          Fill      = @SurfaceContainer,
                           BorderBrush     = @OutlineVariant,
                           BorderThickness = (0,0,0,1),
                           Padding         = (8,4,8,4) ] {
@@ -363,7 +363,7 @@ resources Shells {
     //   Navigation → Left  (PART_NavHost,    single, stretches)
     //   Content    → fill  (PART_ContentHost, single)
     Template x:key="DefaultViewerShell" [TargetType = ViewerShell] {
-        Border [ Background = @Surface ] {
+        Border [ Fill = @Surface ] {
             DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_HeaderHost" [ DockPanel.Dock = Top ]
                 Border x:name="PART_NavHost"
@@ -423,18 +423,18 @@ resources Shells {
     // a transparent hover/press layer.
     Template x:key="CompactHeaderIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
-            [ Background           = #00000000,
+            [ Fill           = #00000000,
               CornerRadius         = (2),
               Width                = 16,
               Height               = 16,
               TextBlock.Foreground = @OnSurfaceVariant ] {
             Border x:name="PART_StateLayer"
-                [ Background = #00000000, CornerRadius = (2) ] {
+                [ Fill = #00000000, CornerRadius = (2) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
     }
 
     // ── PanelButton — rounded-rectangle icon button for panel headers ───────
@@ -465,7 +465,7 @@ resources Shells {
     // last, which would put the content presenter after Commands and mis-bind.
     Template x:key="DefaultShellSideContentPane" [TargetType = ShellSideContentPane] {
         Border
-            [ Background      = $$Background,
+            [ Fill      = $$Fill,
               BorderBrush     = $$BorderBrush,
               BorderThickness = $$BorderThickness ] {
             Grid {
@@ -512,6 +512,6 @@ resources Shells {
     }
     Style [TargetType = ShellSideContentPane] {
         Template = @DefaultShellSideContentPane;
-        Background = @SurfaceContainer;
+        Fill = @SurfaceContainer;
     }
 }

@@ -101,7 +101,7 @@ export class TextBlockAdorner extends Adorner
         this.AttachVisual(this._outline);
 
         this._stem = new Border();
-        this._stem.Background       = ACCENT;
+        this._stem.Fill       = ACCENT;
         this._stem.IsHitTestVisible = false;
         this._stem.RenderTransform       = this._stemRotate;
         this._stem.RenderTransformOrigin = new Point(0.5, 0.5);
@@ -131,7 +131,7 @@ export class TextBlockAdorner extends Adorner
     private makeGrip(fill: SolidColorBrush, cursor: string): Border
     {
         const b = new Border();
-        b.Background      = fill;
+        b.Fill      = fill;
         b.BorderBrush     = ACCENT;
         b.BorderThickness = new Thickness(1);
         b.Width           = handleSize();

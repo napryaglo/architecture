@@ -152,7 +152,7 @@ export class TimePicker extends TemplatedControl
         const pivot = new ClickableBorder();
         pivot.Width = 8; pivot.Height = 8;
         pivot.CornerRadius = new CornerRadius(4, 4, 4, 4);
-        pivot.Background = primary;
+        pivot.Fill = primary;
         Canvas.SetLeft(pivot, CENTER - 4); Canvas.SetTop(pivot, CENTER - 4);
         face.AddChild(pivot);
 
@@ -172,7 +172,7 @@ export class TimePicker extends TemplatedControl
             const cell = new ClickableBorder();
             cell.Width = CELL; cell.Height = CELL;
             cell.CornerRadius = new CornerRadius(CELL / 2, CELL / 2, CELL / 2, CELL / 2);
-            cell.Background = selected ? primary : TRANSPARENT;
+            cell.Fill = selected ? primary : TRANSPARENT;
             Canvas.SetLeft(cell, cx - CELL / 2);
             Canvas.SetTop(cell, cy - CELL / 2);
 
@@ -193,13 +193,13 @@ export class TimePicker extends TemplatedControl
         const pm = this.isPm();
         if (this._amButton !== undefined)
         {
-            this._amButton.Background = pm ? TRANSPARENT : primary;
+            this._amButton.Fill = pm ? TRANSPARENT : primary;
             const t = this._amButton.child as TextBlock | undefined;
             if (t !== undefined) t.Foreground = pm ? onSurface : onPrimary;
         }
         if (this._pmButton !== undefined)
         {
-            this._pmButton.Background = pm ? primary : TRANSPARENT;
+            this._pmButton.Fill = pm ? primary : TRANSPARENT;
             const t = this._pmButton.child as TextBlock | undefined;
             if (t !== undefined) t.Foreground = pm ? onPrimary : onSurface;
         }

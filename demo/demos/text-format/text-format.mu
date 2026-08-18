@@ -10,10 +10,10 @@ import TextFormatVM from "./text-format-vm.mjs"
 
 resources TextFormatDemo {
     DataTemplate [DataType = TextFormatVM] {
-        Border x:root [ Background = @Surface ] {
+        Border x:root [ Fill = @Surface ] {
             DockPanel {
                 // ── Header ─────────────────────────────────────────
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (20,14,20,14) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (20,14,20,14) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
                             [ Text       = "Text format editors",
@@ -31,7 +31,7 @@ resources TextFormatDemo {
                 // ── Editor toolbar ─────────────────────────────────
                 Border
                     [ DockPanel.Dock = Top,
-                      Background      = @SurfaceContainerLow,
+                      Fill      = @SurfaceContainerLow,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,0,0,1),
                       Padding         = (16,10,16,10) ] {

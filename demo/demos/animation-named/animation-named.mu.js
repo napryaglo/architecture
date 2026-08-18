@@ -17,7 +17,7 @@ export class AnimationNamedDemo extends ResourceDictionary {
         const t = new AnimationNamedDemo(_gate_AnimationNamedDemo);
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd2 = _border1.Resources;
@@ -40,7 +40,7 @@ export class AnimationNamedDemo extends ResourceDictionary {
             const _dockPanel15 = new DockPanel();
             const _border16 = new Border();
             _border16.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border16.set_property_value(Border.BackgroundKey, DynamicResource(_border16, "Primary"));
+            _border16.set_property_value(Border.FillKey, DynamicResource(_border16, "Primary"));
             _border16.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock17 = new TextBlock();
             _textBlock17.set_property_value(TextBlock.TextKey, "Named storyboards — Begin / Pause / Resume / Stop");

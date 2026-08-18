@@ -20,13 +20,13 @@ export class BannerDemo extends ResourceDictionary {
             const _factory = (_data) => {
                 let _banner1;
                 const _border2 = new Border();
-                _border2.set_property_value(Border.BackgroundKey, DynamicResource(_border2, "Surface"));
+                _border2.set_property_value(Border.FillKey, DynamicResource(_border2, "Surface"));
                 _border2.set_property_value(Border.BorderBrushKey, DynamicResource(_border2, "OutlineVariant"));
                 _border2.set_property_value(Border.BorderThicknessKey, new Thickness(1));
                 const _dockPanel3 = new DockPanel();
                 const _border4 = new Border();
                 _border4.set_property_value(DockPanel.DockKey, Dock.Top);
-                _border4.set_property_value(Border.BackgroundKey, DynamicResource(_border4, "Primary"));
+                _border4.set_property_value(Border.FillKey, DynamicResource(_border4, "Primary"));
                 _border4.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
                 const _textBlock5 = new TextBlock();
                 _textBlock5.set_property_value(TextBlock.TextKey, "Banner — M3's in-flow alert strip: Leading icon | message | trailing Actions.");

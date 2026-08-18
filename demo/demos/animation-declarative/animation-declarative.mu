@@ -13,7 +13,7 @@ import AnimationDeclarativeVM from "./animation-declarative-vm.mjs"
 
 resources AnimationDeclarativeDemo {
     DataTemplate [DataType = AnimationDeclarativeVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             resources: {
                 // Implicit style on Button — every Button inside this
                 // Border's subtree picks it up automatically. The
@@ -26,7 +26,7 @@ resources AnimationDeclarativeDemo {
             }
             DockPanel {
                 // Header
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "Declarative animation — on Click { BeginStoryboard { ... } }",
                           FontSize   = 15,

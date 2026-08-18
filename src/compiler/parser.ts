@@ -796,7 +796,7 @@ export class Parser
             // AND ControlTemplate.Triggers. For Template (ControlTemplate),
             // the triggers' default source is the templated parent (the
             // control being templated), so `when(IsSelected) {
-            // PART_Border.Background = …; }` inside a `Template
+            // PART_Border.Fill = …; }` inside a `Template
             // [TargetType=ListBoxItem]` watches the ListBoxItem's
             // IsSelected and writes to the named PART_Border via
             // TargetedSetter. Same body shape downstream — the

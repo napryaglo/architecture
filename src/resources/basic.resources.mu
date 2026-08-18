@@ -156,7 +156,7 @@ resources MuralBasic {
             }
             Border x:name="PART_Divider"
                 [ DockPanel.Dock  = Top,
-                  Background      = @OutlineVariant,
+                  Fill      = @OutlineVariant,
                   BorderThickness = (0),
                   Height          = 1 ]
             Border x:name="PART_ContentHost" [ Padding = (0) ] {
@@ -183,7 +183,7 @@ resources MuralBasic {
     // rest / hover / focused / disabled here.
     Template x:key="DefaultOutlinedTextBox" [TargetType = TextBox] {
         Border x:name="PART_Border"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @Outline,
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
@@ -228,7 +228,7 @@ resources MuralBasic {
     // CornerRadius= tuples to `new CornerRadius(...)`.
     Template x:key="DefaultFilledTextBox" [TargetType = TextBox] {
         Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerHigh,
+            [ Fill      = @SurfaceContainerHigh,
               BorderBrush     = @OnSurfaceVariant,
               BorderThickness = (0,0,0,1),
               CornerRadius    = (@ShapeExtraSmall,@ShapeExtraSmall,0,0),
@@ -241,7 +241,7 @@ resources MuralBasic {
         // hover-state container token); focus thickens the bottom rule
         // to 2dp and re-tints to @Primary, matching the M3 active-
         // indicator pattern. Disabled dims the whole row.
-        when ( IsMouseOver ) { PART_Border.Background = @SurfaceContainerHighest; }
+        when ( IsMouseOver ) { PART_Border.Fill = @SurfaceContainerHighest; }
         when ( IsFocused ) {
             PART_Border.BorderBrush = @Primary;
             PART_Border.BorderThickness = (0,0,0,2);
@@ -267,7 +267,7 @@ resources MuralBasic {
     // variants; only the surrounding chrome is dropped.
     Template x:key="DefaultPlainTextBox" [TargetType = TextBox] {
         Border x:name="PART_Border"
-            [ Background      = #00000000,
+            [ Fill      = #00000000,
               BorderThickness = (0),
               Padding         = (0) ] {
             ScrollViewer x:name="PART_Scroll" {
@@ -319,7 +319,7 @@ resources MuralBasic {
     // step the value by SmallChange.
     Template x:key="DefaultSpinEdit" [TargetType = SpinEdit] {
         Border x:name="PART_Border"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @Outline,
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall ] {
@@ -383,12 +383,12 @@ resources MuralBasic {
         // fires natively. Each button's IsMouseOver / IsFocused /
         // IsPressed sources its own row so a hover on PART_Up doesn't
         // light PART_Down (and vice versa).
-        when ( PART_Up.IsMouseOver ) { PART_Up.Background = @StateHoverOverlay; }
-        when ( PART_Up.IsFocused ) { PART_Up.Background = @StateFocusOverlay; }
-        when ( PART_Up.IsPressed ) { PART_Up.Background = @StatePressOverlay; }
-        when ( PART_Down.IsMouseOver ) { PART_Down.Background = @StateHoverOverlay; }
-        when ( PART_Down.IsFocused ) { PART_Down.Background = @StateFocusOverlay; }
-        when ( PART_Down.IsPressed ) { PART_Down.Background = @StatePressOverlay; }
+        when ( PART_Up.IsMouseOver ) { PART_Up.Fill = @StateHoverOverlay; }
+        when ( PART_Up.IsFocused ) { PART_Up.Fill = @StateFocusOverlay; }
+        when ( PART_Up.IsPressed ) { PART_Up.Fill = @StatePressOverlay; }
+        when ( PART_Down.IsMouseOver ) { PART_Down.Fill = @StateHoverOverlay; }
+        when ( PART_Down.IsFocused ) { PART_Down.Fill = @StateFocusOverlay; }
+        when ( PART_Down.IsPressed ) { PART_Down.Fill = @StatePressOverlay; }
 
         // Spinner geometry tracks density: Compact narrows the button
         // column and shrinks the arrows 40%; Comfortable widens it and
@@ -425,7 +425,7 @@ resources MuralBasic {
     // tinted fill from Min to the current value, and a round-cornered
     // thumb. The Slider's TS code positions each part via the
     // SliderLayout panel — this template just paints. PART_Thumb's
-    // Background is rewritten at runtime on IsMouseOver / drag to
+    // Fill is rewritten at runtime on IsMouseOver / drag to
     // match the Theme palette.
     // CornerRadius=2 on PART_Track / PART_Fill stays inline rather
     // than chasing @ShapeExtraSmall (4dp) — the M3 Slider 2024 spec
@@ -440,15 +440,15 @@ resources MuralBasic {
     Template x:key="DefaultSlider" [TargetType = Slider] {
         SliderLayout x:name="PART_Layout" {
             Border x:name="PART_Track"
-                [ Background      = @SurfaceContainerHighest,
+                [ Fill      = @SurfaceContainerHighest,
                   CornerRadius    = 2,
                   BorderThickness = (0) ]
             Border x:name="PART_Fill"
-                [ Background      = @Primary,
+                [ Fill      = @Primary,
                   CornerRadius    = 2,
                   BorderThickness = (0) ]
             Border x:name="PART_Thumb"
-                [ Background      = @Primary,
+                [ Fill      = @Primary,
                   CornerRadius    = @ShapeFull,
                   BorderThickness = (0) ]
         }
@@ -459,9 +459,9 @@ resources MuralBasic {
         // Slider's read-only IsDragging DP. Dragging trigger declared
         // LAST so its setter outranks hover when both match. Disabled
         // dims both track and thumb at the M3 content opacity.
-        when ( PART_Thumb.IsMouseOver ) { PART_Thumb.Background = @PrimaryHover; }
-        when ( IsFocused ) { PART_Thumb.Background = @PrimaryHover; }
-        when ( IsDragging ) { PART_Thumb.Background = @PrimaryPress; }
+        when ( PART_Thumb.IsMouseOver ) { PART_Thumb.Fill = @PrimaryHover; }
+        when ( IsFocused ) { PART_Thumb.Fill = @PrimaryHover; }
+        when ( IsDragging ) { PART_Thumb.Fill = @PrimaryPress; }
         when ( IsEnabled = false ) { PART_Layout.Opacity = @DisabledContentOpacity; }
     }
     Style [TargetType = Slider] {
@@ -505,19 +505,19 @@ resources MuralBasic {
     Template x:key="DefaultScrollBar" [TargetType = ScrollBar] {
         ScrollBarLayout x:name="PART_Layout" {
             Border x:name="PART_Track"
-                [ Background      = @SurfaceContainerLow,
+                [ Fill      = @SurfaceContainerLow,
                   CornerRadius    = @ShapeExtraSmall,
                   BorderThickness = (0) ]
             Border x:name="PART_Thumb"
-                [ Background      = @OutlineVariant,
+                [ Fill      = @OutlineVariant,
                   CornerRadius    = @ShapeExtraSmall,
                   BorderThickness = (0) ]
         }
         // Thumb tint: hover → @Outline (slightly darker), drag →
         // @OnSurfaceVariant (darkest). Drag declared LAST so it wins
         // over hover at the trigger tier when both match.
-        when ( PART_Thumb.IsMouseOver ) { PART_Thumb.Background = @Outline; }
-        when ( IsDragging ) { PART_Thumb.Background = @OnSurfaceVariant; }
+        when ( PART_Thumb.IsMouseOver ) { PART_Thumb.Fill = @Outline; }
+        when ( IsDragging ) { PART_Thumb.Fill = @OnSurfaceVariant; }
         // Auto-hide resting state: fade the template layout root to
         // Opacity=0 so both track and thumb disappear without disturbing
         // layout / hit-test geometry. pulseActivity restores Opacity by
@@ -547,11 +547,11 @@ resources MuralBasic {
     // is over it).
     Template x:key="DefaultThumb" [TargetType = Thumb] {
         Border x:name="PART_Border"
-            [ Background      = @OutlineVariant,
+            [ Fill      = @OutlineVariant,
               CornerRadius    = 2,
               BorderThickness = (0) ]
-        when ( IsMouseOver ) { PART_Border.Background = @Outline; }
-        when ( IsDragging ) { PART_Border.Background = @OnSurfaceVariant; }
+        when ( IsMouseOver ) { PART_Border.Fill = @Outline; }
+        when ( IsDragging ) { PART_Border.Fill = @OnSurfaceVariant; }
     }
     Style [TargetType = Thumb] {
         Template = @DefaultThumb;
@@ -565,7 +565,7 @@ resources MuralBasic {
     // the right affordance on hover.
     Template x:key="DefaultGridSplitter" [TargetType = GridSplitter] {
         Border x:name="PART_Border"
-            [ Background      = @OutlineVariant,
+            [ Fill      = @OutlineVariant,
               CornerRadius    = 0,
               BorderThickness = (0) ]
     }
@@ -592,7 +592,7 @@ resources MuralBasic {
     // than a ControlTemplate, so a markup trigger template wouldn't apply.
     Template x:key="DefaultSplitter" [TargetType = Splitter] {
         Border x:name="PART_Border"
-            [ Background      = @OutlineVariant,
+            [ Fill      = @OutlineVariant,
               CornerRadius    = 0,
               BorderThickness = (0) ]
     }

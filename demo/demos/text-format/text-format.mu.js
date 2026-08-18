@@ -20,11 +20,11 @@ export class TextFormatDemo extends ResourceDictionary {
             let _textBlock1;
             const _border2 = new Border();
             _border2.SetNameScope(new NameScope());
-            _border2.set_property_value(Border.BackgroundKey, DynamicResource(_border2, "Surface"));
+            _border2.set_property_value(Border.FillKey, DynamicResource(_border2, "Surface"));
             const _dockPanel3 = new DockPanel();
             const _border4 = new Border();
             _border4.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border4.set_property_value(Border.BackgroundKey, DynamicResource(_border4, "Primary"));
+            _border4.set_property_value(Border.FillKey, DynamicResource(_border4, "Primary"));
             _border4.set_property_value(Border.PaddingKey, new Thickness(20, 14, 20, 14));
             const _stackPanel5 = new StackPanel();
             _stackPanel5.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
@@ -44,7 +44,7 @@ export class TextFormatDemo extends ResourceDictionary {
             _dockPanel3.AddChild(_border4);
             const _border8 = new Border();
             _border8.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border8.set_property_value(Border.BackgroundKey, DynamicResource(_border8, "SurfaceContainerLow"));
+            _border8.set_property_value(Border.FillKey, DynamicResource(_border8, "SurfaceContainerLow"));
             _border8.set_property_value(Border.BorderBrushKey, DynamicResource(_border8, "OutlineVariant"));
             _border8.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
             _border8.set_property_value(Border.PaddingKey, new Thickness(16, 10, 16, 10));

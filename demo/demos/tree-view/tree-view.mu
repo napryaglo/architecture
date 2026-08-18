@@ -17,7 +17,7 @@ import TreeViewVM from "./tree-view-vm.mjs"
 resources TreeViewDemo {
     DataTemplate [DataType = TreeViewVM] {
         Border x:root
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1) ] {
             // x:root owns the NameScope so the bound TreeView's x:name
@@ -25,7 +25,7 @@ resources TreeViewDemo {
 
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "TreeView — composed markup vs. HierarchicalDataTemplate",
                           FontSize   = 15,
@@ -71,7 +71,7 @@ resources TreeViewDemo {
                     }
 
                     // Divider
-                    Border [ Width = 1, Background = @OutlineVariant, Margin = (0,12,0,12) ]
+                    Border [ Width = 1, Fill = @OutlineVariant, Margin = (0,12,0,12) ]
 
                     // ── Right: data-bound via HierarchicalDataTemplate ─
                     // The TreeView is bare here; the VM wires

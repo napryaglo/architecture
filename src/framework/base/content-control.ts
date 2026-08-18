@@ -34,8 +34,8 @@ export class ContentControl extends Control
         ContentControl, 'Content', undefined, MetaData.Measure);
 
     // Border chrome (WPF Control parity): the default template wraps its
-    // ContentPresenter in a Border whose Background / BorderBrush /
-    // BorderThickness TemplateBind to the control. `Background` already rides on
+    // ContentPresenter in a Border whose Fill / BorderBrush /
+    // BorderThickness TemplateBind to the control. `Fill` already rides on
     // Visual, so only the two border DPs are declared here — same shape as
     // Border's own. A bare ContentControl leaves them unset (transparent brush,
     // zero thickness → no visible chrome); a consumer sets them to give the

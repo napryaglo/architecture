@@ -120,10 +120,10 @@ resources CommandsDemo {
 
     // ── Demo shell ──────────────────────────────────────────────────
     DataTemplate [DataType = CommandsVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header — title + Classic/Ribbon mode toggle
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,10,16,10) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,10,16,10) ] {
                     DockPanel [ LastChildFill = true ] {
                         Checkbox
                             [ DockPanel.Dock = Right,
@@ -144,7 +144,7 @@ resources CommandsDemo {
 
                 // MenuButton strip (above the toolbar)
                 Border
-                    [ Background      = @SurfaceContainerLow,
+                    [ Fill      = @SurfaceContainerLow,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,0,0,1),
                       Padding         = (8,6,8,6) ] {
@@ -205,7 +205,7 @@ resources CommandsDemo {
                 // ToolBar strip
                 Border
                     [ DockPanel.Dock  = Top,
-                      Background      = @Surface,
+                      Fill      = @Surface,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,0,0,1) ] {
                     ToolBar {

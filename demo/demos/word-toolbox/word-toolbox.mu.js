@@ -55,7 +55,7 @@ export class WordToolboxDemo extends ResourceDictionary {
                 _border8.SetChild(_contentPresenter9);
                 return _border8;
             };
-            const _tplSet10 = [new TargetedSetter(Border, "Background", new SetterFactory((_t) => DynamicResource(_t, "SecondaryContainer")), "PART_Border")];
+            const _tplSet10 = [new TargetedSetter(Border, "Fill", new SetterFactory((_t) => DynamicResource(_t, "SecondaryContainer")), "PART_Border")];
             const _tplTrig11 = new TemplatePropertyTrigger(ListBoxItem, "IsSelected", true, _tplSet10, undefined);
             return new ControlTemplate(_factory, [_tplTrig11]);
         })();
@@ -69,7 +69,7 @@ export class WordToolboxDemo extends ResourceDictionary {
             let _itemsControl17, _listBox18;
             const _border19 = new Border();
             _border19.SetNameScope(new NameScope());
-            _border19.set_property_value(Border.BackgroundKey, DynamicResource(_border19, "SurfaceContainerLow"));
+            _border19.set_property_value(Border.FillKey, DynamicResource(_border19, "SurfaceContainerLow"));
             _border19.set_property_value(Border.BorderBrushKey, DynamicResource(_border19, "OutlineVariant"));
             _border19.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd20 = _border19.Resources;
@@ -80,7 +80,7 @@ export class WordToolboxDemo extends ResourceDictionary {
             const _dockPanel24 = new DockPanel();
             const _border25 = new Border();
             _border25.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border25.set_property_value(Border.BackgroundKey, DynamicResource(_border25, "InverseSurface"));
+            _border25.set_property_value(Border.FillKey, DynamicResource(_border25, "InverseSurface"));
             _border25.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _stackPanel26 = new StackPanel();
             _stackPanel26.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
@@ -115,7 +115,7 @@ export class WordToolboxDemo extends ResourceDictionary {
             const _dockPanel32 = new DockPanel();
             const _border33 = new Border();
             _border33.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border33.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#e0f2fe')));
+            _border33.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#e0f2fe')));
             _border33.set_property_value(Border.PaddingKey, new Thickness(12, 8, 12, 8));
             const _textBlock34 = new TextBlock();
             _textBlock34.set_property_value(TextBlock.TextKey, "Toolbox — drag a word to the listbox");
@@ -140,7 +140,7 @@ export class WordToolboxDemo extends ResourceDictionary {
             const _dockPanel37 = new DockPanel();
             const _border38 = new Border();
             _border38.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border38.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#dbeafe')));
+            _border38.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#dbeafe')));
             _border38.set_property_value(Border.PaddingKey, new Thickness(12, 8, 12, 8));
             const _textBlock39 = new TextBlock();
             _textBlock39.set_property_value(TextBlock.TextKey, "ListBox — drag tiles to reorder; toolbox words land here");

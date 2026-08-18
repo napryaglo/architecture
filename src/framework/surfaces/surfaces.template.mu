@@ -17,7 +17,7 @@ resources Surfaces {
     // PART_StateLayer overlay that composites @StateHoverOverlay /
     // @StatePressOverlay on hover / press. All three share the same
     // @ShapeMedium corner radius and the same 16dp content padding;
-    // they differ in Background, BorderThickness, and resting Effect.
+    // they differ in Fill, BorderThickness, and resting Effect.
     //
     // Hover behaviour (all variants): elevation bumps one level above
     // the resting value (Filled / Outlined go Level0 → Level1, Elevated
@@ -34,21 +34,21 @@ resources Surfaces {
     // Filled — @SurfaceContainerHighest, no border, no resting Effect.
     Template x:key="DefaultFilledCard" [TargetType = Card] {
         Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerHighest,
+            [ Fill      = @SurfaceContainerHighest,
               BorderThickness = (0),
               CornerRadius    = @ShapeMedium ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeMedium,
                   Padding      = (16,16,16,16) ] {
                 ContentPresenter
             }
         }
         when ( IsMouseOver ) {
-            PART_StateLayer.Background = @StateHoverOverlay;
+            PART_StateLayer.Fill = @StateHoverOverlay;
             PART_Border.Effect = @ElevationLevel1;
         }
-        when ( IsPressed ) { PART_StateLayer.Background = @StatePressOverlay; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @StatePressOverlay; }
         // Density — tighten / loosen the 16dp content padding on the 4dp
         // grid. Card is a container (no own touch target), so this is a
         // spacing response only; the interactive Content inside adapts via
@@ -60,23 +60,23 @@ resources Surfaces {
     // Elevated — @SurfaceContainerLow, no border, resting Level1.
     Template x:key="DefaultElevatedCard" [TargetType = Card] {
         Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerLow,
+            [ Fill      = @SurfaceContainerLow,
               BorderThickness = (0),
               CornerRadius    = @ShapeMedium,
               Effect          = @ElevationLevel1 ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeMedium,
                   Padding      = (16,16,16,16) ] {
                 ContentPresenter
             }
         }
         when ( IsMouseOver ) {
-            PART_StateLayer.Background = @StateHoverOverlay;
+            PART_StateLayer.Fill = @StateHoverOverlay;
             PART_Border.Effect = @ElevationLevel2;
         }
         when ( IsPressed ) {
-            PART_StateLayer.Background = @StatePressOverlay;
+            PART_StateLayer.Fill = @StatePressOverlay;
             PART_Border.Effect = @ElevationLevel1;
         }
         when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (12,12,12,12); }
@@ -86,22 +86,22 @@ resources Surfaces {
     // Outlined — @Surface, 1-DIP @Outline border, no resting Effect.
     Template x:key="DefaultOutlinedCard" [TargetType = Card] {
         Border x:name="PART_Border"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @Outline,
               BorderThickness = (1),
               CornerRadius    = @ShapeMedium ] {
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeMedium,
                   Padding      = (15,15,15,15) ] {
                 ContentPresenter
             }
         }
         when ( IsMouseOver ) {
-            PART_StateLayer.Background = @StateHoverOverlay;
+            PART_StateLayer.Fill = @StateHoverOverlay;
             PART_Border.Effect = @ElevationLevel1;
         }
-        when ( IsPressed ) { PART_StateLayer.Background = @StatePressOverlay; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @StatePressOverlay; }
         when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (2); }
         // Density — the outlined variant's resting padding is 15 (16 − 1dp
         // border), so the ladder keeps that −1 offset: 11 / 23.
@@ -147,7 +147,7 @@ resources Surfaces {
     // migrated off resolveXxx-from-ctor to a real Template DP).
     //
     // M3 spec deltas closed by this template:
-    //   * Background: @SurfaceContainerLow (M3 Standard / Modal).
+    //   * Fill: @SurfaceContainerLow (M3 Standard / Modal).
     //   * Padding:    (0,12,0,0) — M3's 12dp top inset baked in.
     //   * Elevation:  @ElevationLevel1 when Variant=Temporary (M3 Modal
     //                 floats over content with a shadow ramp; Permanent
@@ -161,7 +161,7 @@ resources Surfaces {
     //     mural's template DSL doesn't support yet.
     Template x:key="DefaultDrawerPane" [TargetType = Drawer] {
         Border x:name="PART_Pane"
-            [ Background      = @SurfaceContainerLow,
+            [ Fill      = @SurfaceContainerLow,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1),
               Padding         = (@Spacing0,@Spacing3,@Spacing0,@Spacing0) ] {
@@ -187,7 +187,7 @@ resources Surfaces {
     // surface itself.
     Template x:key="DefaultDialog" [TargetType = Dialog] {
         Border x:name="PART_Dialog"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = #00000000,
               BorderThickness = (0),
               CornerRadius    = @ShapeExtraLarge,
@@ -226,7 +226,7 @@ resources Surfaces {
     // `new CornerRadius(...)` rather than the default Thickness shape.
     Template x:key="DefaultBottomSheet" [TargetType = BottomSheet] {
         Border x:name="PART_Sheet"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = #00000000,
               BorderThickness = (0),
               CornerRadius    = (@ShapeExtraLarge,@ShapeExtraLarge,0,0),
@@ -253,7 +253,7 @@ resources Surfaces {
     // Standard variant keeps it docked in-flow.
     Template x:key="DefaultSideSheet" [TargetType = SideSheet] {
         Border x:name="PART_Sheet"
-            [ Background      = @SurfaceContainerLow,
+            [ Fill      = @SurfaceContainerLow,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1,0,0,0) ] {
             Grid {

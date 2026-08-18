@@ -437,7 +437,7 @@ export class Lexer
     // [A-Za-z_][A-Za-z0-9_]* — underscores allowed (matches the XAML
     // PART_Border naming convention used throughout the bundled
     // ControlTemplates and surfaces in trigger setter LHS like
-    // `PART_Border.Background = …`). Hyphens still excluded; they're
+    // `PART_Border.Fill = …`). Hyphens still excluded; they're
     // reserved as a binary minus / negative-number prefix.
     private lexIdent(start: SourceLocation): Token
     {

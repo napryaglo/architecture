@@ -44,7 +44,7 @@ const EMPTY_CAP_OPTIONS: readonly CapOption[] = Object.freeze([]) as readonly Ca
 // responsibility on routing values between the consumer and the editors.
 export class ShapeFormatControl extends TemplatedControl
 {
-    public static readonly FillKey   = Model.RegisterProperty<Brush | undefined>(
+    public static override readonly FillKey   = Model.RegisterProperty<Brush | undefined>(
         ShapeFormatControl, 'Fill',   undefined,
         MetaData.None | MetaData.BindsTwoWayByDefault);
     public static readonly StrokeKey = Model.RegisterProperty<Pen | undefined>(
@@ -80,8 +80,8 @@ export class ShapeFormatControl extends TemplatedControl
         ShapeFormatControl, 'TargetCapScale', 1,
         MetaData.None | MetaData.BindsTwoWayByDefault);
 
-    public get Fill():   Brush | undefined  { return this.get_property_value(ShapeFormatControl.FillKey); }
-    public set Fill(v:   Brush | undefined) { this.set_property_value(ShapeFormatControl.FillKey, v); }
+    public override get Fill():   Brush | undefined  { return this.get_property_value(ShapeFormatControl.FillKey); }
+    public override set Fill(v:   Brush | undefined) { this.set_property_value(ShapeFormatControl.FillKey, v); }
     public get Stroke(): Pen | undefined    { return this.get_property_value(ShapeFormatControl.StrokeKey); }
     public set Stroke(v: Pen | undefined)   { this.set_property_value(ShapeFormatControl.StrokeKey, v); }
     public get SourceCapTemplate(): DataTemplate | undefined { return this.get_property_value(ShapeFormatControl.SourceCapTemplateKey); }

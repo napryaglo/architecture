@@ -412,8 +412,8 @@ export class Model
     // Public accessors
     //
     // The canonical consumer surface is the typed-key form on every
-    // accessor — `model.get_property_value(Border.BackgroundKey)`,
-    // `model.set_property_value(Border.BackgroundKey, brush)`, etc.
+    // accessor — `model.get_property_value(Border.FillKey)`,
+    // `model.set_property_value(Border.FillKey, brush)`, etc.
     // The phantom `T` on `PropertyKey<T>` makes a typo at the call site
     // a compile error and threads the value type through the accessor
     // signature so no `as T` cast is needed.

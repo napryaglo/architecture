@@ -34,13 +34,13 @@ export type InternalPropertyChangeCallback = (
 // In WPF the order is Local > Trigger, but mural's `.mu` templates emit
 // per-part defaults via the factory's `set_property_value` calls
 // (LocalValue tier) and then express state-driven overrides
-// (`when ( IsMouseOver ) { PART_Border.Background = … }`) via
+// (`when ( IsMouseOver ) { PART_Border.Fill = … }`) via
 // TemplatePropertyTrigger — which writes at TriggerValue. With the WPF
 // order those state triggers were invisible (LocalValue blocked them),
 // so every templated control's hover / press / IsChecked feedback
 // silently broke. Promoting Trigger above Local matches the way
 // authors write templates here, at the cost of consumers no longer
-// being able to write `widget.Background = brush` over an active
+// being able to write `widget.Fill = brush` over an active
 // trigger.
 //
 // The enum values themselves don't encode priority — the EVD's `value`

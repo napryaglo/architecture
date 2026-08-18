@@ -35,11 +35,11 @@ resources Toggles {
         // then spans the grown bounds while the track (and its margin-
         // anchored thumb) stay centred and unclipped.
         Border x:name="PART_HitTarget"
-            [ Background          = #00000000,
+            [ Fill          = #00000000,
               HorizontalAlignment = Stretch,
               VerticalAlignment   = Stretch ] {
             Border x:name="PART_Track"
-                [ Background          = @SurfaceContainerHighest,
+                [ Fill          = @SurfaceContainerHighest,
                   BorderBrush         = @Outline,
                   BorderThickness     = (2),
                   CornerRadius        = @ShapeFull,
@@ -54,7 +54,7 @@ resources Toggles {
                 // height, 16dp Width fixed below). The IsChecked trigger
                 // shifts to right-anchored + 24dp width.
                 Border x:name="PART_Thumb"
-                    [ Background          = @Outline,
+                    [ Fill          = @Outline,
                       CornerRadius        = @ShapeFull,
                       BorderThickness     = (0),
                       Width               = 16,
@@ -67,9 +67,9 @@ resources Toggles {
         // IsChecked — track + thumb both flip palette; the thumb grows
         // and re-anchors to the right edge.
         when ( IsChecked ) {
-            PART_Track.Background = @Primary;
+            PART_Track.Fill = @Primary;
             PART_Track.BorderBrush = @Primary;
-            PART_Thumb.Background = @OnPrimary;
+            PART_Thumb.Fill = @OnPrimary;
             PART_Thumb.Width = 24;
             PART_Thumb.Height = 24;
             PART_Thumb.Margin = (24,0,0,0);
@@ -77,8 +77,8 @@ resources Toggles {
         // State-layer ladder. Hover / focus / press tint the thumb at
         // the Primary state-layer opacities so the affordance reads
         // even when the track is unchecked.
-        when ( IsMouseOver ) { PART_Thumb.Background = @OnSurface; }
-        when ( IsFocused ) { PART_Thumb.Background = @OnSurface; }
+        when ( IsMouseOver ) { PART_Thumb.Fill = @OnSurface; }
+        when ( IsFocused ) { PART_Thumb.Fill = @OnSurface; }
         when ( IsPressed ) {
             PART_Thumb.Width = 28;
             PART_Thumb.Height = 28;
@@ -117,11 +117,11 @@ resources Toggles {
         // this wrapper — the Checkbox pins its 18×18 defaults, so that's what
         // the render size clamps to. The box keeps its 2dp border unscaled.
         Border x:name="PART_HitTarget"
-            [ Background          = #00000000,
+            [ Fill          = #00000000,
               HorizontalAlignment = Stretch,
               VerticalAlignment   = Stretch ] {
             Border x:name="PART_Box"
-                [ Background          = #00000000,
+                [ Fill          = #00000000,
                   BorderBrush         = @OnSurfaceVariant,
                   BorderThickness     = (2),
                   CornerRadius        = @ShapeExtraSmall,
@@ -141,7 +141,7 @@ resources Toggles {
         }
         // IsChecked — fill the box and reveal the glyph.
         when ( IsChecked ) {
-            PART_Box.Background = @Primary;
+            PART_Box.Fill = @Primary;
             PART_Box.BorderBrush = @Primary;
             PART_Mark.Opacity = 1;
         }
@@ -181,11 +181,11 @@ resources Toggles {
         // grows via the CONTROL's Width/Height (Style triggers below), not
         // this wrapper — the ring's 2dp stroke stays unscaled.
         Border x:name="PART_HitTarget"
-            [ Background          = #00000000,
+            [ Fill          = #00000000,
               HorizontalAlignment = Stretch,
               VerticalAlignment   = Stretch ] {
             Border x:name="PART_Ring"
-                [ Background          = #00000000,
+                [ Fill          = #00000000,
                   BorderBrush         = @OnSurfaceVariant,
                   BorderThickness     = (2),
                   CornerRadius        = @ShapeFull,
@@ -194,7 +194,7 @@ resources Toggles {
                   HorizontalAlignment = Center,
                   VerticalAlignment   = Center ] {
                 Border x:name="PART_Dot"
-                    [ Background          = @Primary,
+                    [ Fill          = @Primary,
                       CornerRadius        = @ShapeFull,
                       BorderThickness     = (0),
                       Width               = 10,
@@ -246,12 +246,12 @@ resources Toggles {
     // row's IsSelected (which the owning Selector flips on click). The dot
     // is always present at Opacity 0 so the implicit-transition engine
     // fades it in / out on select without a Storyboard. The whole row is
-    // the hit target (PART_Row); its Background carries the state-layer
+    // the hit target (PART_Row); its Fill carries the state-layer
     // ladder so hover / focus / press read across the full row, not just
     // the 20dp circle.
     Template x:key="DefaultRadioButtonItem" [TargetType = RadioButtonItem] {
         Border x:name="PART_Row"
-            [ Background      = #00000000,
+            [ Fill      = #00000000,
               CornerRadius    = @ShapeSmall,
               Padding         = (@Spacing2,@Spacing1,@Spacing3,@Spacing1) ] {
             // DockPanel (not a horizontal StackPanel): a horizontal StackPanel
@@ -263,7 +263,7 @@ resources Toggles {
             DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_Ring"
                     [ DockPanel.Dock      = Left,
-                      Background          = #00000000,
+                      Fill          = #00000000,
                       BorderBrush         = @OnSurfaceVariant,
                       BorderThickness     = (2),
                       CornerRadius        = @ShapeFull,
@@ -271,7 +271,7 @@ resources Toggles {
                       Height              = 20,
                       VerticalAlignment   = Center ] {
                     Border x:name="PART_Dot"
-                        [ Background          = @Primary,
+                        [ Fill          = @Primary,
                           CornerRadius        = @ShapeFull,
                           BorderThickness     = (0),
                           Width               = 10,
@@ -292,9 +292,9 @@ resources Toggles {
         }
         // State-layer ladder — overlay the full row (ordered after Selected
         // so the pressed/hover tint sits on top of the resting fill).
-        when ( IsMouseOver ) { PART_Row.Background = @StateHoverOverlay; }
-        when ( IsFocused ) { PART_Row.Background = @StateFocusOverlay; }
-        when ( IsPressed ) { PART_Row.Background = @StatePressOverlay; }
+        when ( IsMouseOver ) { PART_Row.Fill = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Row.Fill = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Row.Fill = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_Row.Opacity = @DisabledContentOpacity; }
 
         // Adaptive layout (§ 18.6) — the row is the hit target, so density /

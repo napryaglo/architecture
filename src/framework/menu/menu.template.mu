@@ -43,7 +43,7 @@ resources Menus {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -92,7 +92,7 @@ resources Menus {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -144,7 +144,7 @@ resources Menus {
     // and the chevron column auto-hides when there's no submenu).
     //
     // State chrome is fully declarative:
-    //   * IsMouseOver / IsPressed swap PART_Row.Background through
+    //   * IsMouseOver / IsPressed swap PART_Row.Fill through
     //     the SurfaceContainer ramp (matches the M3 menu-item
     //     hover / pressed surface).
     //   * IsChecked and IsSubmenuOpen both tint the row
@@ -152,7 +152,7 @@ resources Menus {
     //     selection state uses.
     //
     // Mural's TriggerValue tier sits ABOVE LocalValue (see
-    // effective-value.ts), so the trigger Background writes win over
+    // effective-value.ts), so the trigger Fill writes win over
     // the row's factory defaults even when authors re-skin via a
     // child Style.
     //
@@ -206,11 +206,11 @@ resources Menus {
         // whatever surface the popup chrome paints. Using a solid token
         // like @SurfaceContainerHigh here would be invisible — the
         // ContextMenu / MenuButton popup chrome IS @SurfaceContainerHigh.
-        when ( IsMouseOver ) { PART_Row.Background = @StateHoverOverlay; }
-        when ( IsFocused ) { PART_Row.Background = @StateFocusOverlay; }
-        when ( IsPressed ) { PART_Row.Background = @StatePressOverlay; }
-        when ( IsChecked ) { PART_Row.Background = @SecondaryContainer; }
-        when ( IsSubmenuOpen ) { PART_Row.Background = @SecondaryContainer; }
+        when ( IsMouseOver ) { PART_Row.Fill = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Row.Fill = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Row.Fill = @StatePressOverlay; }
+        when ( IsChecked ) { PART_Row.Fill = @SecondaryContainer; }
+        when ( IsSubmenuOpen ) { PART_Row.Fill = @SecondaryContainer; }
         when ( IsEnabled = false ) { PART_Row.Opacity = @DisabledContentOpacity; }
 
         // M3 density variants — tighter Padding on Compact, looser on
@@ -241,7 +241,7 @@ resources Menus {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -282,10 +282,10 @@ resources Menus {
             }
         }
         // State-layer tokens — see DefaultMenuItemRow above for why.
-        when ( IsMouseOver ) { PART_Row.Background = @StateHoverOverlay; }
-        when ( IsFocused ) { PART_Row.Background = @StateFocusOverlay; }
-        when ( IsPressed ) { PART_Row.Background = @StatePressOverlay; }
-        when ( IsSubmenuOpen ) { PART_Row.Background = @SecondaryContainer; }
+        when ( IsMouseOver ) { PART_Row.Fill = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Row.Fill = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Row.Fill = @StatePressOverlay; }
+        when ( IsSubmenuOpen ) { PART_Row.Fill = @SecondaryContainer; }
         when ( IsEnabled = false ) { PART_Row.Opacity = @DisabledContentOpacity; }
 
         when ( ThemeManager.Density = Compact ) {
@@ -313,7 +313,7 @@ resources Menus {
         StackPanel [ Orientation = Horizontal ]
     }
     Style [TargetType = MenuStrip] {
-        Background = @SurfaceContainerLow;
+        Fill = @SurfaceContainerLow;
         Padding = (4,2,4,2);
         ItemsPanel = @DefaultMenuStripPanel;
         ItemContainerStyle = @MenuStripItemStyle;

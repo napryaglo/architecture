@@ -17,10 +17,10 @@ resources HitTestDemo {
     Pen x:key="HeartOutlinePen" [ Brush = #ff00ff, Thickness = 3 ]
 
     DataTemplate [DataType = HitTestVM] {
-        Border x:root [ Background = @Surface ] {
+        Border x:root [ Fill = @Surface ] {
             DockPanel {
                 // ── Header ─────────────────────────────────────────
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (20,14,20,14) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (20,14,20,14) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
                             [ Text       = "Hit test",

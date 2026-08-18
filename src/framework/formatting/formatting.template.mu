@@ -7,7 +7,7 @@
 resources Formatting {
     // ── ColorPicker: closed chrome ─────────────────────────────────
     // A ComboBox-style trigger: rounded outlined border housing a small
-    // swatch (Background bound to the templated parent's SwatchBrush) and
+    // swatch (Fill bound to the templated parent's SwatchBrush) and
     // a chevron. ColorPicker.ctor wires the
     // PointerDown / PointerUp / PointerLeave gesture on
     // PART_SelectionTrigger; on release the picker flips IsDropDownOpen
@@ -19,7 +19,7 @@ resources Formatting {
         // Without it the outlined border stretched full-width while the
         // swatch/label/chevron clustered on the left.
         ClickableBorder x:name="PART_SelectionTrigger"
-            [ Background          = @Surface,
+            [ Fill          = @Surface,
               BorderBrush         = @Outline,
               BorderThickness     = (1),
               CornerRadius        = @ShapeExtraSmall,
@@ -33,7 +33,7 @@ resources Formatting {
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (1),
                       Margin          = (0,0,@Spacing3,0),
-                      Background      = $$SwatchBrush ]
+                      Fill      = $$SwatchBrush ]
                 Shape x:name="PART_Chevron"
                     [ Geometry          = @ChevronDown,
                       Fill              = @OnSurfaceVariant,
@@ -44,10 +44,10 @@ resources Formatting {
         }
 
         when ( PART_SelectionTrigger.IsMouseOver ) {
-            PART_SelectionTrigger.Background = @StateHoverOverlay;
+            PART_SelectionTrigger.Fill = @StateHoverOverlay;
         }
         when ( PART_SelectionTrigger.IsPressed ) {
-            PART_SelectionTrigger.Background = @StatePressOverlay;
+            PART_SelectionTrigger.Fill = @StatePressOverlay;
         }
         when ( IsDropDownOpen ) { PART_SelectionTrigger.BorderBrush = @Primary; }
 
@@ -87,12 +87,12 @@ resources Formatting {
     // "More Colors…" entry opens the advanced editor dialog
     // (DefaultColorPickerMoreColors). ColorPicker scans PART_ThemeGrid /
     // PART_StandardRow / PART_RecentRow and wires each swatch to commit
-    // its own resolved Background colour.
+    // its own resolved Fill colour.
     Template x:key="DefaultColorPickerPopup" [TargetType = ColorPicker] {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -136,7 +136,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
-                              Background      = #C00000 ]
+                              Fill      = #C00000 ]
                         ClickableBorder
                             [ Width           = 22,
                               Height          = 16,
@@ -144,7 +144,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
-                              Background      = #FF0000 ]
+                              Fill      = #FF0000 ]
                         ClickableBorder
                             [ Width           = 22,
                               Height          = 16,
@@ -152,7 +152,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
-                              Background      = #FFC000 ]
+                              Fill      = #FFC000 ]
                         ClickableBorder
                             [ Width           = 22,
                               Height          = 16,
@@ -160,7 +160,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
-                              Background      = #FFFF00 ]
+                              Fill      = #FFFF00 ]
                         ClickableBorder
                             [ Width           = 22,
                               Height          = 16,
@@ -168,7 +168,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
-                              Background      = #92D050 ]
+                              Fill      = #92D050 ]
                         ClickableBorder
                             [ Width           = 22,
                               Height          = 16,
@@ -176,7 +176,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
-                              Background      = #00B050 ]
+                              Fill      = #00B050 ]
                         ClickableBorder
                             [ Width           = 22,
                               Height          = 16,
@@ -184,7 +184,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
-                              Background      = #00B0F0 ]
+                              Fill      = #00B0F0 ]
                         ClickableBorder
                             [ Width           = 22,
                               Height          = 16,
@@ -192,7 +192,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
-                              Background      = #0070C0 ]
+                              Fill      = #0070C0 ]
                         ClickableBorder
                             [ Width           = 22,
                               Height          = 16,
@@ -200,7 +200,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
-                              Background      = #002060 ]
+                              Fill      = #002060 ]
                         ClickableBorder
                             [ Width           = 22,
                               Height          = 16,
@@ -208,7 +208,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,0,0),
-                              Background      = #7030A0 ]
+                              Fill      = #7030A0 ]
                     }
 
                     // ── Recent Colors ──────────────────────────────
@@ -234,7 +234,7 @@ resources Formatting {
                     // Rows + separators span edge-to-edge because the body
                     // has no padding. Built inline — deliberately NOT reusing
                     // the MenuItem / MenuSeparator templates.
-                    Border [ Height = 1, Background = @OutlineVariant ]
+                    Border [ Height = 1, Fill = @OutlineVariant ]
 
                     // More Colors… — opens the advanced editor dialog
                     // (HS box + sliders + hex) as a secondary overlay.
@@ -246,7 +246,7 @@ resources Formatting {
                               Style      = @LabelLarge ]
                     }
 
-                    Border [ Height = 1, Background = @OutlineVariant ]
+                    Border [ Height = 1, Fill = @OutlineVariant ]
 
                     // No Color — clears the selection to a transparent
                     // sentinel. Plain text row, matching More Colors.
@@ -258,7 +258,7 @@ resources Formatting {
                               Style      = @LabelLarge ]
                     }
 
-                    Border [ Height = 1, Background = @OutlineVariant ]
+                    Border [ Height = 1, Fill = @OutlineVariant ]
 
                     // Color Scheme — side-flyout submenu. The chevron marks
                     // it expandable; ColorPicker anchors the scheme gallery
@@ -294,11 +294,11 @@ resources Formatting {
             }
         }
 
-        when ( PART_NoColor.IsMouseOver ) { PART_NoColor.Background = @StateHoverOverlay; }
+        when ( PART_NoColor.IsMouseOver ) { PART_NoColor.Fill = @StateHoverOverlay; }
         when ( PART_SchemeButton.IsMouseOver ) {
-            PART_SchemeButton.Background = @StateHoverOverlay;
+            PART_SchemeButton.Fill = @StateHoverOverlay;
         }
-        when ( PART_MoreColors.IsMouseOver ) { PART_MoreColors.Background = @StateHoverOverlay; }
+        when ( PART_MoreColors.IsMouseOver ) { PART_MoreColors.Fill = @StateHoverOverlay; }
         when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
     }
 
@@ -314,7 +314,7 @@ resources Formatting {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -336,7 +336,7 @@ resources Formatting {
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               Margin          = (0,0,8,0),
-                              Background      = $$SwatchBrush ]
+                              Fill      = $$SwatchBrush ]
                         TextBox x:name="PART_HexInput" [ Width = 220, VerticalAlignment = Center ]
                     }
 
@@ -360,7 +360,7 @@ resources Formatting {
                             Border x:name="PART_VRailCursor"
                                 [ Width      = 26,
                                   Height     = 4,
-                                  Background = #1f2937 ]
+                                  Fill = #1f2937 ]
                         }
                     }
 
@@ -436,7 +436,7 @@ resources Formatting {
                         }
                         ClickableBorder x:name="PART_MoreOk"
                             [ CornerRadius = @ShapeExtraSmall,
-                              Background   = @Primary,
+                              Fill   = @Primary,
                               Padding      = (@Spacing4,@Spacing2,@Spacing4,@Spacing2) ] {
                             TextBlock
                                 [ Text       = "OK",
@@ -448,7 +448,7 @@ resources Formatting {
             }
         }
 
-        when ( PART_MoreCancel.IsMouseOver ) { PART_MoreCancel.Background = @StateHoverOverlay; }
+        when ( PART_MoreCancel.IsMouseOver ) { PART_MoreCancel.Fill = @StateHoverOverlay; }
         when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
     }
 
@@ -461,7 +461,7 @@ resources Formatting {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -499,7 +499,7 @@ resources Formatting {
     // Leave on PART_SelectionTrigger.
     Template x:key="DefaultBrushPicker" [TargetType = BrushPicker] {
         ClickableBorder x:name="PART_SelectionTrigger"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @Outline,
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
@@ -512,7 +512,7 @@ resources Formatting {
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (1),
                       Margin          = (0,0,@Spacing3,0),
-                      Background      = $$PreviewBrush ]
+                      Fill      = $$PreviewBrush ]
                 TextBlock x:name="PART_VariantLabel"
                     [ Text              = "Solid",
                       Foreground        = @OnSurface,
@@ -529,10 +529,10 @@ resources Formatting {
         }
 
         when ( PART_SelectionTrigger.IsMouseOver ) {
-            PART_SelectionTrigger.Background = @StateHoverOverlay;
+            PART_SelectionTrigger.Fill = @StateHoverOverlay;
         }
         when ( PART_SelectionTrigger.IsPressed ) {
-            PART_SelectionTrigger.Background = @StatePressOverlay;
+            PART_SelectionTrigger.Fill = @StatePressOverlay;
         }
         when ( IsDropDownOpen ) { PART_SelectionTrigger.BorderBrush = @Primary; }
         when ( Variant = Linear ) { PART_VariantLabel.Text = "Linear gradient"; }
@@ -575,7 +575,7 @@ resources Formatting {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -586,7 +586,7 @@ resources Formatting {
                     // ── Variant tabs ─────────────────────────────
                     StackPanel [ Orientation = Horizontal, Margin = (0,0,0,10) ] {
                         ClickableBorder x:name="PART_TabSolid"
-                            [ Background   = @SecondaryContainer,
+                            [ Fill   = @SecondaryContainer,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -596,7 +596,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabLinear"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -606,7 +606,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabRadial"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -616,7 +616,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabPattern"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4) ] {
                             TextBlock
@@ -639,7 +639,7 @@ resources Formatting {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -649,7 +649,7 @@ resources Formatting {
                 StackPanel [ Orientation = Vertical ] {
                     StackPanel [ Orientation = Horizontal, Margin = (0,0,0,10) ] {
                         ClickableBorder x:name="PART_TabSolid"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -659,7 +659,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabLinear"
-                            [ Background   = @SecondaryContainer,
+                            [ Fill   = @SecondaryContainer,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -669,7 +669,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabRadial"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -679,7 +679,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabPattern"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4) ] {
                             TextBlock
@@ -728,7 +728,7 @@ resources Formatting {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -738,7 +738,7 @@ resources Formatting {
                 StackPanel [ Orientation = Vertical ] {
                     StackPanel [ Orientation = Horizontal, Margin = (0,0,0,10) ] {
                         ClickableBorder x:name="PART_TabSolid"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -748,7 +748,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabLinear"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -758,7 +758,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabRadial"
-                            [ Background   = @SecondaryContainer,
+                            [ Fill   = @SecondaryContainer,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -768,7 +768,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabPattern"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4) ] {
                             TextBlock
@@ -847,7 +847,7 @@ resources Formatting {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -857,7 +857,7 @@ resources Formatting {
                 StackPanel [ Orientation = Vertical ] {
                     StackPanel [ Orientation = Horizontal, Margin = (0,0,0,10) ] {
                         ClickableBorder x:name="PART_TabSolid"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -867,7 +867,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabLinear"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -877,7 +877,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabRadial"
-                            [ Background   = @Surface,
+                            [ Fill   = @Surface,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4),
                               Margin       = (0,0,4,0) ] {
@@ -887,7 +887,7 @@ resources Formatting {
                                   Style      = @LabelMedium ]
                         }
                         ClickableBorder x:name="PART_TabPattern"
-                            [ Background   = @SecondaryContainer,
+                            [ Fill   = @SecondaryContainer,
                               CornerRadius = @ShapeExtraSmall,
                               Padding      = (10,4,10,4) ] {
                             TextBlock
@@ -1209,7 +1209,7 @@ resources Formatting {
             // lays them in two rows regardless of pane width.
             UniformGrid [ Grid.Row = 2, Grid.ColumnSpan = 2, Columns = 3, Margin = (0,0,0,@Spacing4) ] {
                 ClickableBorder x:name="PART_TabNone"
-                    [ Background          = @Surface,
+                    [ Fill          = @Surface,
                       BorderBrush         = @OutlineVariant,
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
@@ -1223,7 +1223,7 @@ resources Formatting {
                           HorizontalAlignment = Center ]
                 }
                 ClickableBorder x:name="PART_TabSolid"
-                    [ Background          = @Surface,
+                    [ Fill          = @Surface,
                       BorderBrush         = @OutlineVariant,
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
@@ -1237,7 +1237,7 @@ resources Formatting {
                           HorizontalAlignment = Center ]
                 }
                 ClickableBorder x:name="PART_TabLinear"
-                    [ Background          = @Surface,
+                    [ Fill          = @Surface,
                       BorderBrush         = @OutlineVariant,
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
@@ -1251,7 +1251,7 @@ resources Formatting {
                           HorizontalAlignment = Center ]
                 }
                 ClickableBorder x:name="PART_TabRadial"
-                    [ Background          = @Surface,
+                    [ Fill          = @Surface,
                       BorderBrush         = @OutlineVariant,
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
@@ -1265,7 +1265,7 @@ resources Formatting {
                           HorizontalAlignment = Center ]
                 }
                 ClickableBorder x:name="PART_TabPattern"
-                    [ Background          = @Surface,
+                    [ Fill          = @Surface,
                       BorderBrush         = @OutlineVariant,
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
@@ -1279,7 +1279,7 @@ resources Formatting {
                           HorizontalAlignment = Center ]
                 }
                 ClickableBorder x:name="PART_TabPicture"
-                    [ Background          = @Surface,
+                    [ Fill          = @Surface,
                       BorderBrush         = @OutlineVariant,
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
@@ -1342,12 +1342,12 @@ resources Formatting {
             }
         }
 
-        when ( Variant = None ) { PART_TabNone.Background = @SecondaryContainer; }
-        when ( Variant = Solid ) { PART_TabSolid.Background = @SecondaryContainer; }
-        when ( Variant = Linear ) { PART_TabLinear.Background = @SecondaryContainer; }
-        when ( Variant = Radial ) { PART_TabRadial.Background = @SecondaryContainer; }
-        when ( Variant = Pattern ) { PART_TabPattern.Background = @SecondaryContainer; }
-        when ( Variant = Picture ) { PART_TabPicture.Background = @SecondaryContainer; }
+        when ( Variant = None ) { PART_TabNone.Fill = @SecondaryContainer; }
+        when ( Variant = Solid ) { PART_TabSolid.Fill = @SecondaryContainer; }
+        when ( Variant = Linear ) { PART_TabLinear.Fill = @SecondaryContainer; }
+        when ( Variant = Radial ) { PART_TabRadial.Fill = @SecondaryContainer; }
+        when ( Variant = Pattern ) { PART_TabPattern.Fill = @SecondaryContainer; }
+        when ( Variant = Picture ) { PART_TabPicture.Fill = @SecondaryContainer; }
     }
 
     // ── Body templates ─────────────────────────────────────────────

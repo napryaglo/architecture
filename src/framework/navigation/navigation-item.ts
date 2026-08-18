@@ -15,7 +15,7 @@ import { TextBlock } from '../../basic/text-block.js';
 // bottom tab strip). Mirrors WPF / UWP's NavigationViewItem.
 //
 // Anatomy (M3):
-//   * Icon container — pill-shaped (56dp × 32dp). Background is
+//   * Icon container — pill-shaped (56dp × 32dp). Fill is
 //     transparent at rest, @SecondaryContainer when selected.
 //   * Icon — 24dp glyph slotted via the `Icon` DP. Ink: @OnSurfaceVariant
 //     at rest, @OnSecondaryContainer when selected.
@@ -156,7 +156,7 @@ export class NavigationItem extends ContentControl
             // (Selector) writes the attached DP; the template's
             // `when (IsSelected)` trigger watches the instance DP. Without
             // the attached→instance leg the trigger never fires, and the
-            // M3 selection chrome (PART_IconContainer.Background flipping
+            // M3 selection chrome (PART_IconContainer.Fill flipping
             // to @SecondaryContainer) stays invisible.
             const fromAttached = descriptor.Owner === Selector;
             const fromInstance = descriptor.Owner === NavigationItem;

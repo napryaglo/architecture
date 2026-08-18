@@ -112,7 +112,7 @@ describe('ListBox selection survives container recycle by data identity', () => 
     test('ItemContainerStyle + custom template with IsSelected trigger: chrome clears across recycle cycles (word-toolbox parity)', () => {
         // Mimics the WordTileItemStyle setup: an ItemContainerStyle
         // whose Template carries a TemplatePropertyTrigger watching
-        // IsSelected and writing PART_Border.Background. The default
+        // IsSelected and writing PART_Border.Fill. The default
         // ListBoxItem template already has its own IsSelected → chrome
         // trigger, but consumers who supply their OWN template via
         // ItemContainerStyle (word-toolbox right pane) get a different
@@ -130,7 +130,7 @@ describe('ListBox selection survives container recycle by data identity', () => 
             [
                 new TemplatePropertyTrigger(
                     ListBoxItem, 'IsSelected', true,
-                    [new TargetedSetter(Border, 'Background', selectedBrush, 'PART_Border')],
+                    [new TargetedSetter(Border, 'Fill', selectedBrush, 'PART_Border')],
                 ),
             ],
         );
@@ -149,7 +149,7 @@ describe('ListBox selection survives container recycle by data identity', () => 
         const partBorder5 = C5.visualChildren[0]!.FindName('PART_Border') as Border;
         assert.ok(partBorder5 instanceof Border, 'PART_Border missing in custom template root');
         assert.equal(C5.IsSelected, true);
-        assert.equal(partBorder5.Background, selectedBrush,
+        assert.equal(partBorder5.Fill, selectedBrush,
             'selected row should have the trigger-applied background');
 
         // Recycle C5 (and a few siblings) — mimics scroll-out.
@@ -172,8 +172,8 @@ describe('ListBox selection survives container recycle by data identity', () => 
             assert.equal(c.IsSelected, false,
                 `recycled container rebound to a non-selected item must not show IsSelected`);
             const pb = c.visualChildren[0]!.FindName('PART_Border') as Border;
-            assert.equal(pb.Background, undefined,
-                `recycled container must shed the trigger-applied background — saw ${pb.Background}`);
+            assert.equal(pb.Fill, undefined,
+                `recycled container must shed the trigger-applied background — saw ${pb.Fill}`);
         }
     });
 
@@ -182,7 +182,7 @@ describe('ListBox selection survives container recycle by data identity', () => 
         // scroll-recycle selection issue. During the recycle cycle the
         // container sits in the pool (detached, _target=undefined).
         // bindContainer fires SetIsSelectedInternal(false) → trigger →
-        // PART_Border.Background change → InvalidateVisual on
+        // PART_Border.Fill change → InvalidateVisual on
         // PART_Border. If that call is a no-op while detached, the
         // SVG keeps the prior binding's blue paint. Verified here at
         // the lowest level: confirm the visual queues the invalidation
@@ -227,9 +227,9 @@ describe('ListBox selection survives container recycle by data identity', () => 
             're-attach with no new invalidation must not replay anything');
     });
 
-    test('PART_Border.Background clears on rebind to a non-selected item (chrome end-to-end)', async () => {
+    test('PART_Border.Fill clears on rebind to a non-selected item (chrome end-to-end)', async () => {
         // The default ListBoxItem template's IsSelected trigger writes
-        // PART_Border.Background = @SecondaryContainer. That's a
+        // PART_Border.Fill = @SecondaryContainer. That's a
         // DynamicResource lookup that needs SOME palette merged into
         // Application.Resources — without it the trigger value
         // resolves to undefined and the assertion below has nothing
@@ -246,7 +246,7 @@ describe('ListBox selection survives container recycle by data identity', () => 
         const containerB = lb.Generator.ContainerFromItem('B') as ListBoxItem;
         // Resolve PART_Border via the template root's namescope.
         // Default template wraps content in a PART_Border the
-        // IsSelected trigger writes Background on.
+        // IsSelected trigger writes Fill on.
         const root = containerB.visualChildren[0]!;
         const partBorder = root.FindName('PART_Border') as Border | undefined;
         assert.ok(partBorder instanceof Border,
@@ -254,7 +254,7 @@ describe('ListBox selection survives container recycle by data identity', () => 
         // While selected, the IsSelected trigger writes the
         // SecondaryContainer brush. Snapshot it so we can verify it
         // clears after rebind.
-        const selectedBg = partBorder.Background;
+        const selectedBg = partBorder.Fill;
         assert.ok(selectedBg !== undefined,
             'selected row should have a non-undefined background from the trigger');
 
@@ -264,7 +264,7 @@ describe('ListBox selection survives container recycle by data identity', () => 
         assert.equal(recycled.IsSelected, false);
         const partBorderAfter = recycled.visualChildren[0]!.FindName('PART_Border') as Border | undefined;
         assert.ok(partBorderAfter instanceof Border);
-        assert.equal(partBorderAfter.Background, undefined,
+        assert.equal(partBorderAfter.Fill, undefined,
             'after rebind to a non-selected item the chrome background should clear');
     });
 });

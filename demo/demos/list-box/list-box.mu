@@ -13,7 +13,7 @@ import ListBoxVM from "./list-box-vm.mjs"
 resources ListBoxDemo {
     DataTemplate [DataType = ListBoxVM] {
         Border x:root
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1) ] {
             // x:root marks this Border as the NameScope owner so x:name
@@ -25,7 +25,7 @@ resources ListBoxDemo {
             // built-in ScrollViewers have a bounded viewport.
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "ListBox demo — declarative vs. Items",
                           FontSize   = 15,
@@ -92,7 +92,7 @@ resources ListBoxDemo {
                     }
 
                     // Divider
-                    Border [ Width = 1, Background = @OutlineVariant, Margin = (0,12,0,12) ]
+                    Border [ Width = 1, Fill = @OutlineVariant, Margin = (0,12,0,12) ]
 
                     // Middle: Items convenience path. The host walks the
                     // attached Items array (string values) and auto-
@@ -108,7 +108,7 @@ resources ListBoxDemo {
                     }
 
                     // Divider
-                    Border [ Width = 1, Background = @OutlineVariant, Margin = (0,12,0,12) ]
+                    Border [ Width = 1, Fill = @OutlineVariant, Margin = (0,12,0,12) ]
 
                     // Right: ItemsSource + CollectionView. VM wires
                     // CollectionView with Filter + Sort applied;

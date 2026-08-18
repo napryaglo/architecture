@@ -32,7 +32,7 @@ resources ToolBars {
     // rebuildContent in tool-bar-items.ts).
     Template x:key="DefaultToolBarButton" [TargetType = ToolBarButton] {
         Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerHigh,
+            [ Fill      = @SurfaceContainerHigh,
               BorderThickness = (0),
               CornerRadius    = 0 ] {
             // Transparent inner state layer (M3 state-layer model): the
@@ -44,14 +44,14 @@ resources ToolBars {
             // NOT clip its child to CornerRadius, so the Position triggers
             // round this layer in lock-step with PART_Border.
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = 0,
                   Padding      = (12,8,12,8) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
         when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; PART_StateLayer.CornerRadius = CornerRadius.Full; }
         when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; PART_StateLayer.CornerRadius = CornerRadius.LeftRounded; }
         when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; PART_StateLayer.CornerRadius = CornerRadius.RightRounded; }
@@ -84,7 +84,7 @@ resources ToolBars {
     // the chrome reads as "Filled" (@Primary) while checked so a sticky
     // toggle (Bold, Italic, …) reads unmistakably against the surrounding
     // square buttons. The position triggers ride on top of IsChecked
-    // because they target a different DP (CornerRadius vs Background).
+    // because they target a different DP (CornerRadius vs Fill).
     //
     // Checked ink: the Style below flips the inherited TextBlock.Foreground
     // to @OnPrimary while checked, so a bare icon Shape (Fill unset) painted
@@ -95,25 +95,25 @@ resources ToolBars {
     // IconButtonToggle Style carries its checked foregrounds.
     Template x:key="DefaultToolBarToggleButton" [TargetType = ToolBarToggleButton] {
         Border x:name="PART_Border"
-            [ Background      = @SurfaceContainerHigh,
+            [ Fill      = @SurfaceContainerHigh,
               BorderThickness = (0),
               CornerRadius    = 0 ] {
             // Same transparent state layer as DefaultToolBarButton — hover /
             // press ride a translucent OnSurfaceVariant tint ON TOP of the
             // base, matching the Filled IconButtonToggle. IsChecked swaps the
-            // base fill (PART_Border.Background) to @Primary; the state layer
+            // base fill (PART_Border.Fill) to @Primary; the state layer
             // overlays either base without touching it, so checked + hover
             // composes as Primary + tint instead of one darkening the other.
             Border x:name="PART_StateLayer"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = 0,
                   Padding      = (12,8,12,8) ] {
                 ContentPresenter
             }
         }
-        when ( IsMouseOver ) { PART_StateLayer.Background = @OnSurfaceVariantHoverLayer; }
-        when ( IsPressed ) { PART_StateLayer.Background = @OnSurfaceVariantPressLayer; }
-        when ( IsChecked ) { PART_Border.Background = @Primary; }
+        when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
+        when ( IsChecked ) { PART_Border.Fill = @Primary; }
         when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; PART_StateLayer.CornerRadius = CornerRadius.Full; }
         when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; PART_StateLayer.CornerRadius = CornerRadius.LeftRounded; }
         when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; PART_StateLayer.CornerRadius = CornerRadius.RightRounded; }
@@ -158,33 +158,33 @@ resources ToolBars {
     Template x:key="DefaultToolBarSplitTrigger" [TargetType = ToolBarSplitButton] {
         StackPanel [ Orientation = Horizontal ] {
             Border x:name="PART_Primary"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   CornerRadius    = (@ShapeSmall,0,0,@ShapeSmall),
                   BorderThickness = (0) ] {
                 Border x:name="PART_PrimaryState"
-                    [ Background   = #00000000,
+                    [ Fill   = #00000000,
                       CornerRadius = (@ShapeSmall,0,0,@ShapeSmall),
                       Padding      = (12,8,10,8) ] {
                     Border x:name="PART_Content" [ HorizontalAlignment = Center, VerticalAlignment = Center ]
                 }
             }
             Border x:name="PART_Arrow"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   CornerRadius    = (0,@ShapeSmall,@ShapeSmall,0),
                   BorderThickness = (1,0,0,0),
                   BorderBrush     = @OutlineVariant ] {
                 Border x:name="PART_ArrowState"
-                    [ Background   = #00000000,
+                    [ Fill   = #00000000,
                       CornerRadius = (0,@ShapeSmall,@ShapeSmall,0),
                       Padding      = (6,8,8,8) ] {
                     Shape [ Geometry = @ChevronDown, Fill = @OnSurfaceVariant, Width = 12, Height = 12, VerticalAlignment = Center ]
                 }
             }
         }
-        when ( PART_Primary.IsMouseOver ) { PART_PrimaryState.Background = @OnSurfaceVariantHoverLayer; }
-        when ( PART_Primary.IsPressed ) { PART_PrimaryState.Background = @OnSurfaceVariantPressLayer; }
-        when ( PART_Arrow.IsMouseOver ) { PART_ArrowState.Background = @OnSurfaceVariantHoverLayer; }
-        when ( PART_Arrow.IsPressed ) { PART_ArrowState.Background = @OnSurfaceVariantPressLayer; }
+        when ( PART_Primary.IsMouseOver ) { PART_PrimaryState.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( PART_Primary.IsPressed ) { PART_PrimaryState.Fill = @OnSurfaceVariantPressLayer; }
+        when ( PART_Arrow.IsMouseOver ) { PART_ArrowState.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( PART_Arrow.IsPressed ) { PART_ArrowState.Fill = @OnSurfaceVariantPressLayer; }
         when ( IsEnabled = false ) { PART_Primary.Opacity = @DisabledContentOpacity; PART_Arrow.Opacity = @DisabledContentOpacity; }
     }
     // Dropdown chrome (single-part) — adopted when the split button has NO
@@ -197,11 +197,11 @@ resources ToolBars {
     // trigger in its own scoped Style (see Plexus's @CompactSplitButtonStyle).
     Template x:key="DefaultToolBarDropdownTrigger" [TargetType = ToolBarSplitButton] {
         Border x:name="PART_Primary"
-            [ Background      = @SurfaceContainerHigh,
+            [ Fill      = @SurfaceContainerHigh,
               CornerRadius    = @ShapeSmall,
               BorderThickness = (0) ] {
             Border x:name="PART_PrimaryState"
-                [ Background   = #00000000,
+                [ Fill   = #00000000,
                   CornerRadius = @ShapeSmall,
                   Padding      = (12,8,10,8) ] {
                 StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
@@ -210,8 +210,8 @@ resources ToolBars {
                 }
             }
         }
-        when ( PART_Primary.IsMouseOver ) { PART_PrimaryState.Background = @OnSurfaceVariantHoverLayer; }
-        when ( PART_Primary.IsPressed ) { PART_PrimaryState.Background = @OnSurfaceVariantPressLayer; }
+        when ( PART_Primary.IsMouseOver ) { PART_PrimaryState.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( PART_Primary.IsPressed ) { PART_PrimaryState.Fill = @OnSurfaceVariantPressLayer; }
         when ( IsEnabled = false ) { PART_Primary.Opacity = @DisabledContentOpacity; }
     }
     // Popup chrome — MenuPopupHost positions PART_PopupContainer below the
@@ -220,7 +220,7 @@ resources ToolBars {
         MenuPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -302,7 +302,7 @@ resources ToolBars {
         ToolBarPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   Padding         = (4) ] {

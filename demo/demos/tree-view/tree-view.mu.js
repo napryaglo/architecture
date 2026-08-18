@@ -19,13 +19,13 @@ export class TreeViewDemo extends ResourceDictionary {
             let _treeView1;
             const _border2 = new Border();
             _border2.SetNameScope(new NameScope());
-            _border2.set_property_value(Border.BackgroundKey, DynamicResource(_border2, "Surface"));
+            _border2.set_property_value(Border.FillKey, DynamicResource(_border2, "Surface"));
             _border2.set_property_value(Border.BorderBrushKey, DynamicResource(_border2, "OutlineVariant"));
             _border2.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel3 = new DockPanel();
             const _border4 = new Border();
             _border4.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border4.set_property_value(Border.BackgroundKey, DynamicResource(_border4, "Primary"));
+            _border4.set_property_value(Border.FillKey, DynamicResource(_border4, "Primary"));
             _border4.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock5 = new TextBlock();
             _textBlock5.set_property_value(TextBlock.TextKey, "TreeView — composed markup vs. HierarchicalDataTemplate");
@@ -107,7 +107,7 @@ export class TreeViewDemo extends ResourceDictionary {
             _stackPanel6.AddChild(_stackPanel7);
             const _border27 = new Border();
             _border27.set_property_value(Border.WidthKey, 1);
-            _border27.set_property_value(Border.BackgroundKey, DynamicResource(_border27, "OutlineVariant"));
+            _border27.set_property_value(Border.FillKey, DynamicResource(_border27, "OutlineVariant"));
             _border27.set_property_value(Border.MarginKey, new Thickness(0, 12, 0, 12));
             _stackPanel6.AddChild(_border27);
             const _stackPanel28 = new StackPanel();

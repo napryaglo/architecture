@@ -16,13 +16,13 @@ export class SplitterDemo extends ResourceDictionary {
         const t = new SplitterDemo(_gate_SplitterDemo);
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Primary"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Primary"));
             _border3.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _stackPanel4 = new StackPanel();
             _stackPanel4.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
@@ -58,7 +58,7 @@ export class SplitterDemo extends ResourceDictionary {
             const _border11 = new Border();
             _border11.set_property_value(Border.WidthKey, 200);
             _border11.set_property_value(Border.HeightKey, 138);
-            _border11.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#dbeafe')));
+            _border11.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#dbeafe')));
             const _textBlock12 = new TextBlock();
             _textBlock12.set_property_value(TextBlock.TextKey, "Width=200");
             _textBlock12.set_property_value(TextBlock.FontSizeKey, 14);
@@ -75,7 +75,7 @@ export class SplitterDemo extends ResourceDictionary {
             const _border14 = new Border();
             _border14.set_property_value(Border.WidthKey, 300);
             _border14.set_property_value(Border.HeightKey, 138);
-            _border14.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#e0f2fe')));
+            _border14.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#e0f2fe')));
             const _textBlock15 = new TextBlock();
             _textBlock15.set_property_value(TextBlock.TextKey, "Width=300 — drag the gray bar to resize the LEFT pane");
             _textBlock15.set_property_value(TextBlock.FontSizeKey, 13);
@@ -101,7 +101,7 @@ export class SplitterDemo extends ResourceDictionary {
             const _border19 = new Border();
             _border19.set_property_value(DockPanel.DockKey, Dock.Top);
             _border19.set_property_value(Border.HeightKey, 80);
-            _border19.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#dcfce7')));
+            _border19.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#dcfce7')));
             const _textBlock20 = new TextBlock();
             _textBlock20.set_property_value(TextBlock.TextKey, "Height=80");
             _textBlock20.set_property_value(TextBlock.FontSizeKey, 14);
@@ -117,7 +117,7 @@ export class SplitterDemo extends ResourceDictionary {
             _splitter21.set_property_value(Splitter.HeightKey, 8);
             _dockPanel18.AddChild(_splitter21);
             const _border22 = new Border();
-            _border22.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#bbf7d0')));
+            _border22.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#bbf7d0')));
             const _textBlock23 = new TextBlock();
             _textBlock23.set_property_value(TextBlock.TextKey, "Drag the gray bar to resize the TOP pane.");
             _textBlock23.set_property_value(TextBlock.FontSizeKey, 13);

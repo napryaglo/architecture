@@ -91,7 +91,7 @@ interface TriggerTermLite
 }
 
 // Macro substitution map. A hole is bound either to a ValueNode (named
-// parameter, substituted in value positions like `Background=#bg`) or
+// parameter, substituted in value positions like `Fill=#bg`) or
 // to a list of BodyItems (positional `#1` content slot, substituted
 // where the macro body says `#1` as a body item).
 type MacroSubst = Map<
@@ -2149,7 +2149,7 @@ export class Compiler
             // class. Reject for now until the root-class inference
             // story is solid.
             throw new EmitError(
-                "bare `Property = value;` in DataTemplate triggers is not supported yet — write `Owner.Property = value` (e.g. `Border.Background = …`) or `targetName.Property = value`",
+                "bare `Property = value;` in DataTemplate triggers is not supported yet — write `Owner.Property = value` (e.g. `Border.Fill = …`) or `targetName.Property = value`",
                 item.span);
         }
         const first  = parts[0]!;

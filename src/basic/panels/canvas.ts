@@ -102,7 +102,7 @@ export class Canvas extends Panel
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        const bg = this.Background;
+        const bg = this.Fill;
         if (bg === undefined) return;
         const size = this.RenderSize;
         if (size.Width <= 0 || size.Height <= 0) return;

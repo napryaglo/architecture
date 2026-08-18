@@ -3,7 +3,7 @@
 // Modelled after WPF's `System.Windows.Media.Effects.Effect`. The
 // concrete renderer asks the effect for a CSS `filter` chunk and
 // installs it on the visual's wrapper element. Effects compose with
-// the regular paint pipeline — Background, Border, content draw
+// the regular paint pipeline — Fill, Border, content draw
 // normally, then the rasterised output gets the filter applied.
 //
 // V1 is single-effect-per-visual + CSS-filter only. WPF's

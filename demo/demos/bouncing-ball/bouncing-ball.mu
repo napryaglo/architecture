@@ -12,7 +12,7 @@ resources BouncingBallDemo {
 
     DataTemplate [DataType = BouncingBallVM] {
         Border x:root
-            [ Background      = @InverseSurface,
+            [ Fill      = @InverseSurface,
               BorderBrush     = @Outline,
               BorderThickness = (1),
               Width           = 640,

@@ -17,10 +17,10 @@ import BannerVM from "./banner-vm.mjs"
 
 resources BannerDemo {
     DataTemplate [DataType = BannerVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "Banner — M3's in-flow alert strip: Leading icon | message | trailing Actions.",
                           FontSize   = 15,

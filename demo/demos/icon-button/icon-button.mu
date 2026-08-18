@@ -8,7 +8,7 @@ import IconButtonVM from "./icon-button-vm.mjs"
 //     Outlined / Standard) — 40×40 chrome, glyph cascades through
 //     TextBlock.Foreground.
 //   * IconButtonToggle with the same four variants — IsChecked flips
-//     Background per variant; the Style-level multi-condition triggers
+//     Fill per variant; the Style-level multi-condition triggers
 //     flip TextBlock.Foreground.
 //   * Theme swap (run alongside ThemeSelector) — every brush rides
 //     through DynamicResource so light ↔ dark re-tints live.
@@ -39,10 +39,10 @@ resources IconButtonDemo {
     }
 
     DataTemplate [DataType = IconButtonVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "IconButton — M3's compact square button. Four variants drive the chrome via Button.Variant.",
                           FontSize   = 15,
@@ -116,7 +116,7 @@ resources IconButtonDemo {
 
                     // ── Row 2: IconButtonToggle ───────────────────────
                     TextBlock
-                        [ Text       = "IconButtonToggle — same Variant set; IsChecked flips Background + glyph ink.",
+                        [ Text       = "IconButtonToggle — same Variant set; IsChecked flips Fill + glyph ink.",
                           FontWeight = Bold,
                           FontSize   = 14,
                           Foreground = @OnSurface,

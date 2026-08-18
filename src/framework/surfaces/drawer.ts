@@ -403,7 +403,7 @@ export class Drawer extends Control
         const host = new TemporaryOverlayHost();
         host.drawer = this;
         const scrim = new ScrimSurface();
-        scrim.Background = this.resolveScrim();
+        scrim.Fill = this.resolveScrim();
         scrim.onClick = (): void =>
         {
             // User-initiated dismissal: flip IsOpen and tell listeners.
@@ -548,7 +548,7 @@ export class Drawer extends Control
             case 'ScrimBrush':
                 if (this._scrim !== undefined)
                 {
-                    this._scrim.Background = (newValue as Brush | undefined) ?? this.resolveScrim();
+                    this._scrim.Fill = (newValue as Brush | undefined) ?? this.resolveScrim();
                 }
                 break;
         }

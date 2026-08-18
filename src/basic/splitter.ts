@@ -167,7 +167,7 @@ export class Splitter extends Thumb
         // DynamicResource so a theme switch re-tints live (matches how Thumb
         // seeds the resting brush).
         border.set_property_value(
-            resolveKey(border, undefined, 'Background'),
+            resolveKey(border, undefined, 'Fill'),
             DynamicResource(border, active ? 'Primary' : 'OutlineVariant'));
     }
 

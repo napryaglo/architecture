@@ -115,7 +115,7 @@ describe('Slider — horizontal thumb geometry', () => {
         sl.Value = 50;
         sl.Arrange(new Rect(0, 0, 200, 16));
         // Thumb leading edge 98 + half-thumb 2 = 100.
-        assert.equal(sl.Fill.ArrangedRect.Width, 100);
+        assert.equal(sl.TrackFill.ArrangedRect.Width, 100);
     });
 
     test('Track spans the full primary length', () => {

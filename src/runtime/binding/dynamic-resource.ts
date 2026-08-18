@@ -274,7 +274,7 @@ class DynamicResourceBinding extends Binding
 // automatically.
 //
 // Usage:
-//   border.set_property_value(Border.BackgroundKey, DynamicResource(border, 'AccentBrush'));
+//   border.set_property_value(Border.FillKey, DynamicResource(border, 'AccentBrush'));
 //
 // Behaviorally equivalent to a Binding source, so it composes with
 // the EVD's value-source priority (Binding sits above LocalValue and

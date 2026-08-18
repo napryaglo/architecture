@@ -18,13 +18,13 @@ export class BottomSheetDemo extends ResourceDictionary {
         const t = new BottomSheetDemo(_gate_BottomSheetDemo);
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Primary"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Primary"));
             _border3.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock4 = new TextBlock();
             _textBlock4.set_property_value(TextBlock.TextKey, "BottomSheet — M3's bottom-anchored surface. Toggle peek vs expanded posture.");
@@ -41,7 +41,7 @@ export class BottomSheetDemo extends ResourceDictionary {
             const _border7 = new Border();
             _border7.set_property_value(Border.WidthKey, 32);
             _border7.set_property_value(Border.HeightKey, 4);
-            _border7.set_property_value(Border.BackgroundKey, DynamicResource(_border7, "OutlineVariant"));
+            _border7.set_property_value(Border.FillKey, DynamicResource(_border7, "OutlineVariant"));
             _border7.set_property_value(Border.CornerRadiusKey, DynamicResource(_border7, "ShapeFull"));
             _border7.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border7.set_property_value(Border.HorizontalAlignmentKey, HorizontalAlignment.Center);
@@ -63,7 +63,7 @@ export class BottomSheetDemo extends ResourceDictionary {
             _bottomSheet5.Content = _stackPanel6;
             _dockPanel2.AddChild(_bottomSheet5);
             const _border10 = new Border();
-            _border10.set_property_value(Border.BackgroundKey, DynamicResource(_border10, "Surface"));
+            _border10.set_property_value(Border.FillKey, DynamicResource(_border10, "Surface"));
             _border10.set_property_value(Border.PaddingKey, new Thickness(24));
             const _stackPanel11 = new StackPanel();
             _stackPanel11.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);

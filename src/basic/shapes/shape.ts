@@ -34,7 +34,7 @@ export class Shape extends Element
 {
     public static readonly GeometryKey = Model.RegisterProperty<Geometry | undefined>(
         Shape, 'Geometry', undefined, MetaData.Render);
-    public static readonly FillKey     = Model.RegisterProperty<Brush    | undefined>(
+    public static override readonly FillKey     = Model.RegisterProperty<Brush    | undefined>(
         Shape, 'Fill',     undefined, MetaData.Render);
     public static readonly StrokeKey   = Model.RegisterProperty<Pen      | undefined>(
         Shape, 'Stroke',   undefined, MetaData.Render);
@@ -55,8 +55,8 @@ export class Shape extends Element
     public get Geometry(): Geometry | undefined { return this.get_property_value(Shape.GeometryKey); }
     public set Geometry(value: Geometry | undefined) { this.set_property_value(Shape.GeometryKey, value); }
 
-    public get Fill(): Brush | undefined { return this.get_property_value(Shape.FillKey); }
-    public set Fill(value: Brush | undefined) { this.set_property_value(Shape.FillKey, value); }
+    public override get Fill(): Brush | undefined { return this.get_property_value(Shape.FillKey); }
+    public override set Fill(value: Brush | undefined) { this.set_property_value(Shape.FillKey, value); }
 
     public get Stroke(): Pen | undefined { return this.get_property_value(Shape.StrokeKey); }
     public set Stroke(value: Pen | undefined) { this.set_property_value(Shape.StrokeKey, value); }

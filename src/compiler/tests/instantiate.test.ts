@@ -100,14 +100,14 @@ describe('instantiate — happy path', () => {
         const app = buildApp(`
             Application{ resources: {
                 @primary = #4caf50
-                Style[TargetType=Border]{ Background = @primary; }
+                Style[TargetType=Border]{ Fill = @primary; }
                 Border x:root{}
             } }
         `);
         // The Style sits in Resources keyed by Border.
         const s = app.Resources.Resolve(Border);
         assert.ok(s instanceof Style);
-        // Border's resolved Background — Style is implicit, target is
+        // Border's resolved Fill — Style is implicit, target is
         // the rooted Border. The style applies via the existing
         // resolve_implicit_style path. The actual property resolution
         // requires the Visual to attach to the logical tree; here it
@@ -120,9 +120,9 @@ describe('instantiate — happy path', () => {
         const app = buildApp(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    Background = #ffffff;
+                    Fill = #ffffff;
                     when( IsMouseOver ){
-                        Background = #eeeeee;
+                        Fill = #eeeeee;
                     }
                 }
             } }
@@ -139,8 +139,8 @@ describe('instantiate — happy path', () => {
         const app = buildApp(`
             Application{ resources: {
                 Style[TargetType=Border]{
-                    when( Tag is unset ){ Background = #111111; }
-                    when( Tag is set ){ Background = #222222; }
+                    when( Tag is unset ){ Fill = #111111; }
+                    when( Tag is set ){ Fill = #222222; }
                 }
             } }
         `);

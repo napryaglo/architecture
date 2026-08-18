@@ -89,7 +89,7 @@ resources DiagramDemo {
         Border x:root
             [ IsDraggable     = true,
               OnDragStart     = $BeginDragData,
-              Background      = @Surface,
+              Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1),
               CornerRadius    = 4,
@@ -163,12 +163,12 @@ resources DiagramDemo {
     // ── Diagram workspace ──────────────────────────────────────────
     DataTemplate [DataType = DiagramDocument] {
         Border x:root
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @OutlineVariant,
               BorderThickness = (1) ] {
             DockPanel {
                 // Header strip.
-                Border [ DockPanel.Dock = Top, Height = 44, Background = @Primary ] {
+                Border [ DockPanel.Dock = Top, Height = 44, Fill = @Primary ] {
                     StackPanel [ Orientation = Horizontal, Margin = (16,0,0,0) ] {
                         Shape
                             [ Geometry          = @home,
@@ -203,7 +203,7 @@ resources DiagramDemo {
                 // (Was three stacked Dock=Top rows.)
                 Border
                     [ DockPanel.Dock  = Top,
-                      Background      = @SurfaceContainer,
+                      Fill      = @SurfaceContainer,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,0,0,1),
                       Padding         = (8,4,8,4) ] {
@@ -366,7 +366,7 @@ resources DiagramDemo {
                 Border
                     [ DockPanel.Dock  = Left,
                       Width           = 200,
-                      Background      = @SurfaceContainerLow,
+                      Fill      = @SurfaceContainerLow,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,0,1,0),
                       Padding         = (8) ] {
@@ -407,7 +407,7 @@ resources DiagramDemo {
                 Border
                     [ DockPanel.Dock  = Right,
                       Width           = 320,
-                      Background      = @SurfaceContainerLow,
+                      Fill      = @SurfaceContainerLow,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (1,0,0,0),
                       Padding         = (12) ] {

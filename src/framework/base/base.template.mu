@@ -17,13 +17,13 @@ resources Bases {
     // a Template too. Without one, the control has no visual children
     // and renders nothing, even when Content is set.
     //
-    // The default: a Border whose Background / BorderBrush / BorderThickness
+    // The default: a Border whose Fill / BorderBrush / BorderThickness
     // TemplateBind to the control (so a bare ContentControl can carry chrome —
     // unset ⇒ transparent brush + zero thickness ⇒ invisible), wrapping the
     // ContentPresenter that hosts the resolved Content visual. Any derived
     // class with its own Style overrides this without conflict.
     Template x:key="DefaultContentControlTemplate" [TargetType = ContentControl] {
-        Border [ Background      = $$Background,
+        Border [ Fill      = $$Fill,
                  BorderBrush     = $$BorderBrush,
                  BorderThickness = $$BorderThickness ] {
             ContentPresenter

@@ -22,7 +22,7 @@ export class BouncingBallDemo extends ResourceDictionary {
             let _canvas2;
             const _border3 = new Border();
             _border3.SetNameScope(new NameScope());
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "InverseSurface"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "InverseSurface"));
             _border3.set_property_value(Border.BorderBrushKey, DynamicResource(_border3, "Outline"));
             _border3.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border3.set_property_value(Border.WidthKey, 640);

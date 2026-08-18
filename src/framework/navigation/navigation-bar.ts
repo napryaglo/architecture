@@ -35,7 +35,7 @@ function displayString(item: unknown): string
 //
 // M3 chrome:
 //   * Height: 80dp
-//   * Background: @Surface
+//   * Fill: @Surface
 //   * Items area: horizontal UniformGrid (every item gets the same
 //     width regardless of label length).
 //   * No Header / Footer slots — the bottom-bar pattern doesn't carry

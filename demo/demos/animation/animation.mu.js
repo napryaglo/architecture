@@ -19,13 +19,13 @@ export class AnimationDemo extends ResourceDictionary {
             let _button1, _border2, _button3, _border4, _button5, _border6, _button7, _border8, _button9, _border10, _border11;
             const _border12 = new Border();
             _border12.SetNameScope(new NameScope());
-            _border12.set_property_value(Border.BackgroundKey, DynamicResource(_border12, "Surface"));
+            _border12.set_property_value(Border.FillKey, DynamicResource(_border12, "Surface"));
             _border12.set_property_value(Border.BorderBrushKey, DynamicResource(_border12, "OutlineVariant"));
             _border12.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel13 = new DockPanel();
             const _border14 = new Border();
             _border14.set_property_value(DockPanel.DockKey, Dock.Top);
-            _border14.set_property_value(Border.BackgroundKey, DynamicResource(_border14, "Primary"));
+            _border14.set_property_value(Border.FillKey, DynamicResource(_border14, "Primary"));
             _border14.set_property_value(Border.PaddingKey, new Thickness(16, 12, 16, 12));
             const _textBlock15 = new TextBlock();
             _textBlock15.set_property_value(TextBlock.TextKey, "Animation — From/To, AutoReverse + Repeat, keyframes");
@@ -57,7 +57,7 @@ export class AnimationDemo extends ResourceDictionary {
             _stackPanel19.AddChild(_button1);
             _border2 = new Border();
             _border2.Name = "slideTarget";
-            _border2.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#4caf50')));
+            _border2.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#4caf50')));
             _border2.set_property_value(Border.WidthKey, 100);
             _border2.set_property_value(Border.HeightKey, 24);
             _border2.set_property_value(Border.CornerRadiusKey, 4);
@@ -91,7 +91,7 @@ export class AnimationDemo extends ResourceDictionary {
             _stackPanel24.AddChild(_button3);
             _border4 = new Border();
             _border4.Name = "loopTarget";
-            _border4.set_property_value(Border.BackgroundKey, DynamicResource(_border4, "Primary"));
+            _border4.set_property_value(Border.FillKey, DynamicResource(_border4, "Primary"));
             _border4.set_property_value(Border.WidthKey, 100);
             _border4.set_property_value(Border.HeightKey, 24);
             _border4.set_property_value(Border.CornerRadiusKey, 4);
@@ -125,7 +125,7 @@ export class AnimationDemo extends ResourceDictionary {
             _stackPanel29.AddChild(_button5);
             _border6 = new Border();
             _border6.Name = "pulseTarget";
-            _border6.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#4caf50')));
+            _border6.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#4caf50')));
             _border6.set_property_value(Border.BorderBrushKey, DynamicResource(_border6, "Primary"));
             _border6.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border6.set_property_value(Border.CornerRadiusKey, 4);
@@ -148,7 +148,7 @@ export class AnimationDemo extends ResourceDictionary {
             _stackPanel33.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
             _stackPanel33.set_property_value(StackPanel.MarginKey, new Thickness(0, 0, 0, 24));
             const _textBlock34 = new TextBlock();
-            _textBlock34.set_property_value(TextBlock.TextKey, "Brush colour fade — SolidColorBrushAnimation on Background, cubic-bezier easing.");
+            _textBlock34.set_property_value(TextBlock.TextKey, "Brush colour fade — SolidColorBrushAnimation on Fill, cubic-bezier easing.");
             _textBlock34.set_property_value(TextBlock.FontSizeKey, 12);
             _textBlock34.set_property_value(TextBlock.FontWeightKey, FontWeight.Bold);
             _textBlock34.set_property_value(TextBlock.MarginKey, new Thickness(0, 0, 0, 8));
@@ -164,7 +164,7 @@ export class AnimationDemo extends ResourceDictionary {
             _stackPanel35.AddChild(_button7);
             _border8 = new Border();
             _border8.Name = "colorTarget";
-            _border8.set_property_value(Border.BackgroundKey, DynamicResource(_border8, "Primary"));
+            _border8.set_property_value(Border.FillKey, DynamicResource(_border8, "Primary"));
             _border8.set_property_value(Border.WidthKey, 140);
             _border8.set_property_value(Border.HeightKey, 24);
             _border8.set_property_value(Border.CornerRadiusKey, 4);
@@ -172,7 +172,7 @@ export class AnimationDemo extends ResourceDictionary {
             _stackPanel35.AddChild(_border8);
             _stackPanel33.AddChild(_stackPanel35);
             const _textBlock37 = new TextBlock();
-            _textBlock37.set_property_value(TextBlock.TextKey, "Background brush fades blue → green → blue using CSS-style ease-in-out.");
+            _textBlock37.set_property_value(TextBlock.TextKey, "Fill brush fades blue → green → blue using CSS-style ease-in-out.");
             _textBlock37.set_property_value(TextBlock.FontSizeKey, 11);
             _textBlock37.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock37, "OnSurfaceVariant"));
             _textBlock37.set_property_value(TextBlock.MarginKey, new Thickness(0, 8, 0, 0));
@@ -200,7 +200,7 @@ export class AnimationDemo extends ResourceDictionary {
             _stackPanel42.set_property_value(StackPanel.MarginKey, new Thickness(20, 0, 0, 0));
             _border10 = new Border();
             _border10.Name = "bezierA";
-            _border10.set_property_value(Border.BackgroundKey, DynamicResource(_border10, "Primary"));
+            _border10.set_property_value(Border.FillKey, DynamicResource(_border10, "Primary"));
             _border10.set_property_value(Border.WidthKey, 100);
             _border10.set_property_value(Border.HeightKey, 14);
             _border10.set_property_value(Border.CornerRadiusKey, 2);
@@ -208,7 +208,7 @@ export class AnimationDemo extends ResourceDictionary {
             _stackPanel42.AddChild(_border10);
             _border11 = new Border();
             _border11.Name = "bezierB";
-            _border11.set_property_value(Border.BackgroundKey, new SolidColorBrush(Color.FromHex('#4caf50')));
+            _border11.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#4caf50')));
             _border11.set_property_value(Border.WidthKey, 100);
             _border11.set_property_value(Border.HeightKey, 14);
             _border11.set_property_value(Border.CornerRadiusKey, 2);

@@ -182,7 +182,7 @@ describe('compile — Style emission', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Style x:key="DangerButton"[TargetType=Border]{ Background = #ff0000; }
+                    Style x:key="DangerButton"[TargetType=Border]{ Fill = #ff0000; }
                 }
             }
         `);
@@ -194,9 +194,9 @@ describe('compile — Style emission', () => {
             Application{
                 resources: {
                     Style[TargetType=Border]{
-                        Background = #ffffff;
+                        Fill = #ffffff;
                         when( IsMouseOver ){
-                            Background = #eeeeee;
+                            Fill = #eeeeee;
                         }
                     }
                 }
@@ -219,9 +219,9 @@ describe('compile — Style emission', () => {
             Application{
                 resources: {
                     Style[TargetType=Border]{
-                        Background = #ffffff;
+                        Fill = #ffffff;
                         when( $IsSelected ){
-                            Background = #ffaa00;
+                            Fill = #ffaa00;
                         }
                     }
                 }
@@ -249,7 +249,7 @@ describe('compile — Style emission', () => {
             Application{
                 resources: {
                     Style[TargetType=Border]{
-                        when( $Mode = "warn" ){ Background = #ffff00; }
+                        when( $Mode = "warn" ){ Fill = #ffff00; }
                     }
                 }
             }
@@ -265,7 +265,7 @@ describe('compile — Style emission', () => {
             Application{
                 resources: {
                     Style[TargetType=Border]{
-                        when( $User.IsAdmin ){ Background = #00ff00; }
+                        when( $User.IsAdmin ){ Fill = #00ff00; }
                     }
                 }
             }
@@ -281,7 +281,7 @@ describe('compile — Style emission', () => {
             Application{
                 resources: {
                     Style[TargetType=Border]{
-                        when( not $IsSelected ){ Background = #000; }
+                        when( not $IsSelected ){ Fill = #000; }
                     }
                 }
             }
@@ -304,7 +304,7 @@ describe('compile — Style emission', () => {
                     resources: {
                         Style[TargetType=Border]{
                             when( IsMouseOver and $IsSelected ){
-                                Background = #000;
+                                Fill = #000;
                             }
                         }
                     }
@@ -319,7 +319,7 @@ describe('compile — Style emission', () => {
             Application{
                 resources: {
                     Style[TargetType=Border]{
-                        when( $IsSelected and $IsHot ){ Background = #000; }
+                        when( $IsSelected and $IsHot ){ Fill = #000; }
                     }
                 }
             }
@@ -337,7 +337,7 @@ describe('compile — Style BasedOn (BasedOn = @key)', () => {
         const js = emitted(`
             resources SharedDict {
                 Style x:key="Base"[TargetType=Border]{ Padding = (4); }
-                Style x:key="Derived"[TargetType=Border, BasedOn=@Base]{ Background = #fff; }
+                Style x:key="Derived"[TargetType=Border, BasedOn=@Base]{ Fill = #fff; }
             }
         `);
         const m = js.match(/const (_style\d+) = new Style\(Border, \[_setter\d+\], undefined, \[\], \[\]\);/);
@@ -353,7 +353,7 @@ describe('compile — Style BasedOn (BasedOn = @key)', () => {
         const js = emitted(`
             Application{
                 resources: {
-                    Style x:key="Title"[TargetType=Border, BasedOn=@TitleSmall]{ Background = #fff; }
+                    Style x:key="Title"[TargetType=Border, BasedOn=@TitleSmall]{ Fill = #fff; }
                 }
             }
         `);
@@ -396,14 +396,14 @@ describe('compile — DataTemplate triggers', () => {
                         TextBlock x:name="label"
                     }
                     when( $IsSelected ) {
-                        Border.Background = #ffaa00;
+                        Border.Fill = #ffaa00;
                     }
                 }
             }
         `);
-        // The TargetedSetter wraps the Background setter for the
+        // The TargetedSetter wraps the Fill setter for the
         // template root (Owner=Border, no targetName).
-        assert.match(js, /new TargetedSetter\(Border, "Background",/);
+        assert.match(js, /new TargetedSetter\(Border, "Fill",/);
         // TemplateDataTrigger consumes the setter array.
         assert.match(
             js,
@@ -432,7 +432,7 @@ describe('compile — DataTemplate triggers', () => {
                         TextBlock x:name="label"
                     }
                     when( $IsEditing ) {
-                        Border.Background = #ffaa00;
+                        Border.Fill = #ffaa00;
                     }
                 }
             }
@@ -470,23 +470,23 @@ describe('compile — DataTemplate triggers', () => {
             resources Test {
                 DataTemplate x:key="T" [DataType=FooVM] {
                     Border x:root {
-                        Border x:name="chrome" [Background=#ffaa00]
-                        TextBlock [Foreground=$chrome.Background]
+                        Border x:name="chrome" [Fill=#ffaa00]
+                        TextBlock [Foreground=$chrome.Fill]
                     }
                 }
             }
         `);
-        // The TextBlock's Foreground binds to the chrome's Background
+        // The TextBlock's Foreground binds to the chrome's Fill
         // via ElementNameBinding wrapping a thunk that captures the
         // chrome var, NOT via DataContextBinding. The thunk shape
         // supports forward x:name references in the same template body.
         assert.match(
             js,
-            /ElementNameBinding\(\(\) => _border\d+, "Background"\)/,
+            /ElementNameBinding\(\(\) => _border\d+, "Fill"\)/,
         );
         assert.doesNotMatch(
             js,
-            /DataContextBinding\([^,]+, "chrome\.Background"\)/,
+            /DataContextBinding\([^,]+, "chrome\.Fill"\)/,
         );
         // The import header pulls ElementNameBinding from the runtime.
         assert.match(
@@ -519,10 +519,10 @@ describe('compile — DataTemplate triggers', () => {
             resources Test {
                 DataTemplate x:key="T" [DataType=FooVM] {
                     Border x:root {
-                        Border x:name="chrome" [Background=#ffffff]
+                        Border x:name="chrome" [Fill=#ffffff]
                     }
                     when( $IsSelected ) {
-                        chrome.Background = #ffaa00;
+                        chrome.Fill = #ffaa00;
                     }
                 }
             }
@@ -531,7 +531,7 @@ describe('compile — DataTemplate triggers', () => {
         // owner inferred from the named element's declared class.
         assert.match(
             js,
-            /new TargetedSetter\(Border, "Background", [^,]+, "chrome"\)/,
+            /new TargetedSetter\(Border, "Fill", [^,]+, "chrome"\)/,
         );
     });
 
@@ -585,7 +585,7 @@ describe('compile — DataTemplate triggers', () => {
                     DataTemplate x:key="T" [DataType=FooVM] {
                         Border x:root
                         when( $IsSelected ) {
-                            Background = #ffaa00;
+                            Fill = #ffaa00;
                         }
                     }
                 }
@@ -777,19 +777,19 @@ describe('compile — value emission', () => {
         const js = emitted(`
             Application{ resources: {
                 @theme = #4caf50
-                Border x:root[Background=@@theme]{}
+                Border x:root[Fill=@@theme]{}
             } }
         `);
         assert.match(
             js,
-            /\.set_property_value\(\w+\.BackgroundKey, DynamicResource\(_border\d+, "theme"\)\);/,
+            /\.set_property_value\(\w+\.FillKey, DynamicResource\(_border\d+, "theme"\)\);/,
         );
     });
 
     test('@@key inside a Style setter wraps in a SetterFactory', () => {
         const js = emitted(`
             Application{ resources: {
-                Style[TargetType=Border]{ Background = @@theme; }
+                Style[TargetType=Border]{ Fill = @@theme; }
             } }
         `);
         assert.match(
@@ -807,12 +807,12 @@ describe('compile — value emission', () => {
         const js = emitted(`
             Application{ resources: {
                 @primary = #4caf50
-                Border x:root[Background=@primary]{}
+                Border x:root[Fill=@primary]{}
             } }
         `);
         assert.match(
             js,
-            /\.set_property_value\(\w+\.BackgroundKey, DynamicResource\(_border\d+, "primary"\)\);/,
+            /\.set_property_value\(\w+\.FillKey, DynamicResource\(_border\d+, "primary"\)\);/,
         );
     });
 
@@ -916,7 +916,7 @@ describe('compile — value emission', () => {
             () => emitted(`
                 Application{ resources: {
                     @x = Nonsense.Full
-                    Border x:root[Background=@x]{}
+                    Border x:root[Fill=@x]{}
                 } }
             `),
             (err: Error) =>
@@ -944,11 +944,11 @@ describe('compile — value emission', () => {
 describe('compile — deferred & errored features', () => {
     test('$Path binding emits DataContextBinding bound to the target var', () => {
         const js = emitted(`
-            Application{ resources: { Border x:root[Background=$Name]{} } }
+            Application{ resources: { Border x:root[Fill=$Name]{} } }
         `);
         assert.match(
             js,
-            /\.set_property_value\(\w+\.BackgroundKey, DataContextBinding\(_border\d+, "Name"\)\);/,
+            /\.set_property_value\(\w+\.FillKey, DataContextBinding\(_border\d+, "Name"\)\);/,
         );
     });
 

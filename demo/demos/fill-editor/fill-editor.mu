@@ -8,10 +8,10 @@ import FillEditorDemoVM from "./fill-editor-vm.mjs"
 
 resources FillEditorDemo {
     DataTemplate [DataType = FillEditorDemoVM] {
-        Border x:root [ Background = @Surface ] {
+        Border x:root [ Fill = @Surface ] {
             DockPanel {
                 // ── Header ────────────────────────────────────────
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (20,14,20,14) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (20,14,20,14) ] {
                     StackPanel [ Orientation = Vertical ] {
                         TextBlock
                             [ Text       = "PowerPoint-style Fill editor",
@@ -29,7 +29,7 @@ resources FillEditorDemo {
                 // ── Status strip ──────────────────────────────────
                 Border
                     [ DockPanel.Dock  = Bottom,
-                      Background      = @SurfaceContainerLow,
+                      Fill      = @SurfaceContainerLow,
                       BorderBrush     = @OutlineVariant,
                       BorderThickness = (0,1,0,0),
                       Padding         = (20,10,20,10) ] {
@@ -37,13 +37,13 @@ resources FillEditorDemo {
                 }
 
                 // ── Body ──────────────────────────────────────────
-                Border [ Background = @SurfaceContainerLowest, Padding = (20,20,20,20) ] {
+                Border [ Fill = @SurfaceContainerLowest, Padding = (20,20,20,20) ] {
                     StackPanel [ Orientation = Horizontal ] {
                         // Left column — the editor.
                         Border
                             [ Width           = 380,
                               Padding         = (16,16,16,16),
-                              Background      = @SurfaceContainerLow,
+                              Fill      = @SurfaceContainerLow,
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               CornerRadius    = 8,
@@ -67,7 +67,7 @@ resources FillEditorDemo {
                             [ Width           = 520,
                               Height          = 420,
                               Padding         = (20),
-                              Background      = @SurfaceContainer,
+                              Fill      = @SurfaceContainer,
                               BorderBrush     = @OutlineVariant,
                               BorderThickness = (1),
                               CornerRadius    = 8 ] {

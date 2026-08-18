@@ -14,10 +14,10 @@ import BadgeVM from "./badge-vm.mjs"
 
 resources BadgeDemo {
     DataTemplate [DataType = BadgeVM] {
-        Border [ Background = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
-                Border [ DockPanel.Dock = Top, Background = @Primary, Padding = (16,12,16,12) ] {
+                Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock
                         [ Text       = "Badge — M3's small status flag. Variant picks Dot (no count) vs Numeric (Count-driven pill).",
                           FontSize   = 15,
@@ -42,7 +42,7 @@ resources BadgeDemo {
                                 Border
                                     [ Width           = 40,
                                       Height          = 40,
-                                      Background      = @SurfaceContainerHighest,
+                                      Fill      = @SurfaceContainerHighest,
                                       CornerRadius    = @ShapeMedium,
                                       BorderThickness = (0),
                                       Canvas.Left     = 0,
@@ -58,7 +58,7 @@ resources BadgeDemo {
                                 Border
                                     [ Width           = 40,
                                       Height          = 40,
-                                      Background      = @SurfaceContainerHighest,
+                                      Fill      = @SurfaceContainerHighest,
                                       CornerRadius    = @ShapeMedium,
                                       BorderThickness = (0),
                                       Canvas.Left     = 0,

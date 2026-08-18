@@ -17,11 +17,11 @@ export class ShapesDemo extends ResourceDictionary {
         const t = new ShapesDemo(_gate_ShapesDemo);
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
-            _border1.set_property_value(Border.BackgroundKey, DynamicResource(_border1, "Surface"));
+            _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             const _scrollViewer2 = new ScrollViewer();
             const _border3 = new Border();
             _border3.set_property_value(Border.PaddingKey, new Thickness(24, 24, 24, 24));
-            _border3.set_property_value(Border.BackgroundKey, DynamicResource(_border3, "Surface"));
+            _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Surface"));
             const _stackPanel4 = new StackPanel();
             _stackPanel4.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
             const _textBlock5 = new TextBlock();

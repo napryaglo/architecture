@@ -17,7 +17,7 @@ resources Lists {
     // them by key explicitly.
     Template x:key="DefaultComboBoxSelection" [TargetType = ComboBox] {
         ClickableBorder x:name="PART_SelectionBox"
-            [ Background      = @Surface,
+            [ Fill      = @Surface,
               BorderBrush     = @Outline,
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
@@ -59,7 +59,7 @@ resources Lists {
                 // caret rather than open the list. The ComboBox wires the
                 // click; see the IsEditable gating in combo-box.ts.
                 ClickableBorder x:name="PART_ChevronButton"
-                    [ Background        = #00000000,
+                    [ Fill        = #00000000,
                       VerticalAlignment = Center ] {
                     Shape x:name="PART_Chevron"
                         [ Geometry          = @ChevronDown,
@@ -87,10 +87,10 @@ resources Lists {
         // pattern (the selection box is a clickable surface; it earns
         // the same chrome). Disabled dims the entire selection box.
         when ( PART_SelectionBox.IsMouseOver ) {
-            PART_SelectionBox.Background = @StateHoverOverlay;
+            PART_SelectionBox.Fill = @StateHoverOverlay;
         }
-        when ( PART_SelectionBox.IsFocused ) { PART_SelectionBox.Background = @StateFocusOverlay; }
-        when ( PART_SelectionBox.IsPressed ) { PART_SelectionBox.Background = @StatePressOverlay; }
+        when ( PART_SelectionBox.IsFocused ) { PART_SelectionBox.Fill = @StateFocusOverlay; }
+        when ( PART_SelectionBox.IsPressed ) { PART_SelectionBox.Fill = @StatePressOverlay; }
         when ( IsEnabled = false ) { PART_SelectionBox.Opacity = @DisabledContentOpacity; }
 
         // M3 density variants — tighter cell on Compact, looser on
@@ -135,7 +135,7 @@ resources Lists {
         ComboBoxPopupHost x:name="PART_PopupHost" {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_Popup"
-                [ Background      = @SurfaceContainerHigh,
+                [ Fill      = @SurfaceContainerHigh,
                   BorderBrush     = @OutlineVariant,
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
@@ -174,13 +174,13 @@ resources Lists {
     // ComboBoxItemList host or any TextBlock authored inside an item's
     // Content carries its own typography role.
     Style [TargetType = ComboBoxItem] {
-        Background = #00000000;
+        Fill = #00000000;
         BorderThickness = (0);
         Padding = (@Spacing4,@Spacing2,@Spacing4,@Spacing2);
-        when ( IsMouseOver ) { Background = @StateHoverOverlay; }
-        when ( IsFocused ) { Background = @StateFocusOverlay; }
-        when ( IsPressed ) { Background = @StatePressOverlay; }
-        when ( IsSelected ) { Background = @SecondaryContainer; }
+        when ( IsMouseOver ) { Fill = @StateHoverOverlay; }
+        when ( IsFocused ) { Fill = @StateFocusOverlay; }
+        when ( IsPressed ) { Fill = @StatePressOverlay; }
+        when ( IsSelected ) { Fill = @SecondaryContainer; }
         when ( IsEnabled = false ) { Opacity = @DisabledContentOpacity; }
 
         // Density variants — mirror the rest of the list family.
@@ -288,10 +288,10 @@ resources Lists {
         // transparent-at-rest rows); selection swaps to the opaque
         // @SecondaryContainer and is ordered LAST so it outranks any
         // state-layer overlay still matching at the same trigger tier.
-        when ( PART_Row.IsMouseOver ) { PART_Row.Background = @StateHoverOverlay; }
-        when ( PART_Row.IsFocused ) { PART_Row.Background = @StateFocusOverlay; }
-        when ( PART_Row.IsPressed ) { PART_Row.Background = @StatePressOverlay; }
-        when ( IsSelected ) { PART_Row.Background = @SecondaryContainer; }
+        when ( PART_Row.IsMouseOver ) { PART_Row.Fill = @StateHoverOverlay; }
+        when ( PART_Row.IsFocused ) { PART_Row.Fill = @StateFocusOverlay; }
+        when ( PART_Row.IsPressed ) { PART_Row.Fill = @StatePressOverlay; }
+        when ( IsSelected ) { PART_Row.Fill = @SecondaryContainer; }
         when ( IsEnabled = false ) { PART_Row.Opacity = @DisabledContentOpacity; }
 
         // Density variants — mirror ListBoxItem's ladder so a TreeView
@@ -365,7 +365,7 @@ resources Lists {
     // (last-applied-wins inside the trigger priority tier).
     //
     // Density + Pointer triggers ride below the state layer because they
-    // target Padding / Height, not Background — no ordering interaction
+    // target Padding / Height, not Fill — no ordering interaction
     // with the colour ladder above.
     Template x:key="DefaultListBoxItem" [TargetType = ListBoxItem] {
         Border x:name="PART_Border"
@@ -414,10 +414,10 @@ resources Lists {
         }
         // State-layer ladder. M3 tokens — translucent OnSurface tints at
         // the 8% / 12% opacities the spec calls out.
-        when ( IsMouseOver ) { PART_Border.Background = @StateHoverOverlay; }
-        when ( IsFocused ) { PART_Border.Background = @StateFocusOverlay; }
-        when ( IsPressed ) { PART_Border.Background = @StatePressOverlay; }
-        when ( IsSelected ) { PART_Border.Background = @SecondaryContainer; }
+        when ( IsMouseOver ) { PART_Border.Fill = @StateHoverOverlay; }
+        when ( IsFocused ) { PART_Border.Fill = @StateFocusOverlay; }
+        when ( IsPressed ) { PART_Border.Fill = @StatePressOverlay; }
+        when ( IsSelected ) { PART_Border.Fill = @SecondaryContainer; }
         // Disabled — dim the entire row at the M3 content-opacity (38%).
         // dispatchPointer / dispatchKey already gate input on a disabled
         // subtree (see visual-engine/routed-event.ts), so the visual

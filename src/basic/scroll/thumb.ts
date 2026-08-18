@@ -103,11 +103,11 @@ export class Thumb extends Element
         super();
         this.Focusable = true;
         this._border = new Border();
-        // Background tracks the active theme via DynamicResource —
+        // Fill tracks the active theme via DynamicResource —
         // a theme switch re-resolves @OutlineVariant against the new
         // dictionary and re-paints without an imperative refresh.
         this._border.set_property_value(
-            resolveKey(this._border, undefined, 'Background'),
+            resolveKey(this._border, undefined, 'Fill'),
             DynamicResource(this._border, 'OutlineVariant'),
         );
         this.AttachVisual(this._border);
@@ -127,7 +127,7 @@ export class Thumb extends Element
 
     // Expose the chrome handle so consumers can re-tint without
     // re-templating (the underlying Border is the standard mural Border
-    // — Background, BorderBrush, CornerRadius, etc. all reachable).
+    // — Fill, BorderBrush, CornerRadius, etc. all reachable).
     public get Border(): Border { return this._border; }
 
     public AddDragStartedListener(cb: (args: DragStartedEventArgs) => void): void   { this._onDragStarted.add(cb); }

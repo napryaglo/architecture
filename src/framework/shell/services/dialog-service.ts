@@ -80,9 +80,9 @@ export class DialogService extends ServiceBase
 
         const scrim = new ScrimSurface();
         // Theme backdrop tint (@Scrim — the modal overlay token) via DynamicResource
-        // so it tracks light/dark. Installed as a binding on Background.
+        // so it tracks light/dark. Installed as a binding on Fill.
         scrim.set_property_value(
-            Border.BackgroundKey, DynamicResource(scrim, 'Scrim') as unknown as Brush);
+            Border.FillKey, DynamicResource(scrim, 'Scrim') as unknown as Brush);
 
         const dialog = new Dialog();
         if (options.Title !== undefined) dialog.Title = options.Title;

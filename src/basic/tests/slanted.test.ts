@@ -51,7 +51,7 @@ describe('Slanted', () => {
 
     test('non-zero lean pushes a SkewX matrix and pops after the draw', () => {
         const s = new Slanted();
-        s.Background = new SolidColorBrush(Color.Red);
+        s.Fill = new SolidColorBrush(Color.Red);
         const dc = render(s, 100, 100);
         assert.equal(dc.xforms.length, 1);
         assert.equal(dc.popCount, 1);

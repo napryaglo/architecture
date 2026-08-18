@@ -256,7 +256,7 @@ describe('Compatibility: legacy PropertyTrigger 4-arg constructor still works', 
     test('Constructor without enter/exit actions defaults to empty arrays', () => {
         const t = new PropertyTrigger(
             Border, 'IsMouseOver', true,
-            [new Setter(Border, 'Background', undefined)],
+            [new Setter(Border, 'Fill', undefined)],
         );
         assert.deepEqual(t.enterActions, []);
         assert.deepEqual(t.exitActions,  []);

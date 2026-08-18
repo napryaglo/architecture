@@ -120,7 +120,7 @@ export class Slider extends TemplatedControl
     public static readonly SmallChangeKey = Model.RegisterProperty<number>(     Slider, 'SmallChange', 0.01, MetaData.None);
     public static readonly LargeChangeKey = Model.RegisterProperty<number>(     Slider, 'LargeChange', 0.1,  MetaData.None);
     // Read-only "thumb is being dragged" state, surfaced as a DP so
-    // the default template's `when(IsDragging) { PART_Thumb.Background
+    // the default template's `when(IsDragging) { PART_Thumb.Fill
     // = @PrimaryPress; }` trigger fires off the same flag the drag
     // handler flips. Internal write-key keeps the setter private to
     // the drag path; consumers see it through the public boolean getter.
@@ -171,7 +171,7 @@ export class Slider extends TemplatedControl
 
         // Hover / press visual swap on the thumb is declarative — the
         // DefaultSlider template's `when(PART_Thumb.IsMouseOver)` and
-        // `when(IsDragging)` triggers paint PART_Thumb.Background via
+        // `when(IsDragging)` triggers paint PART_Thumb.Fill via
         // DynamicResource, so a theme switch re-tints live and the TS
         // side carries no imperative refresh hook.
     }
@@ -215,7 +215,7 @@ export class Slider extends TemplatedControl
     // ScrollBar.Track / .Thumb. Useful for consumers that want to
     // override one piece's brush without replacing the template.
     public get Track(): Border { return this._track; }
-    public get Fill():  Border { return this._fill;  }
+    public get TrackFill():  Border { return this._fill;  }
     public get Thumb(): Border { return this._thumb; }
 
     protected override OnPropertyChanged(

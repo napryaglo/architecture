@@ -49,7 +49,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
             Application{
                 resources: {
                     Style[TargetType=Button]{
-                        Background = #ff0000;
+                        Fill = #ff0000;
                     }
                 }
             }
@@ -158,7 +158,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
             Application{
                 resources: {
                     Style[TargetType=Button]{
-                        Background = #1976d2;
+                        Fill = #1976d2;
                         on Click {
                             BeginStoryboard {
                                 DoubleAnimation[TargetProperty=Width, To=240, Duration=400]
@@ -168,7 +168,7 @@ describe('compile — declarative EventTrigger + BeginStoryboard', () => {
                 }
             }
         `);
-        assert.match(js, /new Setter\(Button, "Background", /);
+        assert.match(js, /new Setter\(Button, "Fill", /);
         assert.match(js, /new EventTrigger\("Click"/);
         // Setters arg is non-empty AND event-triggers arg is non-empty.
         assert.match(

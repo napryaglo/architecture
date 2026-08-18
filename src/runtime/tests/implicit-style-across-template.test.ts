@@ -25,12 +25,12 @@ describe('§ 11.2 — implicit Style crosses template boundaries', () => {
     test('Style[TargetType=Border] at app root reaches a Border inside another control\'s template', () => {
         const app = new Application();
 
-        // App-level implicit style for ALL Borders. Sets Background to a
+        // App-level implicit style for ALL Borders. Sets Fill to a
         // distinctive brush so we can identify which path won.
         const accent = new SolidColorBrush(Color.FromHex('#bada55'));
         const borderStyle = new Style(
             Border,
-            [new Setter(Border, 'Background', accent)],
+            [new Setter(Border, 'Fill', accent)],
         );
         app.Resources.Set(Border, borderStyle);
 
@@ -58,10 +58,10 @@ describe('§ 11.2 — implicit Style crosses template boundaries', () => {
         assert.ok(capturedInnerBorder !== undefined,
             'template factory ran and captured the inner Border');
         // Without 11.2, the inner Border can't see the app-level Style →
-        // Background stays at its default. With 11.2, the templatedParent
+        // Fill stays at its default. With 11.2, the templatedParent
         // fallback in TryFindResource carries the lookup up to Application
         // and the Style applies.
-        assert.equal(capturedInnerBorder!.Background, accent,
+        assert.equal(capturedInnerBorder!.Fill, accent,
             'app-level Style[TargetType=Border] applied to template-internal Border');
     });
 
@@ -73,7 +73,7 @@ describe('§ 11.2 — implicit Style crosses template boundaries', () => {
         const accent = new SolidColorBrush(Color.FromHex('#ff8800'));
         const borderStyle = new Style(
             Border,
-            [new Setter(Border, 'Background', accent)],
+            [new Setter(Border, 'Fill', accent)],
         );
 
         let capturedInnerBorder: Border | undefined;
@@ -92,7 +92,7 @@ describe('§ 11.2 — implicit Style crosses template boundaries', () => {
         const target = new HeadlessTarget(200, 200);
         target.Content = cc;
 
-        assert.equal(capturedInnerBorder!.Background, accent,
+        assert.equal(capturedInnerBorder!.Fill, accent,
             'consumer-side Style on ContentControl.Resources applied to its template-internal Border');
     });
 
@@ -114,9 +114,9 @@ describe('§ 11.2 — implicit Style crosses template boundaries', () => {
         const target = new HeadlessTarget(200, 200);
         target.Content = cc;
 
-        // No style yet — Background should be the Border default
+        // No style yet — Fill should be the Border default
         // (transparent / undefined).
-        const originalBackground = capturedInnerBorder!.Background;
+        const originalBackground = capturedInnerBorder!.Fill;
 
         // Now register the style. The Application.Resources subscription
         // wired by subscribe_styles must fire and re-resolve the implicit
@@ -124,12 +124,12 @@ describe('§ 11.2 — implicit Style crosses template boundaries', () => {
         const accent = new SolidColorBrush(Color.FromHex('#0099cc'));
         const borderStyle = new Style(
             Border,
-            [new Setter(Border, 'Background', accent)],
+            [new Setter(Border, 'Fill', accent)],
         );
         app.Resources.Set(Border, borderStyle);
 
-        assert.notEqual(capturedInnerBorder!.Background, originalBackground);
-        assert.equal(capturedInnerBorder!.Background, accent,
+        assert.notEqual(capturedInnerBorder!.Fill, originalBackground);
+        assert.equal(capturedInnerBorder!.Fill, accent,
             'late-arriving app-level Style cascaded into template-internal Border via the subscription chain');
     });
 });

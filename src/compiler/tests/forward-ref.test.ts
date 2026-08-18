@@ -19,14 +19,14 @@ describe('forward x:name reference', () => {
             resources Test {
                 DataTemplate x:key="T" [DataType=FooVM] {
                     Border x:root {
-                        TextBlock [Foreground=$nodes.Background]
-                        Border x:name="nodes" [Background=#ff0000]
+                        TextBlock [Foreground=$nodes.Fill]
+                        Border x:name="nodes" [Fill=#ff0000]
                     }
                 }
             }
         `);
-        assert.match(js, /ElementNameBinding\(\(\) => _border\d+, "Background"\)/);
-        assert.doesNotMatch(js, /DataContextBinding\([^,]+, "nodes\.Background"\)/);
+        assert.match(js, /ElementNameBinding\(\(\) => _border\d+, "Fill"\)/);
+        assert.doesNotMatch(js, /DataContextBinding\([^,]+, "nodes\.Fill"\)/);
         // `let _border…;` declaration emitted before any element
         // construction in the factory body.
         assert.match(js, /\(_data\) => \{\s*let _border\d+;/);
@@ -43,13 +43,13 @@ describe('forward x:name reference', () => {
             resources Test {
                 DataTemplate x:key="T" [DataType=FooVM] {
                     Border x:root {
-                        Border x:name="chrome" [Background=#ffaa00]
-                        TextBlock [Foreground=$chrome.Background]
+                        Border x:name="chrome" [Fill=#ffaa00]
+                        TextBlock [Foreground=$chrome.Fill]
                     }
                 }
             }
         `);
-        assert.match(js, /ElementNameBinding\(\(\) => _border\d+, "Background"\)/);
-        assert.doesNotMatch(js, /DataContextBinding\([^,]+, "chrome\.Background"\)/);
+        assert.match(js, /ElementNameBinding\(\(\) => _border\d+, "Fill"\)/);
+        assert.doesNotMatch(js, /DataContextBinding\([^,]+, "chrome\.Fill"\)/);
     });
 });

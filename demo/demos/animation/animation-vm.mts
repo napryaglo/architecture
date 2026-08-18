@@ -24,7 +24,7 @@ import { SolidColorBrushAnimation } from '@pragmatic-lab/mural/visual-engine';
 // Narrow structural views of the named elements this showcase reaches
 // through FindName. The base Visual type doesn't surface the concrete
 // control members the imperative wiring touches (control-specific
-// AddClickHandler / Content / Width / Background), so we cast the
+// AddClickHandler / Content / Width / Fill), so we cast the
 // FindName results through these minimal shapes rather than pull in the
 // host control classes just for typing.
 interface ClickSource {
@@ -36,7 +36,7 @@ interface AnimatableElement {
     BeginAnimation(propertyName: string, timeline: AnimationTimeline): Storyboard;
 }
 interface BrushTarget {
-    Background: unknown;
+    Fill: unknown;
 }
 
 export class AnimationVM extends Model
@@ -117,10 +117,10 @@ export class AnimationVM extends Model
             // Compose a two-leg Storyboard: blue → green → blue, with
             // BeginTime offsetting the second leg until the first ends.
             colorSb = new Storyboard();
-            colorSb.Add(colorTarget, 'Background', new SolidColorBrushAnimation({
+            colorSb.Add(colorTarget, 'Fill', new SolidColorBrushAnimation({
                 From: blue, To: green, Duration: 500, Easing: easeInOut,
             }));
-            colorSb.Add(colorTarget, 'Background', new SolidColorBrushAnimation({
+            colorSb.Add(colorTarget, 'Fill', new SolidColorBrushAnimation({
                 BeginTime: 500,
                 From: green, To: blue, Duration: 500, Easing: easeInOut,
             }));
