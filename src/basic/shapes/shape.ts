@@ -34,10 +34,9 @@ export class Shape extends Element
 {
     public static readonly GeometryKey = Model.RegisterProperty<Geometry | undefined>(
         Shape, 'Geometry', undefined, MetaData.Render);
-    public static override readonly FillKey     = Model.RegisterProperty<Brush    | undefined>(
-        Shape, 'Fill',     undefined, MetaData.Render);
-    public static override readonly StrokeKey   = Model.RegisterProperty<Pen      | undefined>(
-        Shape, 'Stroke',   undefined, MetaData.Render);
+    // Fill and Stroke are inherited from Visual (Visual.Fill / Visual.Stroke) —
+    // a Shape IS a paintable Visual, so it reads the same slots every other
+    // Visual does rather than shadowing them with its own DPs.
 
     // Width of an INVISIBLE hit band painted UNDER the visible content
     // (0 = off, the default — existing shapes are unaffected). A thin
@@ -54,12 +53,6 @@ export class Shape extends Element
 
     public get Geometry(): Geometry | undefined { return this.get_property_value(Shape.GeometryKey); }
     public set Geometry(value: Geometry | undefined) { this.set_property_value(Shape.GeometryKey, value); }
-
-    public override get Fill(): Brush | undefined { return this.get_property_value(Shape.FillKey); }
-    public override set Fill(value: Brush | undefined) { this.set_property_value(Shape.FillKey, value); }
-
-    public override get Stroke(): Pen | undefined { return this.get_property_value(Shape.StrokeKey); }
-    public override set Stroke(value: Pen | undefined) { this.set_property_value(Shape.StrokeKey, value); }
 
     public get HitTestStrokeWidth(): number { return this.get_property_value(Shape.HitTestStrokeWidthKey); }
     public set HitTestStrokeWidth(value: number) { this.set_property_value(Shape.HitTestStrokeWidthKey, value); }
@@ -104,6 +97,14 @@ export class Shape extends Element
         const g = this.Geometry;
         if (g === undefined) return undefined;
         return this.fitTransform(g, size) === undefined ? g : undefined;
+    }
+
+    // The Visual shape geometry consumed by ClipToBounds (and available to
+    // picking): the shape's own outline when it supplies one, else the base
+    // bounds rect. Same silhouette ArrangeOverride publishes as HitTestGeometry.
+    protected override buildClipGeometry(size: Size): Geometry
+    {
+        return this.buildGeometry(size) ?? super.buildClipGeometry(size);
     }
 
     // In-place mutations of the current Fill / Stroke / Geometry (PenEditor

@@ -991,7 +991,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
     // The halo's arrange reads conn.Geometry, conn.Stroke?.Thickness on
     // every pass — so it must re-arrange whenever any of those change.
     //   * Shape.GeometryKey  — routing recompute swaps the Geometry DP.
-    //   * Shape.StrokeKey    — user edits the pen-by-reference (FormatMirror
+    //   * Visual.StrokeKey    — user edits the pen-by-reference (FormatMirror
     //                          mutates in place, but a Stroke replacement
     //                          must still re-arm the ThicknessKey listener
     //                          against the new Pen instance).
@@ -1027,7 +1027,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         if (subscribedHoverConnector !== undefined)
         {
             subscribedHoverConnector.RemovePropertyChangedListener(Shape.GeometryKey, onHoveredConnectorChanged);
-            subscribedHoverConnector.RemovePropertyChangedListener(Shape.StrokeKey,   onHoveredConnectorChanged);
+            subscribedHoverConnector.RemovePropertyChangedListener(Visual.StrokeKey,   onHoveredConnectorChanged);
             if (subscribedHoverPen !== undefined)
             {
                 subscribedHoverPen.RemovePropertyChangedListener(Pen.ThicknessKey, onHoveredConnectorChanged);
@@ -1038,7 +1038,7 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         if (next !== undefined)
         {
             next.AddPropertyChangedListener(Shape.GeometryKey, onHoveredConnectorChanged);
-            next.AddPropertyChangedListener(Shape.StrokeKey,   onHoveredConnectorChanged);
+            next.AddPropertyChangedListener(Visual.StrokeKey,   onHoveredConnectorChanged);
             subscribedHoverPen = next.Stroke;
             if (subscribedHoverPen !== undefined)
             {
