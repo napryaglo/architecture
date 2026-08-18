@@ -10,6 +10,7 @@ import {
     Rect,
     Color,
     Point,
+    Thickness,
 } from '../../runtime/index.js';
 import { Border, Canvas, TextBlock } from '../../basic/index.js';
 import {
@@ -391,5 +392,61 @@ describe('SvgRenderer — path-shaped subtree clip', () => {
         const clipPathEl = surface.querySelector('clipPath > path');
         assert.ok(clipPathEl, 'the <clipPath> contains a <path> for the PathGeometry');
         assert.ok(clipPathEl!.getAttribute('d'), 'the clip <path> carries d path-data');
+    });
+});
+
+describe('SvgRenderer — ClipChildren children group', () => {
+    beforeEach(() => { Application.current = null; });
+
+    test('ChildClip hosts children in a clipped mural-children group; own paint stays out', () => {
+        const { document, surface } = makeDom();
+        const renderer = new SvgRenderer(surface, { document });
+
+        const border = new Border();
+        border.Fill = new SolidColorBrush(Color.FromHex('#ffffff'));
+        border.BorderBrush = new SolidColorBrush(Color.FromHex('#000000'));
+        border.BorderThickness = new Thickness(8);
+        border.ClipChildren = true;
+        const child = new Border();
+        child.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
+        border.SetChild(child);
+        border.Measure(new Size(100, 100));
+        border.Arrange(new Rect(0, 0, 100, 100));
+
+        renderer.Render(border, undefined, null, null);
+
+        const group = surface.querySelector('g.mural-children');
+        assert.ok(group, 'mural-children group exists');
+        assert.ok(group!.getAttribute('clip-path'), 'the group is clipped');
+        // The child outer lives inside the clipped group.
+        assert.ok(group!.querySelector(':scope > g.mural-visual'), 'child outer is inside the group');
+        // The Border's own paint is a sibling of the group, not inside it.
+        const rootOuter = surface.querySelector('g.mural-visual')!;
+        const own = rootOuter.querySelector(':scope > g.mural-own');
+        assert.ok(own, 'own paint group exists');
+        assert.equal(group!.contains(own!), false, 'own paint stays outside the clipped group');
+    });
+
+    test('toggling ClipChildren off moves children back and removes the group', () => {
+        const { document, surface } = makeDom();
+        const renderer = new SvgRenderer(surface, { document });
+
+        const border = new Border();
+        border.BorderBrush = new SolidColorBrush(Color.FromHex('#000000'));
+        border.BorderThickness = new Thickness(8);
+        border.ClipChildren = true;
+        border.SetChild(new Border());
+        border.Measure(new Size(100, 100));
+        border.Arrange(new Rect(0, 0, 100, 100));
+        renderer.Render(border, undefined, null, null);
+        assert.ok(surface.querySelector('g.mural-children'), 'group present when on');
+
+        border.ClipChildren = false;
+        border.Measure(new Size(100, 100));
+        border.Arrange(new Rect(0, 0, 100, 100));
+        renderer.Render(border, undefined, null, null);
+        assert.equal(surface.querySelector('g.mural-children'), null, 'group removed when off');
+        const rootOuter = surface.querySelector('g.mural-visual')!;
+        assert.ok(rootOuter.querySelector(':scope > g.mural-visual'), 'child outer back under the outer group');
     });
 });

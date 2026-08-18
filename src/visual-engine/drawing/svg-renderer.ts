@@ -71,6 +71,10 @@ interface VisualNodes
     // silently fall through instead of dispatching to the row.
     hit:   SVGRectElement;
     own:   SVGGElement;
+    // Lazily-created <g class="mural-children" clip-path> hosting the child
+    // outers when ChildClip is set. Positioned after `own`, so own paint stays
+    // unclipped and children paint on top. Absent when ClipChildren is off.
+    children?: SVGGElement;
     // Persistent <foreignObject> for a DomHost — created once, parked in the
     // outer group, sized on arrange, and NEVER touched by repaintOwn, so the
     // hosted DOM (a Monaco editor, a webview) survives render invalidations
@@ -116,6 +120,10 @@ interface RenderableVisual extends BackrefHost
 {
     readonly ArrangedRect: { X: number; Y: number; Width: number; Height: number };
     readonly Clip:         unknown;
+    // Visual.ChildClip — clips the CHILDREN only (not own paint), applied via a
+    // `mural-children` group. Undefined means children paint directly in the
+    // outer <g> as usual.
+    readonly ChildClip:    unknown;
     readonly IsHitTestVisible: boolean;
     // Visual.Visibility — string-enum: 'Visible' (paint + hit-test),
     // 'Hidden' (slot reserved, no paint, no hit), 'Collapsed' (zero
@@ -481,11 +489,22 @@ export class SvgRenderer
             this.repaintOwn(info, visual);
         }
 
-        // Recurse into children. Each child's walk will either re-use
-        // an existing outer (no DOM move needed) or create + insert.
+        // Children-only clip. AFTER repaintOwn so the mural-children group is
+        // inserted after `own` (own paint stays unclipped). ChildClip is
+        // rebuilt at arrange, so respond to arrange-dirty as well as render.
+        if (isNew || renderDirty === null || arrangeDirty === null
+            || arrangeDirty.has(visual) || renderDirty.has(visual) || sizeChanged)
+        {
+            this.applyChildClip(info, visual);
+        }
+
+        // Recurse into children — into the clipped group when present, else the
+        // outer <g>. Each child's walk re-uses an existing outer (no DOM move)
+        // or creates + inserts under the given parent.
+        const childParent = info.children ?? info.outer;
         for (const child of visual.visualChildren)
         {
-            this.walk(child, info.outer, renderDirty, arrangeDirty, visited);
+            this.walk(child, childParent, renderDirty, arrangeDirty, visited);
         }
     }
 
@@ -571,6 +590,7 @@ export class SvgRenderer
     // for this visual. Tracked via a WeakMap so we can find and remove
     // the prior def without scanning <defs>.
     private clipDefs = new WeakMap<RenderableVisual, SVGElement>();
+    private childClipDefs = new WeakMap<RenderableVisual, SVGElement>();
 
     // Mirror IsHitTestVisible onto BOTH the outer <g> and the mural-hit
     // pad. When false, the outer gets `pointer-events="none"` so this
@@ -654,24 +674,16 @@ export class SvgRenderer
         }
     }
 
-    private applyClip(outer: SVGGElement, visual: RenderableVisual): void
+    // Build a fresh <clipPath> for `geom` (rect / ellipse / path — the same
+    // geometry classes the DC recognises), append it to defs, and return it —
+    // or undefined for an unsupported / empty geometry. Shared by the
+    // whole-subtree Clip (applyClip) and the children-only ChildClip
+    // (applyChildClip); the geometry is in the visual's local space either way.
+    private buildClipPath(geom: unknown): SVGElement | undefined
     {
-        // Tear down any prior clip-path def we own for this visual.
-        const prior = this.clipDefs.get(visual);
-        if (prior !== undefined)
-        {
-            prior.remove();
-            this.clipDefs.delete(visual);
-            outer.removeAttribute('clip-path');
-        }
-        const clip = visual.Clip as { Rect?: unknown; Center?: unknown; Figures?: unknown } | undefined;
-        if (clip === undefined || clip === null) return;
+        const clip = geom as { Rect?: unknown; Center?: unknown; Figures?: unknown } | undefined;
+        if (clip === undefined || clip === null) return undefined;
 
-        // Build a fresh <clipPath> off the same geometry classes the
-        // DC recognises. We deliberately don't share the DC's PushClip
-        // here — clip on the visual wraps the WHOLE subtree (own +
-        // children), so it lives on the outer <g>, not nested inside
-        // the own group.
         const id = `mural-clip-${this.clipCounter++}`;
         const cp = this.doc.createElementNS(SVG_NS, 'clipPath') as SVGElement;
         cp.setAttribute('id', id);
@@ -703,7 +715,7 @@ export class SvgRenderer
         {
             // Arbitrary path clip (e.g. a HeartPresenter's silhouette).
             // Lower to <path d="…"> via the SAME serializer DrawGeometry
-            // uses, so the subtree clip tracks the painted outline exactly.
+            // uses, so the clip tracks the painted outline exactly.
             const path = clip as unknown as PathGeometry;
             const shape = this.doc.createElementNS(SVG_NS, 'path') as SVGElement;
             shape.setAttribute('d', pathGeometryToSvgD(path));
@@ -713,12 +725,71 @@ export class SvgRenderer
         }
         else
         {
-            return;   // Unsupported clip shape — leave outer unclipped.
+            return undefined;   // Unsupported clip shape.
         }
 
         this.defs.appendChild(cp);
+        return cp;
+    }
+
+    private applyClip(outer: SVGGElement, visual: RenderableVisual): void
+    {
+        // Tear down any prior clip-path def we own for this visual.
+        const prior = this.clipDefs.get(visual);
+        if (prior !== undefined)
+        {
+            prior.remove();
+            this.clipDefs.delete(visual);
+            outer.removeAttribute('clip-path');
+        }
+        // Clip wraps the WHOLE subtree (own + children), so it lives on the
+        // outer <g>, not nested inside the own group.
+        const cp = this.buildClipPath(visual.Clip);
+        if (cp === undefined) return;
         this.clipDefs.set(visual, cp);
-        outer.setAttribute('clip-path', `url(#${id})`);
+        outer.setAttribute('clip-path', `url(#${cp.getAttribute('id')})`);
+    }
+
+    // Children-only clip: when ChildClip is set, host the child outers in a
+    // `<g class="mural-children" clip-path>` inserted after `own`, so the
+    // visual's own paint stays unclipped and only its children are trimmed.
+    // The geometry is in the visual's local space (no per-child translation).
+    private applyChildClip(info: VisualNodes, visual: RenderableVisual): void
+    {
+        // Rebuild our clip def from scratch each pass we're invoked.
+        const prior = this.childClipDefs.get(visual);
+        if (prior !== undefined) { prior.remove(); this.childClipDefs.delete(visual); }
+
+        const cp = this.buildClipPath(visual.ChildClip);
+        if (cp !== undefined)
+        {
+            let g = info.children;
+            if (g === undefined)
+            {
+                g = this.doc.createElementNS(SVG_NS, 'g') as SVGGElement;
+                g.setAttribute('class', 'mural-children');
+                info.outer.appendChild(g);   // after hit + own → children paint on top
+                // Move existing child outers into the group (toggle-on).
+                for (const node of Array.from(info.outer.children))
+                {
+                    if (node !== g && (node as Element).getAttribute('class') === 'mural-visual')
+                    {
+                        g.appendChild(node);
+                    }
+                }
+                info.children = g;
+            }
+            this.childClipDefs.set(visual, cp);
+            g.setAttribute('clip-path', `url(#${cp.getAttribute('id')})`);
+        }
+        else if (info.children !== undefined)
+        {
+            // ChildClip cleared — move children back to the outer <g>, drop group.
+            const g = info.children;
+            while (g.firstChild !== null) info.outer.appendChild(g.firstChild);
+            g.remove();
+            info.children = undefined;
+        }
     }
 
     private repaintOwn(info: VisualNodes, visual: RenderableVisual): void
