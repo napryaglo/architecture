@@ -24,6 +24,7 @@ import { DrawerDemo } from "../demos/drawer/drawer.mu.js";
 import { FabMenuDemo } from "../demos/fab-menu/fab-menu.mu.js";
 import { FabDemo } from "../demos/fab/fab.mu.js";
 import { FillEditorDemo } from "../demos/fill-editor/fill-editor.mu.js";
+import { HitTestDemo } from "../demos/hit-test/hit-test.mu.js";
 import { IconButtonDemo } from "../demos/icon-button/icon-button.mu.js";
 import { ListBoxDemo } from "../demos/list-box/list-box.mu.js";
 import { LoadingIndicatorDemo } from "../demos/loading-indicator/loading-indicator.mu.js";
@@ -104,6 +105,7 @@ export const app = (() => {
     for (const [_k, _v] of RibbonDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of RichTextEditorDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of RichTextBlockDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of HitTestDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of SegmentedButtonDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ShapesDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of SliderDemo.Clone().Entries()) _rd1.Set(_k, _v);

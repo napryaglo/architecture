@@ -299,6 +299,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['PuffyDiamond',            '@pragmatic-lab/mural/basic'],
     ['PuffyBase',               '@pragmatic-lab/mural/basic'],
     ['Heart',                   '@pragmatic-lab/mural/basic'],
+    ['HeartPresenter',          '@pragmatic-lab/mural/basic'],
     ['Bun',                     '@pragmatic-lab/mural/basic'],
     ['Ghostish',                '@pragmatic-lab/mural/basic'],
     ['PixelArt',                '@pragmatic-lab/mural/basic'],

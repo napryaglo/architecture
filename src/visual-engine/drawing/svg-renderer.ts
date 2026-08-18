@@ -1,5 +1,7 @@
 import type { Visual } from '../../runtime/index.js';
 import { SvgDomDrawingContext } from './svg-dom-drawing-context.js';
+import { pathGeometryToSvgD } from '../geometry/path-to-svg.js';
+import type { PathGeometry } from '../geometry/geometry.js';
 
 // Live-DOM renderer that paints a Visual tree into an `<svg>` surface
 // and keeps the painted result in lock-step with the visual tree on
@@ -662,7 +664,7 @@ export class SvgRenderer
             this.clipDefs.delete(visual);
             outer.removeAttribute('clip-path');
         }
-        const clip = visual.Clip as { Rect?: unknown; Center?: unknown } | undefined;
+        const clip = visual.Clip as { Rect?: unknown; Center?: unknown; Figures?: unknown } | undefined;
         if (clip === undefined || clip === null) return;
 
         // Build a fresh <clipPath> off the same geometry classes the
@@ -695,6 +697,18 @@ export class SvgRenderer
             shape.setAttribute('cy', formatNumber(e.Center.Y));
             shape.setAttribute('rx', formatNumber(e.RadiusX));
             shape.setAttribute('ry', formatNumber(e.RadiusY));
+            cp.appendChild(shape);
+        }
+        else if ('Figures' in (clip as object))
+        {
+            // Arbitrary path clip (e.g. a HeartPresenter's silhouette).
+            // Lower to <path d="…"> via the SAME serializer DrawGeometry
+            // uses, so the subtree clip tracks the painted outline exactly.
+            const path = clip as unknown as PathGeometry;
+            const shape = this.doc.createElementNS(SVG_NS, 'path') as SVGElement;
+            shape.setAttribute('d', pathGeometryToSvgD(path));
+            if ((clip as { FillRule?: string }).FillRule === 'evenodd')
+                shape.setAttribute('clip-rule', 'evenodd');
             cp.appendChild(shape);
         }
         else

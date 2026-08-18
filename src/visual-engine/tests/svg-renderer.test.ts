@@ -9,12 +9,16 @@ import {
     Size,
     Rect,
     Color,
+    Point,
 } from '../../runtime/index.js';
 import { Border, Canvas, TextBlock } from '../../basic/index.js';
 import {
     SvgRenderer,
     VISUAL_BACKREF,
     SolidColorBrush,
+    PathGeometry,
+    PathFigure,
+    LineSegment,
 } from '../index.js';
 
 // Spin up a fresh JSDOM per test so document state doesn't leak. The
@@ -357,5 +361,35 @@ describe('SvgRenderer — visibility gate', () => {
         border.Visibility = Visibility.Visible;
         renderer.Render(border, undefined, null, null);
         assert.equal(outer.getAttribute('display'), null);
+    });
+});
+
+describe('SvgRenderer — path-shaped subtree clip', () => {
+    beforeEach(() => { Application.current = null; });
+
+    test('a PathGeometry Clip emits a <clipPath> with a <path> and references it on the outer group', () => {
+        const { document, surface } = makeDom();
+        const renderer = new SvgRenderer(surface, { document });
+
+        const border = new Border();
+        border.Background = new SolidColorBrush(Color.FromHex('#4caf50'));
+        // Triangle path clip in the Visual's local space.
+        const figure = new PathFigure(new Point(0, 0), [
+            new LineSegment(new Point(100, 0)),
+            new LineSegment(new Point(50, 80)),
+        ], true);
+        border.Clip = new PathGeometry([figure]);
+        border.Measure(new Size(100, 80));
+        border.Arrange(new Rect(0, 0, 100, 80));
+
+        renderer.Render(border, undefined, null, null);
+
+        const outer = surface.querySelector('g.mural-visual');
+        assert.ok(outer, 'outer group exists');
+        assert.ok(outer!.getAttribute('clip-path'), 'outer group references a clip-path');
+
+        const clipPathEl = surface.querySelector('clipPath > path');
+        assert.ok(clipPathEl, 'the <clipPath> contains a <path> for the PathGeometry');
+        assert.ok(clipPathEl!.getAttribute('d'), 'the clip <path> carries d path-data');
     });
 });
