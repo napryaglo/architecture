@@ -13,6 +13,7 @@ import {
     HeadlessTarget,
     SolidColorBrush,
     SvgDrawingContext,
+    Pen,
 } from '../index.js';
 
 // Leaf Visual that paints a fixed-size colored rectangle at (0,0) in
@@ -224,5 +225,55 @@ describe('HeadlessTarget.Render', () => {
         t.Render(new SvgDrawingContext());
         assert.equal(t.ActualWidth,  120);
         assert.equal(t.ActualHeight, 60);
+    });
+});
+
+// A container that paints its own outline (Stroke) and clips its children.
+class ClipContainer extends Single
+{
+    constructor(child: Visual)
+    {
+        super();
+        this.SetChild(child);
+        this.ClipChildren = true;
+        this.Stroke = new Pen(new SolidColorBrush(Color.Black), 10);
+    }
+    protected override MeasureOverride(availableSize: Size): Size
+    {
+        this.child?.Measure(availableSize);
+        return this.child?.DesiredSize ?? Size.Zero;
+    }
+}
+
+// Records the order of drawing-context operations so we can assert the
+// ChildClip wraps children but NOT the container's own paint.
+class OpLog implements DrawingContext
+{
+    public ops: string[] = [];
+    DrawRectangle(): void        { this.ops.push('draw'); }
+    DrawRoundedRectangle(): void { this.ops.push('draw'); }
+    DrawGeometry(): void         { this.ops.push('draw'); }
+    DrawText(): void             { this.ops.push('text'); }
+    PushTransform(): void        { this.ops.push('pushT'); }
+    PushClip(): void             { this.ops.push('pushClip'); }
+    Pop(): void                  { this.ops.push('pop'); }
+}
+
+describe('HeadlessTarget — ChildClip push/pop', () => {
+    test('ChildClip is pushed after own paint and popped after children', () => {
+        const leaf = new PaintRect(new Size(100, 100), Color.Red);
+        const container = new ClipContainer(leaf);
+        const t = new HeadlessTarget(100, 100, container);
+
+        const dc = new OpLog();
+        t.Render(dc);
+
+        const push = dc.ops.indexOf('pushClip');
+        const pop  = dc.ops.lastIndexOf('pop');
+        assert.ok(push >= 0, 'ChildClip was pushed');
+        // The container's own paint (first draw) precedes the ChildClip push.
+        assert.ok(dc.ops.indexOf('draw') < push, 'own paint is NOT clipped by ChildClip');
+        // The child paints inside the ChildClip (between push and its pop).
+        assert.ok(dc.ops.slice(push + 1, pop).includes('draw'), 'child paints inside the ChildClip');
     });
 });

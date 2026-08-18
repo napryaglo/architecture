@@ -102,6 +102,14 @@ export class HeadlessTarget extends PresentationTarget
             dc.PushClip(clip as Parameters<DrawingContext['PushClip']>[0]);
         }
         visual.Render(dc);
+        // ChildClip — clips the CHILDREN only (not this Visual's own paint),
+        // so it is pushed AFTER Render and popped after the descendant walk.
+        // Mirrors the SvgRenderer's mural-children group.
+        const childClip = visual.ChildClip;
+        if (childClip !== undefined)
+        {
+            dc.PushClip(childClip as Parameters<DrawingContext['PushClip']>[0]);
+        }
         // Walk the VISUAL children — what the renderer sees, which
         // post-templating differs from the logical content. Every
         // Visual exposes this getter (default empty for leaves;
@@ -109,6 +117,10 @@ export class HeadlessTarget extends PresentationTarget
         for (const child of visual.visualChildren)
         {
             this.renderTree(child, dc);
+        }
+        if (childClip !== undefined)
+        {
+            dc.Pop();
         }
         if (clip !== undefined)
         {
