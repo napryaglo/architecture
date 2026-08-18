@@ -22,22 +22,25 @@ import { Shape } from './shape.js';
 // Stroke insets by half-thickness (Border / Ellipse convention).
 export class Arch extends Shape
 {
-    // Outline = the drawn silhouette; single source for paint + hit.
+    // Hit / clip outline = the OUTER silhouette (inset 0).
     protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        return this.buildOutline(size, 0);
+    }
+
+    // The silhouette inset uniformly by `inset` px per edge.
+    private buildOutline(size: Size, inset: number): Geometry | undefined
     {
         if (size.Width <= 0 || size.Height <= 0) return undefined;
 
-        const stroke = this.Stroke;
-        const t      = stroke?.Thickness ?? 0;
-        const half = t / 2;
-        const w    = Math.max(0, size.Width  - t);
-        const h    = Math.max(0, size.Height - t);
+        const w    = Math.max(0, size.Width  - 2 * inset);
+        const h    = Math.max(0, size.Height - 2 * inset);
         const archHeight = Math.min(w / 2, h);
 
-        const xL          = half;
-        const xR          = half + w;
-        const yTopOfSides = half + archHeight;
-        const yBottom     = half + h;
+        const xL          = inset;
+        const xR          = inset + w;
+        const yTopOfSides = inset + archHeight;
+        const yBottom     = inset + h;
 
         const figure = new PathFigure(
             new Point(xL, yTopOfSides),
@@ -58,7 +61,7 @@ export class Arch extends Shape
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        const geom = this.buildGeometry(this.RenderSize);
+        const geom = this.buildOutline(this.RenderSize, (this.Stroke?.Thickness ?? 0) / 2);
         if (geom === undefined) return;
         dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }

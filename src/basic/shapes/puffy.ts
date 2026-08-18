@@ -53,27 +53,30 @@ export class Puffy extends Shape
     public get Base(): PuffyBase { return this.get_property_value(Puffy.BaseKey); }
     public set Base(v: PuffyBase) { this.set_property_value(Puffy.BaseKey, v); }
 
-    // Hit outline: the same puffy figure the renderer draws, with the
+    // Hit / clip outline = the OUTER silhouette (inset 0), with the
     // diamond rotation baked into the geometry's Transform so
     // Geometry.Contains (which inverts Transform) matches the drawn shape.
     // RenderOverride keeps its own dc.PushTransform — do NOT delegate, or
     // the rotation would apply twice.
     protected override buildGeometry(size: Size): Geometry | undefined
     {
+        return this.buildOutline(size, 0);
+    }
+
+    // The puffy silhouette inset uniformly by `inset` px per edge.
+    private buildOutline(size: Size, inset: number): Geometry | undefined
+    {
         if (size.Width <= 0 || size.Height <= 0) return undefined;
 
-        const stroke = this.Stroke;
-        const t      = stroke?.Thickness ?? 0;
-        const half = t / 2;
-        const w    = Math.max(0, size.Width  - t);
-        const h    = Math.max(0, size.Height - t);
+        const w    = Math.max(0, size.Width  - 2 * inset);
+        const h    = Math.max(0, size.Height - 2 * inset);
 
         const isDiamond = this.Base === PuffyBase.Diamond;
         const scale  = isDiamond ? Math.SQRT1_2 : 1;
         const innerW = w * scale;
         const innerH = h * scale;
-        const offX   = half + (w - innerW) / 2;
-        const offY   = half + (h - innerH) / 2;
+        const offX   = inset + (w - innerW) / 2;
+        const offY   = inset + (h - innerH) / 2;
 
         const geom = new PathGeometry([buildPuffyFigure(
             offX, offY, innerW, innerH,
@@ -81,8 +84,8 @@ export class Puffy extends Shape
 
         if (isDiamond)
         {
-            const cx = half + w / 2;
-            const cy = half + h / 2;
+            const cx = inset + w / 2;
+            const cy = inset + h / 2;
             const a  = Math.PI / 4;
             const c  = Math.cos(a);
             const s  = Math.sin(a);
@@ -101,8 +104,8 @@ export class Puffy extends Shape
         const stroke = this.Stroke;
         const t      = stroke?.Thickness ?? 0;
         const half = t / 2;
-        const w    = Math.max(0, size.Width  - t);
-        const h    = Math.max(0, size.Height - t);
+        const w    = Math.max(0, size.Width  - 2 * half);
+        const h    = Math.max(0, size.Height - 2 * half);
 
         const isDiamond = this.Base === PuffyBase.Diamond;
         // Pre-shrink so the 45° rotation stays inside the slot.

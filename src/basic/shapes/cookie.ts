@@ -39,20 +39,23 @@ export class Cookie extends Shape
     public get CornerRadius(): number { return this.get_property_value(Cookie.CornerRadiusKey); }
     public set CornerRadius(v: number) { this.set_property_value(Cookie.CornerRadiusKey, v); }
 
-    // Outline = the drawn silhouette; single source for paint + hit.
+    // Hit / clip outline = the OUTER silhouette (inset 0).
     protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        return this.buildOutline(size, 0);
+    }
+
+    // The silhouette inset uniformly by `inset` px per edge.
+    private buildOutline(size: Size, inset: number): Geometry | undefined
     {
         if (size.Width <= 0 || size.Height <= 0) return undefined;
 
-        const stroke = this.Stroke;
-        const t      = stroke?.Thickness ?? 0;
-        const half = t / 2;
-        const w    = Math.max(0, size.Width  - t);
-        const h    = Math.max(0, size.Height - t);
+        const w    = Math.max(0, size.Width  - 2 * inset);
+        const h    = Math.max(0, size.Height - 2 * inset);
         const rx   = w / 2;
         const ry   = h / 2;
-        const cx   = half + rx;
-        const cy   = half + ry;
+        const cx   = inset + rx;
+        const cy   = inset + ry;
 
         const sides = Math.max(3, Math.floor(this.Sides));
         const phi0  = this.Rotation * Math.PI / 180;
@@ -71,7 +74,7 @@ export class Cookie extends Shape
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        const geom = this.buildGeometry(this.RenderSize);
+        const geom = this.buildOutline(this.RenderSize, (this.Stroke?.Thickness ?? 0) / 2);
         if (geom === undefined) return;
         dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }

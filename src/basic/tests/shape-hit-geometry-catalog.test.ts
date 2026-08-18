@@ -125,6 +125,19 @@ describe('Catalog shapes batch B — outline hit region', () => {
         assert.ok(!hit.Contains(new Point(50, 2)), 'top-centre valley notch falls through');
     });
 
+    test('Heart: hit outline is stroke-inclusive (outer); paint insets by half the pen', () => {
+        const hrt = new Heart();
+        hrt.Stroke = new Pen(new SolidColorBrush(Color.Black), 10);
+        hrt.Width = 100; hrt.Height = 100;
+        arrange(hrt, 100, 100);
+        const hit = (hrt.HitTestGeometry as PathGeometry).GetBounds();
+        const paint = (drawnGeometries(hrt)[0] as PathGeometry).GetBounds();
+        // Hit outline uses the full slot (inset 0); paint insets by t/2 = 5,
+        // so the hit region is strictly larger than what is painted.
+        assert.ok(hit.Width > paint.Width, 'hit outline wider than painted');
+        assert.ok(hit.Height > paint.Height, 'hit outline taller than painted');
+    });
+
     test('Squircle sets a PathGeometry hit region covering its centre', () => {
         const sq = new Squircle();
         sq.Width = 80; sq.Height = 80;

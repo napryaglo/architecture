@@ -45,16 +45,22 @@ export class PixelArt extends Shape
     public get Source(): PixelSource { return this.get_property_value(PixelArt.SourceKey); }
     public set Source(v: PixelSource) { this.set_property_value(PixelArt.SourceKey, v); }
 
-    // Outline = the drawn silhouette; single source for paint + hit.
+    // Hit / clip outline = the OUTER silhouette (inset 0), so the whole
+    // shape including its stroke band is grabbable.
     protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        return this.buildOutline(size, 0);
+    }
+
+    // The rasterised cell grid inset uniformly by `inset` px on every edge.
+    // buildGeometry uses inset 0 (outer, for hit); RenderOverride paints at
+    // inset = t/2 so a centred stroke lands fully inside the outline.
+    private buildOutline(size: Size, inset: number): Geometry | undefined
     {
         if (size.Width <= 0 || size.Height <= 0) return undefined;
 
-        const stroke = this.Stroke;
-        const t      = stroke?.Thickness ?? 0;
-        const half = t / 2;
-        const w    = Math.max(0, size.Width  - t);
-        const h    = Math.max(0, size.Height - t);
+        const w    = Math.max(0, size.Width  - 2 * inset);
+        const h    = Math.max(0, size.Height - 2 * inset);
 
         const N = Math.max(2, Math.floor(this.GridSize));
         const cellW = w / N;
@@ -74,8 +80,8 @@ export class PixelArt extends Shape
                 const v = (j + 0.5) / N;
                 if (!inside(u, v)) continue;
 
-                const x0 = half + i * cellW;
-                const y0 = half + j * cellH;
+                const x0 = inset + i * cellW;
+                const y0 = inset + j * cellH;
                 const x1 = x0 + cellW;
                 const y1 = y0 + cellH;
                 figures.push(new PathFigure(new Point(x0, y0), [
@@ -91,7 +97,7 @@ export class PixelArt extends Shape
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        const geom = this.buildGeometry(this.RenderSize);
+        const geom = this.buildOutline(this.RenderSize, (this.Stroke?.Thickness ?? 0) / 2);
         if (geom === undefined) return;
         dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }

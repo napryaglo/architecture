@@ -40,23 +40,26 @@ export class Fan extends Shape
     public get Pivot(): FanPivot { return this.get_property_value(Fan.PivotKey); }
     public set Pivot(v: FanPivot) { this.set_property_value(Fan.PivotKey, v); }
 
-    // Outline = the drawn silhouette; single source for paint + hit.
+    // Hit / clip outline = the OUTER silhouette (inset 0).
     protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        return this.buildOutline(size, 0);
+    }
+
+    // The silhouette inset uniformly by `inset` px per edge.
+    private buildOutline(size: Size, inset: number): Geometry | undefined
     {
         if (size.Width <= 0 || size.Height <= 0) return undefined;
 
-        const stroke = this.Stroke;
-        const t      = stroke?.Thickness ?? 0;
-        const half = t / 2;
-        const w    = Math.max(0, size.Width  - t);
-        const h    = Math.max(0, size.Height - t);
+        const w    = Math.max(0, size.Width  - 2 * inset);
+        const h    = Math.max(0, size.Height - 2 * inset);
 
         // Three points per pivot: the pivot itself + the two arc endpoints.
         // Pick the SVG sweep direction so the arc takes the "outer" path
         // (concave-toward-the-pivot), giving the wedge shape rather than
         // the rest of the ellipse.
-        const xL = half,     xR = half + w;
-        const yT = half,     yB = half + h;
+        const xL = inset,     xR = inset + w;
+        const yT = inset,     yB = inset + h;
 
         let pivot:    Point;
         let arcStart: Point;
@@ -105,7 +108,7 @@ export class Fan extends Shape
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        const geom = this.buildGeometry(this.RenderSize);
+        const geom = this.buildOutline(this.RenderSize, (this.Stroke?.Thickness ?? 0) / 2);
         if (geom === undefined) return;
         dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }

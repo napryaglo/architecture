@@ -36,20 +36,26 @@ export class Arrow extends Shape
     public get BowDepth(): number { return this.get_property_value(Arrow.BowDepthKey); }
     public set BowDepth(v: number) { this.set_property_value(Arrow.BowDepthKey, v); }
 
-    // Outline = the drawn silhouette; single source for paint + hit.
+    // Hit / clip outline = the OUTER silhouette (inset 0), so the whole
+    // shape including its stroke band is grabbable.
     protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        return this.buildOutline(size, 0);
+    }
+
+    // The arrow silhouette inset uniformly by `inset` px on every edge.
+    // buildGeometry uses inset 0 (outer, for hit); RenderOverride paints at
+    // inset = t/2 so a centred stroke lands fully inside the outline.
+    private buildOutline(size: Size, inset: number): Geometry | undefined
     {
         if (size.Width <= 0 || size.Height <= 0) return undefined;
 
-        const stroke = this.Stroke;
-        const t      = stroke?.Thickness ?? 0;
-        const half = t / 2;
-        const w    = Math.max(0, size.Width  - t);
-        const h    = Math.max(0, size.Height - t);
+        const w    = Math.max(0, size.Width  - 2 * inset);
+        const h    = Math.max(0, size.Height - 2 * inset);
 
-        const top = new Point(half + w / 2, half);
-        const bl  = new Point(half,         half + h);
-        const br  = new Point(half + w,     half + h);
+        const top = new Point(inset + w / 2, inset);
+        const bl  = new Point(inset,         inset + h);
+        const br  = new Point(inset + w,     inset + h);
 
         const topToBr = unit(top, br);
         const blToTop = unit(bl,  top);
@@ -59,7 +65,7 @@ export class Arrow extends Shape
         // The bow control point: the bottom edge midpoint pulled up
         // toward the top by `BowDepth × H`.
         const bow = Math.max(0, Math.min(1, this.BowDepth)) * h;
-        const baseCtrl = new Point(half + w / 2, half + h - bow);
+        const baseCtrl = new Point(inset + w / 2, inset + h - bow);
 
         const edges = [
             Math.hypot(br.X - top.X, br.Y - top.Y),
@@ -103,7 +109,10 @@ export class Arrow extends Shape
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        const geom = this.buildGeometry(this.RenderSize);
+        // Paint the outline inset by half the pen so a centred stroke stays
+        // inside the outer (hit) silhouette. Render is unchanged from when
+        // buildGeometry itself insetted.
+        const geom = this.buildOutline(this.RenderSize, (this.Stroke?.Thickness ?? 0) / 2);
         if (geom === undefined) return;
         dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }

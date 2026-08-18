@@ -29,26 +29,32 @@ export class Bun extends Shape
     public get Waist(): number { return this.get_property_value(Bun.WaistKey); }
     public set Waist(v: number) { this.set_property_value(Bun.WaistKey, v); }
 
-    // Outline = the drawn silhouette; single source for paint + hit.
+    // Hit / clip outline = the OUTER silhouette (inset 0), so the whole
+    // shape including its stroke band is grabbable.
     protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        return this.buildOutline(size, 0);
+    }
+
+    // The bun silhouette inset uniformly by `inset` px on every edge.
+    // buildGeometry uses inset 0 (outer, for hit); RenderOverride paints at
+    // inset = t/2 so a centred stroke lands fully inside the outline.
+    private buildOutline(size: Size, inset: number): Geometry | undefined
     {
         if (size.Width <= 0 || size.Height <= 0) return undefined;
 
-        const stroke = this.Stroke;
-        const t      = stroke?.Thickness ?? 0;
-        const half = t / 2;
-        const w    = Math.max(0, size.Width  - t);
-        const h    = Math.max(0, size.Height - t);
+        const w    = Math.max(0, size.Width  - 2 * inset);
+        const h    = Math.max(0, size.Height - 2 * inset);
 
-        const cx    = half + w / 2;
+        const cx    = inset + w / 2;
         const waist = Math.max(0.2, Math.min(1, this.Waist));
         const wx    = (w / 2) * waist;       // waist half-width
-        const top   = new Point(cx, half);
-        const right = new Point(half + w, half + h / 2);
-        const bot   = new Point(cx, half + h);
-        const left  = new Point(half, half + h / 2);
-        const wRight = new Point(cx + wx, half + h / 2);
-        const wLeft  = new Point(cx - wx, half + h / 2);
+        const top   = new Point(cx, inset);
+        const right = new Point(inset + w, inset + h / 2);
+        const bot   = new Point(cx, inset + h);
+        const left  = new Point(inset, inset + h / 2);
+        const wRight = new Point(cx + wx, inset + h / 2);
+        const wLeft  = new Point(cx - wx, inset + h / 2);
 
         // Each quadrant: cubic Bezier from corner to waist. Tangent on
         // the top is horizontal; tangent on the waist is vertical for a
@@ -85,7 +91,10 @@ export class Bun extends Shape
 
     protected override RenderOverride(dc: DrawingContext): void
     {
-        const geom = this.buildGeometry(this.RenderSize);
+        // Paint the outline inset by half the pen so a centred stroke stays
+        // inside the outer (hit) silhouette. Render is unchanged from when
+        // buildGeometry itself insetted.
+        const geom = this.buildOutline(this.RenderSize, (this.Stroke?.Thickness ?? 0) / 2);
         if (geom === undefined) return;
         dc.DrawGeometry(this.Fill, this.Stroke, geom);
     }

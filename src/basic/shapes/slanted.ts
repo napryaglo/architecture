@@ -28,32 +28,38 @@ export class Slanted extends Squircle
     public get LeanAngle(): number { return this.get_property_value(Slanted.LeanAngleKey); }
     public set LeanAngle(v: number) { this.set_property_value(Slanted.LeanAngleKey, v); }
 
-    // Hit outline: the same sheared squircle the renderer draws, with the
-    // shear baked into the geometry's Transform (Contains inverts it).
-    // RenderOverride keeps its own dc.PushTransform — do NOT delegate.
+    // Hit / clip outline = the OUTER sheared squircle (inset 0), so the whole
+    // shape including its stroke band is grabbable. The shear is baked into
+    // the geometry's Transform (Contains inverts it). RenderOverride keeps its
+    // own dc.PushTransform — do NOT delegate.
     protected override buildGeometry(size: Size): Geometry | undefined
+    {
+        return this.buildSlantedOutline(size, 0);
+    }
+
+    // The sheared squircle silhouette inset uniformly by `inset` px on every
+    // edge. buildGeometry uses inset 0 (outer, for hit); RenderOverride paints
+    // at inset = t/2 so a centred stroke lands fully inside the outline.
+    private buildSlantedOutline(size: Size, inset: number): Geometry | undefined
     {
         if (size.Width <= 0 || size.Height <= 0) return undefined;
 
-        const stroke = this.Stroke;
-        const t      = stroke?.Thickness ?? 0;
-        const half = t / 2;
-        const w    = Math.max(0, size.Width  - t);
-        const h    = Math.max(0, size.Height - t);
+        const w    = Math.max(0, size.Width  - 2 * inset);
+        const h    = Math.max(0, size.Height - 2 * inset);
 
         const lean = this.LeanAngle * Math.PI / 180;
         const tan  = Math.tan(lean);
         const shift = h * Math.abs(tan);
 
         const innerWidth = Math.max(0, w - shift);
-        const innerXL    = half + shift / 2;
+        const innerXL    = inset + shift / 2;
 
         const geom = new PathGeometry([
-            buildSquircleFigure(innerXL, half, innerWidth, h, this.Superness)]);
+            buildSquircleFigure(innerXL, inset, innerWidth, h, this.Superness)]);
 
         if (tan !== 0)
         {
-            const yBottom = half + h;
+            const yBottom = inset + h;
             geom.Transform = new MatrixTransform(new Matrix(1, 0, -tan, 1, yBottom * tan, 0));
         }
         return geom;
