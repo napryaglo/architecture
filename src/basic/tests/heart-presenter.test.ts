@@ -58,22 +58,21 @@ describe('HeartPresenter — heart chrome + outline-confined hit region', () => 
             `right inset ~ half the pen (got ${rightInset} for pen ${t})`);
     });
 
-    test('ClipChildren clips the content to the heart inset by the full pen (inside the stroke)', () => {
+    test('ClipChildren sets ChildClip to the heart inset by the full pen (inside the stroke)', () => {
         const hp = new HeartPresenter();
         const t = 40;
         hp.Stroke = new Pen(new SolidColorBrush(new Color(255, 0, 255, 255)), t);
         hp.ClipChildren = true;
-        const child = new Border();           // default Stretch → fills the slot, no offset
-        hp.Content = child;
+        hp.Content = new Border();            // default Stretch → fills the slot
         hp.Width = 240; hp.Height = 240;
         arrange(hp, 240, 240);
 
-        const clip = child.Clip as PathGeometry;
-        assert.ok(clip instanceof PathGeometry, 'content is clipped by a heart PathGeometry');
+        const clip = hp.ChildClip as PathGeometry;
+        assert.ok(clip instanceof PathGeometry, 'ChildClip is a heart PathGeometry');
 
-        // The content clip (inset by the full pen) sits strictly INSIDE the
-        // drawn heart outline (inset by half the pen) on every side, so
-        // content can't overlap the border.
+        // The child clip (inset by the full pen) sits strictly INSIDE the drawn
+        // heart outline (inset by half the pen) on every side, so content can't
+        // overlap the border. ChildClip is in the presenter's own local space.
         const clipB  = clip.GetBounds();
         const drawnB = (drawnGeometries(hp)[0].geom as PathGeometry).GetBounds();
         assert.ok(clipB.X > drawnB.X,                               'left inside the stroke');
@@ -82,14 +81,13 @@ describe('HeartPresenter — heart chrome + outline-confined hit region', () => 
         assert.ok(clipB.Y + clipB.Height < drawnB.Y + drawnB.Height,'bottom inside the stroke');
     });
 
-    test('without ClipChildren (default) the content is not clipped', () => {
+    test('without ClipChildren (default) ChildClip is undefined', () => {
         const hp = new HeartPresenter();
-        const child = new Border();
-        hp.Content = child;
+        hp.Content = new Border();
         hp.Width = 240; hp.Height = 240;
         arrange(hp, 240, 240);
 
-        assert.equal(child.Clip, undefined, 'content carries no clip when ClipChildren is false');
+        assert.equal(hp.ChildClip, undefined, 'no ChildClip when ClipChildren is false');
     });
 
     test('renders one heart geometry painted with its Fill and Stroke', () => {

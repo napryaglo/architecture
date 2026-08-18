@@ -283,6 +283,21 @@ export class Border extends Single
             Math.max(0, br - inset), Math.max(0, bl - inset));
     }
 
+    // ClipChildren clips content to INSIDE the border — the inner rounded rect
+    // inset by BorderThickness on each side, radii reduced to match. Overrides
+    // the base (which uses the uniform Stroke width) so a non-uniform
+    // BorderThickness insets each edge independently.
+    protected override buildChildClipGeometry(size: Size): Geometry | undefined
+    {
+        const bt = this.BorderThickness;
+        const { tl } = this.resolveCorners(size);
+        const rect = new Rect(
+            bt.Left, bt.Top,
+            Math.max(0, size.Width  - bt.Horizontal),
+            Math.max(0, size.Height - bt.Vertical));
+        return new RectangleGeometry(rect, Math.max(0, tl - bt.Left), Math.max(0, tl - bt.Top));
+    }
+
     protected override RenderOverride(dc: DrawingContext): void
     {
         // Uniform thickness: Visual's base paint draws Fill + the synthesized
