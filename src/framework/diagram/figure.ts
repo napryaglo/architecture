@@ -130,12 +130,11 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public static readonly GeometryKey = Model.RegisterProperty<PathGeometry | undefined>(
         Figure, 'Geometry', undefined, MetaData.None);
 
-    // Fill brush is inherited from Visual (Visual.Fill); Figure's historic
-    // default rides on the OverrideMetadata in the static block above.
-    // Stroke pen is per-instance (PenEditor mutates in place, so sharing
-    // across figures would leak edits).
-    public static readonly StrokeKey = Model.RegisterProperty<Pen | undefined>(
-        Figure, 'Stroke', undefined, MetaData.None);
+    // Fill brush and Stroke pen are inherited from Visual (Visual.Fill /
+    // Visual.Stroke). Figure's historic Fill default rides on the
+    // OverrideMetadata in the static block above; the per-instance Stroke
+    // Pen is assigned in the constructor (PenEditor mutates Pens in place,
+    // so sharing one across figures would leak edits).
 
     // The shape's text block (the Visio "text block") — a first-class
     // ShapeText sub-control created per-instance in the ctor and hosted in
@@ -318,7 +317,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
         // because PenEditor mutates Pens in place — each Figure needs
         // its own. Cloning keeps the visual default consistent without
         // leaking edits across instances; width comes from settings.
-        this.set_property_value(Figure.StrokeKey, new Pen(DEFAULT_STROKE_BRUSH, DiagramSettings.ShapeStrokeWidth()));
+        this.set_property_value(Visual.StrokeKey, new Pen(DEFAULT_STROKE_BRUSH, DiagramSettings.ShapeStrokeWidth()));
         // Default size — gives a freshly-constructed Figure a visible
         // footprint even before fromKind / fromSource has run.
         if (Number.isNaN(this.Width))  this.Width  = DiagramSettings.ShapeDefaultSize();
@@ -451,8 +450,6 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public set Kind(value: string)             { this.set_property_value(Figure.KindKey, value); }
     public get Geometry(): PathGeometry | undefined  { return this.get_property_value(Figure.GeometryKey); }
     public set Geometry(value: PathGeometry | undefined) { this.set_property_value(Figure.GeometryKey, value); }
-    public get Stroke(): Pen | undefined       { return this.get_property_value(Figure.StrokeKey); }
-    public set Stroke(value: Pen | undefined)  { this.set_property_value(Figure.StrokeKey, value); }
     public get SizeToContent(): boolean        { return this.get_property_value(Figure.SizeToContentKey); }
     public set SizeToContent(value: boolean)   { this.set_property_value(Figure.SizeToContentKey, value); }
     public get UserSized(): boolean            { return this.get_property_value(Figure.UserSizedKey); }

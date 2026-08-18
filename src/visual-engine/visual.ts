@@ -18,6 +18,7 @@ import type { DragStartCallback } from './drag-drop.js';
 import type { Effect } from './drawing/effect.js';
 import type { Transform } from './drawing/transform.js';
 import { RectangleGeometry, type Geometry } from './geometry/geometry.js';
+import type { Pen } from './drawing/pen.js';
 
 // Routed event names that map to the per-instance _routedListeners
 // registry. These are the public NAMES authors use in `on Xxx { … }`
@@ -243,6 +244,12 @@ export class Visual extends Model
     // that don't paint (Panel, ContentControl, …) leave Fill at
     // its default undefined with zero render cost.
     public static readonly FillKey      = Model.RegisterProperty<Brush | undefined>(Visual, 'Fill',      undefined, MetaData.Render);
+
+    // Stroke pen — the outline drawn around this Visual's shape geometry
+    // (buildClipGeometry). Consolidation target for Shape.Stroke. Default
+    // undefined ≡ no outline; the base paint no-ops when both Fill and
+    // Stroke are undefined, so plain Panels/Controls are unaffected.
+    public static readonly StrokeKey    = Model.RegisterProperty<Pen | undefined>(Visual, 'Stroke',    undefined, MetaData.Render);
 
     // Affine transform applied to the Visual's painted output (and the
     // painted output of every descendant) at render time. WPF parity —
@@ -742,6 +749,10 @@ export class Visual extends Model
      *  Default undefined ≡ no fill. */
     public get Fill(): Brush | undefined { return this.get_property_value(Visual.FillKey); }
     public set Fill(value: Brush | undefined) { this.set_property_value(Visual.FillKey, value); }
+
+    /** Stroke pen for the Visual's shape outline. Default undefined ≡ no stroke. */
+    public get Stroke(): Pen | undefined { return this.get_property_value(Visual.StrokeKey); }
+    public set Stroke(value: Pen | undefined) { this.set_property_value(Visual.StrokeKey, value); }
 
     /** Affine transform applied at render time. See RenderTransformKey
      *  for semantics. Default undefined (identity). */

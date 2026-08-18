@@ -35,14 +35,14 @@ export class HeartPresenter extends ContentPresenter
     public static override readonly FillKey   = Model.RegisterProperty<Brush | undefined>(
         HeartPresenter, 'Fill',   undefined, MetaData.Render);
     
-    public static readonly StrokeKey = Model.RegisterProperty<Pen   | undefined>(
+    public static override readonly StrokeKey = Model.RegisterProperty<Pen   | undefined>(
         HeartPresenter, 'Stroke', undefined, MetaData.Render);
 
     public override get Fill(): Brush | undefined { return this.get_property_value(HeartPresenter.FillKey); }
     public override set Fill(value: Brush | undefined) { this.set_property_value(HeartPresenter.FillKey, value); }
 
-    public get Stroke(): Pen | undefined { return this.get_property_value(HeartPresenter.StrokeKey); }
-    public set Stroke(value: Pen | undefined) { this.set_property_value(HeartPresenter.StrokeKey, value); }
+    public override get Stroke(): Pen | undefined { return this.get_property_value(HeartPresenter.StrokeKey); }
+    public override set Stroke(value: Pen | undefined) { this.set_property_value(HeartPresenter.StrokeKey, value); }
 
     // When true, the presented Content is clipped to the heart inset by the
     // FULL pen thickness — i.e. to the stroke's inner edge — so content sits
