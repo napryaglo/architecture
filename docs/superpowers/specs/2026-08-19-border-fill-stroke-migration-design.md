@@ -1,4 +1,4 @@
-# Border Fill/Stroke Migration Design
+# Border + ContentControl Fill/Stroke Migration Design
 
 **Date:** 2026-08-19
 **Status:** Approved (design)
@@ -8,13 +8,24 @@
 
 `Border` carries its own border-stroke properties — `BorderBrush` (Brush) and
 `BorderPen` (Pen escape hatch) — which synthesize `Visual`'s base `Stroke` pen
-via a `syncStroke()` / `OnPropertyChanged` machine. This duplicates the
+via a `syncStroke()` / `OnPropertyChanged` machine. `ContentControl` (the base
+for Button/Card/Chip/…) mirrors this with its own `BorderBrush` DP that
+TemplateBinds to the inner Border in its default template. This duplicates the
 `Fill` + `Stroke` model that `Shape` (and the base `Visual` paint path)
 already use. The background fill already migrated to the inherited `Fill` DP
 (the `Background`→`Fill` rename); this finishes the job for the stroke side.
 
-Goal: `Border` uses the **inherited** `Fill` (background) and `Stroke` (border
-pen) DPs directly, and drops `BorderBrush` and `BorderPen`.
+Goal: **`Fill` + `Stroke` become the library-wide standard for chrome.**
+`Border` and `ContentControl` drop `BorderBrush` / `BorderPen` and use the
+**inherited** `Fill` (background) and `Stroke` (border pen) DPs directly. After
+this change no framework class exposes a `BorderBrush`/`BorderPen` DP for
+Border-outline chrome.
+
+**Out of scope (domain DPs, not Border chrome — left untouched):**
+`Table.BorderBrush` (per-cell gridline brush, drawn by Table's own layout, not
+a pen outline) and `PaginatedCanvas.PageBorderBrush` (page-edge stroke). These
+are independent of `Border`/`ContentControl` and semantically not a
+Fill-or-Stroke on this element.
 
 ## Constraint that shapes the design
 
@@ -106,6 +117,24 @@ Update the class header: `Fill` = background, `Stroke` = the border pen (brush
 = uniform/per-side width + child inset. Drop the `BorderBrush` / `BorderPen`
 prose.
 
+### `ContentControl` (`src/framework/base/content-control.ts`)
+
+**Removed:** `BorderBrushKey` / `BorderBrush` DP + accessors.
+
+**Kept:** `BorderThicknessKey` / `BorderThickness` (still forwards to the inner
+Border, which keeps `BorderThickness`).
+
+**Inherited (used, not redeclared):** `Fill`, `Stroke` — both on `Visual`.
+`ContentControl.Stroke` is the Pen a consumer sets; the default template
+forwards it to the inner Border unchanged.
+
+**Default template (`src/framework/base/base.template.mu`,
+`DefaultContentControlTemplate`):** the inner Border's chrome bindings change
+from `Fill = $$Fill, BorderBrush = $$BorderBrush, BorderThickness =
+$$BorderThickness` to `Fill = $$Fill, Stroke = $$Stroke, BorderThickness =
+$$BorderThickness`. `Stroke` is a direct Pen passthrough (`$$Stroke`), NOT a
+`Pen [...]` wrapper — the source `ContentControl.Stroke` is already a Pen.
+
 ## Data flow
 
 ```
@@ -121,23 +150,56 @@ clip     ─► buildClipGeometry (outer), buildChildClipGeometry (inner, Border
 
 ## Consumer migration (Mural, this change)
 
-Mechanical, per matched site (~180 across `.mu` + `.ts`, incl. tests):
+Because `BorderBrush`/`BorderPen` are gone on **both** `Border` and
+`ContentControl`, the sweep is uniform — no per-occurrence "is this a Border or
+a ContentControl?" classification. Recipes:
 
-- Declarative attr `BorderBrush = @X` → `Stroke = Pen [ Brush = @X ]` (keep the
-  sibling `BorderThickness`).
+**Markup (`.mu`), ~108 `BorderBrush` + the `BorderPen` sites:**
+- Value is a **Brush** (`@Resource`, `#hex`, or a data `$brushBinding`):
+  `BorderBrush = @X` → `Stroke = Pen [ Brush = @X ]`. Any sibling
+  `BorderThickness` stays.
+- Value is a **binding to a former-`BorderBrush` source that is now a Pen**
+  (`$$BorderBrush` / `$BorderBrush` — the source control's DP was renamed
+  `BorderBrush`→`Stroke`): `BorderBrush = $$BorderBrush` → `Stroke = $$Stroke`
+  (direct Pen passthrough, NO `Pen [...]` wrapper). This is the
+  `ContentControl` default template case.
 - `BorderPen = <pen>` (`$Binding` or `@Resource`) → `Stroke = <pen>`.
 - `when`-trigger write `X.BorderBrush = @Y` → `X.Stroke = Pen [ Brush = @Y ]`.
   Where several triggers swap the same border's brush across states, the plan
   MAY hoist per-state `Pen` resources instead of repeating inline `Pen [...]`,
   chosen per file for readability.
-- TS `border.BorderBrush = brush` → `border.Stroke = new Pen(brush)`;
-  `border.BorderPen = pen` → `border.Stroke = pen`. Test assertions that read
-  `BorderBrush`/`BorderPen` or the synthesized `Stroke` update to the new
-  contract (a uniform border's painted pen has `Brush === Stroke.Brush` and
-  `Thickness === BorderThickness.Top`).
+- After editing any `.mu`, regenerate compiled artifacts where the project
+  precompiles them (Mural's `build:templates`; Plexus's `compile:mu`).
 
-`Table.HeaderBackground` and any non-`Border` `Background`-named DPs are
-unrelated and untouched (already handled by the earlier Fill rename).
+Inline `Pen [ Brush = @X, Thickness = 1 ]` as a property value is verified to
+compile and instantiate a real `Pen` (spike, 2026-08-19). `$$` TemplateBindings
+resolve normally inside a template body.
+
+**TypeScript, ~14 non-test files + 5 test files:**
+- Border/ContentControl instance writes: `x.BorderBrush = brush` →
+  `x.Stroke = new Pen(brush)`; `x.BorderPen = pen` → `x.Stroke = pen`.
+- Instance reads: `const b = x.BorderBrush` → `const b = x.Stroke?.Brush`.
+- `ContentControl.BorderBrushKey` references (metadata overrides, bindings) →
+  `Visual.StrokeKey`.
+- Test assertions that read `BorderBrush`/`BorderPen` or the synthesized
+  `Stroke` update to the new contract (a uniform border's painted pen has
+  `Brush === Stroke.Brush` and `Thickness === BorderThickness.Top`).
+
+**Explicitly NOT migrated:** `Table.BorderBrush` (gridlines),
+`PaginatedCanvas.PageBorderBrush` (page edge) — independent domain DPs. Any
+`.ts`/`.mu` reference to *those* stays as-is. `Table.HeaderBackground` likewise
+(already handled by the earlier Fill rename).
+
+## Ordering (breaking removal)
+
+Removing the DPs breaks every unmigrated reference's compile at once, so the
+whole change lands as one coordinated branch and the definitive green gate is
+the FINAL task (`tsc -p tsconfig.build.json` + full `npm test`). Per-task
+verification uses targeted single-file test runs for the area touched (`npx
+tsx --test <file>`), which compile in isolation. The core `Border` /
+`ContentControl` change and their own tests come first; consumer batches
+(grouped by area to minimise cross-references to still-unmigrated siblings)
+follow; the final task proves whole-project green.
 
 ## Rollout
 
