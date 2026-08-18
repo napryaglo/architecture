@@ -48,11 +48,11 @@ export class HeartPresenter extends ContentPresenter
     // FULL pen thickness — i.e. to the stroke's inner edge — so content sits
     // inside the border rather than overlapping it. Off by default (content
     // overflows freely, like a plain ContentPresenter).
-    public static readonly ClipChildrenKey = Model.RegisterProperty<boolean>(
+    public static override readonly ClipChildrenKey = Model.RegisterProperty<boolean>(
         HeartPresenter, 'ClipChildren', false, MetaData.Arrange);
 
-    public get ClipChildren(): boolean { return this.get_property_value(HeartPresenter.ClipChildrenKey); }
-    public set ClipChildren(value: boolean) { this.set_property_value(HeartPresenter.ClipChildrenKey, value); }
+    public override get ClipChildren(): boolean { return this.get_property_value(HeartPresenter.ClipChildrenKey); }
+    public override set ClipChildren(value: boolean) { this.set_property_value(HeartPresenter.ClipChildrenKey, value); }
 
     // Heart silhouette filling the slot, inset uniformly by `inset` px on
     // every edge and translated by (dx, dy). Control points as fractions of

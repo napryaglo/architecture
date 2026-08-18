@@ -330,6 +330,20 @@ export class Visual extends Model
     // Clip DP only while this flag is on, so a hand-set Clip is never clobbered.
     public static readonly ClipToBoundsKey = Model.RegisterProperty<boolean>(Visual, 'ClipToBounds', false, MetaData.Arrange);
 
+    // When true, clip this Visual's CHILDREN (not its own paint) to the shape
+    // inset by the full stroke — the region inside the outline. Distinct from
+    // ClipToBounds (whole-subtree). Off by default. Drives syncChildClip at the
+    // tail of Arrange, which fills the internal ChildClip slot the renderers
+    // read. Lets a bordered / shaped container trim content to inside its
+    // stroke while the stroke itself keeps painting.
+    public static readonly ClipChildrenKey = Model.RegisterProperty<boolean>(Visual, 'ClipChildren', false, MetaData.Arrange);
+
+    // The children-only clip geometry, in this Visual's local space. Set only by
+    // syncChildClip (never authored directly); read by the renderers alongside
+    // Clip / HitTestGeometry. MetaData.None so writing it never re-invalidates
+    // layout. Public getter, internal setter.
+    public static readonly ChildClipKey = Model.RegisterProperty<Geometry | undefined>(Visual, 'ChildClip', undefined, MetaData.None);
+
     // DataContext DP + accessor moved to `Element` (§ Phase B / B5.2) —
     // FE-tier ambient-data root. The DP fires inheritance through the
     // logical tree, which itself lives on Element (§ B4.4).
@@ -1148,8 +1162,18 @@ export class Visual extends Model
     public get ClipToBounds(): boolean { return this.get_property_value(Visual.ClipToBoundsKey); }
     public set ClipToBounds(value: boolean) { this.set_property_value(Visual.ClipToBoundsKey, value); }
 
+    public get ClipChildren(): boolean { return this.get_property_value(Visual.ClipChildrenKey); }
+    public set ClipChildren(value: boolean) { this.set_property_value(Visual.ClipChildrenKey, value); }
+
+    // Read by the renderers; written only by syncChildClip.
+    public get ChildClip(): Geometry | undefined { return this.get_property_value(Visual.ChildClipKey); }
+    protected set ChildClip(value: Geometry | undefined) { this.set_property_value(Visual.ChildClipKey, value); }
+
     // Owns the Clip DP only while ClipToBounds is on (see syncClipToBounds).
     private _clipToBoundsApplied = false;
+
+    // Owns the ChildClip DP only while ClipChildren is on (see syncChildClip).
+    private _childClipApplied = false;
 
     // The clip geometry for ClipToBounds, in this Visual's local space. Base
     // returns a rectangle of the arranged bounds; subclasses override to shape
@@ -1175,6 +1199,34 @@ export class Visual extends Model
         {
             this.Clip = undefined;
             this._clipToBoundsApplied = false;
+        }
+    }
+
+    // The children-only clip geometry: the shape inset by the FULL stroke —
+    // i.e. the region inside the outline's inner edge. Reuses buildPaintGeometry
+    // (the outline inset by a given amount), so Border yields its inner rounded
+    // rect and a shaped container yields its inset silhouette with no extra
+    // code. Called only with a positive size (the sync guards degenerate boxes).
+    protected buildChildClipGeometry(size: Size): Geometry | undefined
+    {
+        return this.buildPaintGeometry(size, this.Stroke?.Thickness ?? 0);
+    }
+
+    // Reconcile ChildClip with ClipChildren at arrange time, parallel to
+    // syncClipToBounds. ChildClip is a dedicated slot (no consumer value is ever
+    // at risk), so the latch is only for clean teardown on toggle-off.
+    private syncChildClip(size: Size): void
+    {
+        if (this.ClipChildren)
+        {
+            if (size.Width <= 0 || size.Height <= 0) return;   // wait for a real arranged size
+            this.ChildClip = this.buildChildClipGeometry(size);
+            this._childClipApplied = true;
+        }
+        else if (this._childClipApplied)
+        {
+            this.ChildClip = undefined;
+            this._childClipApplied = false;
         }
     }
 
@@ -1399,6 +1451,7 @@ export class Visual extends Model
         }
         this._isArrangeValid = true;
         this.syncClipToBounds(this._renderSize);
+        this.syncChildClip(this._renderSize);
     }
 
     /** The composed layout matrix (LayoutTransform shifted so its transformed
