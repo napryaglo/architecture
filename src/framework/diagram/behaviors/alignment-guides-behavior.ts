@@ -20,55 +20,73 @@ import type { Diagram } from '../diagram.js';
 // `Diagram.AlignmentGuidesEnabled` DP. Internal `@internal` API so the
 // framework can install + uninstall it from a single place.
 //
-// On attach: subscribes to Diagram's PointerDown / PointerMove /
-// PointerUp routed events; installs PositionSnap.
+// Preview-phase delivery is non-negotiable: Figure.OnPointerDown / Move /
+// Up all set args.Handled = true, which short-circuits the BUBBLE route
+// walk before any Diagram-level bubble listener runs (this behavior used
+// to listen there — so guides never appeared). The Diagram forwards its
+// tunnel (preview) pointer virtuals to the handler bundle we install; the
+// tunnel fires root -> target, so we bracket the drag BEFORE the Figure
+// consumes the gesture. Guide COMPUTATION rides the PositionSnap callback
+// instead: it runs during the Figure's own move with the candidate rect,
+// so guides track the snapped position with no stale frame.
 //
-// On detach: removes every listener; restores prior PositionSnap.
+// On attach: installs the preview handler bundle + the PositionSnap.
+// On detach: withdraws the bundle; restores the prior PositionSnap.
 
 /** @internal */
 export function attachAlignmentGuides(diagram: Diagram): () => void
 {
     let activeFigure: Figure | undefined = undefined;
 
+    // Compose over any snap already installed rather than dropping it. When a
+    // figure is being dragged, compute + publish the guides for the (already
+    // snapped-by-any-prior-callback) rect and return the alignment snap.
     const previousSnap = diagram.PositionSnap;
     diagram.PositionSnap = (rect: Rect): Rect => {
-        if (activeFigure === undefined) return rect;
+        const base = previousSnap !== undefined ? previousSnap(rect) : rect;
+        if (activeFigure === undefined) return base;
         const others = collectOtherRects(diagram, activeFigure);
-        return findAlignmentGuides(rect, others).snapped;
+        const { snapped, guides } = findAlignmentGuides(base, others);
+        diagram._setAlignmentGuides(guides);
+        return snapped;
     };
 
-    const onPointerDown = (args: PointerEventArgs): void => {
+    const onPreviewPointerDown = (args: PointerEventArgs): void => {
+        if (args.Handled) return;   // a connector / edit-handle gesture already claimed it
         const fig = findFigureAncestor(args.Source);
         if (fig === undefined) return;
         activeFigure = fig;
-        diagram._setAlignmentGuides([]);   // user hasn't moved yet
+        diagram._setAlignmentGuides([]);   // nothing has moved yet
     };
 
-    const onPointerMove = (_args: PointerEventArgs): void => {
-        if (activeFigure === undefined) return;
-        const moving = rectFromFigure(activeFigure);
-        const others = collectOtherRects(diagram, activeFigure);
-        const guides = findAlignmentGuides(moving, others).guides;
-        diagram._setAlignmentGuides(guides);
-    };
-
-    const onPointerUp = (_args: PointerEventArgs): void => {
+    const onPreviewPointerUp = (_args: PointerEventArgs): void => {
         if (activeFigure === undefined) return;
         activeFigure = undefined;
         diagram._setAlignmentGuides([]);
     };
 
-    diagram.AddRoutedEventListener('PointerDown', onPointerDown as unknown as (a: unknown) => void);
-    diagram.AddRoutedEventListener('PointerMove', onPointerMove as unknown as (a: unknown) => void);
-    diagram.AddRoutedEventListener('PointerUp',   onPointerUp   as unknown as (a: unknown) => void);
+    diagram._setAlignmentGuidesHandlers({
+        OnPreviewPointerDown: onPreviewPointerDown,
+        OnPreviewPointerUp:   onPreviewPointerUp,
+    });
 
     return (): void => {
-        diagram.RemoveRoutedEventListener('PointerDown', onPointerDown as unknown as (a: unknown) => void);
-        diagram.RemoveRoutedEventListener('PointerMove', onPointerMove as unknown as (a: unknown) => void);
-        diagram.RemoveRoutedEventListener('PointerUp',   onPointerUp   as unknown as (a: unknown) => void);
+        diagram._setAlignmentGuidesHandlers(undefined);
         diagram.PositionSnap = previousSnap;
         if (diagram.AlignmentGuides.length > 0) diagram._setAlignmentGuides([]);
     };
+}
+
+// Handler bundle the Diagram delegates its preview pointer virtuals to.
+// Only down / up are needed — guide computation happens in the PositionSnap
+// callback (which the Figure's move drives with the candidate rect). The
+// method names match the framework's pointer virtual conventions for clarity
+// at the dispatch site; `unknown` args mirror ConnectorInteractionsHandlers
+// so the Diagram and this behavior stay decoupled from the args type here.
+export interface AlignmentGuidesHandlers
+{
+    OnPreviewPointerDown(args: unknown): void;
+    OnPreviewPointerUp  (args: unknown): void;
 }
 
 // Walk up the visual parent chain from the event source to the
@@ -85,28 +103,21 @@ function findFigureAncestor(visual: unknown): Figure | undefined
     return undefined;
 }
 
-function rectFromFigure(figure: Figure): Rect
-{
-    const ar = figure.ArrangedRect;
-    const w = ar?.Width  ?? 0;
-    const h = ar?.Height ?? 0;
-    return new Rect(figure.Left, figure.Top, w, h);
-}
-
 // Walk Diagram's items, look up each one's container via the
-// ItemContainerGenerator, snapshot its current rect. Skip the
-// dragged figure itself.
+// ItemContainerGenerator, snapshot its current rect. Excludes the dragged
+// figure by CONTAINER identity: post-migration an item can BE a Figure
+// (Items-are-Figures) or a VM wrapped in a container Figure, so comparing
+// DataContext is unreliable — a Figure item has no separate DataContext.
 function collectOtherRects(diagram: Diagram, excludedFigure: Figure): Rect[]
 {
     const out: Rect[] = [];
     const items = diagram.ItemsSource;
     if (items === undefined) return out;
-    const excludedItem = excludedFigure.DataContext;
     for (const peer of items as Iterable<unknown>)
     {
-        if (peer === excludedItem) continue;
         const container = diagram.Generator.ContainerFromItem(peer);
         if (!(container instanceof Figure)) continue;
+        if (container === excludedFigure) continue;
         const rect = container.ArrangedRect;
         if (rect === undefined || rect.Width <= 0) continue;
         out.push(new Rect(container.Left, container.Top, rect.Width, rect.Height));

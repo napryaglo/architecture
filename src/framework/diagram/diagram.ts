@@ -51,6 +51,7 @@ import {
 import {
     attachAlignmentGuides,
     type AlignmentGuide,
+    type AlignmentGuidesHandlers,
 } from './behaviors/alignment-guides-behavior.js';
 import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js';
 import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
@@ -845,6 +846,17 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         this._connectorInteractionsHandlers = h;
     }
 
+    // Alignment-guides preview-pointer interceptor. Same reason as the
+    // connector one above: Figure.OnPointer* set args.Handled, so the
+    // alignment behavior must observe drag start / end in the TUNNEL phase.
+    // Installed by attachAlignmentGuides, withdrawn on detach.
+    private _alignmentGuidesHandlers: AlignmentGuidesHandlers | undefined = undefined;
+    /** @internal — used by attachAlignmentGuides. Not exposed publicly. */
+    public _setAlignmentGuidesHandlers(h: AlignmentGuidesHandlers | undefined): void
+    {
+        this._alignmentGuidesHandlers = h;
+    }
+
     // Drop-receiver / Mutator attach state — detach thunks for whichever
     // receiver / mutator is currently wired. Swapped out on DP change so
     // the previous wiring releases its listeners.
@@ -1089,6 +1101,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     {
         super.OnPreviewPointerDown(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerDown(args);
+        this._alignmentGuidesHandlers?.OnPreviewPointerDown(args);
     }
     protected override OnPreviewPointerMove(args: PointerEventArgs): void
     {
@@ -1099,6 +1112,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     {
         super.OnPreviewPointerUp(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerUp(args);
+        this._alignmentGuidesHandlers?.OnPreviewPointerUp(args);
     }
     protected override OnPointerLeave(args: PointerEventArgs): void
     {

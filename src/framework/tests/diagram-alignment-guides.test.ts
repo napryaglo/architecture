@@ -16,6 +16,8 @@ import {
     type MountableTarget,
 } from '../../runtime/index.js';
 import { Border, Canvas, ItemsPanelTemplate } from '../../basic/index.js';
+import { PaginatedCanvas } from '../../basic/panels/paginated-canvas.js';
+import { initTestApp } from '../../basic/tests/test-app.js';
 import { Diagram } from '../diagram/diagram.js';
 import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
@@ -128,5 +130,65 @@ describe('Diagram — alignment guides DP surface', () => {
         diagram._setAlignmentGuides(synthetic);
         assert.equal(diagram.AlignmentGuides.length, 1);
         assert.equal(diagram.AlignmentGuides[0].position, 100);
+    });
+});
+
+// Regression: guides never appeared during a real drag because the behavior
+// listened on the Diagram's BUBBLE pointer events, which Figure.OnPointerDown/
+// Move/Up swallow by setting args.Handled. The fix drives the behavior from the
+// Diagram's TUNNEL (preview) pointer interceptor (bracketing the active figure)
+// and computes guides inside the PositionSnap callback. These tests exercise
+// that path with real Figure items (Items-are-Figures).
+describe('Diagram — alignment guides drag integration', () => {
+    function setupFigures(): { diagram: Diagram; a: Figure; b: Figure } {
+        initTestApp();   // Diagram theme → item containers realize + arrange
+        const a = new Figure(); a.Left = 100; a.Top = 100; a.Width = 80; a.Height = 60;
+        const b = new Figure(); b.Left = 300; b.Top = 100; b.Width = 80; b.Height = 60;
+        const coll = new ObservableCollection<Figure>();
+        coll.Add(a); coll.Add(b);
+        const diagram = new Diagram();
+        diagram.ItemsPanel = new ItemsPanelTemplate(() => new PaginatedCanvas());
+        diagram.ItemsSource = coll;
+        diagram.AlignmentGuidesEnabled = true;
+        const surface = new Border();
+        surface.SetChild(diagram);
+        const target = new FakeTarget();
+        target.Content = surface;
+        (surface as Visual).Measure(new Size(800, 600));
+        (surface as Visual).Arrange({ X: 0, Y: 0, Width: 800, Height: 600 } as never);
+        return { diagram, a, b };
+    }
+
+    // Drive the Diagram's tunnel (preview) pointer virtual directly — the same
+    // point real routing invokes before a descendant Figure consumes the event.
+    function previewPointer(diagram: Diagram, kind: 'PointerDown' | 'PointerUp', source: Figure): void {
+        const args = { Kind: kind, Source: source, Visual: source, Handled: false };
+        const seam = diagram as unknown as {
+            OnPreviewPointerDown(a: unknown): void;
+            OnPreviewPointerUp(a: unknown): void;
+        };
+        if (kind === 'PointerDown') seam.OnPreviewPointerDown(args);
+        else seam.OnPreviewPointerUp(args);
+    }
+
+    test('dragging a figure whose edge nears a peer publishes guides and snaps', () => {
+        const { diagram, a, b } = setupFigures();
+        previewPointer(diagram, 'PointerDown', a);
+        // A dragged so its top edge (103) lands within tolerance of B's top (100).
+        const snapped = diagram.PositionSnap!(new Rect(a.Left, b.Top + 3, a.Width, a.Height));
+        assert.ok(diagram.AlignmentGuides.length > 0, 'guides published during drag');
+        assert.equal(snapped.Y, b.Top, 'snapped the moving rect to the peer top edge');
+    });
+
+    test('pointer-up ends the drag: guides clear and snapping disengages', () => {
+        const { diagram, a, b } = setupFigures();
+        previewPointer(diagram, 'PointerDown', a);
+        diagram.PositionSnap!(new Rect(a.Left, b.Top + 3, a.Width, a.Height));
+        assert.ok(diagram.AlignmentGuides.length > 0, 'precondition: guides present mid-drag');
+
+        previewPointer(diagram, 'PointerUp', a);
+        assert.equal(diagram.AlignmentGuides.length, 0, 'guides cleared on pointer-up');
+        const r = diagram.PositionSnap!(new Rect(a.Left, b.Top + 3, a.Width, a.Height));
+        assert.equal(r.Y, b.Top + 3, 'no snap once the drag has ended');
     });
 });
