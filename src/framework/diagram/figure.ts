@@ -207,7 +207,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
 
     // ── Static factories ─────────────────────────────────────────────
     //
-    // Three construction paths mirror the historical ShapeNodeVM:
+    // Three construction paths for a self-painting shape node:
     //
     //   * fromKind(kind, …)      — toolbox drop / CreateNode. Pulls the
     //                              unit-1 source from the catalog.

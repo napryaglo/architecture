@@ -36,9 +36,9 @@ export interface ISideEndpointHost
 
 // Reusable implementation of Figure's per-side endpoint registry.
 // Holds NO Figure-specific state; bounds are supplied via a `bounds`
-// callback so both Figure (ArrangedRect) and ShapeNodeVM (Left/Top/Width/Height
-// built on the fly) can supply their coordinate frame without coupling
-// this class to either host type.
+// callback so both Figure (ArrangedRect) and a SideConnectableNodeVM
+// (Left/Top/Width/Height built on the fly) can supply their coordinate frame
+// without coupling this class to either host type.
 export class SideEndpointRegistry
 {
     private readonly _sideEndpoints: Map<ResolvedPortSide, ConnectorEndpoint[]> = new Map();
