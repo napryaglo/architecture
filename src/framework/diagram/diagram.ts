@@ -6,6 +6,7 @@ import {
     MetaData,
     Model,
     type ObservableCollection,
+    type PersistentGuide,
     Rect,
     type KeyEventArgs,
     Key,
@@ -317,6 +318,17 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // here; consumers can also bind for custom guide visualization.
     public static readonly AlignmentGuidesKey = Model.RegisterReadOnlyProperty<readonly AlignmentGuide[]>(
         Diagram, 'AlignmentGuides', Object.freeze([]) as readonly AlignmentGuide[], MetaData.None);
+
+    // Persistent (Visio-style) ruler guides. Read-write: the app hydrates them
+    // from the .diagram metadata and persists changes; the behavior mutates them
+    // on placement/reposition/delete/glue; the adorner subscribes to paint them.
+    public static readonly GuidesKey = Model.RegisterProperty<readonly PersistentGuide[]>(
+        Diagram, 'Guides', Object.freeze([]) as readonly PersistentGuide[], MetaData.None);
+
+    // Feature opt-in: shows the rulers AND attaches the persistent-guides behavior
+    // + adorner. Default off — the template is visually identical to today.
+    public static readonly RulersVisibleKey = Model.RegisterProperty<boolean>(
+        Diagram, 'RulersVisible', false, MetaData.None);
 
     // Selection-resize opt-in. Default off. When flipped true, a
     // SelectionBoundsAdorner mounts in the ItemsPanel's AdornerLayer
@@ -644,6 +656,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
 
     public get AlignmentGuidesEnabled():  boolean { return this.get_property_value(Diagram.AlignmentGuidesEnabledKey); }
     public set AlignmentGuidesEnabled(v: boolean) { this.set_property_value(Diagram.AlignmentGuidesEnabledKey, v); }
+
+    public get Guides(): readonly PersistentGuide[] { return this.get_property_value(Diagram.GuidesKey); }
+    public set Guides(v: readonly PersistentGuide[]) { this.set_property_value(Diagram.GuidesKey, v); }
+
+    public get RulersVisible(): boolean { return this.get_property_value(Diagram.RulersVisibleKey); }
+    public set RulersVisible(v: boolean) { this.set_property_value(Diagram.RulersVisibleKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
     public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
     public get TextBlockAdornerEnabled():  boolean { return this.get_property_value(Diagram.TextBlockAdornerEnabledKey); }
