@@ -690,10 +690,23 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // Paint the silhouette as own paint. Guard: a neutral container Figure (no
     // _source → no _shape) paints nothing, rather than the base bounds rect —
     // which also removes the historic stray-rect-behind-the-shape artifact.
+    //
+    // The paint is inlined from Visual.RenderOverride rather than delegated via
+    // super — the inheritance chain runs Figure → ContentControl → Control, and
+    // Control.RenderOverride is a deliberate no-op ("the template tree paints
+    // itself"). Calling super here would therefore draw NOTHING (the historic
+    // "figures render as empty boxes" bug). Fill + Stroke are the inherited
+    // Visual DPs; buildPaintGeometry (overridden above) returns the silhouette
+    // inset by half the stroke so a centred pen stays inside the outline.
     protected override RenderOverride(dc: DrawingContext): void
     {
         if (this._shape === undefined) return;
-        super.RenderOverride(dc);
+        const fill = this.Fill, stroke = this.Stroke;
+        if (fill === undefined && stroke === undefined) return;
+        const s = this.RenderSize;
+        if (s.Width <= 0 || s.Height <= 0) return;
+        const half = (stroke?.Thickness ?? 0) / 2;
+        dc.DrawGeometry(fill, stroke, this.buildPaintGeometry(s, half));
     }
 
     protected override OnPropertyChanged(

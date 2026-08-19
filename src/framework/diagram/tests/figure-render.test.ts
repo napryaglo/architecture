@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Size } from '../../../runtime/index.js';
-import { PathGeometry, RectangleGeometry, type Geometry } from '../../../visual-engine/index.js';
+import { JSDOM } from 'jsdom';
+import { initTestApp } from '../../../basic/tests/test-app.js';
+import { Size, Rect } from '../../../runtime/index.js';
+import { PathGeometry, RectangleGeometry, SvgRenderer, type Geometry } from '../../../visual-engine/index.js';
 import { Figure } from '../figure.js';
 
 // The design contract lives on the geometry seams the inherited Visual paint +
@@ -9,8 +11,15 @@ import { Figure } from '../figure.js';
 // (children mask), buildClipGeometry (hit / clip-to-bounds). A catalog Figure
 // surfaces its scaled silhouette (a PathGeometry) through all three; a shapeless
 // container falls back to the base bounds rect (a RectangleGeometry) and paints
-// nothing (RenderOverride guard). Own-paint emission itself is exercised by the
-// base Visual/Border tests — a headless Figure has RenderSize 0 (no theme).
+// nothing (RenderOverride guard).
+//
+// Own-paint emission is NOT covered by the base Visual/Border tests: Figure's
+// chain runs Figure → ContentControl → Control, and Control.RenderOverride is a
+// deliberate no-op (the template subtree paints itself). So Figure must draw its
+// silhouette itself in RenderOverride — a `super` delegation would paint nothing
+// (the "figures render as empty boxes" regression). The DOM test at the bottom
+// renders through the real SvgRenderer (with a theme, so RenderSize > 0) to guard
+// that; a headless Figure without a theme has RenderSize 0 and can't.
 
 interface Seams {
     buildPaintGeometry(size: Size, inset: number): Geometry;
@@ -53,4 +62,31 @@ test('resize rescales the silhouette', () => {
     f.Width = 120; f.Height = 30;
     const b = seams(f).buildPaintGeometry(new Size(120, 30), 0).GetBounds();
     assert.ok(Math.abs(b.Width - 120) < 1 && Math.abs(b.Height - 30) < 1);
+});
+
+// Regression: a shaped Figure, arranged with a theme (RenderSize > 0) and painted
+// through the real renderer, MUST emit a filled silhouette path. Before the fix
+// RenderOverride delegated to super (Control's no-op) and drew nothing — the node
+// rendered as an empty box (only its hit pad + template content, no silhouette).
+test('a shaped Figure renders a filled silhouette path through the SvgRenderer', () => {
+    initTestApp();
+    const dom = new JSDOM('<!doctype html><html><body></body></html>');
+    const doc = dom.window.document;
+    const svg = doc.createElementNS('http://www.w3.org/2000/svg', 'svg') as SVGSVGElement;
+    doc.body.appendChild(svg);
+    const renderer = new SvgRenderer(svg, { document: doc });
+
+    const f = Figure.fromKind('ellipse', 0, 0, { width: 80, height: 60 });
+    f.Measure(new Size(80, 60));
+    f.Arrange(new Rect(0, 0, 80, 60));
+    assert.ok(f.RenderSize.Width > 0 && f.RenderSize.Height > 0, 'theme applied → non-zero RenderSize');
+
+    renderer.Render(f, undefined, null, null);
+
+    const painted = [...svg.querySelectorAll('path')].some(
+        (p) => (p.getAttribute('d') ?? '').length > 0
+            && p.getAttribute('fill') !== null
+            && p.getAttribute('fill') !== 'none',
+    );
+    assert.ok(painted, 'figure must emit a filled silhouette path, not an empty box');
 });
