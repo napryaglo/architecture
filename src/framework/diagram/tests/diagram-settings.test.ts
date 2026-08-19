@@ -96,6 +96,17 @@ describe('DiagramSettings', () => {
         assert.equal(DiagramSettings.ShapeDefaultFill().Color.ToHex().toLowerCase(), '#00ff00');
     });
 
+    test('exposes ruler + persistent-guide defaults', () => {
+        Application.current = null;
+        assert.equal(DiagramSettings.RulerThickness(), 20);
+        assert.equal(DiagramSettings.RulerTickMinSpacing(), 60);
+        assert.equal(DiagramSettings.GuideGrabTolerance(), 4);
+        assert.equal(DiagramSettings.PersistentGuideThickness(), 1);
+        assert.ok(DiagramSettings.PersistentGuideColor() instanceof SolidColorBrush);
+        assert.ok(DiagramSettings.RulerFill() instanceof SolidColorBrush);
+        assert.ok(DiagramSettings.RulerTickColor() instanceof SolidColorBrush);
+    });
+
     test('Subscribe fires when a Diagram setting changes', () => {
         const app = appWithSettings();
         const settings = app.Services.getRequired(ApplicationSettings.Key);
