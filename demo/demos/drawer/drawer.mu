@@ -22,7 +22,7 @@ import DrawerVM from "./drawer-vm.mjs"
 
 resources DrawerDemo {
     DataTemplate [DataType = DrawerVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             DockPanel {
                 // ── Header bar (Top) ───────────────────────────
                 Border
@@ -54,7 +54,7 @@ resources DrawerDemo {
                     Border
                         [ Fill      = @SurfaceContainerLow,
                           BorderThickness = (0,0,1,0),
-                          BorderBrush     = @OutlineVariant ] {
+                          Stroke     = Pen [ Brush = @OutlineVariant ] ] {
                         StackPanel {
                             TextBlock [ Text = "🏠", FontSize = 18, Margin = (20,16,0,0) ]
                             TextBlock [ Text = "📊", FontSize = 18, Margin = (20,16,0,0) ]
@@ -75,7 +75,7 @@ resources DrawerDemo {
                     Border
                         [ Fill      = @Surface,
                           BorderThickness = (1,0,0,0),
-                          BorderBrush     = @OutlineVariant,
+                          Stroke     = Pen [ Brush = @OutlineVariant ],
                           Padding         = (24) ] {
                         StackPanel {
                             TextBlock

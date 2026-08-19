@@ -90,7 +90,7 @@ resources DiagramDemo {
             [ IsDraggable     = true,
               OnDragStart     = $BeginDragData,
               Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1),
               CornerRadius    = 4,
               Padding         = (4,8,4,8),
@@ -164,7 +164,7 @@ resources DiagramDemo {
     DataTemplate [DataType = DiagramDocument] {
         Border x:root
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1) ] {
             DockPanel {
                 // Header strip.
@@ -204,7 +204,7 @@ resources DiagramDemo {
                 Border
                     [ DockPanel.Dock  = Top,
                       Fill      = @SurfaceContainer,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (0,0,0,1),
                       Padding         = (8,4,8,4) ] {
                     ScrollViewer
@@ -367,7 +367,7 @@ resources DiagramDemo {
                     [ DockPanel.Dock  = Left,
                       Width           = 200,
                       Fill      = @SurfaceContainerLow,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (0,0,1,0),
                       Padding         = (8) ] {
                     DockPanel {
@@ -408,7 +408,7 @@ resources DiagramDemo {
                     [ DockPanel.Dock  = Right,
                       Width           = 320,
                       Fill      = @SurfaceContainerLow,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (1,0,0,0),
                       Padding         = (12) ] {
                     DockPanel {

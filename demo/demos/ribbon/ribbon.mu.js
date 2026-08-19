@@ -5,7 +5,7 @@ import { Diagram } from "@pragmatic-lab/mural/framework/diagram/diagram.js";
 import { SelectionMode } from "@pragmatic-lab/mural/framework/list/list-box.js";
 import { MenuItem, MenuSeparator, Ribbon, RibbonButton, RibbonDropDownButton, RibbonGroup, RibbonSmallButtonColumn, RibbonSplitButton, RibbonTab, RibbonToggleButton } from "@pragmatic-lab/mural/framework/surface.js";
 import { DataContextBinding, DynamicResource, ElementNameBinding, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "@pragmatic-lab/mural/visual-engine";
+import { LineSegment, PathFigure, PathGeometry, Pen, Point, QuadraticBezierSegment } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_RibbonDemo = Symbol("RibbonDemo.ctor");
@@ -198,7 +198,7 @@ export class RibbonDemo extends ResourceDictionary {
             const _border43 = new Border();
             _border43.set_property_value(DockPanel.DockKey, Dock.Bottom);
             _border43.set_property_value(Border.FillKey, DynamicResource(_border43, "SurfaceContainerLow"));
-            _border43.set_property_value(Border.BorderBrushKey, DynamicResource(_border43, "OutlineVariant"));
+            _border43.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border43.set_property_value(Border.BorderThicknessKey, new Thickness(0, 1, 0, 0));
             _border43.set_property_value(Border.PaddingKey, new Thickness(12, 6, 12, 6));
             const _textBlock44 = new TextBlock();

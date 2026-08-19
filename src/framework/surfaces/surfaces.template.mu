@@ -87,7 +87,7 @@ resources Surfaces {
     Template x:key="DefaultOutlinedCard" [TargetType = Card] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              BorderBrush     = @Outline,
+              Stroke     = Pen [ Brush = @Outline ],
               BorderThickness = (1),
               CornerRadius    = @ShapeMedium ] {
             Border x:name="PART_StateLayer"
@@ -162,7 +162,7 @@ resources Surfaces {
     Template x:key="DefaultDrawerPane" [TargetType = Drawer] {
         Border x:name="PART_Pane"
             [ Fill      = @SurfaceContainerLow,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1),
               Padding         = (@Spacing0,@Spacing3,@Spacing0,@Spacing0) ] {
             ContentPresenter
@@ -188,7 +188,7 @@ resources Surfaces {
     Template x:key="DefaultDialog" [TargetType = Dialog] {
         Border x:name="PART_Dialog"
             [ Fill      = @Surface,
-              BorderBrush     = #00000000,
+              Stroke     = Pen [ Brush = #00000000 ],
               BorderThickness = (0),
               CornerRadius    = @ShapeExtraLarge,
               Effect          = @Elevation3,
@@ -227,7 +227,7 @@ resources Surfaces {
     Template x:key="DefaultBottomSheet" [TargetType = BottomSheet] {
         Border x:name="PART_Sheet"
             [ Fill      = @Surface,
-              BorderBrush     = #00000000,
+              Stroke     = Pen [ Brush = #00000000 ],
               BorderThickness = (0),
               CornerRadius    = (@ShapeExtraLarge,@ShapeExtraLarge,0,0),
               Effect          = @Elevation1,
@@ -254,7 +254,7 @@ resources Surfaces {
     Template x:key="DefaultSideSheet" [TargetType = SideSheet] {
         Border x:name="PART_Sheet"
             [ Fill      = @SurfaceContainerLow,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1,0,0,0) ] {
             Grid {
                 RowDefinitions {

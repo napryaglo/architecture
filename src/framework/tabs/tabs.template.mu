@@ -23,7 +23,7 @@ resources Tabs {
     Template x:key="DefaultTabControl" [TargetType = TabControl] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (0,0,0,1) ] {
             DockPanel [ LastChildFill = true ] {
                 ItemsPresenter x:name="PART_ItemsPresenter" [ DockPanel.Dock = Top ]
@@ -66,7 +66,7 @@ resources Tabs {
     Template x:key="DefaultTabItem" [TargetType = TabItem] {
         Border x:name="PART_Tab"
             [ Fill      = #00000000,
-              BorderBrush     = #00000000,
+              Stroke     = Pen [ Brush = #00000000 ],
               BorderThickness = (0,0,0,2),
               Padding         = (@Spacing4,@Spacing1,@Spacing4,@Spacing1),
               Height          = 40 ] {
@@ -76,7 +76,7 @@ resources Tabs {
                   HorizontalAlignment = Center,
                   VerticalAlignment   = Center ]
         }
-        when ( IsSelected ) { PART_Tab.BorderBrush = @Primary; }
+        when ( IsSelected ) { PART_Tab.Stroke = Pen [ Brush = @Primary ]; }
         when ( IsMouseOver ) { PART_Tab.Fill = @StateHoverOverlay; }
         when ( IsFocused ) { PART_Tab.Fill = @StateFocusOverlay; }
         when ( IsPressed ) { PART_Tab.Fill = @StatePressOverlay; }

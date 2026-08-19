@@ -22,7 +22,7 @@ resources AnimationDemo {
     DataTemplate [DataType = AnimationVM] {
         Border x:root
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1) ] {
             // x:root owns the NameScope so the inner x:names register and
             // the VM's OnViewMounted FindName resolves them.
@@ -101,7 +101,7 @@ resources AnimationDemo {
                             }
                             Border x:name="pulseTarget"
                                 [ Fill      = #4caf50,
-                                  BorderBrush     = @Primary,
+                                  Stroke     = Pen [ Brush = @Primary ],
                                   BorderThickness = (1),
                                   CornerRadius    = 4,
                                   Margin          = (20,4,0,0),

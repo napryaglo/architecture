@@ -72,7 +72,7 @@ resources Diagrams {
     // without pinning it, so ancestor-scoped bindings remain live — same
     // rationale as the library-preview gotcha memo.
     DataTemplate [DataType = TextNodeVM] {
-        Border [ Fill = $Fill, BorderPen = $Stroke, Width = $Width, Height = $Height ] {
+        Border [ Fill = $Fill, Stroke = $Stroke, Width = $Width, Height = $Height ] {
             ContentPresenter x:name="PART_LabelHost" [ Content = $Text, Width = $Width, Height = $Height ]
         }
     }
@@ -102,7 +102,7 @@ resources Diagrams {
     // verify ActualClip is unset in a layout pass if in doubt).
     DataTemplate [DataType = CalloutNodeVM] {
         Canvas {
-            Border [ Fill = $Fill, BorderPen = $Stroke, Width = $Width, Height = $Height ] {
+            Border [ Fill = $Fill, Stroke = $Stroke, Width = $Width, Height = $Height ] {
                 ContentPresenter x:name="PART_LabelHost" [ Content = $Text, Width = $Width, Height = $Height ]
             }
             Shape
@@ -209,7 +209,7 @@ resources Diagrams {
         // Selector to the enclosing Group via the Parent chain).
         Border x:name="PART_Border"
             [ Fill       = #00000000,
-              BorderBrush      = @Primary,
+              Stroke      = Pen [ Brush = @Primary ],
               BorderThickness  = (0),
               Width            = $$Width,
               Height           = $$Height,

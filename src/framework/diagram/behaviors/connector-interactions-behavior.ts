@@ -133,7 +133,7 @@ const PORT_MARKER_FILL = new SolidColorBrush(Color.FromHex('#ff9800'));
 // when the cursor hovers an UNSELECTED connector. Hit-testable; clicking
 // it picks the connector and seeds the diagram's shared stroke editor.
 // Color mirrors the @Primary material token used by other selection-
-// affordance chrome (see diagram.template.mu's Group BorderBrush). The
+// affordance chrome (see diagram.template.mu's Group Stroke). The
 // other adorners in this file hard-code their fills the same way, so
 // consistency = same here; promote to a Diagram DP when the design
 // system grows a runtime token resolver for code-only adorners.

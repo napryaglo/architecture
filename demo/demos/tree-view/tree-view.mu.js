@@ -2,7 +2,7 @@ import { TreeViewVM } from "./tree-view-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
 import { TreeView, TreeViewItem } from "@pragmatic-lab/mural/framework/list/tree-view.js";
 import { DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_TreeViewDemo = Symbol("TreeViewDemo.ctor");
@@ -20,7 +20,7 @@ export class TreeViewDemo extends ResourceDictionary {
             const _border2 = new Border();
             _border2.SetNameScope(new NameScope());
             _border2.set_property_value(Border.FillKey, DynamicResource(_border2, "Surface"));
-            _border2.set_property_value(Border.BorderBrushKey, DynamicResource(_border2, "OutlineVariant"));
+            _border2.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border2.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel3 = new DockPanel();
             const _border4 = new Border();

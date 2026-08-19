@@ -13,7 +13,7 @@ import SplitButtonVM from "./split-button-vm.mjs"
 
 resources SplitButtonDemo {
     DataTemplate [DataType = SplitButtonVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             DockPanel {
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock

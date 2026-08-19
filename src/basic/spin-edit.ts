@@ -63,7 +63,7 @@ import { TextBlock } from './text-block.js';
 //   │                │▾│
 //   └────────────────┴─┘
 //
-// The outer Border (PART_Border) is the field chrome; its BorderBrush
+// The outer Border (PART_Border) is the field chrome; its Stroke
 // reacts to the INNER TextBox's IsFocused / IsMouseOver flags so a
 // click into the value text turns the outline blue (Material Outlined
 // look). The inner TextBox's own Border is flipped to zero thickness
@@ -92,7 +92,7 @@ export class SpinEdit extends TemplatedControl
     public get IsEditHovered(): boolean { return this.get_property_value(SpinEdit.IsEditHoveredKey); }
     // Surface the inner TextBox's IsFocused / IsMouseOver onto SpinEdit
     // itself so the DefaultSpinEdit template can trigger on these to
-    // swap PART_Border.BorderBrush — no imperative refreshChrome
+    // swap PART_Border.Stroke — no imperative refreshChrome
     // routine reaching into the inner TextBox. The forwarding listeners
     // wired in the ctor keep these DPs synced.
     private static readonly _IsEditFocusedPriv = Model.RegisterReadOnlyProperty<boolean>(
@@ -132,7 +132,7 @@ export class SpinEdit extends TemplatedControl
 
         // Hide the inner TextBox's own border — the outer PART_Border
         // is THE visible field outline. TextBox.refreshChrome still
-        // writes BorderBrush on focus / hover, but a thickness of zero
+        // writes Stroke on focus / hover, but a thickness of zero
         // means those writes paint nothing.
         this._textBox.InnerBorder.BorderThickness = new Thickness(0);
         // Tighten the inner TextBox's vertical padding. The default
@@ -182,8 +182,8 @@ export class SpinEdit extends TemplatedControl
         // SpinEdit isn't focusable itself — focus lives on the composed
         // TextBox. Surface that state as IsEditFocused / IsEditHovered
         // on SpinEdit so the DefaultSpinEdit template can trigger on
-        // them to swap PART_Border.BorderBrush (see basic.resources.mu).
-        // No imperative `_border.BorderBrush =` writes from this class.
+        // them to swap PART_Border.Stroke (see basic.resources.mu).
+        // No imperative `_border.Stroke =` writes from this class.
         const forwardFocus = (): void =>
         {
             this.set_property_value_with_key(SpinEdit._IsEditFocusedPriv, this._textBox.IsFocused);

@@ -30,7 +30,7 @@ resources CarouselDemo {
     }
 
     DataTemplate [DataType = CarouselVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             StackPanel [ Orientation = Vertical, Margin = (32,32,32,32) ] {
                 TextBlock
                     [ Text       = "Carousel — M3 multi-browse hero-card scroller",

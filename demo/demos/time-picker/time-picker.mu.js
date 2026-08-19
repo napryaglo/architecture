@@ -2,7 +2,7 @@ import { TimePickerVM } from "./time-picker-vm.mjs";
 import { Border, DataTemplate, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
 import { TimePicker } from "@pragmatic-lab/mural/framework/pickers/time-picker.js";
 import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_TimePickerDemo = Symbol("TimePickerDemo.ctor");
@@ -18,7 +18,7 @@ export class TimePickerDemo extends ResourceDictionary {
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
-            _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
+            _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _stackPanel2 = new StackPanel();
             _stackPanel2.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);

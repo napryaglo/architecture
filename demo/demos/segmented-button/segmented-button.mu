@@ -18,7 +18,7 @@ import SegmentedButtonVM from "./segmented-button-vm.mjs"
 
 resources SegmentedButtonDemo {
     DataTemplate [DataType = SegmentedButtonVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             DockPanel {
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock

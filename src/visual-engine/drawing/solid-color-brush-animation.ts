@@ -10,7 +10,7 @@ import {
 import { Color } from '../primitives.js';
 import { SolidColorBrush } from './brush.js';
 
-// Animation of a Brush-typed DP (Border.Fill, BorderBrush, TextBlock.
+// Animation of a Brush-typed DP (Border.Fill, Stroke.Brush, TextBlock.
 // Foreground, …) that interpolates the brush's COLOUR while emitting a
 // fresh SolidColorBrush each tick. The Brush slot is overwritten by
 // reference, which is what Border's MetaData.Render handler observes —

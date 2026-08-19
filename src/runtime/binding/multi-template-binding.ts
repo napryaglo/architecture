@@ -35,7 +35,7 @@ class MultiTemplatedParentWatcher extends Model
 //
 // Usage from a ControlTemplate factory body:
 //   const border = new Border();
-//   border.set_property_value(Border.BorderBrushKey,
+//   border.set_property_value(Border.StrokeKey,
 //       MultiTemplateBinding(
 //           templatedParent,
 //           ['IsMouseOver', 'IsPressed'],

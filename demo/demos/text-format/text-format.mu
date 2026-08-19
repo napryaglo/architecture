@@ -32,7 +32,7 @@ resources TextFormatDemo {
                 Border
                     [ DockPanel.Dock = Top,
                       Fill      = @SurfaceContainerLow,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (0,0,0,1),
                       Padding         = (16,10,16,10) ] {
                     StackPanel [ Orientation = Horizontal ] {

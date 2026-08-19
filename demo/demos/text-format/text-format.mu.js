@@ -3,7 +3,7 @@ import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlo
 import { ColorPicker, FontFamilyPicker, FontSizePicker } from "@pragmatic-lab/mural/framework";
 import { ToggleButton } from "@pragmatic-lab/mural/framework/buttons/toggle-button.js";
 import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontStyle, FontWeight, TextDecorations } from "@pragmatic-lab/mural/visual-engine";
+import { FontStyle, FontWeight, Pen, TextDecorations } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_TextFormatDemo = Symbol("TextFormatDemo.ctor");
@@ -45,7 +45,7 @@ export class TextFormatDemo extends ResourceDictionary {
             const _border8 = new Border();
             _border8.set_property_value(DockPanel.DockKey, Dock.Top);
             _border8.set_property_value(Border.FillKey, DynamicResource(_border8, "SurfaceContainerLow"));
-            _border8.set_property_value(Border.BorderBrushKey, DynamicResource(_border8, "OutlineVariant"));
+            _border8.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border8.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
             _border8.set_property_value(Border.PaddingKey, new Thickness(16, 10, 16, 10));
             const _stackPanel9 = new StackPanel();

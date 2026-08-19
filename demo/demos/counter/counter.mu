@@ -9,7 +9,7 @@ import CounterVM from "./counter-vm.mjs"
 
 resources CounterDemo {
     DataTemplate [DataType = CounterVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             Canvas {
                 TextBlock
                     [ Canvas.Left = 24,

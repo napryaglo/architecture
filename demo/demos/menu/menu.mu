@@ -15,7 +15,7 @@ import MenuVM from "./menu-vm.mjs"
 
 resources MenuDemo {
     DataTemplate [DataType = MenuVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             DockPanel {
                 // Header
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {

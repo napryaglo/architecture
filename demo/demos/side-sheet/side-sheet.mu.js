@@ -3,6 +3,7 @@ import { Border, DataTemplate, Dock, Grid, Orientation, StackPanel, TextBlock, T
 import { Button, ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
 import { SideSheet, SideSheetVariant } from "@pragmatic-lab/mural/framework/surfaces/side-sheet.js";
 import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
+import { Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_SideSheetDemo = Symbol("SideSheetDemo.ctor");
@@ -18,7 +19,7 @@ export class SideSheetDemo extends ResourceDictionary {
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
-            _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
+            _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _grid2 = new Grid();
             const _stackPanel3 = new StackPanel();

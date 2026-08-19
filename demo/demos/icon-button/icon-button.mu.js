@@ -4,7 +4,7 @@ import { ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js"
 import { IconButtonToggle } from "@pragmatic-lab/mural/framework/buttons/icon-button-toggle.js";
 import { IconButton } from "@pragmatic-lab/mural/framework/buttons/icon-button.js";
 import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, LineSegment, PathFigure, PathGeometry, Pen, Point, QuadraticBezierSegment } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_IconButtonDemo = Symbol("IconButtonDemo.ctor");
@@ -27,7 +27,7 @@ export class IconButtonDemo extends ResourceDictionary {
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
-            _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
+            _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();

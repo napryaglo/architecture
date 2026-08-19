@@ -22,7 +22,7 @@ resources AnimationTriggersDemo {
     DataTemplate [DataType = AnimationTriggersVM] {
         Border x:root
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1) ] {
             // x:root marks this Border as the NameScope owner so the
             // inner `x:name="banner"` / `x:name="bannerBtn"` registrations

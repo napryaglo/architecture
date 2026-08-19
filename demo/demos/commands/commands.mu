@@ -120,7 +120,7 @@ resources CommandsDemo {
 
     // ── Demo shell ──────────────────────────────────────────────────
     DataTemplate [DataType = CommandsVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             DockPanel {
                 // Header — title + Classic/Ribbon mode toggle
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,10,16,10) ] {
@@ -145,7 +145,7 @@ resources CommandsDemo {
                 // MenuButton strip (above the toolbar)
                 Border
                     [ Fill      = @SurfaceContainerLow,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (0,0,0,1),
                       Padding         = (8,6,8,6) ] {
                     StackPanel [ Orientation = Horizontal ] {
@@ -206,7 +206,7 @@ resources CommandsDemo {
                 Border
                     [ DockPanel.Dock  = Top,
                       Fill      = @Surface,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (0,0,0,1) ] {
                     ToolBar {
                         ToolBarButton [ Command = $SaveCommand ] {

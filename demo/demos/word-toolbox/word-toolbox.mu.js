@@ -5,7 +5,7 @@ import { ListBox, ListBoxItem, SelectionMode } from "@pragmatic-lab/mural/framew
 import { MarqueeBoundsPolicy } from "@pragmatic-lab/mural/framework/list/selector.js";
 import { ScrollViewer } from "@pragmatic-lab/mural/framework/surfaces/scroll-viewer.js";
 import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_WordToolboxDemo = Symbol("WordToolboxDemo.ctor");
@@ -32,7 +32,7 @@ export class WordToolboxDemo extends ResourceDictionary {
         t.Set("ToolboxItemsPanel", _tmpl2);
         const _tmpl4 = new DataTemplate((_data) => {
             const _border5 = new Border();
-            _border5.set_property_value(Border.BorderBrushKey, DynamicResource(_border5, "Outline"));
+            _border5.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
             _border5.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _textBlock6 = new TextBlock();
             _textBlock6.set_property_value(TextBlock.TextKey, DataContextBinding(_textBlock6, "Word"));
@@ -70,7 +70,7 @@ export class WordToolboxDemo extends ResourceDictionary {
             const _border19 = new Border();
             _border19.SetNameScope(new NameScope());
             _border19.set_property_value(Border.FillKey, DynamicResource(_border19, "SurfaceContainerLow"));
-            _border19.set_property_value(Border.BorderBrushKey, DynamicResource(_border19, "OutlineVariant"));
+            _border19.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border19.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd20 = _border19.Resources;
             const _setter21 = new Setter(ContentPresenter, "IsDraggable", true);
@@ -110,7 +110,7 @@ export class WordToolboxDemo extends ResourceDictionary {
             _dockPanel30.set_property_value(DockPanel.LastChildFillKey, true);
             const _border31 = new Border();
             _border31.set_property_value(DockPanel.DockKey, Dock.Left);
-            _border31.set_property_value(Border.BorderBrushKey, DynamicResource(_border31, "OutlineVariant"));
+            _border31.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border31.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 1, 0));
             const _dockPanel32 = new DockPanel();
             const _border33 = new Border();
@@ -135,7 +135,7 @@ export class WordToolboxDemo extends ResourceDictionary {
             _border31.SetChild(_dockPanel32);
             _dockPanel30.AddChild(_border31);
             const _border36 = new Border();
-            _border36.set_property_value(Border.BorderBrushKey, DynamicResource(_border36, "OutlineVariant"));
+            _border36.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border36.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             const _dockPanel37 = new DockPanel();
             const _border38 = new Border();

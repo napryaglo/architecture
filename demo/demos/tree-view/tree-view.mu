@@ -18,7 +18,7 @@ resources TreeViewDemo {
     DataTemplate [DataType = TreeViewVM] {
         Border x:root
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1) ] {
             // x:root owns the NameScope so the bound TreeView's x:name
             // registers and the VM's OnViewMounted FindName resolves it.

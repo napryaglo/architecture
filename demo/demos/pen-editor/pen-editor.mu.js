@@ -2,7 +2,7 @@ import { PenEditorDemoVM } from "./pen-editor-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Ellipse, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
 import { PenEditor } from "@pragmatic-lab/mural/framework";
 import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_PenEditorDemo = Symbol("PenEditorDemo.ctor");
@@ -43,7 +43,7 @@ export class PenEditorDemo extends ResourceDictionary {
             const _border7 = new Border();
             _border7.set_property_value(DockPanel.DockKey, Dock.Bottom);
             _border7.set_property_value(Border.FillKey, DynamicResource(_border7, "SurfaceContainerLow"));
-            _border7.set_property_value(Border.BorderBrushKey, DynamicResource(_border7, "OutlineVariant"));
+            _border7.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border7.set_property_value(Border.BorderThicknessKey, new Thickness(0, 1, 0, 0));
             _border7.set_property_value(Border.PaddingKey, new Thickness(20, 10, 20, 10));
             const _stackPanel8 = new StackPanel();
@@ -94,7 +94,7 @@ export class PenEditorDemo extends ResourceDictionary {
             _border17.set_property_value(Border.WidthKey, 320);
             _border17.set_property_value(Border.PaddingKey, new Thickness(16, 16, 16, 16));
             _border17.set_property_value(Border.FillKey, DynamicResource(_border17, "SurfaceContainerLow"));
-            _border17.set_property_value(Border.BorderBrushKey, DynamicResource(_border17, "OutlineVariant"));
+            _border17.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border17.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border17.set_property_value(Border.CornerRadiusKey, 8);
             _border17.set_property_value(Border.MarginKey, new Thickness(0, 0, 20, 0));
@@ -117,7 +117,7 @@ export class PenEditorDemo extends ResourceDictionary {
             _border21.set_property_value(Border.HeightKey, 420);
             _border21.set_property_value(Border.PaddingKey, new Thickness(20));
             _border21.set_property_value(Border.FillKey, DynamicResource(_border21, "SurfaceContainer"));
-            _border21.set_property_value(Border.BorderBrushKey, DynamicResource(_border21, "OutlineVariant"));
+            _border21.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border21.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border21.set_property_value(Border.CornerRadiusKey, 8);
             const _ellipse22 = new Ellipse();

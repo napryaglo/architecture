@@ -8,7 +8,7 @@ import {
     Element, Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { SolidColorBrush, CornerRadius, type Brush } from '../../visual-engine/index.js';
+import { SolidColorBrush, CornerRadius, Pen, type Brush } from '../../visual-engine/index.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { ClickableBorder } from '../../basic/clickable-border.js';
 import { TextBlock } from '../../basic/text-block.js';
@@ -161,7 +161,7 @@ export class DatePicker extends TemplatedControl
             cell.Fill   = selected ? primary : TRANSPARENT;
             if (isToday)
             {
-                cell.BorderBrush     = primary;
+                cell.Stroke          = new Pen(primary);
                 cell.BorderThickness = new Thickness(1);
             }
 

@@ -30,7 +30,7 @@ import {
     Color,
 } from '../runtime/index.js';
 import { Border } from './border.js';
-import { Brush, SolidColorBrush } from '../visual-engine/index.js';
+import { Brush, Pen, SolidColorBrush } from '../visual-engine/index.js';
 import type { PointerEventArgs } from '../visual-engine/routed-event.js';
 
 // ── Anchor enums ────────────────────────────────────────────────
@@ -163,7 +163,7 @@ export class SelectionBoundsAdorner extends Adorner
         this.IsHitTestVisible = false;
 
         this._bbox = new Border();
-        this._bbox.BorderBrush      = this.ChromeStroke;
+        this._bbox.Stroke           = new Pen(this.ChromeStroke);
         this._bbox.BorderThickness  = new Thickness(1);
         this._bbox.IsHitTestVisible = false;
         this.AttachVisual(this._bbox);
@@ -172,7 +172,7 @@ export class SelectionBoundsAdorner extends Adorner
         {
             const v = new Border();
             v.Fill       = this.ChromeFill;
-            v.BorderBrush      = this.ChromeStroke;
+            v.Stroke           = new Pen(this.ChromeStroke);
             v.BorderThickness  = new Thickness(1);
             v.Width            = this.HandleSize;
             v.Height           = this.HandleSize;

@@ -3,7 +3,7 @@ import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, Targete
 import { Button, ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
 import { Banner } from "@pragmatic-lab/mural/framework/notifications/banner.js";
 import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, Visibility } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_BannerDemo = Symbol("BannerDemo.ctor");
@@ -21,7 +21,7 @@ export class BannerDemo extends ResourceDictionary {
                 let _banner1;
                 const _border2 = new Border();
                 _border2.set_property_value(Border.FillKey, DynamicResource(_border2, "Surface"));
-                _border2.set_property_value(Border.BorderBrushKey, DynamicResource(_border2, "OutlineVariant"));
+                _border2.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
                 _border2.set_property_value(Border.BorderThicknessKey, new Thickness(1));
                 const _dockPanel3 = new DockPanel();
                 const _border4 = new Border();

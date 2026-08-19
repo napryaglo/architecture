@@ -16,6 +16,7 @@ import { Border, Canvas, TextBlock } from '../../basic/index.js';
 import {
     SvgRenderer,
     VISUAL_BACKREF,
+    Pen,
     SolidColorBrush,
     PathGeometry,
     PathFigure,
@@ -404,7 +405,7 @@ describe('SvgRenderer — ClipChildren children group', () => {
 
         const border = new Border();
         border.Fill = new SolidColorBrush(Color.FromHex('#ffffff'));
-        border.BorderBrush = new SolidColorBrush(Color.FromHex('#000000'));
+        border.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#000000')));
         border.BorderThickness = new Thickness(8);
         border.ClipChildren = true;
         const child = new Border();
@@ -432,7 +433,7 @@ describe('SvgRenderer — ClipChildren children group', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         const border = new Border();
-        border.BorderBrush = new SolidColorBrush(Color.FromHex('#000000'));
+        border.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#000000')));
         border.BorderThickness = new Thickness(8);
         border.ClipChildren = true;
         border.SetChild(new Border());

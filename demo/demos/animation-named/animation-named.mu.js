@@ -2,7 +2,7 @@ import { AnimationNamedVM } from "./animation-named-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
 import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
 import { BeginStoryboardAction, DoubleAnimation, DynamicResource, EventTrigger, PauseStoryboardAction, PropertyTrigger, ResourceDictionary, ResumeStoryboardAction, StopStoryboardAction, Storyboard, Style, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_AnimationNamedDemo = Symbol("AnimationNamedDemo.ctor");
@@ -18,7 +18,7 @@ export class AnimationNamedDemo extends ResourceDictionary {
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
-            _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
+            _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd2 = _border1.Resources;
             const _act4 = new BeginStoryboardAction((_target) => {

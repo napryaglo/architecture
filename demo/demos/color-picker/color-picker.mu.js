@@ -2,7 +2,7 @@ import { ColorPickerVM } from "./color-picker-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
 import { ColorPicker, ColorScheme } from "@pragmatic-lab/mural/framework";
 import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_ColorPickerDemo = Symbol("ColorPickerDemo.ctor");
@@ -81,7 +81,7 @@ export class ColorPickerDemo extends ResourceDictionary {
             _border2.set_property_value(Border.HeightKey, 40);
             _border2.set_property_value(Border.CornerRadiusKey, 4);
             _border2.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Bottom);
-            _border2.set_property_value(Border.BorderBrushKey, DynamicResource(_border2, "OutlineVariant"));
+            _border2.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border2.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _stackPanel15.AddChild(_border2);
             _stackPanel14.AddChild(_stackPanel15);
@@ -108,7 +108,7 @@ export class ColorPickerDemo extends ResourceDictionary {
             _border3.set_property_value(Border.HeightKey, 40);
             _border3.set_property_value(Border.CornerRadiusKey, 4);
             _border3.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Bottom);
-            _border3.set_property_value(Border.BorderBrushKey, DynamicResource(_border3, "OutlineVariant"));
+            _border3.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border3.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _stackPanel19.AddChild(_border3);
             _stackPanel14.AddChild(_stackPanel19);
@@ -135,7 +135,7 @@ export class ColorPickerDemo extends ResourceDictionary {
             _border4.set_property_value(Border.HeightKey, 40);
             _border4.set_property_value(Border.CornerRadiusKey, 4);
             _border4.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Bottom);
-            _border4.set_property_value(Border.BorderBrushKey, DynamicResource(_border4, "OutlineVariant"));
+            _border4.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border4.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _stackPanel23.AddChild(_border4);
             _stackPanel14.AddChild(_stackPanel23);
@@ -162,7 +162,7 @@ export class ColorPickerDemo extends ResourceDictionary {
             _border5.set_property_value(Border.HeightKey, 40);
             _border5.set_property_value(Border.CornerRadiusKey, 4);
             _border5.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Bottom);
-            _border5.set_property_value(Border.BorderBrushKey, DynamicResource(_border5, "OutlineVariant"));
+            _border5.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border5.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _stackPanel27.AddChild(_border5);
             _stackPanel14.AddChild(_stackPanel27);

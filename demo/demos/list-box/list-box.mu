@@ -14,7 +14,7 @@ resources ListBoxDemo {
     DataTemplate [DataType = ListBoxVM] {
         Border x:root
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1) ] {
             // x:root marks this Border as the NameScope owner so x:name
             // attributes inside register against its scope — VM's

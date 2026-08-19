@@ -22,7 +22,7 @@ resources ToggleButtonDemo {
     Template x:key="ToggleChromeTemplate" [TargetType = ToggleButton] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              BorderBrush     = @Outline,
+              Stroke     = Pen [ Brush = @Outline ],
               BorderThickness = (1),
               CornerRadius    = @ShapeSmall ] {
             // Transparent state-layer over the fill — hover / press tint
@@ -42,7 +42,7 @@ resources ToggleButtonDemo {
         }
         when ( IsChecked ) {
             PART_Border.Fill = @Primary;
-            PART_Border.BorderBrush = @PrimaryPress;
+            PART_Border.Stroke = Pen [ Brush = @PrimaryPress ];
         }
         when ( IsMouseOver ) { PART_StateLayer.Fill = @StateHoverOverlay; }
         when ( IsPressed ) { PART_StateLayer.Fill = @StatePressOverlay; }
@@ -63,7 +63,7 @@ resources ToggleButtonDemo {
     }
 
     DataTemplate [DataType = ToggleButtonVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             DockPanel {
                 // Header strip
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
@@ -103,7 +103,7 @@ resources ToggleButtonDemo {
                     Border
                         [ Fill      = @SurfaceContainerLow,
                           Padding         = (12,12,12,12),
-                          BorderBrush     = @Outline,
+                          Stroke     = Pen [ Brush = @Outline ],
                           BorderThickness = (1) ] {
                         StackPanel [ Orientation = Vertical ] {
                             TextBlock

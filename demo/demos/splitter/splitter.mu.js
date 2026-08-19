@@ -1,7 +1,7 @@
 import { SplitterVM } from "./splitter-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, Splitter, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
 import { Color, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_SplitterDemo = Symbol("SplitterDemo.ctor");
@@ -17,7 +17,7 @@ export class SplitterDemo extends ResourceDictionary {
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
-            _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
+            _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
@@ -51,7 +51,7 @@ export class SplitterDemo extends ResourceDictionary {
             _stackPanel7.AddChild(_textBlock8);
             const _border9 = new Border();
             _border9.set_property_value(Border.HeightKey, 140);
-            _border9.set_property_value(Border.BorderBrushKey, DynamicResource(_border9, "Outline"));
+            _border9.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
             _border9.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _stackPanel10 = new StackPanel();
             _stackPanel10.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
@@ -95,7 +95,7 @@ export class SplitterDemo extends ResourceDictionary {
             _stackPanel7.AddChild(_textBlock16);
             const _border17 = new Border();
             _border17.set_property_value(Border.HeightKey, 260);
-            _border17.set_property_value(Border.BorderBrushKey, DynamicResource(_border17, "Outline"));
+            _border17.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
             _border17.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel18 = new DockPanel();
             const _border19 = new Border();

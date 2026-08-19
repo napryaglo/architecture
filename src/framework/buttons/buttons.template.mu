@@ -127,7 +127,7 @@ resources Buttons {
     Template x:key="DefaultOutlinedButton" [TargetType = Button] {
         Border x:name="PART_Border"
             [ Fill           = #00000000,
-              BorderBrush          = @Outline,
+              Stroke          = Pen [ Brush = @Outline ],
               BorderThickness      = (1),
               CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @Primary,
@@ -262,7 +262,7 @@ resources Buttons {
     Template x:key="DefaultOutlinedIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
             [ Fill           = #00000000,
-              BorderBrush          = @Outline,
+              Stroke          = Pen [ Brush = @Outline ],
               BorderThickness      = (1),
               CornerRadius         = $$CornerRadius,
               Width                = 40,
@@ -396,7 +396,7 @@ resources Buttons {
     Template x:key="DefaultOutlinedIconButtonToggle" [TargetType = IconButtonToggle] {
         Border x:name="PART_Border"
             [ Fill      = #00000000,
-              BorderBrush     = @Outline,
+              Stroke     = Pen [ Brush = @Outline ],
               BorderThickness = (1),
               CornerRadius    = @ShapeFull,
               Width           = 40,

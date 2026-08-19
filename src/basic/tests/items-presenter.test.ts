@@ -9,7 +9,7 @@ import {
     Visual,
     type DrawingContext,
 } from '../../runtime/index.js';
-import { SolidColorBrush } from '../../visual-engine/index.js';
+import { Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import {
     Border,
     ControlTemplate,
@@ -53,7 +53,7 @@ describe('ItemsPresenter', () => {
         const template = new ControlTemplate(_tp => {
             const border = new Border();
             border.Fill = new SolidColorBrush(Color.White);
-            border.BorderBrush = new SolidColorBrush(Color.Black);
+            border.Stroke = new Pen(new SolidColorBrush(Color.Black));
             border.BorderThickness = new Thickness(2);
             const presenter = new ItemsPresenter();
             border.SetChild(presenter);

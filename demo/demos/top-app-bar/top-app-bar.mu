@@ -19,7 +19,7 @@ resources TopAppBarDemo {
     DataTemplate [DataType = TopAppBarVM] {
         Border
             [ Fill      = @SurfaceContainerLow,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1) ] {
             DockPanel {
                 // Header strip

@@ -13,7 +13,7 @@ import AnimationDeclarativeVM from "./animation-declarative-vm.mjs"
 
 resources AnimationDeclarativeDemo {
     DataTemplate [DataType = AnimationDeclarativeVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             resources: {
                 // Implicit style on Button — every Button inside this
                 // Border's subtree picks it up automatically. The
