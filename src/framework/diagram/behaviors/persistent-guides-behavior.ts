@@ -152,13 +152,21 @@ export function attachPersistentGuides(diagram: Diagram): () => void
         }
     };
 
+    // Consume the gesture AND take keyboard focus: setting Handled here (tunnel
+    // phase) halts the bubble pass, so Diagram.OnPointerDown never runs its own
+    // Focus() — without this, Delete on a selected guide wouldn't reach the Diagram.
+    const claim = (args: PointerEventArgs): void => {
+        args.Handled = true;
+        (diagram as unknown as { Focus?(): void }).Focus?.();
+    };
+
     const onDown = (args: PointerEventArgs): void => {
         if (args.Handled) return;
         // 1) on a ruler -> create (top ruler -> Y guide, left ruler -> X guide)
         const ruler = findAncestor(args.Source, RulerBar);
         if (ruler !== undefined) {
             startCreate(ruler.Orientation === Orientation.Horizontal ? AlignmentAxis.Y : AlignmentAxis.X, contentPoint(args));
-            args.Handled = true;
+            claim(args);
             return;
         }
         const p = contentPoint(args);
@@ -168,14 +176,14 @@ export function attachPersistentGuides(diagram: Diagram): () => void
             diagram.SelectedGuide = gi;
             mode = Mode.Reposition; guideIndex = gi; axis = diagram.Guides[gi]!.axis;
             downPos = diagram.Guides[gi]!.position; lastPos = downPos; moved = false;
-            args.Handled = true;
+            claim(args);
             return;
         }
         // 3) drag out of the canvas margin next to a ruler -> create
         const edge = createEdgeAxis(p);
         if (edge !== undefined) {
             startCreate(edge, p);
-            args.Handled = true;
+            claim(args);
             return;
         }
         // 4) elsewhere: deselect any guide; arm node-drag glue observation
