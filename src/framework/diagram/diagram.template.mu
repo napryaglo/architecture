@@ -248,19 +248,39 @@ resources Diagrams {
     // coords — which keeps side bars on figures past page 1
     // reachable after scrolling.
     Template x:key="DefaultDiagram" [TargetType = Diagram] {
-        // Zoom is a LayoutTransform Scale on PART_Camera (grows its measured
-        // footprint), so the ScrollViewer sizes real scrollbars to the zoomed
-        // content and pan IS the scroll offset. AdornerDecorator wraps
-        // PART_Camera (not the items) so selection adorners stay a constant
-        // on-screen size — the adorner layer composes PART_Camera's
-        // EffectiveLayoutMatrix when positioning them (see adorner.ts).
-        ScrollViewer x:name="PART_Scroll"
-            [ IsAutoHideScrollBars    = false,
-              HorizontalScrollEnabled = true,
-              VerticalScrollEnabled   = true ] {
-            AdornerDecorator {
-                Border x:name="PART_Camera" [ Fill = #00000000 ] {
-                    ItemsPresenter
+        // Rulers (PART_RulerTop / PART_RulerLeft) sit OUTSIDE PART_Scroll in a
+        // Grid so they neither zoom (they're not under PART_Camera's
+        // LayoutTransform) nor scroll off-screen — the Diagram feeds them the
+        // camera zoom/offset so their ticks track the content. They default to
+        // Collapsed (Auto tracks collapse to 0), so the diagram looks identical
+        // to before until RulersVisible flips true.
+        Grid {
+            ColumnDefinitions {
+                ColumnDefinition [ Width = GridLength.Auto ]
+                ColumnDefinition [ Width = GridLength.Star ]
+            }
+            RowDefinitions {
+                RowDefinition [ Height = GridLength.Auto ]
+                RowDefinition [ Height = GridLength.Star ]
+            }
+            Border x:name="PART_RulerCorner" [ Grid.Row = 0, Grid.Column = 0, Fill = #00000000, Visibility = Collapsed ]
+            RulerBar x:name="PART_RulerTop"  [ Grid.Row = 0, Grid.Column = 1, Orientation = Horizontal, Visibility = Collapsed ]
+            RulerBar x:name="PART_RulerLeft" [ Grid.Row = 1, Grid.Column = 0, Orientation = Vertical,   Visibility = Collapsed ]
+            // Zoom is a LayoutTransform Scale on PART_Camera (grows its measured
+            // footprint), so the ScrollViewer sizes real scrollbars to the zoomed
+            // content and pan IS the scroll offset. AdornerDecorator wraps
+            // PART_Camera (not the items) so selection adorners stay a constant
+            // on-screen size — the adorner layer composes PART_Camera's
+            // EffectiveLayoutMatrix when positioning them (see adorner.ts).
+            ScrollViewer x:name="PART_Scroll"
+                [ Grid.Row = 1, Grid.Column = 1,
+                  IsAutoHideScrollBars    = false,
+                  HorizontalScrollEnabled = true,
+                  VerticalScrollEnabled   = true ] {
+                AdornerDecorator {
+                    Border x:name="PART_Camera" [ Fill = #00000000 ] {
+                        ItemsPresenter
+                    }
                 }
             }
         }

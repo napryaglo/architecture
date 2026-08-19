@@ -40,9 +40,17 @@ export enum DiagramSettingKey
     ChromeTextRotateGap         = 'diagram.chrome.textRotateGap',
     ChromeTextStemWidth         = 'diagram.chrome.textStemWidth',
     ChromeGuideThickness        = 'diagram.chrome.guideThickness',
+    ChromePersistentGuideThickness = 'diagram.chrome.persistentGuideThickness',
+    ChromeGuideGrabTolerance       = 'diagram.chrome.guideGrabTolerance',
+    ChromePersistentGuideColor     = 'diagram.chrome.persistentGuideColor',
 
     ToolboxTileSize             = 'diagram.toolbox.tileSize',
     ToolboxPreviewFill          = 'diagram.toolbox.previewFill',
+
+    RulerThickness              = 'diagram.ruler.thickness',
+    RulerTickMinSpacing         = 'diagram.ruler.tickMinSpacing',
+    RulerFill                   = 'diagram.ruler.fill',
+    RulerTickColor              = 'diagram.ruler.tickColor',
 }
 
 // One catalogue row: the schema for a tunable constant. The `default` is the
@@ -64,6 +72,7 @@ const CAT_SHAPES     = 'Diagram · Shapes';
 const CAT_CONNECTORS = 'Diagram · Connectors';
 const CAT_CHROME     = 'Diagram · Editing chrome';
 const CAT_TOOLBOX    = 'Diagram · Toolbox';
+const CAT_RULERS     = 'Diagram · Rulers';
 
 // The single source of truth for every tunable Diagram constant. Each row's
 // `default` is the historical hard-coded value; the diagram reads through the
@@ -144,10 +153,23 @@ const SPECS: readonly DiagramSettingSpec[] =
     { key: DiagramSettingKey.ChromeGuideThickness, label: 'Alignment guide thickness',
       description: 'Line thickness of a snap alignment guide, in pixels.',
       category: CAT_CHROME, default: 1, min: 1, max: 8 },
+    { key: DiagramSettingKey.ChromePersistentGuideThickness, label: 'Persistent guide thickness',
+      description: 'Line thickness of a user-placed ruler guide, in pixels.',
+      category: CAT_CHROME, default: 1, min: 1, max: 8 },
+    { key: DiagramSettingKey.ChromeGuideGrabTolerance, label: 'Guide grab tolerance',
+      description: 'Cursor distance at which a ruler guide can be grabbed, in pixels.',
+      category: CAT_CHROME, default: 4, min: 1, max: 24 },
 
     { key: DiagramSettingKey.ToolboxTileSize, label: 'Toolbox tile size',
       description: 'Width & height of a shape preview tile in the toolbox, in pixels.',
       category: CAT_TOOLBOX, default: 48, min: 16, max: 128 },
+
+    { key: DiagramSettingKey.RulerThickness, label: 'Ruler thickness',
+      description: 'Width/height of the ruler strips along the viewport edges, in pixels.',
+      category: CAT_RULERS, default: 20, min: 12, max: 48 },
+    { key: DiagramSettingKey.RulerTickMinSpacing, label: 'Ruler tick minimum spacing',
+      description: 'Smallest on-screen gap between labelled ruler ticks, in pixels.',
+      category: CAT_RULERS, default: 60, min: 24, max: 200 },
 ];
 
 const DEFAULTS: ReadonlyMap<DiagramSettingKey, number> =
@@ -176,6 +198,15 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
     { key: DiagramSettingKey.ToolboxPreviewFill, label: 'Toolbox preview fill',
       description: 'Fill colour of a shape preview tile in the toolbox.',
       category: CAT_TOOLBOX, default: new SolidColorBrush(Color.FromHex('#1976d2')) },
+    { key: DiagramSettingKey.ChromePersistentGuideColor, label: 'Persistent guide colour',
+      description: 'Colour of a user-placed ruler guide line.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#e5484d')) },
+    { key: DiagramSettingKey.RulerFill, label: 'Ruler fill',
+      description: 'Background fill of the ruler strips.',
+      category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#f3f4f6')) },
+    { key: DiagramSettingKey.RulerTickColor, label: 'Ruler tick colour',
+      description: 'Colour of ruler tick marks and labels.',
+      category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#6b7280')) },
 ];
 
 const COLOR_DEFAULTS: ReadonlyMap<DiagramSettingKey, SolidColorBrush> =
@@ -317,8 +348,17 @@ export class DiagramSettings
     public static TextRotateGap():         number { return DiagramSettings.num(DiagramSettingKey.ChromeTextRotateGap); }
     public static TextStemWidth():         number { return DiagramSettings.num(DiagramSettingKey.ChromeTextStemWidth); }
     public static GuideThickness():        number { return DiagramSettings.num(DiagramSettingKey.ChromeGuideThickness); }
+    public static PersistentGuideThickness(): number         { return DiagramSettings.num(DiagramSettingKey.ChromePersistentGuideThickness); }
+    public static GuideGrabTolerance():       number         { return DiagramSettings.num(DiagramSettingKey.ChromeGuideGrabTolerance); }
+    public static PersistentGuideColor():     SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromePersistentGuideColor); }
 
     // ── Toolbox ──────────────────────────────────────────────────────────
     public static ToolboxTileSize():    number          { return DiagramSettings.num(DiagramSettingKey.ToolboxTileSize); }
     public static ToolboxPreviewFill(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ToolboxPreviewFill); }
+
+    // ── Rulers ───────────────────────────────────────────────────────────
+    public static RulerThickness():      number          { return DiagramSettings.num(DiagramSettingKey.RulerThickness); }
+    public static RulerTickMinSpacing(): number          { return DiagramSettings.num(DiagramSettingKey.RulerTickMinSpacing); }
+    public static RulerFill():           SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.RulerFill); }
+    public static RulerTickColor():      SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.RulerTickColor); }
 }

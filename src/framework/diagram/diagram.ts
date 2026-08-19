@@ -6,7 +6,9 @@ import {
     MetaData,
     Model,
     type ObservableCollection,
+    type PersistentGuide,
     Rect,
+    Visibility,
     type KeyEventArgs,
     Key,
     type PointerEventArgs,
@@ -53,12 +55,15 @@ import {
     type AlignmentGuide,
     type AlignmentGuidesHandlers,
 } from './behaviors/alignment-guides-behavior.js';
+import { attachPersistentGuides, type PersistentGuidesHandlers } from './behaviors/persistent-guides-behavior.js';
+import { PersistentGuidesAdorner } from './guides/persistent-guides-adorner.js';
+import { RulerBar } from './guides/ruler-bar.js';
 import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js';
 import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
 import { Brush, Pen, Point, ScaleTransform, Size, TextAlignment } from '../../visual-engine/index.js';
-import type { ScrollViewer } from '../surfaces/scroll-viewer.js';
+import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { type Camera, clampZoom, fitBounds, zoomAtPoint } from './camera.js';
 import { attachZoomPan } from './behaviors/zoom-pan-behavior.js';
 
@@ -317,6 +322,17 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // here; consumers can also bind for custom guide visualization.
     public static readonly AlignmentGuidesKey = Model.RegisterReadOnlyProperty<readonly AlignmentGuide[]>(
         Diagram, 'AlignmentGuides', Object.freeze([]) as readonly AlignmentGuide[], MetaData.None);
+
+    // Persistent (Visio-style) ruler guides. Read-write: the app hydrates them
+    // from the .diagram metadata and persists changes; the behavior mutates them
+    // on placement/reposition/delete/glue; the adorner subscribes to paint them.
+    public static readonly GuidesKey = Model.RegisterProperty<readonly PersistentGuide[]>(
+        Diagram, 'Guides', Object.freeze([]) as readonly PersistentGuide[], MetaData.None);
+
+    // Feature opt-in: shows the rulers AND attaches the persistent-guides behavior
+    // + adorner. Default off — the template is visually identical to today.
+    public static readonly RulersVisibleKey = Model.RegisterProperty<boolean>(
+        Diagram, 'RulersVisible', false, MetaData.None);
 
     // Selection-resize opt-in. Default off. When flipped true, a
     // SelectionBoundsAdorner mounts in the ItemsPanel's AdornerLayer
@@ -644,6 +660,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
 
     public get AlignmentGuidesEnabled():  boolean { return this.get_property_value(Diagram.AlignmentGuidesEnabledKey); }
     public set AlignmentGuidesEnabled(v: boolean) { this.set_property_value(Diagram.AlignmentGuidesEnabledKey, v); }
+
+    public get Guides(): readonly PersistentGuide[] { return this.get_property_value(Diagram.GuidesKey); }
+    public set Guides(v: readonly PersistentGuide[]) { this.set_property_value(Diagram.GuidesKey, v); }
+
+    public get RulersVisible(): boolean { return this.get_property_value(Diagram.RulersVisibleKey); }
+    public set RulersVisible(v: boolean) { this.set_property_value(Diagram.RulersVisibleKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
     public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
     public get TextBlockAdornerEnabled():  boolean { return this.get_property_value(Diagram.TextBlockAdornerEnabledKey); }
@@ -815,6 +837,14 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     private _alignmentGuidesDetach:  (() => void) | undefined = undefined;
     private _alignmentGuidesAdorner: AlignmentGuidesAdorner | undefined = undefined;
 
+    // Persistent-guides (ruler) state: the behavior's detach thunk, the mounted
+    // adorner, and the camera-feed detach that keeps the rulers tracking zoom/pan.
+    // All undefined when RulersVisible is false; queueMicrotask-deferred mount
+    // handles the DP flipping before ItemsPanel materializes.
+    private _persistentGuidesDetach:  (() => void) | undefined = undefined;
+    private _persistentGuidesAdorner: PersistentGuidesAdorner | undefined = undefined;
+    private _rulerCameraDetach:       (() => void) | undefined = undefined;
+
     // Selection-resize state — adorner instance + the source that
     // drives its resize semantics. undefined when SelectionResizeEnabled
     // is false; queueMicrotask-deferred mount handles the case where
@@ -855,6 +885,15 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public _setAlignmentGuidesHandlers(h: AlignmentGuidesHandlers | undefined): void
     {
         this._alignmentGuidesHandlers = h;
+    }
+
+    // Persistent-guides preview-pointer interceptor — same tunnel-phase reason as
+    // the alignment + connector interceptors. Installed by attachPersistentGuides.
+    private _persistentGuidesHandlers: PersistentGuidesHandlers | undefined = undefined;
+    /** @internal — used by attachPersistentGuides. Not exposed publicly. */
+    public _setPersistentGuidesHandlers(h: PersistentGuidesHandlers | undefined): void
+    {
+        this._persistentGuidesHandlers = h;
     }
 
     // Drop-receiver / Mutator attach state — detach thunks for whichever
@@ -1102,17 +1141,20 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         super.OnPreviewPointerDown(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerDown(args);
         this._alignmentGuidesHandlers?.OnPreviewPointerDown(args);
+        this._persistentGuidesHandlers?.OnPreviewPointerDown(args);
     }
     protected override OnPreviewPointerMove(args: PointerEventArgs): void
     {
         super.OnPreviewPointerMove(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerMove(args);
+        this._persistentGuidesHandlers?.OnPreviewPointerMove(args);
     }
     protected override OnPreviewPointerUp(args: PointerEventArgs): void
     {
         super.OnPreviewPointerUp(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerUp(args);
         this._alignmentGuidesHandlers?.OnPreviewPointerUp(args);
+        this._persistentGuidesHandlers?.OnPreviewPointerUp(args);
     }
     protected override OnPointerLeave(args: PointerEventArgs): void
     {
@@ -1196,6 +1238,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         {
             if (newValue === true) this._attachAlignmentGuides();
             else                   this._detachAlignmentGuides();
+        }
+        else if (descriptor.Name === 'RulersVisible')
+        {
+            if (newValue === true) this._enableRulers();
+            else                   this._disableRulers();
         }
         else if (descriptor.Name === 'SelectionResizeEnabled')
         {
@@ -1378,6 +1425,85 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         const adorner = new AlignmentGuidesAdorner(panel, this);
         layer.Add(adorner);
         this._alignmentGuidesAdorner = adorner;
+    }
+
+    private _enableRulers(): void
+    {
+        if (this._persistentGuidesDetach === undefined)
+            this._persistentGuidesDetach = attachPersistentGuides(this);
+        queueMicrotask(() => this._mountPersistentGuidesAdorner());
+        this._showRulers(true);
+        this._wireRulerCamera();
+    }
+
+    private _disableRulers(): void
+    {
+        this._persistentGuidesDetach?.();
+        this._persistentGuidesDetach = undefined;
+        if (this._persistentGuidesAdorner !== undefined)
+        {
+            const layer = AdornerLayer.GetAdornerLayer(this._persistentGuidesAdorner.AdornedElement);
+            layer?.Remove(this._persistentGuidesAdorner);
+            this._persistentGuidesAdorner.Dispose();
+            this._persistentGuidesAdorner = undefined;
+        }
+        this._rulerCameraDetach?.();
+        this._rulerCameraDetach = undefined;
+        this._showRulers(false);
+    }
+
+    private _mountPersistentGuidesAdorner(): void
+    {
+        if (this._persistentGuidesAdorner !== undefined) return;
+        const panel = this.ItemsPanelInstance;
+        if (panel === undefined) return;
+        const layer = AdornerLayer.GetAdornerLayer(panel);
+        if (layer === undefined) return;
+        const adorner = new PersistentGuidesAdorner(panel, this);
+        layer.Add(adorner);
+        this._persistentGuidesAdorner = adorner;
+    }
+
+    private _rulerParts(): { top?: RulerBar; left?: RulerBar; corner?: Visual }
+    {
+        return {
+            top:    this.GetTemplateChild('PART_RulerTop')    as unknown as RulerBar | undefined,
+            left:   this.GetTemplateChild('PART_RulerLeft')   as unknown as RulerBar | undefined,
+            corner: this.GetTemplateChild('PART_RulerCorner') as unknown as Visual  | undefined,
+        };
+    }
+
+    private _showRulers(show: boolean): void
+    {
+        const v = show ? Visibility.Visible : Visibility.Collapsed;
+        const { top, left, corner } = this._rulerParts();
+        if (top    !== undefined) top.Visibility    = v;
+        if (left   !== undefined) left.Visibility   = v;
+        if (corner !== undefined) corner.Visibility = v;
+    }
+
+    // Feed zoom/offset/extent into the rulers whenever the camera changes so their
+    // ticks track the panned/zoomed content. The rulers sit outside PART_Camera,
+    // so they must be told the transform explicitly (they don't inherit it).
+    private _wireRulerCamera(): void
+    {
+        if (this._rulerCameraDetach !== undefined) return;
+        const feed = (): void => {
+            const { top, left } = this._rulerParts();
+            const vp = this._viewportSize();
+            if (top !== undefined)  { top.Zoom  = this.Zoom; top.Offset  = this.ScrollX; top.Extent  = vp.Width; }
+            if (left !== undefined) { left.Zoom = this.Zoom; left.Offset = this.ScrollY; left.Extent = vp.Height; }
+        };
+        feed();
+        const scroll = this.ScrollHost;
+        this.AddPropertyChangedListener(Diagram.ZoomKey, feed);
+        scroll?.AddPropertyChangedListener(ScrollViewer.HorizontalOffsetKey, feed);
+        scroll?.AddPropertyChangedListener(ScrollViewer.VerticalOffsetKey, feed);
+        this._rulerCameraDetach = (): void => {
+            this.RemovePropertyChangedListener(Diagram.ZoomKey, feed);
+            scroll?.RemovePropertyChangedListener(ScrollViewer.HorizontalOffsetKey, feed);
+            scroll?.RemovePropertyChangedListener(ScrollViewer.VerticalOffsetKey, feed);
+        };
     }
 
     private _attachSelectionResize(): void
