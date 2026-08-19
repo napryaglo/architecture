@@ -1,19 +1,19 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { DiagramDocument } from '../diagram-document.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
+import { Figure } from '../figure.js';
 import { GeometryCombineMode } from '../commands/combine.js';
 
-// Pure document-mutation tests for CombineSelection emitting ShapeNodeVM.
+// Pure document-mutation tests for CombineSelection emitting Figure.
 // No layout / Application needed — these exercise the mutation API only.
-describe('CombineSelection emits ShapeNodeVM (M2)', () => {
+describe('CombineSelection emits Figure (M2)', () => {
 
-    test('Union of two rectangles produces one ShapeNodeVM with defined Geometry', () => {
+    test('Union of two rectangles produces one Figure with defined Geometry', () => {
         const doc = new DiagramDocument();
         const a = doc.CreateNode('rectangle',  0, 0)!;
         const b = doc.CreateNode('rectangle', 40, 0)!;
-        assert.ok(a instanceof ShapeNodeVM, 'CreateNode should return ShapeNodeVM');
-        assert.ok(b instanceof ShapeNodeVM, 'CreateNode should return ShapeNodeVM');
+        assert.ok(a instanceof Figure, 'CreateNode should return Figure');
+        assert.ok(b instanceof Figure, 'CreateNode should return Figure');
         const before = doc.Nodes.Count;  // 2
 
         doc.CombineSelection([a, b], GeometryCombineMode.Union);
@@ -22,17 +22,17 @@ describe('CombineSelection emits ShapeNodeVM (M2)', () => {
             `Combine should collapse ${before} nodes to ${before - 1}; got ${doc.Nodes.Count}`);
 
         const remaining = doc.Nodes.Get(0)!;
-        assert.ok(remaining instanceof ShapeNodeVM,
-            'Remaining node must be a ShapeNodeVM');
+        assert.ok(remaining instanceof Figure,
+            'Remaining node must be a Figure');
         assert.notEqual(remaining.Geometry, undefined,
-            'Combined ShapeNodeVM must have a defined Geometry');
+            'Combined Figure must have a defined Geometry');
 
         // Inputs must no longer be in Nodes.
         assert.equal(doc.Nodes.IndexOf(a), -1, 'Input a must be removed from Nodes');
         assert.equal(doc.Nodes.IndexOf(b), -1, 'Input b must be removed from Nodes');
     });
 
-    test('Fewer than two ShapeNodeVM leaves is a no-op', () => {
+    test('Fewer than two Figure leaves is a no-op', () => {
         const doc = new DiagramDocument();
         const a = doc.CreateNode('rectangle', 0, 0)!;
         const before = doc.Nodes.Count;  // 1
@@ -42,7 +42,7 @@ describe('CombineSelection emits ShapeNodeVM (M2)', () => {
         assert.equal(doc.Nodes.Count, before, 'Single-item combine must leave Nodes unchanged');
     });
 
-    test('Non-ShapeNodeVM items in selection are ignored; ShapeNodeVMs are combined', () => {
+    test('Non-Figure items in selection are ignored; Figures are combined', () => {
         const doc = new DiagramDocument();
         const a = doc.CreateNode('rectangle',  0, 0)!;
         const b = doc.CreateNode('rectangle', 40, 0)!;
@@ -56,7 +56,7 @@ describe('CombineSelection emits ShapeNodeVM (M2)', () => {
         assert.equal(doc.Nodes.Count, before - 1,
             `Foreign items must be skipped; combined ${before} → ${before - 1}`);
         const remaining = doc.Nodes.Get(0)!;
-        assert.ok(remaining instanceof ShapeNodeVM, 'Remaining node must be ShapeNodeVM');
+        assert.ok(remaining instanceof Figure, 'Remaining node must be Figure');
     });
 
     test('Status message reflects combine mode after successful combine', () => {

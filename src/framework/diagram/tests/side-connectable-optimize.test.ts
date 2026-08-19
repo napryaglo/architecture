@@ -1,6 +1,6 @@
 // Regression: the side-intersection optimizer lived only on Figure, and the
 // connector invoked it duck-typed with optional chaining — so on VM-backed
-// nodes (SideConnectableNodeVM → ArchNodeVM / ShapeNodeVM, what real diagrams
+// nodes (SideConnectableNodeVM → ArchNodeVM / the shape Figure, what real diagrams
 // use) the call resolved to undefined and was silently swallowed. Connectors
 // sharing a VM node's side were therefore never fanned out to avoid crossings.
 //

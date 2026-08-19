@@ -8,11 +8,10 @@ import {
     type MountableTarget,
     Size,
 } from '../../../runtime/index.js';
-import { Border, ItemsPanelTemplate, TextBlock, Shape } from '../../../basic/index.js';
+import { Border, ItemsPanelTemplate, TextBlock } from '../../../basic/index.js';
 import { PaginatedCanvas } from '../../../basic/panels/paginated-canvas.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
 
 class FakeTarget implements MountableTarget {
     public Content: Visual | undefined;
@@ -37,7 +36,7 @@ function collectVisuals(root: Visual): Visual[]
     return result;
 }
 
-describe('Diagram — ShapeNodeVM DataTemplate rendering (m2)', () => {
+describe('Diagram — shape Figure realization (m2)', () => {
     beforeEach(() => {
         initTestApp();
     });
@@ -59,29 +58,28 @@ describe('Diagram — ShapeNodeVM DataTemplate rendering (m2)', () => {
         surface.Arrange({ X: 0, Y: 0, Width: 800, Height: 600 } as never);
     }
 
-    test('renders ShapeNodeVM via [DataType] DataTemplate into the container', () => {
+    test('a shape Figure is realized as its own container carrying the silhouette', () => {
         const { diagram, surface } = build();
-        const vm = ShapeNodeVM.fromKind('rectangle', 30, 20);
-        const col = new ObservableCollection<ShapeNodeVM>();
-        col.Add(vm);
+        // A shape Figure IS the node — it self-paints, so there is no inner
+        // Shape produced by a [DataType] DataTemplate. Adding it to the diagram
+        // realizes it directly as its own container.
+        const fig = Figure.fromKind('rectangle', 30, 20);
+        const col = new ObservableCollection<Figure>();
+        col.Add(fig);
         diagram.ItemsSource = col;
         layout(surface);
 
-        const container = diagram.Generator.ContainerFromItem(vm);
+        const container = diagram.Generator.ContainerFromItem(fig);
         assert.ok(container !== undefined, 'ContainerFromItem should return a container');
         assert.ok(container instanceof Figure, 'container should be a Figure');
+        assert.strictEqual(container, fig, 'a shape Figure is its own container');
 
-        // Walk the entire visual subtree of the container Figure.
+        // The Figure self-paints its silhouette from a cached unit source.
+        assert.ok(fig._getSource() !== undefined, 'the shape Figure carries its silhouette source');
+        assert.ok(fig.Geometry !== undefined, 'the shape Figure exposes a scaled silhouette geometry');
+
+        // The "can not resolve template" fallback TextBlock must not appear.
         const visuals = collectVisuals(container);
-
-        // Direct proof the DataTemplate resolved + rendered: a Shape
-        // with defined Geometry must be in the subtree.
-        const hasShape = visuals.some(
-            v => v instanceof Shape && (v as Shape).Geometry !== undefined,
-        );
-        assert.ok(hasShape, 'DataTemplate should render a Shape with defined Geometry');
-
-        // And the "can not resolve template" fallback TextBlock must not appear.
         const hasErrorBlock = visuals.some(
             v => v instanceof TextBlock
               && (v as TextBlock).Text.startsWith('can not resolve template'),

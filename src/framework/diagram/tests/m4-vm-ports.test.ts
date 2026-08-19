@@ -1,25 +1,25 @@
-// M4 B1: ShapeNodeVM ports — Ports getter + SideEndpointRegistry delegation.
+// M4 B1: Figure ports — Ports getter + SideEndpointRegistry delegation.
 // Tests must FAIL before implementation and PASS after.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Application } from '../../../runtime/index.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
+import { Figure } from '../figure.js';
 import { PortSide } from '../port.js';
 
 function app(): void { Application.current = null; new Application(); }
 
-describe('M4 ShapeNodeVM ports', () => {
+describe('M4 Figure ports', () => {
     test('Ports resolves per-kind defaults (non-empty)', () => {
         app();
-        const vm = ShapeNodeVM.fromKind('rectangle', 0, 0, { width: 80, height: 60 });
+        const vm = Figure.fromKind('rectangle', 0, 0, { width: 80, height: 60 });
         assert.ok(vm.Ports.length > 0, 'a rectangle VM exposes default ports');
     });
 
     test('side-endpoint registration reports slot index + count', () => {
         app();
-        const vm = ShapeNodeVM.fromKind('rectangle', 0, 0, { width: 80, height: 60 });
+        const vm = Figure.fromKind('rectangle', 0, 0, { width: 80, height: 60 });
         // Cast to ISideEndpointHost for duck-typed access (matches the spec pattern)
         const host = vm as unknown as import('../side-endpoint-host.js').ISideEndpointHost;
         // PortSide.E is a ResolvedPortSide (Exclude<PortSide, PortSide.Auto>)
@@ -35,7 +35,7 @@ describe('M4 ShapeNodeVM ports', () => {
 
     test('GetSideEndpointCount returns 0 for a side with no registrations', () => {
         app();
-        const vm = ShapeNodeVM.fromKind('rectangle', 0, 0, { width: 80, height: 60 });
+        const vm = Figure.fromKind('rectangle', 0, 0, { width: 80, height: 60 });
         const host = vm as unknown as import('../side-endpoint-host.js').ISideEndpointHost;
         assert.equal(host.GetSideEndpointCount(PortSide.N), 0);
     });

@@ -19,7 +19,7 @@ import { Diagram } from '../diagram/diagram.js';
 import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
-// Stand-in for the demo's ShapeNodeVM. Carries Left / Top / Width /
+// Stand-in for a shape node. Carries Left / Top / Width /
 // Height / IsSelected — the surface the alignment math reads + writes.
 class NodeVM extends Model
 {

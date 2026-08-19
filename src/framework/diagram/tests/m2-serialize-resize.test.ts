@@ -1,5 +1,5 @@
-// M2 interim shim: ShapeNodeVM save/load round-trip + container→VM resize chain.
-// Part A (serialize): ShapeNodeVM nodes survive Save/Load via the legacy
+// M2 interim shim: Figure save/load round-trip + container→VM resize chain.
+// Part A (serialize): Figure nodes survive Save/Load via the legacy
 //   {id,kind,left,top,w,h,d} record format.
 // Part B (resize): container Width change propagates into VM.Geometry rebuild.
 
@@ -18,7 +18,6 @@ import { PaginatedCanvas } from '../../../basic/panels/paginated-canvas.js';
 import { Diagram } from '../diagram.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 import { Figure } from '../figure.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
 import { GeometryCombineMode } from '../commands/combine.js';
 
 // ── In-memory DiagramStorage (same pattern as diagram-document-connectors.test.ts) ──
@@ -39,14 +38,14 @@ function newDoc(storage?: DiagramStorage): DiagramDocument
 
 // ── Part A: serialize round-trip (pure, no layout) ───────────────────
 
-describe('DiagramDocument — ShapeNodeVM serialize round-trip (M2)', () => {
-    test('CreateNode + Save + Load restores a ShapeNodeVM with correct Kind/Left/Top', () => {
+describe('DiagramDocument — Figure serialize round-trip (M2)', () => {
+    test('CreateNode + Save + Load restores a Figure with correct Kind/Left/Top', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
 
         const vm = doc.CreateNode('rectangle', 12, 34);
-        assert.ok(vm !== null, 'CreateNode should return a ShapeNodeVM');
-        assert.ok(vm instanceof ShapeNodeVM, 'CreateNode return value should be ShapeNodeVM');
+        assert.ok(vm !== null, 'CreateNode should return a Figure');
+        assert.ok(vm instanceof Figure, 'CreateNode return value should be Figure');
 
         doc.Save();
 
@@ -56,14 +55,14 @@ describe('DiagramDocument — ShapeNodeVM serialize round-trip (M2)', () => {
 
         assert.equal(doc2.Nodes.Count, 1, 'Loaded document should have exactly 1 node');
         const restored = doc2.Nodes.Get(0)!;
-        assert.ok(restored instanceof ShapeNodeVM, 'Restored node should be a ShapeNodeVM');
-        const restoredVm = restored as ShapeNodeVM;
+        assert.ok(restored instanceof Figure, 'Restored node should be a Figure');
+        const restoredVm = restored as Figure;
         assert.equal(restoredVm.Kind, 'rectangle', 'Restored Kind should be rectangle');
         assert.equal(restoredVm.Left, 12, 'Restored Left should be 12');
         assert.equal(restoredVm.Top,  34, 'Restored Top should be 34');
     });
 
-    test('CombineSelection (fromSource) ShapeNodeVM round-trips with defined Geometry', () => {
+    test('CombineSelection (fromSource) Figure round-trips with defined Geometry', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
 
@@ -81,8 +80,8 @@ describe('DiagramDocument — ShapeNodeVM serialize round-trip (M2)', () => {
         doc2.Load();
 
         assert.equal(doc2.Nodes.Count, 1, 'Loaded document should have 1 node');
-        const restored = doc2.Nodes.Get(0)! as ShapeNodeVM;
-        assert.ok(restored instanceof ShapeNodeVM, 'Restored combined node should be ShapeNodeVM');
+        const restored = doc2.Nodes.Get(0)! as Figure;
+        assert.ok(restored instanceof Figure, 'Restored combined node should be Figure');
         assert.notEqual(restored.Geometry, undefined, 'Restored combined node must have defined Geometry');
     });
 });
@@ -95,7 +94,7 @@ class FakeTarget implements MountableTarget {
     public GetFocusedVisual(): Visual | undefined { return undefined; }
 }
 
-describe('ShapeNodeVM — container→VM resize chain (M2)', () => {
+describe('Figure — container→VM resize chain (M2)', () => {
     beforeEach(() => {
         initTestApp();
     });
@@ -120,8 +119,8 @@ describe('ShapeNodeVM — container→VM resize chain (M2)', () => {
     test('setting container.Width propagates into vm.Geometry rebuild', () => {
         const { diagram, surface } = build();
 
-        const vm = ShapeNodeVM.fromKind('rectangle', 30, 20);
-        const col = new ObservableCollection<ShapeNodeVM>();
+        const vm = Figure.fromKind('rectangle', 30, 20);
+        const col = new ObservableCollection<Figure>();
         col.Add(vm);
         diagram.ItemsSource = col;
         layout(surface);
