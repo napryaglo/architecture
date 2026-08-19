@@ -14,7 +14,6 @@ import { Pen, Point, TextAlignment } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Group } from './group.js';
 import { NodeViewModel } from './node-view-model.js';
-import { ShapeNodeVM } from './shape-node-vm.js';
 import { TextNodeVM } from './text-node-vm.js';
 import { CalloutNodeVM } from './callout-node-vm.js';
 import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
@@ -584,15 +583,15 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
     // ── Mutation API (DiagramMutator surface) ──────────────────────
 
-    public CreateNode(kind: string, x: number, y: number): ShapeNodeVM | null
+    public CreateNode(kind: string, x: number, y: number): Figure | null
     {
         if (!SHAPE_CATALOG_MAP.has(kind)) return null;
-        const vm = ShapeNodeVM.fromKind(kind, x, y);
-        vm.Id = 'n' + this._nextId++;
-        this.Nodes.Add(vm);
+        const node = Figure.fromKind(kind, x, y);
+        node.Id = 'n' + this._nextId++;
+        this.Nodes.Add(node);
         this.Status = `Placed ${kind}. ${this.Nodes.Count} nodes.`;
         this._markDirty();
-        return vm;
+        return node;
     }
 
     public AddNode(node: NodeViewModel): void
@@ -795,15 +794,15 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
     /** PowerPoint Merge-Shapes counterpart. Folds the geometric subset
      *  of `items` via `mergeShapes` and replaces the inputs with a single
-     *  combined-source ShapeNodeVM. Figure-based Groups are not VM leaves
-     *  yet (M4) — skip them. */
+     *  combined-source shape Figure. Figure-based Groups are skipped. */
     public CombineSelection(items: readonly unknown[], mode: GeometryCombineMode): void
     {
-        const leaves: ShapeNodeVM[] = [];
+        const leaves: Figure[] = [];
         for (const item of items)
         {
-            if (item instanceof ShapeNodeVM) leaves.push(item);
-            // Figure-based Groups are not VM leaves yet (M4) — skip them.
+            // A shape Figure is a Figure that carries a silhouette source; skip
+            // Group containers and content nodes.
+            if (item instanceof Figure && item._getSource() !== undefined) leaves.push(item);
         }
         if (leaves.length < 2) return;
         const merged = mergeShapes(leaves, mode);
@@ -813,7 +812,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             return;
         }
         const template = leaves[0]!;
-        const result = ShapeNodeVM.fromSource(merged.source, merged.x, merged.y, {
+        const result = Figure.fromSource(merged.source, merged.x, merged.y, {
             width:  merged.w,
             height: merged.h,
         });
@@ -824,10 +823,6 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             const PenCtor = template.Stroke.constructor as new (...args: unknown[]) => typeof template.Stroke;
             result.Stroke = new PenCtor(template.Stroke.Brush, template.Stroke.Thickness);
         }
-        // ShapeNodeVM has no IsSelected property (it's on the Figure container,
-        // not the VM) — the result.IsSelected = true line from the old Figure
-        // body is intentionally omitted. Selection of the combined node is not
-        // required for this task.
         for (const leaf of leaves)
         {
             const idx = this.Nodes.IndexOf(leaf);
@@ -937,9 +932,9 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
         // Round-trip nodes first so connectors can resolve their endpoint
         // nodeIds against the freshly-rehydrated Nodes set.
-        // byId accepts Figure, ShapeNodeVM, TextNodeVM, or CalloutNodeVM;
+        // byId accepts Figure, TextNodeVM, or CalloutNodeVM;
         // ConnectorEndpoint.Node is typed Model so all are accepted.
-        const byId = new Map<string, Figure | ShapeNodeVM | TextNodeVM | CalloutNodeVM>();
+        const byId = new Map<string, Figure | TextNodeVM | CalloutNodeVM>();
         // Callout leader targets resolve in a second pass (the target node may
         // be deserialized after the callout).
         const pendingLeaders: { callout: CalloutNodeVM; targetId: string }[] = [];
@@ -964,7 +959,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             const id = n.id !== '' ? n.id : nextFreeId();
             const base: NodeBaseRecord = { id, left: n.left, top: n.top, w: n.w, h: n.h };
 
-            let node: Figure | ShapeNodeVM | TextNodeVM | CalloutNodeVM | undefined;
+            let node: Figure | TextNodeVM | CalloutNodeVM | undefined;
 
             if (typeof n.type === 'string')
             {
@@ -972,7 +967,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 const s = serializerByType(n.type);
                 if (s !== undefined)
                 {
-                    node = s.deserialize(n.data ?? {}, base) as Figure | ShapeNodeVM | TextNodeVM | CalloutNodeVM;
+                    node = s.deserialize(n.data ?? {}, base) as Figure | TextNodeVM | CalloutNodeVM;
                 }
                 // Unknown serializer type — skip.
             }
@@ -997,7 +992,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 {
                     // geometry shape (catalog kind or freeform d-string)
                     const s = serializerByType('shape')!;
-                    node = s.deserialize({ kind, d: n.d ?? '' }, base) as ShapeNodeVM;
+                    node = s.deserialize({ kind, d: n.d ?? '' }, base) as Figure;
                 }
             }
 
@@ -1017,8 +1012,8 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         }
 
         // Wire callout leaders now that every node id resolves.
-        // The target may be any rehydrated node type (TextNodeVM, ShapeNodeVM,
-        // Figure, or CalloutNodeVM) — all satisfy ILeaderTarget at runtime
+        // The target may be any rehydrated node type (Figure shape, TextNodeVM,
+        // or CalloutNodeVM) — all satisfy ILeaderTarget at runtime
         // (Left/Top/Width/Height + DPs).
         for (const { callout, targetId } of pendingLeaders)
         {
@@ -1133,7 +1128,7 @@ function nodeEndpoint(nodeId: string, ep: ConnectorEndpoint): SerializedConnecto
 
 function rehydrateEndpoint(
     s: SerializedConnectorEndpoint,
-    byId: ReadonlyMap<string, Figure | ShapeNodeVM | TextNodeVM | CalloutNodeVM>,
+    byId: ReadonlyMap<string, Figure | TextNodeVM | CalloutNodeVM>,
 ): ConnectorEndpoint
 {
     if (s.nodeId !== undefined)
