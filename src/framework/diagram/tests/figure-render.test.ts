@@ -30,18 +30,18 @@ test('a catalog Figure surfaces its silhouette (a PathGeometry) as paint + clip 
     assert.ok(Math.abs(b.Width - 80) < 1 && Math.abs(b.Height - 60) < 1);
 });
 
-test('a bare Figure has no shape: ClipChildren off and the seams fall back to the bounds rect', () => {
+test('a bare Figure has no shape: ClipToBounds off and the seams fall back to the bounds rect', () => {
     const f = new Figure();
-    assert.equal(f.ClipChildren, false);
+    assert.equal(f.ClipToBounds, false);
     assert.equal(f._getSource(), undefined);
     const paint = seams(f).buildPaintGeometry(new Size(40, 40), 0);
     assert.ok(paint instanceof RectangleGeometry, 'no silhouette → base bounds rect (guard paints nothing)');
 });
 
-test('a shaped Figure turns ClipChildren on and clips children to the silhouette', () => {
+test('a shaped Figure turns ClipToBounds on and clips children to the silhouette', () => {
     const f = Figure.fromKind('ellipse', 0, 0, { width: 80, height: 60 });
     f.Width = 80; f.Height = 60;
-    assert.equal(f.ClipChildren, true);
+    assert.equal(f.ClipToBounds, true);
     const childClip = seams(f).buildChildClipGeometry(new Size(80, 60));
     assert.ok(childClip instanceof PathGeometry);
 });

@@ -617,22 +617,23 @@ export class Figure extends ContentControl implements ISideEndpointHost
         if (this._source === undefined)
         {
             this._shape = undefined;
-            this.ClipChildren = false;
+            this.ClipToBounds = false;
             return;
         }
         this._shape = scaleGeometry(this._source, this.Width, this.Height);
         // Clip content + label to the silhouette (own paint stays crisp — see the
-        // seams below). Re-arrange to rebuild ChildClip from the new _shape, and
-        // repaint the own silhouette (both were driven by the old MetaData on the
-        // Geometry DP / the inner Shape; _shape is a plain field, so invalidate).
-        this.ClipChildren = this._shape !== undefined;
+        // seams below). ClipToBounds now drives the children-only ChildClip
+        // (buildChildClipGeometry), so the stroke keeps painting. Re-arrange to
+        // rebuild ChildClip from the new _shape and repaint the own silhouette
+        // (_shape is a plain field, so invalidate explicitly).
+        this.ClipToBounds = this._shape !== undefined;
         this.InvalidateArrange();
         this.InvalidateVisual();
     }
 
     // The silhouette drives own paint (buildPaintGeometry → inherited
     // Visual.RenderOverride draws Fill + Stroke over it), the children-only clip
-    // (buildChildClipGeometry, applied via ClipChildren), and hit / clip-to-bounds
+    // (buildChildClipGeometry, applied via ClipToBounds), and hit / clip-to-bounds
     // (buildClipGeometry). No inset is applied to the paint geometry: own paint is
     // NOT self-clipped (the raw Clip DP is never set), so a centred stroke straddles
     // the outline exactly as a Shape primitive does. All three fall back to super
@@ -650,6 +651,24 @@ export class Figure extends ContentControl implements ISideEndpointHost
     protected override buildClipGeometry(size: Size): Geometry
     {
         return this._shape ?? super.buildClipGeometry(size);
+    }
+
+    // Confine picking to the silhouette — the SAME geometry the clip-to-bounds /
+    // child-clip seams use (buildClipGeometry), so hit and clip agree by
+    // construction. Only when the Figure actually has a shape and the slot is
+    // non-degenerate; a neutral container Figure keeps the default AABB hit
+    // region (undefined) so its content hit-tests normally. HitTestGeometry is
+    // MetaData.None, so writing it here never re-invalidates layout.
+    //
+    // Use finalSize, NOT this.RenderSize: Visual.Arrange assigns RenderSize the
+    // RETURN of this method, so the getter is still stale here (mirrors Shape).
+    protected override ArrangeOverride(finalSize: Size): Size
+    {
+        const arranged = super.ArrangeOverride(finalSize);
+        const confine = this._shape !== undefined
+            && finalSize.Width > 0 && finalSize.Height > 0;
+        this.HitTestGeometry = confine ? this.buildClipGeometry(finalSize) : undefined;
+        return arranged;
     }
 
     // Paint the silhouette as own paint. Guard: a neutral container Figure (no
