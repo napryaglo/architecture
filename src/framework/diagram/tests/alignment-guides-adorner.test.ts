@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, Rect, Size } from '../../../runtime/index.js';
+import { Application, Matrix, Point, Rect, Size } from '../../../runtime/index.js';
 import { Border } from '../../../basic/index.js';
 import { Diagram } from '../diagram.js';
 import { AlignmentGuidesAdorner } from '../behaviors/alignment-guides-adorner.js';
@@ -41,5 +41,39 @@ describe('AlignmentGuidesAdorner rendering', () => {
         assert.ok(Math.abs(pool[1].RenderSize.Width - 400) < 1, 'horizontal guide spans the adorner width');
         // an unused slot stays collapsed
         assert.equal(pool[5].RenderSize.Width, 0, 'unused slot stays 0-width');
+    });
+
+    // Regression: guides rendered at raw content coords, drifting left/up of the
+    // panned+zoomed nodes. Positions must project through the AdornerLayer's
+    // content->layer matrix (camera zoom + pan), like the connector/selection
+    // adorners.
+    test('guide positions project through the content->layer (camera) matrix', () => {
+        Application.current = null;
+        new Application();
+        const diagram = new Diagram();
+        const host = new Border();
+        host.Width = 400; host.Height = 300;
+        host.Measure(new Size(400, 300));
+        host.Arrange(new Rect(0, 0, 400, 300));
+
+        const adorner = new AlignmentGuidesAdorner(host, diagram);
+        // A camera transform: zoom 1.5 + pan. Compose scale then translate.
+        const m = Matrix.Scale(1.5, 1.5).Multiply(Matrix.Translate(40, 25));
+        adorner._setAdornedToLayerMatrix(m);
+        diagram._setAlignmentGuides([
+            { axis: 'x' as const, position: 100, movingEdge: 'min' as const, otherEdge: 'min' as const, otherRect: new Rect(0, 0, 10, 10) },
+            { axis: 'y' as const, position: 60,  movingEdge: 'min' as const, otherEdge: 'min' as const, otherRect: new Rect(0, 0, 10, 10) },
+        ]);
+        adorner.Measure(new Size(400, 300));
+        adorner.Arrange(new Rect(0, 0, 400, 300));
+
+        const pool = (adorner as unknown as { _pool: { ArrangedRect: Rect }[] })._pool;
+        const expX = m.Transform(new Point(100, 0)).X;   // vertical guide layer-x
+        const expY = m.Transform(new Point(0, 60)).Y;    // horizontal guide layer-y
+        // thickness default 1 → line centred on the projected coordinate.
+        assert.ok(Math.abs(pool[0].ArrangedRect.X - (expX - 0.5)) < 0.5, `vertical guide at projected x (${pool[0].ArrangedRect.X} vs ${expX})`);
+        assert.ok(Math.abs(pool[1].ArrangedRect.Y - (expY - 0.5)) < 0.5, `horizontal guide at projected y (${pool[1].ArrangedRect.Y} vs ${expY})`);
+        // sanity: projection actually moved them off the raw content coord
+        assert.ok(Math.abs(pool[0].ArrangedRect.X - 100) > 1, 'projection changed the raw position');
     });
 });

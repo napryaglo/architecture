@@ -1,5 +1,6 @@
 import {
     Color,
+    Point,
     Rect,
     Size,
     type Visual,
@@ -76,6 +77,15 @@ export class AlignmentGuidesAdorner extends Adorner
         const W = finalSize.Width;
         const H = finalSize.Height;
         const thickness = DiagramSettings.GuideThickness();
+        // Guide positions are CONTENT coordinates (figure Left/Top space). The
+        // AdornerLayer sits OUTSIDE PART_Camera, so project each position through
+        // the content->layer matrix (camera zoom + pan) or the line drifts to raw
+        // canvas coords — same mechanism the connector/selection adorners use. The
+        // camera is scale+translate only (no rotation), so a vertical guide's
+        // layer-x depends only on the content x, a horizontal's layer-y only on y;
+        // each line still spans the full layer (0..W / 0..H) and keeps its
+        // constant on-screen thickness.
+        const m = this.AdornedToLayerMatrix;
         const used = Math.min(guides.length, this._pool.length);
         for (let i = 0; i < used; i++)
         {
@@ -83,13 +93,15 @@ export class AlignmentGuidesAdorner extends Adorner
             const v = this._pool[i]!;
             if (g.axis === 'x')
             {
-                // Vertical line at x = position
-                v.Arrange(new Rect(g.position - thickness / 2, 0, thickness, H));
+                // Vertical line at the projected x, spanning the full height.
+                const x = m.IsIdentity ? g.position : m.Transform(new Point(g.position, 0)).X;
+                v.Arrange(new Rect(x - thickness / 2, 0, thickness, H));
             }
             else
             {
-                // Horizontal line at y = position
-                v.Arrange(new Rect(0, g.position - thickness / 2, W, thickness));
+                // Horizontal line at the projected y, spanning the full width.
+                const y = m.IsIdentity ? g.position : m.Transform(new Point(0, g.position)).Y;
+                v.Arrange(new Rect(0, y - thickness / 2, W, thickness));
             }
         }
         // Park unused pool slots off-screen so they don't get hit-tested
