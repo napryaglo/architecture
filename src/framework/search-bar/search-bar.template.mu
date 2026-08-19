@@ -18,7 +18,7 @@ resources SearchBars {
     Template x:key="DefaultSearchBar" [TargetType = SearchBar] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHigh,
-              BorderBrush     = #00000000,
+              Stroke     = Pen [ Brush = #00000000 ],
               BorderThickness = (0),
               CornerRadius    = @ShapeSmall,
               Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2),

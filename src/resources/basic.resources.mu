@@ -184,7 +184,7 @@ resources MuralBasic {
     Template x:key="DefaultOutlinedTextBox" [TargetType = TextBox] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              BorderBrush     = @Outline,
+              Stroke     = Pen [ Brush = @Outline ],
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
               Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
@@ -196,8 +196,8 @@ resources MuralBasic {
         // before focused so focused wins the trigger tier when both
         // match. Both ride through DynamicResource so theme switches
         // re-tint live.
-        when ( IsMouseOver ) { PART_Border.BorderBrush = @OnSurface; }
-        when ( IsFocused ) { PART_Border.BorderBrush = @Primary; }
+        when ( IsMouseOver ) { PART_Border.Stroke = Pen [ Brush = @OnSurface ]; }
+        when ( IsFocused ) { PART_Border.Stroke = Pen [ Brush = @Primary ]; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
 
         // M3 density variants — tighter Padding on Compact, looser on
@@ -229,7 +229,7 @@ resources MuralBasic {
     Template x:key="DefaultFilledTextBox" [TargetType = TextBox] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHigh,
-              BorderBrush     = @OnSurfaceVariant,
+              Stroke     = Pen [ Brush = @OnSurfaceVariant ],
               BorderThickness = (0,0,0,1),
               CornerRadius    = (@ShapeExtraSmall,@ShapeExtraSmall,0,0),
               Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
@@ -243,7 +243,7 @@ resources MuralBasic {
         // indicator pattern. Disabled dims the whole row.
         when ( IsMouseOver ) { PART_Border.Fill = @SurfaceContainerHighest; }
         when ( IsFocused ) {
-            PART_Border.BorderBrush = @Primary;
+            PART_Border.Stroke = Pen [ Brush = @Primary ];
             PART_Border.BorderThickness = (0,0,0,2);
         }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
@@ -320,7 +320,7 @@ resources MuralBasic {
     Template x:key="DefaultSpinEdit" [TargetType = SpinEdit] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              BorderBrush     = @Outline,
+              Stroke     = Pen [ Brush = @Outline ],
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall ] {
             // SpinEdit isn't focusable itself; IsEditFocused /
@@ -339,7 +339,7 @@ resources MuralBasic {
                 Border x:name="PART_ButtonColumn"
                     [ DockPanel.Dock  = Right,
                       Width           = 18,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (1,0,0,0) ] {
                     StackPanel [ Orientation = Vertical ] {
                         ClickableBorder x:name="PART_Up"
@@ -373,8 +373,8 @@ resources MuralBasic {
         }
         // Outer-border outline ladder — IsEditFocused outranks
         // IsEditHovered (focus is the dominant state when both match).
-        when ( IsEditHovered ) { PART_Border.BorderBrush = @OnSurface; }
-        when ( IsEditFocused ) { PART_Border.BorderBrush = @Primary; }
+        when ( IsEditHovered ) { PART_Border.Stroke = Pen [ Brush = @OnSurface ]; }
+        when ( IsEditFocused ) { PART_Border.Stroke = Pen [ Brush = @Primary ]; }
         when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
 
         // Up / Down state-layer chrome — translucent OnSurface tints

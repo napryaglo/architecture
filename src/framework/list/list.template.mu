@@ -18,7 +18,7 @@ resources Lists {
     Template x:key="DefaultComboBoxSelection" [TargetType = ComboBox] {
         ClickableBorder x:name="PART_SelectionBox"
             [ Fill      = @Surface,
-              BorderBrush     = @Outline,
+              Stroke     = Pen [ Brush = @Outline ],
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
               // Vertical padding is @Spacing1 (4), NOT @Spacing2 (8): a 32-DIP box
@@ -79,7 +79,7 @@ resources Lists {
         // item tint). IsDropDownOpen swaps PART_SelectionBox.BorderBrush
         // from @Outline (resting) to @Primary (open).
         when ( HasSelection ) { PART_SelectionText.Foreground = @OnSurface; }
-        when ( IsDropDownOpen ) { PART_SelectionBox.BorderBrush = @Primary; }
+        when ( IsDropDownOpen ) { PART_SelectionBox.Stroke = Pen [ Brush = @Primary ]; }
 
         // State-layer ladder — translucent OnSurface tints composite
         // over the @Surface resting background. Hover / focus / press
@@ -136,7 +136,7 @@ resources Lists {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_Popup"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,

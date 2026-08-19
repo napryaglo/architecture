@@ -41,7 +41,7 @@ resources ButtonGroups {
     Template x:key="DefaultSegmentedItem" [TargetType = SegmentedItem] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              BorderBrush     = @Outline,
+              Stroke     = Pen [ Brush = @Outline ],
               BorderThickness = (1,1,0,1),
               CornerRadius    = (0),
               Padding         = (@Spacing3,@Spacing1,@Spacing3,@Spacing1),
@@ -129,7 +129,7 @@ resources ButtonGroups {
                   CornerRadius    = (0,@ShapeSmall,@ShapeSmall,0),
                   Padding         = (@Spacing2,@Spacing2,@Spacing2,@Spacing2),
                   BorderThickness = (1,0,0,0),
-                  BorderBrush     = @PrimaryContainer ] {
+                  Stroke     = Pen [ Brush = @PrimaryContainer ] ] {
                 Shape
                     [ Geometry            = @ChevronDown,
                       Fill                = @OnPrimary,
@@ -198,7 +198,7 @@ resources ButtonGroups {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,

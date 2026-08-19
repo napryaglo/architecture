@@ -90,7 +90,7 @@ resources Notifications {
     Template x:key="DefaultBanner" [TargetType = Banner] {
         Border x:name="PART_Banner"
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (0,0,0,1),
               Padding         = (@Spacing4,@Spacing3,@Spacing4,@Spacing3) ] {
             DockPanel [ LastChildFill = true ] {
@@ -135,7 +135,7 @@ resources Notifications {
     Template x:key="DefaultSnackbar" [TargetType = Snackbar] {
         Border x:name="PART_Snackbar"
             [ Fill      = @InverseSurface,
-              BorderBrush     = #00000000,
+              Stroke     = Pen [ Brush = #00000000 ],
               BorderThickness = (0),
               CornerRadius    = @ShapeExtraSmall,
               Effect          = @Elevation3,

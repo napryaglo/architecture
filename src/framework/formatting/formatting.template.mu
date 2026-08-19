@@ -20,7 +20,7 @@ resources Formatting {
         // swatch/label/chevron clustered on the left.
         ClickableBorder x:name="PART_SelectionTrigger"
             [ Fill          = @Surface,
-              BorderBrush         = @Outline,
+              Stroke         = Pen [ Brush = @Outline ],
               BorderThickness     = (1),
               CornerRadius        = @ShapeExtraSmall,
               HorizontalAlignment = Left,
@@ -30,7 +30,7 @@ resources Formatting {
                     [ Width           = 22,
                       Height          = 18,
                       CornerRadius    = 3,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (1),
                       Margin          = (0,0,@Spacing3,0),
                       Fill      = $$SwatchBrush ]
@@ -49,7 +49,7 @@ resources Formatting {
         when ( PART_SelectionTrigger.IsPressed ) {
             PART_SelectionTrigger.Fill = @StatePressOverlay;
         }
-        when ( IsDropDownOpen ) { PART_SelectionTrigger.BorderBrush = @Primary; }
+        when ( IsDropDownOpen ) { PART_SelectionTrigger.Stroke = Pen [ Brush = @Primary ]; }
 
         // Density ladder — same Padding shape the TextBox / SpinEdit use,
         // so the closed colour dropdown tracks the height of the numeric
@@ -93,7 +93,7 @@ resources Formatting {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -133,7 +133,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #C00000 ]
@@ -141,7 +141,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #FF0000 ]
@@ -149,7 +149,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #FFC000 ]
@@ -157,7 +157,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #FFFF00 ]
@@ -165,7 +165,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #92D050 ]
@@ -173,7 +173,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #00B050 ]
@@ -181,7 +181,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #00B0F0 ]
@@ -189,7 +189,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #0070C0 ]
@@ -197,7 +197,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #002060 ]
@@ -205,7 +205,7 @@ resources Formatting {
                             [ Width           = 22,
                               Height          = 16,
                               CornerRadius    = 2,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,0,0),
                               Fill      = #7030A0 ]
@@ -315,7 +315,7 @@ resources Formatting {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -333,7 +333,7 @@ resources Formatting {
                             [ Width           = 36,
                               Height          = 36,
                               CornerRadius    = 4,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               Margin          = (0,0,8,0),
                               Fill      = $$SwatchBrush ]
@@ -348,14 +348,14 @@ resources Formatting {
                                 [ Width           = 12,
                                   Height          = 12,
                                   CornerRadius    = 6,
-                                  BorderBrush     = #ffffff,
+                                  Stroke     = Pen [ Brush = #ffffff ],
                                   BorderThickness = (2) ]
                         }
                         Canvas x:name="PART_VRail" [ Width = 20, Height = 140, Margin = (12,0,0,0) ] {
                             Border x:name="PART_VRailFill"
                                 [ Width           = 20,
                                   Height          = 140,
-                                  BorderBrush     = @OutlineVariant,
+                                  Stroke     = Pen [ Brush = @OutlineVariant ],
                                   BorderThickness = (1) ]
                             Border x:name="PART_VRailCursor"
                                 [ Width      = 26,
@@ -462,7 +462,7 @@ resources Formatting {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -500,7 +500,7 @@ resources Formatting {
     Template x:key="DefaultBrushPicker" [TargetType = BrushPicker] {
         ClickableBorder x:name="PART_SelectionTrigger"
             [ Fill      = @Surface,
-              BorderBrush     = @Outline,
+              Stroke     = Pen [ Brush = @Outline ],
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
               Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
@@ -509,7 +509,7 @@ resources Formatting {
                     [ Width           = 36,
                       Height          = 18,
                       CornerRadius    = 3,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (1),
                       Margin          = (0,0,@Spacing3,0),
                       Fill      = $$PreviewBrush ]
@@ -534,7 +534,7 @@ resources Formatting {
         when ( PART_SelectionTrigger.IsPressed ) {
             PART_SelectionTrigger.Fill = @StatePressOverlay;
         }
-        when ( IsDropDownOpen ) { PART_SelectionTrigger.BorderBrush = @Primary; }
+        when ( IsDropDownOpen ) { PART_SelectionTrigger.Stroke = Pen [ Brush = @Primary ]; }
         when ( Variant = Linear ) { PART_VariantLabel.Text = "Linear gradient"; }
         when ( Variant = Radial ) { PART_VariantLabel.Text = "Radial gradient"; }
         when ( Variant = Pattern ) { PART_VariantLabel.Text = "Pattern"; }
@@ -576,7 +576,7 @@ resources Formatting {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -640,7 +640,7 @@ resources Formatting {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -729,7 +729,7 @@ resources Formatting {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -848,7 +848,7 @@ resources Formatting {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -1210,7 +1210,7 @@ resources Formatting {
             UniformGrid [ Grid.Row = 2, Grid.ColumnSpan = 2, Columns = 3, Margin = (0,0,0,@Spacing4) ] {
                 ClickableBorder x:name="PART_TabNone"
                     [ Fill          = @Surface,
-                      BorderBrush         = @OutlineVariant,
+                      Stroke         = Pen [ Brush = @OutlineVariant ],
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
@@ -1224,7 +1224,7 @@ resources Formatting {
                 }
                 ClickableBorder x:name="PART_TabSolid"
                     [ Fill          = @Surface,
-                      BorderBrush         = @OutlineVariant,
+                      Stroke         = Pen [ Brush = @OutlineVariant ],
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
@@ -1238,7 +1238,7 @@ resources Formatting {
                 }
                 ClickableBorder x:name="PART_TabLinear"
                     [ Fill          = @Surface,
-                      BorderBrush         = @OutlineVariant,
+                      Stroke         = Pen [ Brush = @OutlineVariant ],
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
@@ -1252,7 +1252,7 @@ resources Formatting {
                 }
                 ClickableBorder x:name="PART_TabRadial"
                     [ Fill          = @Surface,
-                      BorderBrush         = @OutlineVariant,
+                      Stroke         = Pen [ Brush = @OutlineVariant ],
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
@@ -1266,7 +1266,7 @@ resources Formatting {
                 }
                 ClickableBorder x:name="PART_TabPattern"
                     [ Fill          = @Surface,
-                      BorderBrush         = @OutlineVariant,
+                      Stroke         = Pen [ Brush = @OutlineVariant ],
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
@@ -1280,7 +1280,7 @@ resources Formatting {
                 }
                 ClickableBorder x:name="PART_TabPicture"
                     [ Fill          = @Surface,
-                      BorderBrush         = @OutlineVariant,
+                      Stroke         = Pen [ Brush = @OutlineVariant ],
                       BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),

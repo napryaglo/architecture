@@ -14,7 +14,7 @@ resources Pickers {
     Template x:key="DefaultDatePicker" [TargetType = DatePicker] {
         Border x:name="PART_Root"
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1),
               CornerRadius    = @ShapeMedium,
               Padding         = (@Spacing3,@Spacing3,@Spacing3,@Spacing3),
@@ -64,7 +64,7 @@ resources Pickers {
     Template x:key="DefaultTimePicker" [TargetType = TimePicker] {
         Border x:name="PART_Root"
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1),
               CornerRadius    = @ShapeMedium,
               Padding         = (@Spacing4,@Spacing4,@Spacing4,@Spacing4) ] {

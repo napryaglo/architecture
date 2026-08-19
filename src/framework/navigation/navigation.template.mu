@@ -139,7 +139,7 @@ resources Navigation {
     Template x:key="DefaultNavigationRail" [TargetType = NavigationRail] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (0,0,1,0),
               Width           = 80 ] {
             DockPanel [ LastChildFill = true ] {
@@ -175,7 +175,7 @@ resources Navigation {
     Template x:key="DefaultNavigationBar" [TargetType = NavigationBar] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (0,1,0,0),
               Height          = 80 ] {
             ItemsPresenter x:name="PART_ItemsPresenter" [ VerticalAlignment = Center ]
@@ -219,7 +219,7 @@ resources Navigation {
     Template x:key="ActivityBarRail" [TargetType = NavigationRail] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHigh,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (0,0,1,0),
               Width           = 48 ] {
             DockPanel [ LastChildFill = true ] {

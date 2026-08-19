@@ -14,7 +14,7 @@ resources StatusBars {
     Template x:key="DefaultStatusBar" [TargetType = StatusBar] {
         Border
             [ Fill      = @SurfaceContainerLow,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (0,1,0,0),
               Padding         = (4,2,4,2) ] {
             ItemsPresenter

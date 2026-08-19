@@ -113,7 +113,7 @@ resources Ribbons {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -149,7 +149,7 @@ resources Ribbons {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -180,7 +180,7 @@ resources Ribbons {
     // is toggled by the control based on LaunchCommand presence.
     Template x:key="DefaultRibbonGroup" [TargetType = RibbonGroup] {
         Border x:name="PART_Border"
-            [ BorderBrush     = @OutlineVariant,
+            [ Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (0,0,1,0),
               Padding         = (@Spacing2) ] {
             DockPanel [ LastChildFill = true ] {
@@ -234,13 +234,13 @@ resources Ribbons {
     Template x:key="DefaultRibbonTabHeader" [TargetType = RibbonTabHeader] {
         Border x:name="PART_Border"
             [ Fill      = $$AccentBrush,
-              BorderBrush     = #00000000,
+              Stroke     = Pen [ Brush = #00000000 ],
               BorderThickness = (0,0,0,2),
               Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2) ] {
             ContentPresenter [ VerticalAlignment = Center ]
         }
-        when ( IsMouseOver ) { PART_Border.BorderBrush = @Outline; }
-        when ( IsCurrent ) { PART_Border.BorderBrush = @Primary; }
+        when ( IsMouseOver ) { PART_Border.Stroke = Pen [ Brush = @Outline ]; }
+        when ( IsCurrent ) { PART_Border.Stroke = Pen [ Brush = @Primary ]; }
         // Adaptive layout — the tab strip has no Size DP (that's the invoker
         // knob), so it carries the full density + coarse-pointer ladder on
         // its header padding, scaled from the resting (16,8) on the 4dp grid.
@@ -268,7 +268,7 @@ resources Ribbons {
     // in an overlay dropdown (PopupTemplate).
     Template x:key="DefaultRibbonGallery" [TargetType = RibbonGallery] {
         Border
-            [ BorderBrush     = @OutlineVariant,
+            [ Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
               Padding         = (@Spacing1) ] {
@@ -285,7 +285,7 @@ resources Ribbons {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -308,7 +308,7 @@ resources Ribbons {
     Template x:key="DefaultRibbon" [TargetType = Ribbon] {
         Border x:name="PART_Root"
             [ Fill      = @SurfaceContainerLow,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (0,0,0,1) ] {
             DockPanel [ LastChildFill = true ] {
                 StackPanel x:name="PART_Qat"

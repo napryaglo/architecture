@@ -172,7 +172,7 @@ resources ToolBars {
                 [ Fill      = @SurfaceContainerHigh,
                   CornerRadius    = (0,@ShapeSmall,@ShapeSmall,0),
                   BorderThickness = (1,0,0,0),
-                  BorderBrush     = @OutlineVariant ] {
+                  Stroke     = Pen [ Brush = @OutlineVariant ] ] {
                 Border x:name="PART_ArrowState"
                     [ Fill   = #00000000,
                       CornerRadius = (0,@ShapeSmall,@ShapeSmall,0),
@@ -221,7 +221,7 @@ resources ToolBars {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
@@ -278,7 +278,7 @@ resources ToolBars {
     // trigger has a stroke to switch on.
     Template x:key="DefaultToolBar" [TargetType = ToolBar] {
         Border x:name="PART_Border"
-            [ BorderBrush     = @Outline,
+            [ Stroke     = Pen [ Brush = @Outline ],
               BorderThickness = (0),
               Padding         = (4) ] {
             DockPanel x:name="PART_Layout" [ LastChildFill = true ] {
@@ -303,7 +303,7 @@ resources ToolBars {
             ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (1),
                   Padding         = (4) ] {
                 ToolBarOverflowItemsControl x:name="PART_PopupList"

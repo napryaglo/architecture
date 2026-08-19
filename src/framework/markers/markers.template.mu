@@ -29,7 +29,7 @@ resources Markers {
     Template x:key="DefaultChip" [TargetType = Chip] {
         Border x:name="PART_Chip"
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1),
               CornerRadius    = @ShapeSmall,
               Padding         = (5,2,5,2) ] {
@@ -53,7 +53,7 @@ resources Markers {
         // edge.
         when ( IsFilterSelected ) {
             PART_Chip.Fill = @SecondaryContainer;
-            PART_Chip.BorderBrush = @SecondaryContainer;
+            PART_Chip.Stroke = Pen [ Brush = @SecondaryContainer ];
         }
 
         // State-layer ladder — translucent OnSurface overlays over

@@ -69,7 +69,7 @@ resources Shells {
                     Border x:name="PART_CommandHost"
                         [ DockPanel.Dock  = Top,
                           Fill      = @SurfaceContainer,
-                          BorderBrush     = @OutlineVariant,
+                          Stroke     = Pen [ Brush = @OutlineVariant ],
                           BorderThickness = (0,0,0,1),
                           Padding         = (8,4,8,4) ] {
                         // Command groups fill the bar as ONE ToolBar (each group's
@@ -492,7 +492,7 @@ resources Shells {
                 // body (the same delineation the right dock's rail carries).
                 Border x:name="PART_Header"
                     [ Grid.Row       = 0,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (0,0,0,1),
                       Padding         = (@Spacing3,@Spacing2,@Spacing2,@Spacing2) ] {
                     DockPanel [ LastChildFill = true ] {
