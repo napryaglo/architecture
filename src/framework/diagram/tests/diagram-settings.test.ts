@@ -1,6 +1,7 @@
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application } from '../../../runtime/index.js';
+import { Application, Color } from '../../../runtime/index.js';
+import { SolidColorBrush } from '../../../visual-engine/index.js';
 import { ApplicationSettings } from '../../shell/services/application-settings-service.js';
 import { DiagramSettings, DiagramSettingKey } from '../diagram-settings.js';
 
@@ -49,6 +50,32 @@ describe('DiagramSettings', () => {
         DiagramSettings.ConnectorOrthogonalStub();
         settings.Set(DiagramSettingKey.ConnectorOrthogonalStub, 40);
         assert.equal(DiagramSettings.ConnectorOrthogonalStub(), 40);
+    });
+
+    test('toolbox tile size defaults to 48 and honours an override', () => {
+        Application.current = null;
+        assert.equal(DiagramSettings.ToolboxTileSize(), 48);
+
+        const app = appWithSettings();
+        const settings = app.Services.getRequired(ApplicationSettings.Key);
+        DiagramSettings.ToolboxTileSize();               // bind + contribute
+        settings.Set(DiagramSettingKey.ToolboxTileSize, 64);
+        assert.equal(DiagramSettings.ToolboxTileSize(), 64);
+    });
+
+    test('toolbox preview fill defaults to the #1976d2 brush', () => {
+        Application.current = null;
+        const fill = DiagramSettings.ToolboxPreviewFill();
+        assert.ok(fill instanceof SolidColorBrush);
+        assert.equal(fill.Color.ToHex().toLowerCase(), '#1976d2');
+    });
+
+    test('a Color override on the toolbox preview fill is reflected', () => {
+        const app = appWithSettings();
+        const settings = app.Services.getRequired(ApplicationSettings.Key);
+        DiagramSettings.ToolboxPreviewFill();            // bind + contribute
+        settings.Set(DiagramSettingKey.ToolboxPreviewFill, new SolidColorBrush(Color.FromHex('#ff0000')));
+        assert.equal(DiagramSettings.ToolboxPreviewFill().Color.ToHex().toLowerCase(), '#ff0000');
     });
 
     test('Subscribe fires when a Diagram setting changes', () => {

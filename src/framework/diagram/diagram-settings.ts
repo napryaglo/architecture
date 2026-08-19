@@ -1,4 +1,5 @@
-import { Application } from '../../runtime/index.js';
+import { Application, Color } from '../../runtime/index.js';
+import { SolidColorBrush } from '../../visual-engine/index.js';
 import { ApplicationSettings } from '../shell/services/application-settings-service.js';
 import { SettingDefinition, SettingKind } from '../shell/settings/setting-definition.js';
 import { Setting } from '../shell/settings/setting.js';
@@ -37,6 +38,9 @@ export enum DiagramSettingKey
     ChromeTextRotateGap         = 'diagram.chrome.textRotateGap',
     ChromeTextStemWidth         = 'diagram.chrome.textStemWidth',
     ChromeGuideThickness        = 'diagram.chrome.guideThickness',
+
+    ToolboxTileSize             = 'diagram.toolbox.tileSize',
+    ToolboxPreviewFill          = 'diagram.toolbox.previewFill',
 }
 
 // One catalogue row: the schema for a tunable constant. The `default` is the
@@ -57,6 +61,7 @@ interface DiagramSettingSpec
 const CAT_SHAPES     = 'Diagram · Shapes';
 const CAT_CONNECTORS = 'Diagram · Connectors';
 const CAT_CHROME     = 'Diagram · Editing chrome';
+const CAT_TOOLBOX    = 'Diagram · Toolbox';
 
 // The single source of truth for every tunable Diagram constant. Each row's
 // `default` is the historical hard-coded value; the diagram reads through the
@@ -137,10 +142,40 @@ const SPECS: readonly DiagramSettingSpec[] =
     { key: DiagramSettingKey.ChromeGuideThickness, label: 'Alignment guide thickness',
       description: 'Line thickness of a snap alignment guide, in pixels.',
       category: CAT_CHROME, default: 1, min: 1, max: 8 },
+
+    { key: DiagramSettingKey.ToolboxTileSize, label: 'Toolbox tile size',
+      description: 'Width & height of a shape preview tile in the toolbox, in pixels.',
+      category: CAT_TOOLBOX, default: 48, min: 16, max: 128 },
 ];
 
 const DEFAULTS: ReadonlyMap<DiagramSettingKey, number> =
     new Map(SPECS.map(s => [s.key, s.default]));
+
+// The colour-valued sibling of DiagramSettingSpec. A Color setting carries a
+// live SolidColorBrush (the service persists it as hex and restores the brush),
+// so it needs no numeric bounds — just a brush `default`.
+interface DiagramColorSettingSpec
+{
+    readonly key:         DiagramSettingKey;
+    readonly label:       string;
+    readonly description: string;
+    readonly category:    string;
+    readonly default:     SolidColorBrush;
+}
+
+const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
+[
+    { key: DiagramSettingKey.ToolboxPreviewFill, label: 'Toolbox preview fill',
+      description: 'Fill colour of a shape preview tile in the toolbox.',
+      category: CAT_TOOLBOX, default: new SolidColorBrush(Color.FromHex('#1976d2')) },
+];
+
+const COLOR_DEFAULTS: ReadonlyMap<DiagramSettingKey, SolidColorBrush> =
+    new Map(COLOR_SPECS.map(s => [s.key, s.default]));
+
+// Every catalogued key, numeric + colour — the change-listener wiring binds all.
+const ALL_KEYS: readonly DiagramSettingKey[] =
+    [...SPECS.map(s => s.key), ...COLOR_SPECS.map(s => s.key)];
 
 // Static resolver for every tunable Diagram constant. Each accessor returns the
 // live value from the app's ApplicationSettings when one is reachable (and the
@@ -176,9 +211,9 @@ export class DiagramSettings
         if (svc !== undefined)
         {
             svc.Contribute(DiagramSettings.Definitions());
-            for (const spec of SPECS)
+            for (const key of ALL_KEYS)
             {
-                svc.GetSetting(spec.key)?.AddPropertyChangedListener(
+                svc.GetSetting(key)?.AddPropertyChangedListener(
                     Setting.ValueKey, DiagramSettings._emit);
             }
         }
@@ -204,7 +239,7 @@ export class DiagramSettings
     // register them explicitly.
     public static Definitions(): SettingDefinition[]
     {
-        return SPECS.map(spec =>
+        const numeric = SPECS.map(spec =>
         {
             const d = new SettingDefinition();
             d.Key         = spec.key;
@@ -217,12 +252,30 @@ export class DiagramSettings
             d.Max         = spec.max;
             return d;
         });
+        const color = COLOR_SPECS.map(spec =>
+        {
+            const d = new SettingDefinition();
+            d.Key         = spec.key;
+            d.Label       = spec.label;
+            d.Description = spec.description;
+            d.Category    = spec.category;
+            d.Kind        = SettingKind.Color;
+            d.Default     = spec.default;
+            return d;
+        });
+        return [...numeric, ...color];
     }
 
     private static num(key: DiagramSettingKey): number
     {
         const value = DiagramSettings.resolve()?.Get(key);
         return typeof value === 'number' ? value : DEFAULTS.get(key)!;
+    }
+
+    private static color(key: DiagramSettingKey): SolidColorBrush
+    {
+        const value = DiagramSettings.resolve()?.Get(key);
+        return value instanceof SolidColorBrush ? value : COLOR_DEFAULTS.get(key)!;
     }
 
     // ── Shapes ───────────────────────────────────────────────────────────
@@ -254,4 +307,8 @@ export class DiagramSettings
     public static TextRotateGap():         number { return DiagramSettings.num(DiagramSettingKey.ChromeTextRotateGap); }
     public static TextStemWidth():         number { return DiagramSettings.num(DiagramSettingKey.ChromeTextStemWidth); }
     public static GuideThickness():        number { return DiagramSettings.num(DiagramSettingKey.ChromeGuideThickness); }
+
+    // ── Toolbox ──────────────────────────────────────────────────────────
+    public static ToolboxTileSize():    number          { return DiagramSettings.num(DiagramSettingKey.ToolboxTileSize); }
+    public static ToolboxPreviewFill(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ToolboxPreviewFill); }
 }
