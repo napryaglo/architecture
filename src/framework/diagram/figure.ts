@@ -100,6 +100,7 @@ export interface FigureFromSourceOptions
 {
     readonly width?:  number;
     readonly height?: number;
+    readonly kind?:   string;
 }
 
 export class Figure extends ContentControl implements ISideEndpointHost
@@ -192,6 +193,12 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // inset to compensate.
     private _shape: PathGeometry | undefined = undefined;
 
+    // Inert catalog-kind provenance tag: set by fromKind (and fromSource's kind
+    // option), read only by serialization. Drives NO behavior — ports are
+    // bbox-for-all and rendering is geometry-driven. Undefined for a bare Figure
+    // or a kindless fromSource.
+    private _kind: string | undefined = undefined;
+
     // Group back-reference. undefined ≡ "top-level". Set by Group when a
     // Figure is added to its Members. Typed via a type-only import to
     // break the figure ↔ group module cycle at runtime; structurally
@@ -239,15 +246,18 @@ export class Figure extends ContentControl implements ISideEndpointHost
         f.Width  = options?.width  ?? DiagramSettings.ShapeDefaultSize();
         f.Height = options?.height ?? DiagramSettings.ShapeDefaultSize();
         f._source = source;
+        f._kind   = options?.kind;
         f._rebuildGeometry();
         return f;
     }
 
     /** @internal — used by fromKind and by Load paths that have a cached source.
-     *  `kind` selects the catalog entry at the call site; it is no longer stored
-     *  (Figure carries no Kind — every figure realizes uniformly from _source). */
-    public _setKindFromCatalog(_kind: string, source: PathGeometry): void
+     *  `kind` selects the catalog entry at the call site and is stored as an
+     *  inert provenance tag (see _kind) for serialization round-trip; it drives
+     *  no behavior — every figure realizes uniformly from _source. */
+    public _setKindFromCatalog(kind: string, source: PathGeometry): void
     {
+        this._kind   = kind;
         this._source = source;
         this._rebuildGeometry();
     }
@@ -450,6 +460,8 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // resolver's outline mode reads `host.Geometry` (see port.ts / PortResolver);
     // the stored state now lives in _shape, driven by the geometry seams below.
     public get Geometry(): PathGeometry | undefined  { return this._shape; }
+    // Inert catalog-kind provenance (serialization only) — see _kind.
+    public get Kind(): string | undefined            { return this._kind; }
     public get SizeToContent(): boolean        { return this.get_property_value(Figure.SizeToContentKey); }
     public set SizeToContent(value: boolean)   { this.set_property_value(Figure.SizeToContentKey, value); }
     public get UserSized(): boolean            { return this.get_property_value(Figure.UserSizedKey); }
