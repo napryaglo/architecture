@@ -233,6 +233,7 @@ export { ToolboxItem } from './diagram/toolbox/toolbox-item.js';
 export { ToolboxVisualDescriptor } from './diagram/toolbox/toolbox-visual-descriptor.js';
 export { ToolboxVisualPresenter } from './diagram/toolbox/toolbox-visual-presenter.js';
 export { RulerBar } from './diagram/guides/ruler-bar.js';
+export { PersistentGuidesAdorner } from './diagram/guides/persistent-guides-adorner.js';
 export { VisualContext, type IToolboxVisualResolver } from './diagram/toolbox/toolbox-visual-resolver.js';
 export { type IToolboxDropFactory, type ToolboxDropContext } from './diagram/toolbox/toolbox-drop-factory.js';
 export { ShapeToolboxItem } from './diagram/toolbox/shape-toolbox-item.js';
