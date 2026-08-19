@@ -16,6 +16,8 @@ export enum DiagramSettingKey
     ShapeLabelMargin            = 'diagram.shape.labelMargin',
     ShapeStrokeWidth            = 'diagram.shape.strokeWidth',
     ShapeMinResize              = 'diagram.shape.minResize',
+    ShapeDefaultFill            = 'diagram.shape.defaultFill',
+    ShapeDefaultStroke          = 'diagram.shape.defaultStroke',
     TextDefaultFontSize         = 'diagram.text.defaultFontSize',
 
     ConnectorStrokeWidth        = 'diagram.connector.strokeWidth',
@@ -165,6 +167,12 @@ interface DiagramColorSettingSpec
 
 const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
 [
+    { key: DiagramSettingKey.ShapeDefaultFill, label: 'Default shape fill',
+      description: 'Fill brush of a freshly-placed shape. Reads on the surface in both schemes.',
+      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#bfdbfe')) },
+    { key: DiagramSettingKey.ShapeDefaultStroke, label: 'Default shape stroke',
+      description: 'Stroke brush of a freshly-placed shape (width comes from Shape stroke width).',
+      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#1976d2')) },
     { key: DiagramSettingKey.ToolboxPreviewFill, label: 'Toolbox preview fill',
       description: 'Fill colour of a shape preview tile in the toolbox.',
       category: CAT_TOOLBOX, default: new SolidColorBrush(Color.FromHex('#1976d2')) },
@@ -283,6 +291,8 @@ export class DiagramSettings
     public static ShapeLabelMargin():    number { return DiagramSettings.num(DiagramSettingKey.ShapeLabelMargin); }
     public static ShapeStrokeWidth():    number { return DiagramSettings.num(DiagramSettingKey.ShapeStrokeWidth); }
     public static ShapeMinResize():      number { return DiagramSettings.num(DiagramSettingKey.ShapeMinResize); }
+    public static ShapeDefaultFill():    SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ShapeDefaultFill); }
+    public static ShapeDefaultStroke():  SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ShapeDefaultStroke); }
     public static TextDefaultFontSize(): number { return DiagramSettings.num(DiagramSettingKey.TextDefaultFontSize); }
 
     // ── Connectors ───────────────────────────────────────────────────────

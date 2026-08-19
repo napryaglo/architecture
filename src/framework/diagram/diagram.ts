@@ -20,7 +20,7 @@ import {
 import { NodeViewModel } from './node-view-model.js';
 import type { DataTemplate } from '../../basic/templates/data-template.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
-import { Figure, type IInlineEditable } from './figure.js';
+import { Figure, resolveEditTarget } from './figure.js';
 import { Group } from './group.js';
 import { ensureToolboxDefaults } from './toolbox/ensure-toolbox-defaults.js';
 import { connectorCapOptions } from './caps/connector-cap-options.js';
@@ -1530,15 +1530,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             {
                 if (container instanceof Figure)
                 {
-                    // Prefer the content VM's own edit entry (IInlineEditable),
-                    // fall back to the Figure's own ShapeText for plain figures.
-                    const content = container.Content;
-                    const editable: IInlineEditable | { BeginEdit(): void } | undefined =
-                        (content !== null && content !== undefined &&
-                         typeof (content as Partial<IInlineEditable>).BeginEdit === 'function')
-                            ? (content as unknown as IInlineEditable)
-                            : container.Text;
-                    editable?.BeginEdit();
+                    // Same resolution as double-click (Figure.OnPointerDown):
+                    // the content VM's own edit entry, else the Figure's ShapeText.
+                    resolveEditTarget(container)?.BeginEdit();
                     break;
                 }
             }

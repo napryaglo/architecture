@@ -9,8 +9,7 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { type Geometry, type PathGeometry, type Point, Pen, SolidColorBrush } from '../../visual-engine/index.js';
-import { Color } from '../../runtime/index.js';
+import { type Geometry, type PathGeometry, type Point, Pen } from '../../visual-engine/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { Border } from '../../basic/border.js';
 import { ShapeText, TextAutoFit } from './shape-text.js';
@@ -63,29 +62,35 @@ import { DiagramSettings } from './diagram-settings.js';
 // Figure DP names whose change should re-resolve the label's {field} tokens.
 const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width', 'Height', 'Id']);
 
-// Default fill for a fresh Figure. Tuned to read on @Surface in both Material
-// light / dark schemes. Consumers replace by assignment. Stroke width comes
-// from DiagramSettings.ShapeStrokeWidth(); the default stroke colour is fixed.
-const DEFAULT_FILL         = new SolidColorBrush(Color.FromHex('#bfdbfe'));
-const DEFAULT_STROKE_BRUSH = new SolidColorBrush(Color.FromHex('#1976d2'));
+// The default Fill / Stroke brushes for a fresh Figure live in DiagramSettings
+// (DiagramSettings.ShapeDefaultFill / .ShapeDefaultStroke) alongside the other
+// tunable diagram constants; stroke width comes from .ShapeStrokeWidth().
 
-// Duck-typed interface for a content VM that owns its own in-place edit entry.
-// Applied via a named cast (never bracket access) so figure.ts stays decoupled
-// from TextNodeVM (no import cycle risk — only the interface lives here).
-export interface IInlineEditable
+// The in-place edit lifecycle a content VM (or the Figure's own ShapeText)
+// exposes: enter edit mode, commit the pending edit, or cancel it. Applied via
+// a named cast (never bracket access) so figure.ts stays decoupled from
+// TextNodeVM (no import cycle risk — only the interface lives here). ShapeText
+// implements all three; a content VM delegates to its own ShapeText.
+export interface IEditable
 {
     BeginEdit(): void;
+    CommitEdit(): void;
+    CancelEdit(): void;
 }
 
-// Resolve the editable target for a container Figure: if its Content implements
-// IInlineEditable, delegate there; otherwise fall back to the Figure's own Text.
-function resolveEditTarget(container: Figure): { BeginEdit(): void } | undefined
+// Resolve the editable target for a container Figure: if its Content is an
+// IEditable (has its own in-place edit entry), delegate there; otherwise fall
+// back to the Figure's own Text (a ShapeText, itself IEditable). Exported so the
+// Diagram's F2 handler resolves the same target as double-click. BeginEdit
+// presence is the discriminator — the only content type that has it (TextNodeVM)
+// implements the whole lifecycle.
+export function resolveEditTarget(container: Figure): IEditable | undefined
 {
     const content = container.Content;
     if (content !== null && content !== undefined &&
-        typeof (content as Partial<IInlineEditable>).BeginEdit === 'function')
+        typeof (content as Partial<IEditable>).BeginEdit === 'function')
     {
-        return content as unknown as IInlineEditable;
+        return content as unknown as IEditable;
     }
     return container.Text;
 }
@@ -96,11 +101,11 @@ export interface FigureFromKindOptions
     readonly height?: number;
 }
 
-export interface FigureFromSourceOptions
+// Same size options as fromKind, plus an optional catalog-kind provenance tag
+// (see Figure._kind) the combined-geometry / Load path threads through.
+export interface FigureFromSourceOptions extends FigureFromKindOptions
 {
-    readonly width?:  number;
-    readonly height?: number;
-    readonly kind?:   string;
+    readonly kind?: string;
 }
 
 export class Figure extends ContentControl implements ISideEndpointHost
@@ -109,7 +114,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
         Model.OverrideMetadata(Figure, Element.DefaultStyleKeyKey, { default_value: Figure });
         // Figure's fill is the inherited Visual.Fill; keep Figure's historic
         // default brush by overriding the metadata for the Figure subtree.
-        Model.OverrideMetadata(Figure, Visual.FillKey, { default_value: DEFAULT_FILL });
+        Model.OverrideMetadata(Figure, Visual.FillKey, { default_value: DiagramSettings.ShapeDefaultFill() });
         // Every diagram node clips its content to its box: a shaped node to its
         // silhouette (buildChildClipGeometry = _shape), a shapeless / content
         // node to its bounds rect (the super fallback). ClipToBounds is
@@ -328,7 +333,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
         // because PenEditor mutates Pens in place — each Figure needs
         // its own. Cloning keeps the visual default consistent without
         // leaking edits across instances; width comes from settings.
-        this.set_property_value(Visual.StrokeKey, new Pen(DEFAULT_STROKE_BRUSH, DiagramSettings.ShapeStrokeWidth()));
+        this.set_property_value(Visual.StrokeKey, new Pen(DiagramSettings.ShapeDefaultStroke(), DiagramSettings.ShapeStrokeWidth()));
         // Default size — gives a freshly-constructed Figure a visible
         // footprint even before fromKind / fromSource has run.
         if (Number.isNaN(this.Width))  this.Width  = DiagramSettings.ShapeDefaultSize();

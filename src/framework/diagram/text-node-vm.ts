@@ -109,7 +109,10 @@ export class TextNodeVM extends NodeViewModel
     public get LabelText(): string       { return this.Text.Content; }
     public set LabelText(v: string)      { this.Text.Content = v; }
 
-    // IInlineEditable contract: drives BeginEdit on the VM's own ShapeText so
-    // the container Figure can delegate to us instead of its own (empty) Text.
-    public BeginEdit(): void { this.Text.BeginEdit(); }
+    // IEditable contract: drives the in-place edit lifecycle on the VM's own
+    // ShapeText so the container Figure delegates to us instead of its own
+    // (empty) Text. All three proxy straight through to Text.
+    public BeginEdit():  void { this.Text.BeginEdit(); }
+    public CommitEdit(): void { this.Text.CommitEdit(); }
+    public CancelEdit(): void { this.Text.CancelEdit(); }
 }

@@ -52,6 +52,18 @@ describe('M4 TextNodeVM', () => {
         assert.equal(vm.LabelText, 'changed');
     });
 
+    test('IEditable lifecycle proxies BeginEdit / CommitEdit / CancelEdit to Text', () => {
+        const vm = new TextNodeVM();
+        const calls: string[] = [];
+        vm.Text.BeginEdit  = () => { calls.push('begin'); };
+        vm.Text.CommitEdit = () => { calls.push('commit'); };
+        vm.Text.CancelEdit = () => { calls.push('cancel'); };
+        vm.BeginEdit();
+        vm.CommitEdit();
+        vm.CancelEdit();
+        assert.deepEqual(calls, ['begin', 'commit', 'cancel']);
+    });
+
     test('renders TextNodeVM via [DataType=TextNodeVM] DataTemplate into the container', () => {
         const diagram = new Diagram();
         diagram.ItemsPanel = new ItemsPanelTemplate(() => new PaginatedCanvas());

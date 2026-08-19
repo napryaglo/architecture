@@ -78,6 +78,24 @@ describe('DiagramSettings', () => {
         assert.equal(DiagramSettings.ToolboxPreviewFill().Color.ToHex().toLowerCase(), '#ff0000');
     });
 
+    test('shape default fill / stroke default to the #bfdbfe / #1976d2 brushes', () => {
+        Application.current = null;
+        const fill = DiagramSettings.ShapeDefaultFill();
+        const stroke = DiagramSettings.ShapeDefaultStroke();
+        assert.ok(fill instanceof SolidColorBrush);
+        assert.ok(stroke instanceof SolidColorBrush);
+        assert.equal(fill.Color.ToHex().toLowerCase(), '#bfdbfe');
+        assert.equal(stroke.Color.ToHex().toLowerCase(), '#1976d2');
+    });
+
+    test('a Color override on the shape default fill is reflected', () => {
+        const app = appWithSettings();
+        const settings = app.Services.getRequired(ApplicationSettings.Key);
+        DiagramSettings.ShapeDefaultFill();              // bind + contribute
+        settings.Set(DiagramSettingKey.ShapeDefaultFill, new SolidColorBrush(Color.FromHex('#00ff00')));
+        assert.equal(DiagramSettings.ShapeDefaultFill().Color.ToHex().toLowerCase(), '#00ff00');
+    });
+
     test('Subscribe fires when a Diagram setting changes', () => {
         const app = appWithSettings();
         const settings = app.Services.getRequired(ApplicationSettings.Key);
