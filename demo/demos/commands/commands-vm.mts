@@ -28,7 +28,7 @@ import {
     RelayCommand,
 } from '@pragmatic-lab/mural/runtime';
 import { SolidColorBrush, Visual } from '@pragmatic-lab/mural/visual-engine';
-import { Figure, ShapeNodeVM } from '@pragmatic-lab/mural/framework';
+import { Figure } from '@pragmatic-lab/mural/framework';
 import { DiagramDocument, type DiagramStorage } from '@pragmatic-lab/mural/framework';
 
 // A Figure subclass constructor carrying the demo's per-kind marker.
@@ -256,12 +256,10 @@ export class CommandsVM extends DiagramDocument
     // DiagramDocument.CreateNode (which routes through Figure.fromKind
     // against the framework SHAPE_CATALOG keyed by the catalog kind name
     // — 'rectangle' / 'ellipse' / …). Returns null for unknown kinds.
-    // Base CreateNode now returns ShapeNodeVM | null (post node-VM migration);
-    // this demo predates that and creates custom Figure subclasses instead.
-    // The signature matches the base so the override is well-typed; no caller
-    // uses the return value (bootstrap seeds + paste/duplicate ignore it), so
-    // the structural cast is safe for the demo.
-    override CreateNode(kind: string, left: number, top: number): ShapeNodeVM | null {
+    // Base CreateNode returns Figure | null (shapes are self-painting Figures);
+    // this demo creates custom Figure subclasses instead, so the override is
+    // well-typed with no cast.
+    override CreateNode(kind: string, left: number, top: number): Figure | null {
         const Cls = CMD_KIND_TO_CLASS[kind];
         if (Cls === undefined) return null;
         // `_nextId` is the base DiagramDocument's private id counter; reach in
@@ -269,7 +267,7 @@ export class CommandsVM extends DiagramDocument
         const id = 'n' + (this as unknown as DiagramDocumentNextId)._nextId++;
         const fig = new Cls(id, left, top);
         this.Nodes.Add(fig);
-        return fig as unknown as ShapeNodeVM;
+        return fig;
     }
 
     get HasSelection():      boolean { return this.get_property_value(CommandsVM.HasSelectionKey); }

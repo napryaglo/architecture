@@ -219,11 +219,9 @@ export class CommandsVM extends DiagramDocument {
     // DiagramDocument.CreateNode (which routes through Figure.fromKind
     // against the framework SHAPE_CATALOG keyed by the catalog kind name
     // — 'rectangle' / 'ellipse' / …). Returns null for unknown kinds.
-    // Base CreateNode now returns ShapeNodeVM | null (post node-VM migration);
-    // this demo predates that and creates custom Figure subclasses instead.
-    // The signature matches the base so the override is well-typed; no caller
-    // uses the return value (bootstrap seeds + paste/duplicate ignore it), so
-    // the structural cast is safe for the demo.
+    // Base CreateNode returns Figure | null (shapes are self-painting Figures);
+    // this demo creates custom Figure subclasses instead, so the override is
+    // well-typed with no cast.
     CreateNode(kind, left, top) {
         const Cls = CMD_KIND_TO_CLASS[kind];
         if (Cls === undefined)
