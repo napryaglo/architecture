@@ -8,12 +8,10 @@ import {
     Size,
     Thickness,
     type DrawingContext,
-    type PropertyDescriptor,
 } from '../runtime/index.js';
 import type { Visual } from '../runtime/index.js';
 import {
     ArcSegment,
-    Brush,
     LineSegment,
     PathFigure,
     PathGeometry,
@@ -41,12 +39,19 @@ import {
 //     Padding.Left, BorderThickness.Top + Padding.Top) with the
 //     remaining size after subtracting the insets.
 //
+// Chrome uses the inherited Visual DPs — `Fill` (background) and `Stroke`
+// (the border pen: Brush + DashStyle/LineCap/LineJoin/MiterLimit). Border
+// does NOT expose BorderBrush/BorderPen; it matches the Shape Fill/Stroke
+// model. `Stroke.Thickness` is IGNORED — `BorderThickness` is the width
+// authority (uniform + per-side) and the child layout inset.
+//
 // Render:
 //   * Fill fills the entire Border rect (under the stroke).
-//   * BorderBrush + BorderThickness produce a stroked rectangle inset
-//     by half the thickness so the stroke sits inside the layout rect.
+//   * Stroke + uniform BorderThickness paint an effective pen (Stroke's
+//     brush + style at width = BorderThickness.Top), inset by half that
+//     width so the stroke sits inside the layout rect.
 //   * CornerRadius rounds both the background fill and the stroke.
-//     The stroke's inner radius is `CornerRadius - StrokeThickness/2`
+//     The stroke's inner radius is `CornerRadius - BorderThickness.Top/2`
 //     (clamped to zero) so the stroke sits exactly on the rounded
 //     outline. Applies to UNIFORM thickness only; the asymmetric
 //     four-rect path below renders sharp corners regardless of radius
@@ -57,10 +62,10 @@ import {
 //     `min(width, height) / 2`, producing a stadium / pill on a wide
 //     rect and a circle on a square one.
 //   * Non-uniform BorderThickness paints four filled rectangles (top,
-//     bottom, left, right) whose union forms the frame. Top and Bottom
-//     span the full width; Left and Right fit between them. Each side
-//     respects its own thickness independently. CornerRadius is
-//     ignored for this case.
+//     bottom, left, right) whose union forms the frame, coloured with
+//     `Stroke.Brush`. Top and Bottom span the full width; Left and Right
+//     fit between them. Each side respects its own thickness
+//     independently. CornerRadius is ignored for this case.
 export class Border extends Single
 {
     // Typed-key DPs. The `T` on each key flows through the typed
@@ -76,11 +81,6 @@ export class Border extends Single
     // owner class is fine — class declarations are hoisted, only their
     // statics aren't filled in yet, and only the class identity matters
     // to RegisterProperty.
-    // Fill lives on Visual now — Border inherits the DP + accessor
-    // and just casts at render sites where Brush is required.
-    public static readonly BorderBrushKey = Model.RegisterProperty<Brush | undefined>(
-        Border, 'BorderBrush', undefined,
-        MetaData.Render);
     public static readonly BorderThicknessKey = Model.RegisterProperty<Thickness>(
         Border, 'BorderThickness', Thickness.Zero,
         MetaData.Measure | MetaData.Arrange | MetaData.Render);
@@ -109,31 +109,12 @@ export class Border extends Single
     public static readonly PaddingKey = Model.RegisterProperty<Thickness>(
         Border, 'Padding', Thickness.Zero,
         MetaData.Measure | MetaData.Arrange);
-    // Optional escape hatch — when set, fully replaces the synthesized
-    // stroke pen (BorderBrush + BorderThickness → new Pen(...)) on the
-    // uniform-thickness render path. Lets consumers reach the Pen knobs
-    // Border doesn't expose directly: DashStyle, LineCap, LineJoin,
-    // MiterLimit. Stroke brush + width come from the supplied Pen;
-    // BorderBrush is ignored in that case, and the layout-rect inset
-    // uses Pen.Thickness so the stroke sits inside its own width.
-    // BorderThickness still drives MEASURE / ARRANGE (the child slot
-    // reservation) — consumers typically set BorderThickness to a value
-    // matching Pen.Thickness, but they're free to diverge if they want
-    // the stroke to overlap padding etc. Ignored for non-uniform
-    // BorderThickness (the four-rect frame path doesn't lower to a
-    // single stroked rect, so there's no Pen to override).
-    public static readonly BorderPenKey = Model.RegisterProperty<Pen | undefined>(
-        Border, 'BorderPen', undefined,
-        MetaData.Render);
 
     constructor(child?: Visual)
     {
         super();
         if (child !== undefined) this.SetChild(child);
     }
-
-    public get BorderBrush(): Brush | undefined { return this.get_property_value(Border.BorderBrushKey); }
-    public set BorderBrush(value: Brush | undefined) { this.set_property_value(Border.BorderBrushKey, value); }
 
     public get BorderThickness(): Thickness { return this.get_property_value(Border.BorderThicknessKey); }
     public set BorderThickness(value: Thickness) { this.set_property_value(Border.BorderThicknessKey, value); }
@@ -143,9 +124,6 @@ export class Border extends Single
 
     public get Padding(): Thickness { return this.get_property_value(Border.PaddingKey); }
     public set Padding(value: Thickness) { this.set_property_value(Border.PaddingKey, value); }
-
-    public get BorderPen(): Pen | undefined { return this.get_property_value(Border.BorderPenKey); }
-    public set BorderPen(value: Pen | undefined) { this.set_property_value(Border.BorderPenKey, value); }
 
     // For inline-baseline probing by a text host (RichTextBlock): the single
     // child plus the inset above it, so a chip's (Border → TextBlock) internal
@@ -219,51 +197,10 @@ export class Border extends Single
         };
     }
 
-    // Keep the synthesized base Stroke in sync with the border inputs. A
-    // uniform-thickness border paints through Visual's base Fill+Stroke path
-    // (RenderOverride → super): the pen is BorderPen when set, else
-    // Pen(BorderBrush, BorderThickness.Top). Non-uniform thickness leaves
-    // Stroke undefined and paints the bespoke four-rect frame directly.
-    // Markup writes bypass the TS setters and go through the descriptor, so
-    // the sync lives here to catch parser-driven writes too.
-    protected override OnPropertyChanged(
-        descriptor: PropertyDescriptor,
-        oldValue:   unknown,
-        newValue:   unknown,
-    ): void
-    {
-        super.OnPropertyChanged(descriptor, oldValue, newValue);
-        const n = descriptor.Name;
-        if (n === 'BorderBrush' || n === 'BorderThickness' || n === 'BorderPen')
-        {
-            this.syncStroke();
-        }
-    }
-
-    // Uniform thickness → the base Stroke pen; non-uniform → undefined (the
-    // four-rect frame owns the paint). BorderPen wins over the synthesized
-    // Pen(BorderBrush, thickness); a zero-width or brush-less pen suppresses
-    // the stroke entirely (matching the old explicit guards).
-    private syncStroke(): void
-    {
-        const bt = this.BorderThickness;
-        const uniform = bt.Left === bt.Top && bt.Top === bt.Right && bt.Right === bt.Bottom;
-        if (!uniform) { this.Stroke = undefined; return; }
-        const custom = this.BorderPen;
-        if (custom !== undefined)
-        {
-            this.Stroke = (custom.Thickness > 0 && custom.Brush !== undefined) ? custom : undefined;
-            return;
-        }
-        this.Stroke = (this.BorderBrush !== undefined && bt.Top > 0)
-            ? new Pen(this.BorderBrush, bt.Top)
-            : undefined;
-    }
-
     // The painted rounded-rect geometry inset by `inset` on every edge, each
     // corner radius reduced by the same. Uniform corners lower to a
-    // RectangleGeometry; asymmetric corners trace a per-corner path. Visual's
-    // base RenderOverride fills + strokes this (inset = Stroke.Thickness/2 so
+    // RectangleGeometry; asymmetric corners trace a per-corner path.
+    // RenderOverride fills + strokes this (inset = BorderThickness.Top/2 so
     // the centred stroke sits inside the layout rect). ClipToBounds keeps
     // using buildClipGeometry (the outer outline).
     protected override buildPaintGeometry(size: Size, inset: number): Geometry
@@ -285,8 +222,9 @@ export class Border extends Single
 
     // ClipChildren clips content to INSIDE the border — the inner rounded rect
     // inset by BorderThickness on each side, radii reduced to match. Overrides
-    // the base (which uses the uniform Stroke width) so a non-uniform
-    // BorderThickness insets each edge independently.
+    // the base (which insets by this.Stroke?.Thickness — for a Border that is
+    // now the USER pen, whose thickness is ignored for width) so the inner clip
+    // insets each edge by its own BorderThickness. This override is load-bearing.
     protected override buildChildClipGeometry(size: Size): Geometry | undefined
     {
         const bt = this.BorderThickness;
@@ -298,46 +236,75 @@ export class Border extends Single
         return new RectangleGeometry(rect, Math.max(0, tl - bt.Left), Math.max(0, tl - bt.Top));
     }
 
+    // Fill = background; Stroke = the border pen (brush + dash/cap/join/miter).
+    // BorderThickness rules the painted WIDTH — Stroke.Thickness is ignored.
     protected override RenderOverride(dc: DrawingContext): void
     {
-        // Uniform thickness: Visual's base paint draws Fill + the synthesized
-        // Stroke over buildPaintGeometry. Non-uniform thickness: base paints
-        // the Fill (Stroke is undefined) and the four-rect frame goes on top.
-        super.RenderOverride(dc);
+        const size = this.RenderSize;
+        if (size.Width <= 0 || size.Height <= 0) return;
 
         const bt = this.BorderThickness;
         const uniform = bt.Left === bt.Top && bt.Top === bt.Right && bt.Right === bt.Bottom;
-        if (uniform) return;
+        const stroke = this.Stroke;
+        const fill = this.Fill;
 
-        // Asymmetric frame — one filled rect per side. Top and Bottom span the
-        // full width; Left and Right sit between them so corner pixels are
-        // owned by Top/Bottom (a single deterministic assignment instead of
-        // overlapping corners that double the alpha for a translucent brush).
-        // CornerRadius is intentionally ignored for this case.
-        const size = this.RenderSize;
+        if (uniform)
+        {
+            // Effective pen: Stroke's brush + style at the BorderThickness width
+            // (Stroke.Thickness is ignored). Suppressed when there is no stroke
+            // brush or the width is zero.
+            const eff = (stroke?.Brush !== undefined && bt.Top > 0)
+                ? effectiveBorderPen(stroke, bt.Top)
+                : undefined;
+            if (fill === undefined && eff === undefined) return;
+            const inset = eff !== undefined ? bt.Top / 2 : 0;
+            dc.DrawGeometry(fill, eff, this.buildPaintGeometry(size, inset));
+            return;
+        }
+
+        // Non-uniform: fill (no stroke) then the four-rect frame with Stroke.Brush.
+        // Top and Bottom span the full width; Left and Right sit between them so
+        // corner pixels are owned by Top/Bottom (a single deterministic
+        // assignment instead of overlapping corners that double the alpha for a
+        // translucent brush). CornerRadius is intentionally ignored for this case.
+        if (fill !== undefined)
+        {
+            dc.DrawGeometry(fill, undefined, this.buildPaintGeometry(size, 0));
+        }
+        const brush = stroke?.Brush;
+        if (brush === undefined) return;
         const innerY = bt.Top;
         const innerH = Math.max(0, size.Height - bt.Top - bt.Bottom);
         if (bt.Top > 0)
         {
-            dc.DrawRectangle(this.BorderBrush, undefined,
-                new Rect(0, 0, size.Width, bt.Top));
+            dc.DrawRectangle(brush, undefined, new Rect(0, 0, size.Width, bt.Top));
         }
         if (bt.Bottom > 0)
         {
-            dc.DrawRectangle(this.BorderBrush, undefined,
-                new Rect(0, size.Height - bt.Bottom, size.Width, bt.Bottom));
+            dc.DrawRectangle(brush, undefined, new Rect(0, size.Height - bt.Bottom, size.Width, bt.Bottom));
         }
         if (bt.Left > 0)
         {
-            dc.DrawRectangle(this.BorderBrush, undefined,
-                new Rect(0, innerY, bt.Left, innerH));
+            dc.DrawRectangle(brush, undefined, new Rect(0, innerY, bt.Left, innerH));
         }
         if (bt.Right > 0)
         {
-            dc.DrawRectangle(this.BorderBrush, undefined,
-                new Rect(size.Width - bt.Right, innerY, bt.Right, innerH));
+            dc.DrawRectangle(brush, undefined, new Rect(size.Width - bt.Right, innerY, bt.Right, innerH));
         }
     }
+}
+
+// The pen a Border actually paints with: Stroke supplies the brush and the
+// style knobs (dash / cap / join / miter); the WIDTH comes from
+// BorderThickness (Stroke.Thickness is ignored on Border).
+function effectiveBorderPen(stroke: Pen, width: number): Pen
+{
+    const p = new Pen(stroke.Brush, width);
+    p.DashStyle  = stroke.DashStyle;
+    p.LineCap    = stroke.LineCap;
+    p.LineJoin   = stroke.LineJoin;
+    p.MiterLimit = stroke.MiterLimit;
+    return p;
 }
 
 // Build a closed PathGeometry tracing a rounded rectangle with INDEPENDENT

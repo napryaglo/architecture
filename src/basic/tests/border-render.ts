@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path';
 import { Color, Thickness } from '../../runtime/index.js';
 import {
     HeadlessTarget,
+    Pen,
     SolidColorBrush,
     SvgDrawingContext,
 } from '../../visual-engine/index.js';
@@ -21,7 +22,7 @@ import { Border } from '../index.js';
 // Build the scene.
 const border = new Border();
 border.Fill      = new SolidColorBrush(Color.Blue);
-border.BorderBrush     = new SolidColorBrush(Color.Black);
+border.Stroke          = new Pen(new SolidColorBrush(Color.Black));
 border.BorderThickness = new Thickness(3);
 border.Width = 100;
 border.Height = 100;
