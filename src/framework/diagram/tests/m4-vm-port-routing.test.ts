@@ -1,6 +1,7 @@
-// M4-B2 tests: VM shapes must honour named/side ports through the
+// M4-B2 tests: shape Figures must honour named/side ports through the
 // duck-typed side-slot host path (endpointSideSlot broadened from
-// instanceof Figure to ISideEndpointHost).
+// instanceof Figure to ISideEndpointHost). A shape Figure IS the node,
+// so it is used directly as a connector endpoint's Node.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -10,7 +11,6 @@ import { Point } from '../../../visual-engine/index.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Figure } from '../figure.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
 import { PortSide } from '../port.js';
 import '../routing/straight-router.js';
 import '../routing/orthogonal-router.js';
@@ -21,21 +21,6 @@ function initApp(): void
 {
     Application.current = null;
     new Application();
-}
-
-// Build a Figure that mirrors what Diagram.bindContainer does for a VM —
-// copies position, sets DataContext.  Used by ConnectorCreateBehavior-style
-// harnesses that resolve the VM from the Figure's DataContext.
-function figureFor(vm: ShapeNodeVM): Figure
-{
-    const f = new Figure();
-    f.Left          = vm.Left;
-    f.Top           = vm.Top;
-    f.Width         = vm.Width;
-    f.Height        = vm.Height;
-    f.DataContext   = vm;
-    f.ExplicitPorts = [];       // suppress port-provider look-up
-    return f;
 }
 
 // Resolve a connector's source anchor after one compute tick.
@@ -62,8 +47,8 @@ describe('M4-B2 — VM side-port routing', () => {
         initApp();
 
         // a: 0,0 100×80   b: 300,0 100×80
-        const vmA = ShapeNodeVM.fromKind('rectangle',   0, 0, { width: 100, height: 80 });
-        const vmB = ShapeNodeVM.fromKind('rectangle', 300, 0, { width: 100, height: 80 });
+        const vmA = Figure.fromKind('rectangle',   0, 0, { width: 100, height: 80 });
+        const vmB = Figure.fromKind('rectangle', 300, 0, { width: 100, height: 80 });
 
         // Endpoint: vmA East side, vmB West side — explicit PortSide, no PortIndex/PortName.
         const src = new ConnectorEndpoint({ Node: vmA, PortSide: PortSide.E });
@@ -101,9 +86,9 @@ describe('M4-B2 — VM side-port routing', () => {
         initApp();
 
         // vmA: 0,0 100×80.  Two connectors leave its East side.
-        const vmA = ShapeNodeVM.fromKind('rectangle',   0, 0, { width: 100, height: 80 });
-        const vmB = ShapeNodeVM.fromKind('rectangle', 300, 0, { width: 100, height: 80 });
-        const vmC = ShapeNodeVM.fromKind('rectangle', 300, 200, { width: 100, height: 80 });
+        const vmA = Figure.fromKind('rectangle',   0, 0, { width: 100, height: 80 });
+        const vmB = Figure.fromKind('rectangle', 300, 0, { width: 100, height: 80 });
+        const vmC = Figure.fromKind('rectangle', 300, 200, { width: 100, height: 80 });
 
         const c1 = new Connector();
         c1.Source = new ConnectorEndpoint({ Node: vmA, PortSide: PortSide.E });

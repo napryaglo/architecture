@@ -19,7 +19,7 @@ import { Diagram } from '../diagram/diagram.js';
 import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
-// Demo-shaped VM with Left/Top/IsSelected. Mirrors the shape ShapeNodeVM
+// Demo-shaped VM with Left/Top/IsSelected. Mirrors the shape a shape node
 // publishes in the diagram demo so the test exercises the real
 // container/style binding chain.
 class TestNodeVM extends Model

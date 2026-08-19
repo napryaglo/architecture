@@ -1,10 +1,10 @@
 // Generic per-VM node serialization registry (M3).
 // Tests:
-//   1. Typed round-trip: ShapeNodeVM + TextShape + connector → save (type field
+//   1. Typed round-trip: Figure + TextShape + connector → save (type field
 //      present on each node record) → load into a fresh doc → correct types,
 //      positions, text, connector endpoints.
 //   2. Legacy load: hand-crafted legacy payload (flat {kind,left,top,w,h,d},
-//      no `type` field) → load → one ShapeNodeVM at the correct position.
+//      no `type` field) → load → one Figure at the correct position.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
 import { Point } from '../../../visual-engine/index.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
+import { Figure } from '../figure.js';
 import { TextNodeVM } from '../text-node-vm.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
@@ -39,7 +39,7 @@ describe('M3 node serialization registry — typed round-trip', () => {
         const doc = newDoc(storage);
 
         const shape = doc.CreateNode('rectangle', 12, 34)!;
-        assert.ok(shape instanceof ShapeNodeVM);
+        assert.ok(shape instanceof Figure);
 
         const txt = new TextNodeVM();
         txt.Id = 'tx1'; txt.LabelText = 'hello'; txt.Left = 200; txt.Top = 100;
@@ -59,12 +59,12 @@ describe('M3 node serialization registry — typed round-trip', () => {
         assert.equal(textRec.type,  'text',  'text record has type=text');
     });
 
-    test('Save → Load restores ShapeNodeVM kind/position', () => {
+    test('Save → Load restores Figure kind/position', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
 
         const shape = doc.CreateNode('rectangle', 12, 34)!;
-        assert.ok(shape instanceof ShapeNodeVM);
+        assert.ok(shape instanceof Figure);
 
         doc.Save();
 
@@ -74,8 +74,8 @@ describe('M3 node serialization registry — typed round-trip', () => {
 
         assert.equal(doc2.Nodes.Count, 1);
         const restored = doc2.Nodes.Get(0)!;
-        assert.ok(restored instanceof ShapeNodeVM, 'restored as ShapeNodeVM');
-        const vm = restored as ShapeNodeVM;
+        assert.ok(restored instanceof Figure, 'restored as Figure');
+        const vm = restored as Figure;
         assert.equal(vm.Kind, 'rectangle');
         assert.equal(vm.Left, 12);
         assert.equal(vm.Top,  34);
@@ -133,7 +133,7 @@ describe('M3 node serialization registry — typed round-trip', () => {
 // ── 2. Legacy load ───────────────────────────────────────────────────
 
 describe('M3 node serialization registry — legacy load', () => {
-    test('flat legacy node record (no type field) loads as ShapeNodeVM', () => {
+    test('flat legacy node record (no type field) loads as Figure', () => {
         const storage = new MemoryStorage();
         // Hand-write a legacy payload: kind + flat fields, no `type`.
         const legacy = JSON.stringify({
@@ -151,8 +151,8 @@ describe('M3 node serialization registry — legacy load', () => {
 
         assert.equal(doc.Nodes.Count, 1, 'one node loaded from legacy payload');
         const node = doc.Nodes.Get(0)!;
-        assert.ok(node instanceof ShapeNodeVM, 'legacy rectangle reloads as ShapeNodeVM');
-        const vm = node as ShapeNodeVM;
+        assert.ok(node instanceof Figure, 'legacy rectangle reloads as Figure');
+        const vm = node as Figure;
         assert.equal(vm.Kind, 'rectangle');
         assert.equal(vm.Left, 5);
         assert.equal(vm.Top,  6);

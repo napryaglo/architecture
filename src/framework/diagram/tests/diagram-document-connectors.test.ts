@@ -78,9 +78,9 @@ describe('DiagramDocument — CreateConnector / DeleteConnectors', () => {
     test('DeleteConnectors unregisters the deleted endpoint so siblings redistribute', () => {
         const doc = newDoc();
         // Construct Figures directly so GetSideEndpointCount (a Figure-specific
-        // method) and port tracking are available.  CreateNode now emits
-        // ShapeNodeVM whose container is a Figure, but the port-side registry
-        // lives on Figure itself; using Figure.fromKind is the right seam here.
+        // method) and port tracking are available.  CreateNode now emits a
+        // shape Figure, and the port-side registry lives on Figure itself;
+        // using Figure.fromKind is the right seam here.
         const hub = Figure.fromKind('rectangle',   0, 100); hub.Id = 'hub'; doc.Nodes.Add(hub);
         const t1  = Figure.fromKind('rectangle', 300,  20); t1.Id  = 't1';  doc.Nodes.Add(t1);
         const t2  = Figure.fromKind('rectangle', 300, 100); t2.Id  = 't2';  doc.Nodes.Add(t2);
@@ -132,7 +132,7 @@ describe('DiagramDocument — Save / Load round-trips connectors', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
 
-        // CreateNode emits ShapeNodeVM (serializable via the 'shape' registry).
+        // CreateNode emits a shape Figure (serializable via the 'shape' registry).
         const a = doc.CreateNode('rectangle', 100, 100)!;
         const b = doc.CreateNode('ellipse',   300, 100)!;
         const c = doc.CreateConnector(

@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 
 import { Application } from '../../../runtime/index.js';
 import { GeometryCombineMode } from '../commands/combine.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
+import { Figure } from '../figure.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
@@ -33,8 +33,8 @@ function newDoc(storage?: DiagramStorage): DiagramDocument
 describe('delete node → connector cascade', () => {
     test('DeleteNodes removes attached connectors from the MODEL (doc.Connectors)', () => {
         const doc = newDoc();
-        const a = ShapeNodeVM.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
-        const b = ShapeNodeVM.fromKind('rectangle', 300, 100); b.Id = 'b'; doc.Nodes.Add(b);
+        const a = Figure.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
+        const b = Figure.fromKind('rectangle', 300, 100); b.Id = 'b'; doc.Nodes.Add(b);
         doc.CreateConnector(
             new ConnectorEndpoint({ Node: a, PortSide: PortSide.E }),
             new ConnectorEndpoint({ Node: b, PortSide: PortSide.W }));
@@ -56,8 +56,8 @@ describe('delete node → connector cascade', () => {
         // the corrupt record is never written to storage.
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
-        const a = ShapeNodeVM.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
-        const b = ShapeNodeVM.fromKind('rectangle', 300, 100); b.Id = 'b'; doc.Nodes.Add(b);
+        const a = Figure.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
+        const b = Figure.fromKind('rectangle', 300, 100); b.Id = 'b'; doc.Nodes.Add(b);
         doc.CreateConnector(
             new ConnectorEndpoint({ Node: a, PortSide: PortSide.E }),
             new ConnectorEndpoint({ Node: b, PortSide: PortSide.W }))!.Target!.Node = undefined;
@@ -79,9 +79,9 @@ describe('delete node → connector cascade', () => {
         // identity-only matching would miss the connector and orphan it; Id
         // matching removes it.
         const doc = newDoc();
-        const a = ShapeNodeVM.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
-        const b = ShapeNodeVM.fromKind('rectangle', 300, 100); b.Id = 'b'; doc.Nodes.Add(b);
-        const staleA = ShapeNodeVM.fromKind('rectangle', 100, 100); staleA.Id = 'a';   // same Id, other object
+        const a = Figure.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
+        const b = Figure.fromKind('rectangle', 300, 100); b.Id = 'b'; doc.Nodes.Add(b);
+        const staleA = Figure.fromKind('rectangle', 100, 100); staleA.Id = 'a';   // same Id, other object
         doc.CreateConnector(
             new ConnectorEndpoint({ Node: staleA, PortSide: PortSide.E }),   // points at the stale object
             new ConnectorEndpoint({ Node: b, PortSide: PortSide.W }));
@@ -95,9 +95,9 @@ describe('delete node → connector cascade', () => {
 
     test('CombineSelection cascades connectors attached to the combined-away leaves', () => {
         const doc = newDoc();
-        const a = ShapeNodeVM.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
-        const b = ShapeNodeVM.fromKind('rectangle', 130, 130); b.Id = 'b'; doc.Nodes.Add(b);
-        const other = ShapeNodeVM.fromKind('rectangle', 400, 100); other.Id = 'o'; doc.Nodes.Add(other);
+        const a = Figure.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
+        const b = Figure.fromKind('rectangle', 130, 130); b.Id = 'b'; doc.Nodes.Add(b);
+        const other = Figure.fromKind('rectangle', 400, 100); other.Id = 'o'; doc.Nodes.Add(other);
         // Connector between the two shapes that will be combined away.
         doc.CreateConnector(
             new ConnectorEndpoint({ Node: a, PortSide: PortSide.E }),
@@ -120,8 +120,8 @@ describe('delete node → connector cascade', () => {
         // route (its endpoint node is gone) so it renders nothing — yet it is
         // still a live entry in doc.Connectors. Visual absence ≠ model absence.
         const doc = newDoc();
-        const a = ShapeNodeVM.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
-        const b = ShapeNodeVM.fromKind('rectangle', 300, 100); b.Id = 'b'; doc.Nodes.Add(b);
+        const a = Figure.fromKind('rectangle', 100, 100); a.Id = 'a'; doc.Nodes.Add(a);
+        const b = Figure.fromKind('rectangle', 300, 100); b.Id = 'b'; doc.Nodes.Add(b);
         const c = doc.CreateConnector(
             new ConnectorEndpoint({ Node: a, PortSide: PortSide.E }),
             new ConnectorEndpoint({ Node: b, PortSide: PortSide.W }))!;

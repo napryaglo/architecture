@@ -2,7 +2,7 @@ import { describe, test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 import { SideConnectableNodeVM } from '../side-connectable-node-vm.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
+import { Figure } from '../figure.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { PortSide } from '../port.js';
 
@@ -37,10 +37,10 @@ describe('SideConnectableNodeVM — side-endpoint host base', () => {
         assert.deepEqual(vm.GetSideSlot(b, PortSide.E), { index: 0, count: 1 });
     });
 
-    test('ShapeNodeVM inherits the host surface and keeps its catalog Kind', () => {
-        const vm = ShapeNodeVM.fromKind('rectangle', 0, 0);
-        assert.equal(typeof vm.GetSideSlot, 'function', 'ShapeNodeVM is still a side host');
-        assert.equal(vm.Kind, 'rectangle', 'ShapeNodeVM overrides Kind with its catalog kind');
-        assert.equal(vm.Ports.length, 4);
+    test('a shape Figure implements the host surface and keeps its catalog Kind', () => {
+        const fig = Figure.fromKind('rectangle', 0, 0);
+        assert.equal(typeof fig.GetSideSlot, 'function', 'a shape Figure is a side host');
+        assert.equal(fig.Kind, 'rectangle', 'a shape Figure carries its catalog kind');
+        assert.equal(fig.Ports.length, 4);
     });
 });

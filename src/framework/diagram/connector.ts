@@ -1345,8 +1345,8 @@ function laneOffsetFor(
 }
 
 // Duck-typed cast: returns the node as ISideEndpointHost when it exposes
-// the GetSideSlot method (i.e. it is a Figure or ShapeNodeVM after B1).
-// This lets the side-slot path accept VM shapes without a base-class
+// the GetSideSlot method (i.e. it is a Figure or a SideConnectableNodeVM).
+// This lets the side-slot path accept either host without a base-class
 // relationship between Figure and NodeViewModel.
 function asSideSlotHost(node: unknown): ISideEndpointHost | undefined
 {
@@ -1355,7 +1355,7 @@ function asSideSlotHost(node: unknown): ISideEndpointHost | undefined
 }
 
 // Endpoint qualifies for the side-anchored registry when its Node
-// implements ISideEndpointHost (Figure or ShapeNodeVM), its PortSide is a
+// implements ISideEndpointHost (a Figure or a SideConnectableNodeVM), its PortSide is a
 // cardinal (not Auto), and no competing port reference (PortName /
 // PortIndex) or FreePoint is set. Same gate used by Connector's
 // `_reregister*Side` registration and by path 3a.

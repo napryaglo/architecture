@@ -1,4 +1,4 @@
-// A ShapeNodeVM's Fill / Stroke are user-editable via the Format Shape pane and
+// A Figure's Fill / Stroke are user-editable via the Format Shape pane and
 // MUST survive Save / Load — the serializer used to persist only kind + geometry,
 // so a fill-colour change was silently lost on reopen.
 
@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
 import { Color, Pen, SolidColorBrush } from '../../../visual-engine/index.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
+import { Figure } from '../figure.js';
 
 class MemoryStorage implements DiagramStorage
 {
@@ -24,7 +24,7 @@ function newDoc(storage?: DiagramStorage): DiagramDocument
     return new DiagramDocument(storage);
 }
 
-describe('ShapeNodeVM — Fill / Stroke Save / Load round-trip', () => {
+describe('Figure — Fill / Stroke Save / Load round-trip', () => {
     test('a changed fill and stroke survive Save / Load', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
@@ -37,8 +37,8 @@ describe('ShapeNodeVM — Fill / Stroke Save / Load round-trip', () => {
         restored.Storage = storage;
         restored.Load();
 
-        const node = restored.Nodes.Get(0) as ShapeNodeVM;
-        assert.ok(node instanceof ShapeNodeVM);
+        const node = restored.Nodes.Get(0) as Figure;
+        assert.ok(node instanceof Figure);
         assert.ok(node.Fill instanceof SolidColorBrush, 'fill is a solid brush');
         assert.equal((node.Fill as SolidColorBrush).Color.ToHex().toLowerCase().slice(0, 7), '#00ff00');
         assert.ok(node.Stroke instanceof Pen, 'stroke is a pen');
@@ -56,7 +56,7 @@ describe('ShapeNodeVM — Fill / Stroke Save / Load round-trip', () => {
         const restored = newDoc(storage);
         restored.Storage = storage;
         restored.Load();
-        const node = restored.Nodes.Get(0) as ShapeNodeVM;
+        const node = restored.Nodes.Get(0) as Figure;
         assert.equal((node.Fill as SolidColorBrush).Color.ToHex().toLowerCase().slice(0, 7), defaultHex);
     });
 });

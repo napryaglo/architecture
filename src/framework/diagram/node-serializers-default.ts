@@ -1,11 +1,11 @@
 // Built-in node serializer registrations.
 //
 // This module registers the three default NodeSerializer implementations —
-// 'shape' (ShapeNodeVM), 'text' (TextNodeVM), 'callout' (CalloutNodeVM) — as side
-// effects on import.  diagram-document.ts imports this module once for its
+// 'shape' (self-painting Figure), 'text' (TextNodeVM), 'callout' (CalloutNodeVM) —
+// as side effects on import.  diagram-document.ts imports this module once for its
 // side effects so the registry is populated before any Save/Load call.
 //
-// Cycle-avoidance: this module imports FROM the concrete classes (ShapeNodeVM,
+// Cycle-avoidance: this module imports FROM the concrete classes (Figure,
 // TextNodeVM, CalloutNodeVM) and FROM node-serialization (registry).  It does NOT
 // import from diagram-document, so there is no cycle.  diagram-document.ts
 // imports this module and may also import individual helpers exported here
@@ -21,7 +21,6 @@ import {
 } from './shape-text-document.js';
 import { Figure } from './figure.js';
 import { NodeViewModel } from './node-view-model.js';
-import { ShapeNodeVM } from './shape-node-vm.js';
 import { TextNodeVM } from './text-node-vm.js';
 import { CalloutNodeVM } from './callout-node-vm.js';
 import { SHAPE_CATALOG_MAP } from './shape-catalog.js';
@@ -116,30 +115,33 @@ export function placeNode(fig: Figure | NodeViewModel, base: NodeBaseRecord): vo
     fig.Height = base.h;
 }
 
-// ── 'shape' serializer (ShapeNodeVM) ─────────────────────────────────
+// ── 'shape' serializer (self-painting Figure) ────────────────────────
 
 registerNodeSerializer({
     type: 'shape',
 
+    // A Figure in doc.Nodes is always a self-painting geometric shape node —
+    // container Figures that wrap a content VM are transient and never enter
+    // Nodes. Guard on a silhouette source as belt-and-suspenders.
     matches(node: unknown): boolean
     {
-        return node instanceof ShapeNodeVM;
+        return node instanceof Figure && node._getSource() !== undefined;
     },
 
     serialize(node: unknown): Record<string, unknown>
     {
-        const vm = node as ShapeNodeVM;
-        const source = vm._getSource();
+        const fig = node as Figure;
+        const source = fig._getSource();
         const out: Record<string, unknown> = {
-            kind: vm.Kind,
+            kind: fig.Kind ?? '',
             d:    source !== undefined ? pathGeometryToSvgD(source) : '',
         };
         // Persist the user-editable Fill / Stroke (Format Shape pane). Only
         // solid colours are captured; a gradient / image brush falls back to
         // the constructed default on reload (documented gap).
-        const fillHex = solidHex(vm.Fill);
+        const fillHex = solidHex(fig.Fill);
         if (fillHex !== undefined) out.fill = fillHex;
-        const stroke = vm.Stroke;
+        const stroke = fig.Stroke;
         if (stroke !== undefined)
         {
             const strokeHex = solidHex(stroke.Brush);
@@ -149,40 +151,40 @@ registerNodeSerializer({
         return out;
     },
 
-    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): ShapeNodeVM
+    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): Figure
     {
         const kind = typeof data.kind === 'string' ? data.kind : '';
         const d    = typeof data.d    === 'string' ? data.d    : '';
-        let vm: ShapeNodeVM;
+        let fig: Figure;
         if (kind !== '' && SHAPE_CATALOG_MAP.has(kind))
         {
-            vm = ShapeNodeVM.fromKind(kind, base.left, base.top, { width: base.w, height: base.h });
+            fig = Figure.fromKind(kind, base.left, base.top, { width: base.w, height: base.h });
         }
         else if (d.length > 0)
         {
-            vm = ShapeNodeVM.fromSource(pathGeometryFromSvgD(d), base.left, base.top, {
+            fig = Figure.fromSource(pathGeometryFromSvgD(d), base.left, base.top, {
                 width:  base.w,
                 height: base.h,
-                kind,
+                kind:   kind !== '' ? kind : undefined,
             });
         }
         else
         {
-            // Fallback: empty source — reconstruct as a blank rectangle VM.
-            vm = ShapeNodeVM.fromKind('rectangle', base.left, base.top, { width: base.w, height: base.h });
+            // Fallback: empty source — reconstruct as a blank rectangle.
+            fig = Figure.fromKind('rectangle', base.left, base.top, { width: base.w, height: base.h });
         }
-        vm.Id = base.id;
+        fig.Id = base.id;
         // Restore Fill / Stroke over the constructed defaults.
-        if (typeof data.fill === 'string') vm.Fill = new SolidColorBrush(Color.FromHex(data.fill));
+        if (typeof data.fill === 'string') fig.Fill = new SolidColorBrush(Color.FromHex(data.fill));
         const strokeHex   = typeof data.stroke      === 'string' ? data.stroke      : undefined;
         const strokeWidth = typeof data.strokeWidth === 'number' ? data.strokeWidth : undefined;
         if (strokeHex !== undefined || strokeWidth !== undefined)
         {
-            const width = strokeWidth ?? vm.Stroke?.Thickness ?? 1;
-            const brush = strokeHex !== undefined ? new SolidColorBrush(Color.FromHex(strokeHex)) : vm.Stroke?.Brush;
-            vm.Stroke = new Pen(brush, width);
+            const width = strokeWidth ?? fig.Stroke?.Thickness ?? 1;
+            const brush = strokeHex !== undefined ? new SolidColorBrush(Color.FromHex(strokeHex)) : fig.Stroke?.Brush;
+            fig.Stroke = new Pen(brush, width);
         }
-        return vm;
+        return fig;
     },
 });
 

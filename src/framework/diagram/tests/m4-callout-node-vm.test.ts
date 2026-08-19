@@ -1,12 +1,12 @@
 // Task C3 — CalloutNodeVM headless tests.
-// Strategy: create a CalloutNodeVM `c` and a target ShapeNodeVM `t`,
+// Strategy: create a CalloutNodeVM `c` and a target Figure `t`,
 // wire the leader, then assert LeaderGeometry math and reactivity.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
 import { CalloutNodeVM } from '../callout-node-vm.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
+import { Figure } from '../figure.js';
 import { PathGeometry } from '../../../visual-engine/index.js';
 
 function app(): void { Application.current = null; new Application(); }
@@ -44,7 +44,7 @@ describe('M4 CalloutNodeVM', () => {
         const c = new CalloutNodeVM();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
 
-        const t = ShapeNodeVM.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
+        const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         c.LeaderTargetNode = t;
 
         assert.ok(c.LeaderGeometry instanceof PathGeometry, 'geometry should be a PathGeometry');
@@ -53,7 +53,7 @@ describe('M4 CalloutNodeVM', () => {
     test('LeaderTargetId returns target Id', () => {
         app();
         const c = new CalloutNodeVM();
-        const t = ShapeNodeVM.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
+        const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         t.Id = 'node-42';
         c.LeaderTargetNode = t;
         assert.equal(c.LeaderTargetId, 'node-42');
@@ -66,7 +66,7 @@ describe('M4 CalloutNodeVM', () => {
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
 
         // Target at (300, 200), size 80×60 → centre = (340, 230).
-        const t = ShapeNodeVM.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
+        const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         c.LeaderTargetNode = t;
 
         const g = c.LeaderGeometry;
@@ -84,7 +84,7 @@ describe('M4 CalloutNodeVM', () => {
         const c = new CalloutNodeVM();
         c.Left = 100; c.Top = 100; c.Width = 120; c.Height = 44;
 
-        const t = ShapeNodeVM.fromKind('rectangle', 400, 300, { width: 80, height: 60 });
+        const t = Figure.fromKind('rectangle', 400, 300, { width: 80, height: 60 });
         c.LeaderTargetNode = t;
 
         const g = c.LeaderGeometry!;
@@ -102,7 +102,7 @@ describe('M4 CalloutNodeVM', () => {
         const c = new CalloutNodeVM();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
 
-        const t = ShapeNodeVM.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
+        const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         c.LeaderTargetNode = t;
 
         const [, end1] = leaderEndpoints(c.LeaderGeometry!);
@@ -122,7 +122,7 @@ describe('M4 CalloutNodeVM', () => {
         const c = new CalloutNodeVM();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
 
-        const t = ShapeNodeVM.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
+        const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         c.LeaderTargetNode = t;
 
         const g1 = c.LeaderGeometry!;
@@ -145,7 +145,7 @@ describe('M4 CalloutNodeVM', () => {
         app();
         const c = new CalloutNodeVM();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
-        const t = ShapeNodeVM.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
+        const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         c.LeaderTargetNode = t;
         assert.ok(c.LeaderGeometry !== undefined, 'geometry defined after setting target');
 
@@ -157,7 +157,7 @@ describe('M4 CalloutNodeVM', () => {
         app();
         const c = new CalloutNodeVM();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
-        const t = ShapeNodeVM.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
+        const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         c.LeaderTargetNode = t;
         c.LeaderTargetNode = undefined;
 

@@ -14,13 +14,12 @@ import type { ConnectorEndpoint } from './connector-endpoint.js';
 // Composes a shared SideEndpointRegistry keyed off the VM's Left/Top/Width/
 // Height (the nodeRect() convention connector.ts uses for VM-backed
 // endpoints). Subclasses that want side-connectable behavior extend this
-// instead of NodeViewModel directly: ShapeNodeVM (geometry shapes), ArchNodeVM
-// (architecture items).
+// instead of NodeViewModel directly — e.g. ArchNodeVM (architecture items).
+// Geometric shape nodes are self-painting Figures (which implement the same
+// ISideEndpointHost directly), not a VM.
 //
 // Kind drives the default port provider. A plain box VM leaves Kind='' →
-// FALLBACK bbox ports (one per cardinal side); a geometry-bearing subclass
-// (ShapeNodeVM) overrides Kind with its catalog kind so ellipse/triangle/etc.
-// pick their specialized provider.
+// FALLBACK bbox ports (one per cardinal side).
 export class SideConnectableNodeVM extends NodeViewModel implements ISideEndpointHost
 {
     private readonly _sideHost = new SideEndpointRegistry(

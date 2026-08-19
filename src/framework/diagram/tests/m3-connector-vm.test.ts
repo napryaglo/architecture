@@ -1,6 +1,6 @@
-// M3 connector-VM tests: after M2, connector endpoints must reference the
-// node VM (not the Figure container) so routing/delete/serialize all track
-// the data item rather than the visual wrapper.
+// M3 connector-VM tests: connector endpoints must reference the shape node
+// so routing/delete/serialize all track the node. A shape Figure IS the node
+// now (no VM wrapper), so the endpoint's Node is the shape Figure itself.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -14,7 +14,6 @@ import { Diagram } from '../diagram.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 import { Figure } from '../figure.js';
 import { NodeViewModel } from '../node-view-model.js';
-import { ShapeNodeVM } from '../shape-node-vm.js';
 import { PortSide } from '../port.js';
 import '../routing/straight-router.js';
 import '../routing/orthogonal-router.js';
@@ -35,34 +34,26 @@ function newDoc(storage?: DiagramStorage): DiagramDocument
     return new DiagramDocument(storage);
 }
 
-// Build a Figure that simulates what Diagram.bindContainer does for a
-// ShapeNodeVM — sets DataContext to the VM and copies position. This lets
-// ConnectorCreateBehavior tests run fully headless without a layout pass.
-function figureFor(vm: ShapeNodeVM): Figure
+// Build a shape Figure that is the node directly. A shape Figure IS the node
+// now, so there's no VM wrapper — the endpoint resolves to the Figure itself.
+function shapeNode(kind: string, left: number, top: number): Figure
 {
-    const f = new Figure();
-    f.Left   = vm.Left;
-    f.Top    = vm.Top;
-    f.Width  = vm.Width;
-    f.Height = vm.Height;
-    f.DataContext = vm;   // mirrors Diagram.bindContainer: node.DataContext = item
+    const f = Figure.fromKind(kind, left, top);
     f.ExplicitPorts = []; // suppress default-provider ports for predictable resolution
     return f;
 }
 
-// ── Endpoints reference the VM, not the Figure container ─────────────
+// ── Endpoints reference the shape node ───────────────────────────────
 
-describe('M3 — connector endpoints reference node VM', () => {
-    test('BeginCreate / EndCreate endpoint.Node is the VM, not the Figure', () => {
+describe('M3 — connector endpoints reference the shape node', () => {
+    test('BeginCreate / EndCreate endpoint.Node is the shape Figure', () => {
         Application.current = null;
         new Application();
         const diagram  = new Diagram();
         const behavior = new ConnectorCreateBehavior(diagram);
 
-        const vmA = ShapeNodeVM.fromKind('rectangle', 0,   0);
-        const vmB = ShapeNodeVM.fromKind('rectangle', 300, 0);
-        const figA = figureFor(vmA);
-        const figB = figureFor(vmB);
+        const figA = shapeNode('rectangle', 0,   0);
+        const figB = shapeNode('rectangle', 300, 0);
 
         // Capture the created args via the ConnectorCreated event.
         let created: { Source: ConnectorEndpoint; Target: ConnectorEndpoint } | undefined;
@@ -72,26 +63,25 @@ describe('M3 — connector endpoints reference node VM', () => {
         behavior.EndCreate(figB, PortSide.W);
 
         assert.ok(created !== undefined, 'ConnectorCreated event must fire');
-        // The endpoint Node must be the VM, not the Figure wrapper.
-        assert.strictEqual(created.Source.Node, vmA, 'Source.Node should be the VM, not the Figure');
-        assert.strictEqual(created.Target.Node, vmB, 'Target.Node should be the VM, not the Figure');
+        // The endpoint Node must be the shape Figure (which is the node).
+        assert.strictEqual(created.Source.Node, figA, 'Source.Node should be the shape Figure');
+        assert.strictEqual(created.Target.Node, figB, 'Target.Node should be the shape Figure');
     });
 
-    test('transient Source.Node during BeginCreate is the VM, not the Figure', () => {
+    test('transient Source.Node during BeginCreate is the shape Figure', () => {
         Application.current = null;
         new Application();
         const diagram  = new Diagram();
         const behavior = new ConnectorCreateBehavior(diagram);
 
-        const vm  = ShapeNodeVM.fromKind('rectangle', 0, 0);
-        const fig = figureFor(vm);
+        const fig = shapeNode('rectangle', 0, 0);
 
         behavior.BeginCreate(fig, PortSide.E, new Point(80, 40));
 
         const transient = behavior.TransientConnector!;
-        // The transient's Source.Node must be the VM.
-        assert.strictEqual(transient.Source!.Node, vm,
-            'Transient Source.Node should be the VM during a BeginCreate drag');
+        // The transient's Source.Node must be the shape Figure.
+        assert.strictEqual(transient.Source!.Node, fig,
+            'Transient Source.Node should be the shape Figure during a BeginCreate drag');
     });
 
     test('Figure with no VM DataContext (e.g. text/callout) references the Figure itself', () => {
@@ -175,7 +165,7 @@ describe('M3 — DeleteNodes cascade drops connectors referencing VMs', () => {
 // ── Serialize by VM id ────────────────────────────────────────────────
 
 describe('M3 — Save/Load round-trips VM-anchored connector endpoints', () => {
-    test('connector anchored on ShapeNodeVMs survives a Save/Load cycle', () => {
+    test('connector anchored on shape Figures survives a Save/Load cycle', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
 
@@ -202,11 +192,11 @@ describe('M3 — Save/Load round-trips VM-anchored connector endpoints', () => {
         const idA = vmA.Id!;
         const idB = vmB.Id!;
 
-        let rA: ShapeNodeVM | undefined;
-        let rB: ShapeNodeVM | undefined;
+        let rA: Figure | undefined;
+        let rB: Figure | undefined;
         for (let i = 0; i < restored.Nodes.Count; i++)
         {
-            const n = restored.Nodes.Get(i) as ShapeNodeVM;
+            const n = restored.Nodes.Get(i) as Figure;
             if (n.Id === idA) rA = n;
             if (n.Id === idB) rB = n;
         }

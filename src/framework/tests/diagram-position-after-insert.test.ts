@@ -20,7 +20,7 @@ import { Diagram } from '../diagram/diagram.js';
 import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
-// Minimal node VM — mirrors the diagram demo's ShapeNodeVM shape with
+// Minimal node VM — mirrors a shape node's shape with
 // Left / Top / IsSelected DPs.
 class TestNodeVM extends Model
 {

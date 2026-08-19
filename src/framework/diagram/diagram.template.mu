@@ -37,15 +37,9 @@ resources Diagrams {
         Template = @DefaultFigure;
     }
 
-    // ── ShapeNodeVM: renders a shape as a Shape primitive ─────────────
-    //
-    // DataTemplate for ShapeNodeVM hosted inside the Figure container's
-    // PART_Content ContentPresenter. Binds the Shape's Geometry / Fill /
-    // Stroke / Width / Height to the ShapeNodeVM's corresponding DPs,
-    // using single-$ bindings (bind to the data item).
-    DataTemplate [DataType = ShapeNodeVM] {
-        Shape [ Geometry = $Geometry, Fill = $Fill, Stroke = $Stroke, Width = $Width, Height = $Height ]
-    }
+    // Geometric shape nodes are self-painting Figures (not a VM + Shape
+    // primitive), so they need no DataTemplate — a shape Figure IS the node and
+    // paints its own silhouette. See Figure.fromKind / the 'shape' serializer.
 
     // ── TextNodeVM: renders a text-box node (VM form of TextShape) ───
     //

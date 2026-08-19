@@ -4,9 +4,12 @@ import { Figure } from '../figure.js';
 import { resolveDefaultPortProvider } from '../port-providers/default-port-providers.js';
 import { BoundingBoxPorts } from '../port-providers/bounding-box-ports.js';
 
-test('Figure no longer exposes a Kind DP or accessor', () => {
+test('Figure exposes Kind as an inert provenance accessor, not a DP', () => {
     const f = Figure.fromKind('ellipse', 0, 0);
-    assert.equal((f as unknown as { Kind?: unknown }).Kind, undefined);
+    // Kind returns the catalog kind for serialization provenance, but it is a
+    // plain read-only getter (no registered KindKey DP) and drives no behavior.
+    assert.equal(f.Kind, 'ellipse');
+    assert.equal((Figure as unknown as { KindKey?: unknown }).KindKey, undefined);
 });
 
 test('fromKind still builds the catalog source (drawable shape)', () => {

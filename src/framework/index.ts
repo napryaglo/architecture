@@ -203,7 +203,6 @@ export { DiagramInspector } from './diagram/diagram-inspector.js';
 export { Figure } from './diagram/figure.js';
 export { NodeViewModel } from './diagram/node-view-model.js';
 export { SideConnectableNodeVM } from './diagram/side-connectable-node-vm.js';
-export { ShapeNodeVM } from './diagram/shape-node-vm.js';
 export { TextNodeVM } from './diagram/text-node-vm.js';
 export { CalloutNodeVM, type ILeaderTarget } from './diagram/callout-node-vm.js';
 export {
