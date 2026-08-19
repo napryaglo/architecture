@@ -120,7 +120,6 @@ export {
     GridUnitType,
 } from './panels/grid.js';
 export { ContentPresenter } from './templates/content-presenter.js';
-export { HeartPresenter } from './heart-presenter.js';
 export {
     ControlTemplate,
     TemplateBinding,

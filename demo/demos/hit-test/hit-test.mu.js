@@ -1,6 +1,5 @@
 import { HitTestVM } from "./hit-test-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, HeartPresenter, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
+import { Border, DataTemplate, Dock, DockPanel, Heart, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
 import { Color, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
 import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
@@ -21,7 +20,7 @@ export class HitTestDemo extends ResourceDictionary {
         t.Set("HeartOutlinePen", _pen0);
         const _tmpl1 = (() => {
             const _factory = (_data) => {
-                let _heartPresenter2;
+                let _heart2;
                 const _border3 = new Border();
                 _border3.SetNameScope(new NameScope());
                 _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Surface"));
@@ -47,21 +46,19 @@ export class HitTestDemo extends ResourceDictionary {
                 _stackPanel6.AddChild(_textBlock8);
                 _border5.SetChild(_stackPanel6);
                 _dockPanel4.AddChild(_border5);
-                _heartPresenter2 = new HeartPresenter();
-                _heartPresenter2.Name = "heartShape";
-                _heartPresenter2.set_property_value(HeartPresenter.FillKey, new SolidColorBrush(Color.FromHex('#ff8c00')));
-                _heartPresenter2.set_property_value(HeartPresenter.StrokeKey, DynamicResource(_heartPresenter2, "HeartOutlinePen"));
-                _heartPresenter2.set_property_value(HeartPresenter.WidthKey, 260);
-                _heartPresenter2.set_property_value(HeartPresenter.HeightKey, 240);
-                _heartPresenter2.set_property_value(HeartPresenter.ClipToBoundsKey, true);
-                _heartPresenter2.set_property_value(HeartPresenter.HorizontalAlignmentKey, HorizontalAlignment.Center);
-                _heartPresenter2.set_property_value(HeartPresenter.VerticalAlignmentKey, VerticalAlignment.Center);
-                _heartPresenter2.set_property_value(HeartPresenter.ContentKey, ((_e) => { _e.HorizontalAlignment = HorizontalAlignment.Center; _e.VerticalAlignment = VerticalAlignment.Center; _e.Content = ((_e) => { _e.Text = "Click Me! This is a very long long label that runs well past the heart so you can see the content clipped to the outline."; return _e; })(new TextBlock()); return _e; })(new Button()));
-                _dockPanel4.AddChild(_heartPresenter2);
+                _heart2 = new Heart();
+                _heart2.Name = "heartShape";
+                _heart2.set_property_value(Heart.FillKey, new SolidColorBrush(Color.FromHex('#ff8c00')));
+                _heart2.set_property_value(Heart.StrokeKey, DynamicResource(_heart2, "HeartOutlinePen"));
+                _heart2.set_property_value(Heart.WidthKey, 260);
+                _heart2.set_property_value(Heart.HeightKey, 240);
+                _heart2.set_property_value(Heart.HorizontalAlignmentKey, HorizontalAlignment.Center);
+                _heart2.set_property_value(Heart.VerticalAlignmentKey, VerticalAlignment.Center);
+                _dockPanel4.AddChild(_heart2);
                 _border3.SetChild(_dockPanel4);
                 return _border3;
             };
-            const _tplSet9 = [new TargetedSetter(HeartPresenter, "Fill", new SolidColorBrush(Color.FromHex('#ffffff')), "heartShape")];
+            const _tplSet9 = [new TargetedSetter(Heart, "Fill", new SolidColorBrush(Color.FromHex('#ffffff')), "heartShape")];
             const _tplDataTrig10 = new TemplateDataTrigger("IsToggled", true, _tplSet9);
             return new DataTemplate(_factory, HitTestVM, [], [_tplDataTrig10]);
         })();

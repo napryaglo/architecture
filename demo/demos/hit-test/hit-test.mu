@@ -36,21 +36,16 @@ resources HitTestDemo {
                     }
                 }
 
-                // ── Stage — the custom HeartPresenter control, centred ──
-                // Content is a Button, presented on top of the heart chrome
-                // and clipped to the heart outline.
-                HeartPresenter x:name="heartShape"
+                // ── Stage — a single Heart shape, centred ──
+                // The Heart draws its own silhouette and publishes it as
+                // HitTestGeometry, so only clicks inside the outline hit it.
+                Heart x:name="heartShape"
                     [ Fill                = #ff8c00,
                       Stroke              = @HeartOutlinePen,
                       Width               = 260,
                       Height              = 240,
-                      ClipToBounds        = true,
                       HorizontalAlignment = Center,
-                      VerticalAlignment   = Center,
-                      Content             = Button
-                          [ HorizontalAlignment = Center,
-                            VerticalAlignment   = Center,
-                            Content             = TextBlock [ Text = "Click Me! This is a very long long label that runs well past the heart so you can see the content clipped to the outline." ] ] ]
+                      VerticalAlignment   = Center ]
             }
         }
 

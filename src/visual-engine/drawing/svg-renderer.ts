@@ -713,7 +713,7 @@ export class SvgRenderer
         }
         else if ('Figures' in (clip as object))
         {
-            // Arbitrary path clip (e.g. a HeartPresenter's silhouette).
+            // Arbitrary path clip (e.g. a shaped Figure's silhouette).
             // Lower to <path d="…"> via the SAME serializer DrawGeometry
             // uses, so the clip tracks the painted outline exactly.
             const path = clip as unknown as PathGeometry;
