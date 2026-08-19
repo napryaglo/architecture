@@ -786,7 +786,7 @@ export class ComboBox extends Selector
 
     private applyDropDownVisibility(open: boolean): void
     {
-        // PART_SelectionBox.BorderBrush is owned by the template's
+        // PART_SelectionBox.Stroke is owned by the template's
         // `when(IsDropDownOpen)` trigger via DynamicResource — flipping
         // IsDropDownOpen here is enough to re-tint live and theme
         // switches re-resolve the brush.
