@@ -25,19 +25,19 @@ export class PersistentGuidesAdorner extends Adorner
         super(adornedElement);
         this._diagram = diagram;
         this.IsHitTestVisible = false;
-        const brush = DiagramSettings.PersistentGuideColor();
         for (let i = 0; i < POOL_SIZE; i++)
         {
             const v = new Border();
-            v.Fill = brush;
             v.IsHitTestVisible = false;
             // Leave Width/Height UNSET so Border's Stretch default fills the arrange
             // rect (pinning 0 would collapse every line — see the alignment adorner).
+            // Fill is set per-guide in ArrangeOverride (selected vs normal colour).
             this.AttachVisual(v);
             this._pool.push(v);
         }
         this._onChange = (): void => this.InvalidateArrange();
         diagram.AddPropertyChangedListener(Diagram.GuidesKey, this._onChange);
+        diagram.AddPropertyChangedListener(Diagram.SelectedGuideKey, this._onChange);
     }
 
     public override get visualChildren(): Visual[] { return this._pool.slice(); }
@@ -53,13 +53,19 @@ export class PersistentGuidesAdorner extends Adorner
     {
         const guides: readonly PersistentGuide[] = this._diagram.Guides;
         const W = finalSize.Width, H = finalSize.Height;
-        const thickness = DiagramSettings.PersistentGuideThickness();
+        const baseThickness = DiagramSettings.PersistentGuideThickness();
+        const normal = DiagramSettings.PersistentGuideColor();
+        const selected = DiagramSettings.PersistentGuideSelectedColor();
+        const selIndex = this._diagram.SelectedGuide;
         const m = this.AdornedToLayerMatrix;
         const used = Math.min(guides.length, this._pool.length);
         for (let i = 0; i < used; i++)
         {
             const g = guides[i]!;
             const v = this._pool[i]!;
+            const isSel = i === selIndex;
+            v.Fill = isSel ? selected : normal;
+            const thickness = isSel ? baseThickness + 2 : baseThickness;   // selected reads thicker
             if (g.axis === AlignmentAxis.X)
             {
                 const x = m.IsIdentity ? g.position : m.Transform(new Point(g.position, 0)).X;
@@ -79,5 +85,6 @@ export class PersistentGuidesAdorner extends Adorner
     public Dispose(): void
     {
         this._diagram.RemovePropertyChangedListener(Diagram.GuidesKey, this._onChange);
+        this._diagram.RemovePropertyChangedListener(Diagram.SelectedGuideKey, this._onChange);
     }
 }
