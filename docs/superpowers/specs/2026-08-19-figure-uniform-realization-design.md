@@ -141,13 +141,21 @@ instead of carrying it into the self-paint model.
   `resolveDefaultPortProvider(host)` returns `FALLBACK_PROVIDER` and drops the
   `{ readonly Kind: string }` host shape.
 
-### Serialization + back-compat
+### Serialization — not affected (Figure scope)
 
-- The node serializers already persist a `d` (SVG path) fallback. Stop writing
-  `kind`; always write the geometry `d` derived from `_source`.
-- **Load** still reads a legacy `kind` when present (old diagrams) to recover the
-  catalog `_source` if `d` is absent; otherwise parse `d`. New saves carry only
-  `d`. No migration pass required.
+Verified: the framework node serializers match `ShapeNodeVM` / `TextNodeVM` /
+`CalloutNodeVM` (node-serializers-default.ts:126,199,231) — **none matches a bare
+`Figure`**. Persisted geometric shapes are `ShapeNodeVM` (the `'shape'`
+serializer owns `kind` + `d`), which is out of scope. A Figure-with-geometry
+appears only where it is not persisted:
+
+- toolbox tile previews — `ShapeVisualResolver.Resolve` → `Figure.fromKind`
+  (shape-visual-resolver.ts:21),
+- demos that subclass `Figure` + `ApplyCatalogKind` (e.g. commands-vm.mts),
+- any "items-are-Figures" diagram that holds Figures with geometry directly.
+
+So this change touches **no serialization**. The `kind`/`d` persistence and its
+back-compat live on `ShapeNodeVM` and move with the `ShapeNodeVM` follow-up.
 
 ## Data flow (after)
 
@@ -193,11 +201,12 @@ Unit tests (Mural `tests/` convention, `tsx --test`):
 - **Kind removed** — `Figure` has no `Kind` DP / accessor; `fromKind` still
   builds the correct `_source`; `resolveDefaultPortProvider` returns the bbox
   provider for every input.
-- **Serialization round-trip** — save (no `kind`, has `d`) → load rebuilds the
-  same silhouette; a legacy record with `kind` + no `d` still loads via the
-  catalog.
+- **Preview + demo render** — `ShapeVisualResolver.Resolve('ellipse', Tile)`
+  yields a Figure whose own paint is the ellipse silhouette (no bounds rect); a
+  demo `ApplyCatalogKind('rectangle')` Figure paints its rect.
 - **Regression** — existing Figure drag / selection / side-endpoint / label
-  tests stay green.
+  tests stay green. (No serialization test — Figure geometry is not persisted;
+  that belongs to the `ShapeNodeVM` follow-up.)
 
 Full framework suite (`npm test`) green before merge; `.mu` under `src/**` +
 `demo/**` referencing `Figure.Geometry` / `Kind` / `PART_Shape` swept and rebuilt
