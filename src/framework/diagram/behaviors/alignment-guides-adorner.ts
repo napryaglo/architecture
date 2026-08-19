@@ -47,8 +47,12 @@ export class AlignmentGuidesAdorner extends Adorner
             const v = new Border();
             v.Fill       = GUIDE_STROKE;
             v.IsHitTestVisible = false;
-            v.Width            = 0;
-            v.Height           = 0;
+            // Leave Width/Height UNSET (NaN). Border defaults to Stretch on both
+            // axes, so each line fills the exact rect ArrangeOverride gives it
+            // (thickness × H for a vertical guide, W × thickness for horizontal).
+            // Pinning Width/Height = 0 here would win over the arrange rect —
+            // Visual.Arrange treats an explicit size (even 0) as authoritative —
+            // collapsing every guide line to 0×0 (computed guides, nothing drawn).
             this.AttachVisual(v);
             this._pool.push(v);
         }
