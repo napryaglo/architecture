@@ -54,6 +54,7 @@ import {
     type AlignmentGuide,
     type AlignmentGuidesHandlers,
 } from './behaviors/alignment-guides-behavior.js';
+import type { PersistentGuidesHandlers } from './behaviors/persistent-guides-behavior.js';
 import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js';
 import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
@@ -875,6 +876,15 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         this._alignmentGuidesHandlers = h;
     }
 
+    // Persistent-guides preview-pointer interceptor — same tunnel-phase reason as
+    // the alignment + connector interceptors. Installed by attachPersistentGuides.
+    private _persistentGuidesHandlers: PersistentGuidesHandlers | undefined = undefined;
+    /** @internal — used by attachPersistentGuides. Not exposed publicly. */
+    public _setPersistentGuidesHandlers(h: PersistentGuidesHandlers | undefined): void
+    {
+        this._persistentGuidesHandlers = h;
+    }
+
     // Drop-receiver / Mutator attach state — detach thunks for whichever
     // receiver / mutator is currently wired. Swapped out on DP change so
     // the previous wiring releases its listeners.
@@ -1120,17 +1130,20 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         super.OnPreviewPointerDown(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerDown(args);
         this._alignmentGuidesHandlers?.OnPreviewPointerDown(args);
+        this._persistentGuidesHandlers?.OnPreviewPointerDown(args);
     }
     protected override OnPreviewPointerMove(args: PointerEventArgs): void
     {
         super.OnPreviewPointerMove(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerMove(args);
+        this._persistentGuidesHandlers?.OnPreviewPointerMove(args);
     }
     protected override OnPreviewPointerUp(args: PointerEventArgs): void
     {
         super.OnPreviewPointerUp(args);
         this._connectorInteractionsHandlers?.OnPreviewPointerUp(args);
         this._alignmentGuidesHandlers?.OnPreviewPointerUp(args);
+        this._persistentGuidesHandlers?.OnPreviewPointerUp(args);
     }
     protected override OnPointerLeave(args: PointerEventArgs): void
     {

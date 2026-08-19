@@ -234,6 +234,7 @@ export { ToolboxVisualDescriptor } from './diagram/toolbox/toolbox-visual-descri
 export { ToolboxVisualPresenter } from './diagram/toolbox/toolbox-visual-presenter.js';
 export { RulerBar } from './diagram/guides/ruler-bar.js';
 export { PersistentGuidesAdorner } from './diagram/guides/persistent-guides-adorner.js';
+export { attachPersistentGuides, type PersistentGuidesHandlers } from './diagram/behaviors/persistent-guides-behavior.js';
 export { VisualContext, type IToolboxVisualResolver } from './diagram/toolbox/toolbox-visual-resolver.js';
 export { type IToolboxDropFactory, type ToolboxDropContext } from './diagram/toolbox/toolbox-drop-factory.js';
 export { ShapeToolboxItem } from './diagram/toolbox/shape-toolbox-item.js';
