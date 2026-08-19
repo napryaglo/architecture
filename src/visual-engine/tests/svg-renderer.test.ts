@@ -396,7 +396,7 @@ describe('SvgRenderer — path-shaped subtree clip', () => {
     });
 });
 
-describe('SvgRenderer — ClipChildren children group', () => {
+describe('SvgRenderer — ClipToBounds children group', () => {
     beforeEach(() => { Application.current = null; });
 
     test('ChildClip hosts children in a clipped mural-children group; own paint stays out', () => {
@@ -407,7 +407,7 @@ describe('SvgRenderer — ClipChildren children group', () => {
         border.Fill = new SolidColorBrush(Color.FromHex('#ffffff'));
         border.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#000000')));
         border.BorderThickness = new Thickness(8);
-        border.ClipChildren = true;
+        border.ClipToBounds = true;
         const child = new Border();
         child.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
         border.SetChild(child);
@@ -428,21 +428,21 @@ describe('SvgRenderer — ClipChildren children group', () => {
         assert.equal(group!.contains(own!), false, 'own paint stays outside the clipped group');
     });
 
-    test('toggling ClipChildren off moves children back and removes the group', () => {
+    test('toggling ClipToBounds off moves children back and removes the group', () => {
         const { document, surface } = makeDom();
         const renderer = new SvgRenderer(surface, { document });
 
         const border = new Border();
         border.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#000000')));
         border.BorderThickness = new Thickness(8);
-        border.ClipChildren = true;
+        border.ClipToBounds = true;
         border.SetChild(new Border());
         border.Measure(new Size(100, 100));
         border.Arrange(new Rect(0, 0, 100, 100));
         renderer.Render(border, undefined, null, null);
         assert.ok(surface.querySelector('g.mural-children'), 'group present when on');
 
-        border.ClipChildren = false;
+        border.ClipToBounds = false;
         border.Measure(new Size(100, 100));
         border.Arrange(new Rect(0, 0, 100, 100));
         renderer.Render(border, undefined, null, null);

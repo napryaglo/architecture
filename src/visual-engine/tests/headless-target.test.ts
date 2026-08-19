@@ -235,7 +235,7 @@ class ClipContainer extends Single
     {
         super();
         this.SetChild(child);
-        this.ClipChildren = true;
+        this.ClipToBounds = true;
         this.Stroke = new Pen(new SolidColorBrush(Color.Black), 10);
     }
     protected override MeasureOverride(availableSize: Size): Size

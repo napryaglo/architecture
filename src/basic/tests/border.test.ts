@@ -119,10 +119,12 @@ describe('Border ClipToBounds', () => {
         b.Arrange(new Rect(0, 0, w, h));
     };
 
-    test('off by default → Border sets no clip', () => {
+    // ClipToBounds fills the children-only ChildClip slot (own paint is never
+    // masked); with no BorderThickness the inner rect equals the outer bounds.
+    test('off by default → Border sets no child clip', () => {
         const b = new Border(new FixedSize(new Size(40, 20)));
         arranged(b, 40, 20);
-        assert.equal(b.Clip, undefined);
+        assert.equal(b.ChildClip, undefined);
     });
 
     test('on → a rounded RectangleGeometry matching the render size + uniform radius', () => {
@@ -130,7 +132,7 @@ describe('Border ClipToBounds', () => {
         b.CornerRadius = 6;
         b.ClipToBounds = true;
         arranged(b, 40, 20);
-        const clip = b.Clip as RectangleGeometry;
+        const clip = b.ChildClip as RectangleGeometry;
         assert.ok(clip instanceof RectangleGeometry);
         assert.equal(clip.Rect.Width, 40);
         assert.equal(clip.Rect.Height, 20);
@@ -143,7 +145,7 @@ describe('Border ClipToBounds', () => {
         b.CornerRadius = new CornerRadius(8, 0, 0, 8);
         b.ClipToBounds = true;
         arranged(b, 40, 20);
-        const clip = b.Clip as RectangleGeometry;
+        const clip = b.ChildClip as RectangleGeometry;
         assert.ok(clip instanceof RectangleGeometry);
         assert.equal(clip.RadiusX, 0);
         assert.equal(clip.RadiusY, 0);
@@ -154,10 +156,10 @@ describe('Border ClipToBounds', () => {
         b.CornerRadius = 6;
         b.ClipToBounds = true;
         arranged(b, 40, 20);
-        assert.ok(b.Clip !== undefined);
+        assert.ok(b.ChildClip !== undefined);
         b.ClipToBounds = false;
         b.Arrange(new Rect(0, 0, 40, 20));   // ClipToBounds is Arrange-metadata → re-arranges
-        assert.equal(b.Clip, undefined);
+        assert.equal(b.ChildClip, undefined);
     });
 
     test('a CornerRadius change refreshes the clip radius on re-arrange', () => {
@@ -167,7 +169,7 @@ describe('Border ClipToBounds', () => {
         arranged(b, 40, 20);
         b.CornerRadius = 10;                 // Arrange-metadata → invalidates arrange
         b.Arrange(new Rect(0, 0, 40, 20));   // re-arrange refreshes the clip
-        assert.equal((b.Clip as RectangleGeometry).RadiusX, 10);
+        assert.equal((b.ChildClip as RectangleGeometry).RadiusX, 10);
     });
 });
 

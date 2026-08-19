@@ -44,7 +44,7 @@ resources HitTestDemo {
                       Stroke              = @HeartOutlinePen,
                       Width               = 260,
                       Height              = 240,
-                      ClipChildren        = true,
+                      ClipToBounds        = true,
                       HorizontalAlignment = Center,
                       VerticalAlignment   = Center,
                       Content             = Button

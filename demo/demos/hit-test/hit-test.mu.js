@@ -53,7 +53,7 @@ export class HitTestDemo extends ResourceDictionary {
                 _heartPresenter2.set_property_value(HeartPresenter.StrokeKey, DynamicResource(_heartPresenter2, "HeartOutlinePen"));
                 _heartPresenter2.set_property_value(HeartPresenter.WidthKey, 260);
                 _heartPresenter2.set_property_value(HeartPresenter.HeightKey, 240);
-                _heartPresenter2.set_property_value(HeartPresenter.ClipChildrenKey, true);
+                _heartPresenter2.set_property_value(HeartPresenter.ClipToBoundsKey, true);
                 _heartPresenter2.set_property_value(HeartPresenter.HorizontalAlignmentKey, HorizontalAlignment.Center);
                 _heartPresenter2.set_property_value(HeartPresenter.VerticalAlignmentKey, VerticalAlignment.Center);
                 _heartPresenter2.set_property_value(HeartPresenter.ContentKey, ((_e) => { _e.HorizontalAlignment = HorizontalAlignment.Center; _e.VerticalAlignment = VerticalAlignment.Center; _e.Content = ((_e) => { _e.Text = "Click Me! This is a very long long label that runs well past the heart so you can see the content clipped to the outline."; return _e; })(new TextBlock()); return _e; })(new Button()));

@@ -73,7 +73,7 @@ interface VisualNodes
     own:   SVGGElement;
     // Lazily-created <g class="mural-children" clip-path> hosting the child
     // outers when ChildClip is set. Positioned after `own`, so own paint stays
-    // unclipped and children paint on top. Absent when ClipChildren is off.
+    // unclipped and children paint on top. Absent when ClipToBounds is off.
     children?: SVGGElement;
     // Persistent <foreignObject> for a DomHost — created once, parked in the
     // outer group, sized on arrange, and NEVER touched by repaintOwn, so the

@@ -16,7 +16,7 @@ resources Diagrams {
     // the scaled shape), so there is no inner Shape primitive. PART_Content hosts
     // the (wrapped-VM) content and PART_LabelHost hosts the Figure's ShapeText
     // block (Figure.Text), slotted after applyDefaultStyle. Both are children, so
-    // the Figure's ChildClip (ClipChildren, built from the same silhouette in
+    // the Figure's ChildClip (ClipToBounds, built from the same silhouette in
     // Figure._rebuildGeometry) masks them to the shape while the own stroke keeps
     // painting. Width / Height template-bind to the measured size so a resize
     // re-lays the content; the silhouette re-scales in _rebuildGeometry.

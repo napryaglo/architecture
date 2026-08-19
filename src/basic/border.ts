@@ -220,7 +220,7 @@ export class Border extends Single
             Math.max(0, br - inset), Math.max(0, bl - inset));
     }
 
-    // ClipChildren clips content to INSIDE the border — the inner rounded rect
+    // ClipToBounds clips content to INSIDE the border — the inner rounded rect
     // inset by BorderThickness on each side, radii reduced to match. Overrides
     // the base (which insets by this.Stroke?.Thickness — for a Border that is
     // now the USER pen, whose thickness is ignored for width) so the inner clip
@@ -228,12 +228,17 @@ export class Border extends Single
     protected override buildChildClipGeometry(size: Size): Geometry | undefined
     {
         const bt = this.BorderThickness;
-        const { tl } = this.resolveCorners(size);
+        const { tl, tr, br, bl } = this.resolveCorners(size);
         const rect = new Rect(
             bt.Left, bt.Top,
             Math.max(0, size.Width  - bt.Horizontal),
             Math.max(0, size.Height - bt.Vertical));
-        return new RectangleGeometry(rect, Math.max(0, tl - bt.Left), Math.max(0, tl - bt.Top));
+        // Match buildClipGeometry's corner handling: uniform corners round, asymmetric
+        // corners fall to a plain rectangle (no per-corner inner path).
+        const uniform = tl === tr && tr === br && br === bl;
+        return uniform
+            ? new RectangleGeometry(rect, Math.max(0, tl - bt.Left), Math.max(0, tl - bt.Top))
+            : new RectangleGeometry(rect);
     }
 
     // Fill = background; Stroke = the border pen (brush + dash/cap/join/miter).

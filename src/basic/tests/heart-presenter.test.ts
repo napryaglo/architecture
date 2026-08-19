@@ -58,11 +58,11 @@ describe('HeartPresenter — heart chrome + outline-confined hit region', () => 
             `right inset ~ half the pen (got ${rightInset} for pen ${t})`);
     });
 
-    test('ClipChildren sets ChildClip to the heart inset by the full pen (inside the stroke)', () => {
+    test('ClipToBounds sets ChildClip to the heart inset by the full pen (inside the stroke)', () => {
         const hp = new HeartPresenter();
         const t = 40;
         hp.Stroke = new Pen(new SolidColorBrush(new Color(255, 0, 255, 255)), t);
-        hp.ClipChildren = true;
+        hp.ClipToBounds = true;
         hp.Content = new Border();            // default Stretch → fills the slot
         hp.Width = 240; hp.Height = 240;
         arrange(hp, 240, 240);
@@ -81,13 +81,13 @@ describe('HeartPresenter — heart chrome + outline-confined hit region', () => 
         assert.ok(clipB.Y + clipB.Height < drawnB.Y + drawnB.Height,'bottom inside the stroke');
     });
 
-    test('without ClipChildren (default) ChildClip is undefined', () => {
+    test('without ClipToBounds (default) ChildClip is undefined', () => {
         const hp = new HeartPresenter();
         hp.Content = new Border();
         hp.Width = 240; hp.Height = 240;
         arrange(hp, 240, 240);
 
-        assert.equal(hp.ChildClip, undefined, 'no ChildClip when ClipChildren is false');
+        assert.equal(hp.ChildClip, undefined, 'no ChildClip when ClipToBounds is false');
     });
 
     test('renders one heart geometry painted with its Fill and Stroke', () => {

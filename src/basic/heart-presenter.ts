@@ -13,11 +13,11 @@ import {
 import { ContentPresenter } from './templates/content-presenter.js';
 
 // A ContentPresenter that paints a heart, confines picking to the heart
-// outline, and (via the inherited ClipChildren) can trim its content to inside
-// the stroke. Fill / Stroke / ClipChildren are the inherited Visual DPs; the
+// outline, and (via the inherited ClipToBounds) can trim its content to inside
+// the stroke. Fill / Stroke / ClipToBounds are the inherited Visual DPs; the
 // heart geometry feeds the base hooks:
 //
-//   * buildClipGeometry  — the OUTER heart (inset 0): hit region + ClipToBounds.
+//   * buildClipGeometry  — the OUTER heart (inset 0): hit region / outline seam.
 //   * buildPaintGeometry  — the heart inset by `inset`. The paint uses t/2 (a
 //                           centred stroke lands inside the outline); the
 //                           inherited buildChildClipGeometry uses the FULL pen
@@ -83,7 +83,7 @@ export class HeartPresenter extends ContentPresenter
         if (s.Width <= 0 || s.Height <= 0) return;
         // Draw the heart HALF a pen inside the outline so the full stroke
         // width stays within it. Presented content renders on top via the
-        // visual-child walk, clipped to ChildClip when ClipChildren is on.
+        // visual-child walk, clipped to ChildClip when ClipToBounds is on.
         dc.DrawGeometry(this.Fill, this.Stroke, this.buildPaintGeometry(s, (this.Stroke?.Thickness ?? 0) / 2));
     }
 

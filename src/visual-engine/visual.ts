@@ -323,20 +323,17 @@ export class Visual extends Model
     // changes re-render.
     public static readonly ClipKey = Model.RegisterProperty<Geometry | undefined>(Visual, 'Clip', undefined, MetaData.Render);
 
-    // When true, clip this Visual and its subtree to its arranged bounds at
-    // render time. Off by default (WPF parity). The clip geometry comes from
-    // buildClipGeometry (base: a bounds rectangle; subclasses override to shape
-    // it), applied at the tail of Arrange via syncClipToBounds — which owns the
-    // Clip DP only while this flag is on, so a hand-set Clip is never clobbered.
+    // When true, clip this Visual's CHILDREN (not its own paint) to its shape
+    // inset by the full stroke — the region inside the outline. Off by default
+    // (WPF parity). The geometry comes from buildChildClipGeometry (base: the
+    // outline inset by the stroke; subclasses override — Border's inner rounded
+    // rect, a shaped container's inset silhouette), applied at the tail of
+    // Arrange via syncChildClip, which fills the internal ChildClip slot the
+    // renderers read. The Visual's own paint (Fill + Stroke) is never masked, so
+    // a bordered / shaped container trims its content while the stroke keeps
+    // painting. For a hand-authored whole-subtree mask (own paint included), set
+    // the Clip DP directly.
     public static readonly ClipToBoundsKey = Model.RegisterProperty<boolean>(Visual, 'ClipToBounds', false, MetaData.Arrange);
-
-    // When true, clip this Visual's CHILDREN (not its own paint) to the shape
-    // inset by the full stroke — the region inside the outline. Distinct from
-    // ClipToBounds (whole-subtree). Off by default. Drives syncChildClip at the
-    // tail of Arrange, which fills the internal ChildClip slot the renderers
-    // read. Lets a bordered / shaped container trim content to inside its
-    // stroke while the stroke itself keeps painting.
-    public static readonly ClipChildrenKey = Model.RegisterProperty<boolean>(Visual, 'ClipChildren', false, MetaData.Arrange);
 
     // The children-only clip geometry, in this Visual's local space. Set only by
     // syncChildClip (never authored directly); read by the renderers alongside
@@ -1162,44 +1159,22 @@ export class Visual extends Model
     public get ClipToBounds(): boolean { return this.get_property_value(Visual.ClipToBoundsKey); }
     public set ClipToBounds(value: boolean) { this.set_property_value(Visual.ClipToBoundsKey, value); }
 
-    public get ClipChildren(): boolean { return this.get_property_value(Visual.ClipChildrenKey); }
-    public set ClipChildren(value: boolean) { this.set_property_value(Visual.ClipChildrenKey, value); }
-
     // Read by the renderers; written only by syncChildClip.
     public get ChildClip(): Geometry | undefined { return this.get_property_value(Visual.ChildClipKey); }
     protected set ChildClip(value: Geometry | undefined) { this.set_property_value(Visual.ChildClipKey, value); }
 
-    // Owns the Clip DP only while ClipToBounds is on (see syncClipToBounds).
-    private _clipToBoundsApplied = false;
-
-    // Owns the ChildClip DP only while ClipChildren is on (see syncChildClip).
+    // Owns the ChildClip DP only while ClipToBounds is on (see syncChildClip).
     private _childClipApplied = false;
 
-    // The clip geometry for ClipToBounds, in this Visual's local space. Base
-    // returns a rectangle of the arranged bounds; subclasses override to shape
-    // the clip (e.g. Border's rounded rect). Called only with a positive size —
-    // the degenerate guard lives in syncClipToBounds.
+    // The Visual's outline in local space — the base geometry for own paint
+    // (buildPaintGeometry insets it by half the stroke) and precise hit-testing
+    // (Shape / Figure publish it as HitTestGeometry). Base returns the arranged
+    // bounds rect; subclasses override to shape it (Border's rounded rect, a
+    // Shape's silhouette). Also the base buildChildClipGeometry insets. Called
+    // only with a positive size.
     protected buildClipGeometry(size: Size): Geometry
     {
         return new RectangleGeometry(new Rect(0, 0, size.Width, size.Height));
-    }
-
-    // Reconcile Clip with ClipToBounds at arrange time. When on, build + apply
-    // the clip and latch ownership; when off, clear only a clip we applied. A
-    // hand-set Clip (ClipToBounds off) is never touched.
-    private syncClipToBounds(size: Size): void
-    {
-        if (this.ClipToBounds)
-        {
-            if (size.Width <= 0 || size.Height <= 0) return;   // wait for a real arranged size
-            this.Clip = this.buildClipGeometry(size);
-            this._clipToBoundsApplied = true;
-        }
-        else if (this._clipToBoundsApplied)
-        {
-            this.Clip = undefined;
-            this._clipToBoundsApplied = false;
-        }
     }
 
     // The children-only clip geometry: the shape inset by the FULL stroke —
@@ -1212,12 +1187,13 @@ export class Visual extends Model
         return this.buildPaintGeometry(size, this.Stroke?.Thickness ?? 0);
     }
 
-    // Reconcile ChildClip with ClipChildren at arrange time, parallel to
-    // syncClipToBounds. ChildClip is a dedicated slot (no consumer value is ever
-    // at risk), so the latch is only for clean teardown on toggle-off.
+    // Reconcile ChildClip with ClipToBounds at arrange time. ChildClip is a
+    // dedicated slot (no consumer value is ever at risk), so the latch is only
+    // for clean teardown on toggle-off. The Visual's own Clip DP is independent
+    // — hand-authored only, never touched here.
     private syncChildClip(size: Size): void
     {
-        if (this.ClipChildren)
+        if (this.ClipToBounds)
         {
             if (size.Width <= 0 || size.Height <= 0) return;   // wait for a real arranged size
             this.ChildClip = this.buildChildClipGeometry(size);
@@ -1450,7 +1426,6 @@ export class Visual extends Model
             this._renderSize = this.ArrangeOverride(renderSize);
         }
         this._isArrangeValid = true;
-        this.syncClipToBounds(this._renderSize);
         this.syncChildClip(this._renderSize);
     }
 
