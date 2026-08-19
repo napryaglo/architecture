@@ -109,6 +109,11 @@ export class Figure extends ContentControl implements ISideEndpointHost
         // Figure's fill is the inherited Visual.Fill; keep Figure's historic
         // default brush by overriding the metadata for the Figure subtree.
         Model.OverrideMetadata(Figure, Visual.FillKey, { default_value: DEFAULT_FILL });
+        // Every diagram node clips its content to its box: a shaped node to its
+        // silhouette (buildChildClipGeometry = _shape), a shapeless / content
+        // node to its bounds rect (the super fallback). ClipToBounds is
+        // children-only, so the node's own paint / stroke is never masked.
+        Model.OverrideMetadata(Figure, Visual.ClipToBoundsKey, { default_value: true });
     }
 
     public static readonly LeftKey = Model.RegisterProperty<number>(
@@ -617,16 +622,15 @@ export class Figure extends ContentControl implements ISideEndpointHost
         if (this._source === undefined)
         {
             this._shape = undefined;
-            this.ClipToBounds = false;
+            this.InvalidateArrange();
+            this.InvalidateVisual();
             return;
         }
         this._shape = scaleGeometry(this._source, this.Width, this.Height);
-        // Clip content + label to the silhouette (own paint stays crisp — see the
-        // seams below). ClipToBounds now drives the children-only ChildClip
-        // (buildChildClipGeometry), so the stroke keeps painting. Re-arrange to
-        // rebuild ChildClip from the new _shape and repaint the own silhouette
-        // (_shape is a plain field, so invalidate explicitly).
-        this.ClipToBounds = this._shape !== undefined;
+        // Re-arrange to rebuild ChildClip from the new _shape and repaint the own
+        // silhouette (_shape is a plain field, so invalidate explicitly).
+        // ClipToBounds defaults true on Figure (children clip to the shape, or to
+        // the bounds rect when shapeless; the own stroke stays crisp).
         this.InvalidateArrange();
         this.InvalidateVisual();
     }
