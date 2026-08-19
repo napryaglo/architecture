@@ -3,7 +3,7 @@ import { Border, ContentPresenter, DataTemplate, Dock, DockPanel, ItemsPanelTemp
 import { ItemsControl } from "@pragmatic-lab/mural/framework/base/items-control.js";
 import { ScrollViewer } from "@pragmatic-lab/mural/framework/surfaces/scroll-viewer.js";
 import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_DragDropExtendedDemo = Symbol("DragDropExtendedDemo.ctor");
@@ -58,7 +58,7 @@ export class DragDropExtendedDemo extends ResourceDictionary {
             const _border14 = new Border();
             _border14.SetNameScope(new NameScope());
             _border14.set_property_value(Border.FillKey, DynamicResource(_border14, "Surface"));
-            _border14.set_property_value(Border.BorderBrushKey, DynamicResource(_border14, "OutlineVariant"));
+            _border14.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border14.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd15 = _border14.Resources;
             const _setter16 = new Setter(ContentPresenter, "IsDraggable", true);
@@ -116,7 +116,7 @@ export class DragDropExtendedDemo extends ResourceDictionary {
             const _border29 = new Border();
             _border29.set_property_value(Border.WidthKey, 320);
             _border29.set_property_value(Border.HeightKey, 280);
-            _border29.set_property_value(Border.BorderBrushKey, DynamicResource(_border29, "OutlineVariant"));
+            _border29.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border29.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border29.set_property_value(Border.MarginKey, new Thickness(0, 0, 16, 0));
             _scrollViewer11 = new ScrollViewer();
@@ -138,7 +138,7 @@ export class DragDropExtendedDemo extends ResourceDictionary {
             const _border31 = new Border();
             _border31.set_property_value(Border.WidthKey, 320);
             _border31.set_property_value(Border.HeightKey, 280);
-            _border31.set_property_value(Border.BorderBrushKey, DynamicResource(_border31, "Outline"));
+            _border31.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
             _border31.set_property_value(Border.BorderThicknessKey, new Thickness(2));
             _border31.set_property_value(Border.FillKey, DynamicResource(_border31, "SurfaceContainerLow"));
             const _dockPanel32 = new DockPanel();

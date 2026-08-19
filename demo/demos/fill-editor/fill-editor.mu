@@ -30,7 +30,7 @@ resources FillEditorDemo {
                 Border
                     [ DockPanel.Dock  = Bottom,
                       Fill      = @SurfaceContainerLow,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (0,1,0,0),
                       Padding         = (20,10,20,10) ] {
                     TextBlock [ Text = $FillSummary, FontSize = 11, Foreground = @OnSurfaceVariant ]
@@ -44,7 +44,7 @@ resources FillEditorDemo {
                             [ Width           = 380,
                               Padding         = (16,16,16,16),
                               Fill      = @SurfaceContainerLow,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               CornerRadius    = 8,
                               Margin          = (0,0,20,0) ] {
@@ -68,7 +68,7 @@ resources FillEditorDemo {
                               Height          = 420,
                               Padding         = (20),
                               Fill      = @SurfaceContainer,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               CornerRadius    = 8 ] {
                             Rectangle

@@ -59,7 +59,7 @@ resources TextOnPathDemo {
                 Border
                     [ DockPanel.Dock  = Top,
                       Padding         = (20,12,20,12),
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (0,0,0,1) ] {
                     StackPanel [ Orientation = Horizontal ] {
                         StackPanel [ Orientation = Vertical, Margin = (0,0,24,0) ] {
@@ -155,7 +155,7 @@ resources TextOnPathDemo {
                 Border [ Fill = @SurfaceContainerLow, Padding = (20,20,20,20) ] {
                     Border
                         [ Fill      = @Surface,
-                          BorderBrush     = @OutlineVariant,
+                          Stroke     = Pen [ Brush = @OutlineVariant ],
                           BorderThickness = (1),
                           Padding         = (0) ] {
                         Canvas x:name="surface" [ Width = 700, Height = 440 ]

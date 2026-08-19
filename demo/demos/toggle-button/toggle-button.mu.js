@@ -2,7 +2,7 @@ import { ToggleButtonVM } from "./toggle-button-vm.mjs";
 import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock } from "@pragmatic-lab/mural/basic";
 import { ToggleButton } from "@pragmatic-lab/mural/framework/buttons/toggle-button.js";
 import { Color, DataContextBinding, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontStyle, FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { FontStyle, FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_ToggleButtonDemo = Symbol("ToggleButtonDemo.ctor");
@@ -21,7 +21,7 @@ export class ToggleButtonDemo extends ResourceDictionary {
                 _border1 = new Border();
                 _border1.Name = "PART_Border";
                 _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
-                _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "Outline"));
+                _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
                 _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
                 _border1.set_property_value(Border.CornerRadiusKey, DynamicResource(_border1, "ShapeSmall"));
                 _border2 = new Border();
@@ -34,7 +34,7 @@ export class ToggleButtonDemo extends ResourceDictionary {
                 _border1.SetChild(_border2);
                 return _border1;
             };
-            const _tplSet4 = [new TargetedSetter(Border, "Fill", new SetterFactory((_t) => DynamicResource(_t, "Primary")), "PART_Border"), new TargetedSetter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "PrimaryPress")), "PART_Border")];
+            const _tplSet4 = [new TargetedSetter(Border, "Fill", new SetterFactory((_t) => DynamicResource(_t, "Primary")), "PART_Border"), new TargetedSetter(Border, "Stroke", ((_e) => { _e.Brush = DynamicResource(_e, "PrimaryPress"); return _e; })(new Pen()), "PART_Border")];
             const _tplTrig5 = new TemplatePropertyTrigger(ToggleButton, "IsChecked", true, _tplSet4, undefined);
             const _tplSet6 = [new TargetedSetter(Border, "Fill", new SetterFactory((_t) => DynamicResource(_t, "StateHoverOverlay")), "PART_StateLayer")];
             const _tplTrig7 = new TemplatePropertyTrigger(ToggleButton, "IsMouseOver", true, _tplSet6, undefined);
@@ -53,7 +53,7 @@ export class ToggleButtonDemo extends ResourceDictionary {
         const _tmpl16 = new DataTemplate((_data) => {
             const _border17 = new Border();
             _border17.set_property_value(Border.FillKey, DynamicResource(_border17, "Surface"));
-            _border17.set_property_value(Border.BorderBrushKey, DynamicResource(_border17, "OutlineVariant"));
+            _border17.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border17.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel18 = new DockPanel();
             const _border19 = new Border();
@@ -103,7 +103,7 @@ export class ToggleButtonDemo extends ResourceDictionary {
             const _border29 = new Border();
             _border29.set_property_value(Border.FillKey, DynamicResource(_border29, "SurfaceContainerLow"));
             _border29.set_property_value(Border.PaddingKey, new Thickness(12, 12, 12, 12));
-            _border29.set_property_value(Border.BorderBrushKey, DynamicResource(_border29, "Outline"));
+            _border29.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
             _border29.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _stackPanel30 = new StackPanel();
             _stackPanel30.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);

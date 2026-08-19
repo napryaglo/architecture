@@ -54,7 +54,7 @@ resources DragDropExtendedDemo {
     DataTemplate [DataType = DragDropExtendedVM] {
         Border x:root
             [ Fill      = @Surface,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1) ] {
             resources: {
                 // Per-row drag source — every ItemsControl-generated
@@ -112,7 +112,7 @@ resources DragDropExtendedDemo {
                     Border
                         [ Width           = 320,
                           Height          = 280,
-                          BorderBrush     = @OutlineVariant,
+                          Stroke     = Pen [ Brush = @OutlineVariant ],
                           BorderThickness = (1),
                           Margin          = (0,0,16,0) ] {
                         ScrollViewer x:name="scroll"
@@ -134,7 +134,7 @@ resources DragDropExtendedDemo {
                     Border
                         [ Width           = 320,
                           Height          = 280,
-                          BorderBrush     = @Outline,
+                          Stroke     = Pen [ Brush = @Outline ],
                           BorderThickness = (2),
                           Fill      = @SurfaceContainerLow ] {
                         DockPanel {

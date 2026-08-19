@@ -3,7 +3,7 @@ import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlo
 import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
 import { Drawer, DrawerVariant } from "@pragmatic-lab/mural/framework/surfaces/drawer.js";
 import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_DrawerDemo = Symbol("DrawerDemo.ctor");
@@ -19,7 +19,7 @@ export class DrawerDemo extends ResourceDictionary {
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
-            _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
+            _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
@@ -56,7 +56,7 @@ export class DrawerDemo extends ResourceDictionary {
             const _border9 = new Border();
             _border9.set_property_value(Border.FillKey, DynamicResource(_border9, "SurfaceContainerLow"));
             _border9.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 1, 0));
-            _border9.set_property_value(Border.BorderBrushKey, DynamicResource(_border9, "OutlineVariant"));
+            _border9.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             const _stackPanel10 = new StackPanel();
             const _textBlock11 = new TextBlock();
             _textBlock11.set_property_value(TextBlock.TextKey, "🏠");
@@ -84,7 +84,7 @@ export class DrawerDemo extends ResourceDictionary {
             const _border15 = new Border();
             _border15.set_property_value(Border.FillKey, DynamicResource(_border15, "Surface"));
             _border15.set_property_value(Border.BorderThicknessKey, new Thickness(1, 0, 0, 0));
-            _border15.set_property_value(Border.BorderBrushKey, DynamicResource(_border15, "OutlineVariant"));
+            _border15.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border15.set_property_value(Border.PaddingKey, new Thickness(24));
             const _stackPanel16 = new StackPanel();
             const _textBlock17 = new TextBlock();

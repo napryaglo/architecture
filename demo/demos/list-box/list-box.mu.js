@@ -3,7 +3,7 @@ import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlo
 import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
 import { ListBox, ListBoxItem, SelectionMode } from "@pragmatic-lab/mural/framework/list/list-box.js";
 import { DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_ListBoxDemo = Symbol("ListBoxDemo.ctor");
@@ -21,7 +21,7 @@ export class ListBoxDemo extends ResourceDictionary {
             const _border5 = new Border();
             _border5.SetNameScope(new NameScope());
             _border5.set_property_value(Border.FillKey, DynamicResource(_border5, "Surface"));
-            _border5.set_property_value(Border.BorderBrushKey, DynamicResource(_border5, "OutlineVariant"));
+            _border5.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border5.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel6 = new DockPanel();
             const _border7 = new Border();

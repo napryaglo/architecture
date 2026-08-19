@@ -3,7 +3,7 @@ import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlo
 import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
 import { StatusBar, StatusBarItem, StatusBarSeparator } from "@pragmatic-lab/mural/framework/surface.js";
 import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_StatusBarDemo = Symbol("StatusBarDemo.ctor");
@@ -19,7 +19,7 @@ export class StatusBarDemo extends ResourceDictionary {
         const _tmpl0 = new DataTemplate((_data) => {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
-            _border1.set_property_value(Border.BorderBrushKey, DynamicResource(_border1, "OutlineVariant"));
+            _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border1.set_property_value(Border.CornerRadiusKey, 4);
             _border1.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Top);

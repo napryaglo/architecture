@@ -25,7 +25,7 @@ resources DashboardDemo {
     // setting them).
     Style x:key="DashboardPrimaryCard" [TargetType = Border] {
         Fill = #4caf50;
-        BorderBrush = #1b5e20;
+        Stroke = Pen [ Brush = #1b5e20 ];
         BorderThickness = (2);
         CornerRadius = (8);
         Padding = (16);
@@ -41,7 +41,7 @@ resources DashboardDemo {
 
     Style x:key="DashboardDangerCard" [TargetType = Border] {
         Fill = #d32f2f;
-        BorderBrush = #7f0000;
+        Stroke = Pen [ Brush = #7f0000 ];
         BorderThickness = (2);
         CornerRadius = (8);
         Padding = (16);
@@ -57,7 +57,7 @@ resources DashboardDemo {
 
     Style x:key="DashboardPaperCard" [TargetType = Border] {
         Fill = @Surface;
-        BorderBrush = @OutlineVariant;
+        Stroke = Pen [ Brush = @OutlineVariant ];
         BorderThickness = (1);
         CornerRadius = (6);
         Padding = (20);

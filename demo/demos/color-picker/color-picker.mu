@@ -62,7 +62,7 @@ resources ColorPickerDemo {
                                   Height            = 40,
                                   CornerRadius      = 4,
                                   VerticalAlignment = Bottom,
-                                  BorderBrush       = @OutlineVariant,
+                                  Stroke       = Pen [ Brush = @OutlineVariant ],
                                   BorderThickness   = (1) ]
                         }
                         StackPanel [ Orientation = Horizontal, Margin = (0,0,0,16) ] {
@@ -80,7 +80,7 @@ resources ColorPickerDemo {
                                   Height            = 40,
                                   CornerRadius      = 4,
                                   VerticalAlignment = Bottom,
-                                  BorderBrush       = @OutlineVariant,
+                                  Stroke       = Pen [ Brush = @OutlineVariant ],
                                   BorderThickness   = (1) ]
                         }
                         StackPanel [ Orientation = Horizontal, Margin = (0,0,0,16) ] {
@@ -98,7 +98,7 @@ resources ColorPickerDemo {
                                   Height            = 40,
                                   CornerRadius      = 4,
                                   VerticalAlignment = Bottom,
-                                  BorderBrush       = @OutlineVariant,
+                                  Stroke       = Pen [ Brush = @OutlineVariant ],
                                   BorderThickness   = (1) ]
                         }
                         StackPanel [ Orientation = Horizontal ] {
@@ -116,7 +116,7 @@ resources ColorPickerDemo {
                                   Height            = 40,
                                   CornerRadius      = 4,
                                   VerticalAlignment = Bottom,
-                                  BorderBrush       = @OutlineVariant,
+                                  Stroke       = Pen [ Brush = @OutlineVariant ],
                                   BorderThickness   = (1) ]
                         }
                     }

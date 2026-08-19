@@ -6,6 +6,7 @@ import { Color, HorizontalAlignment, Thickness, VerticalAlignment } from '../../
 import {
     FontWeight,
     HeadlessTarget,
+    Pen,
     SolidColorBrush,
     SvgDrawingContext,
 } from '../../visual-engine/index.js';
@@ -27,7 +28,7 @@ text.VerticalAlignment   = VerticalAlignment.Center;
 
 const border = new Border(text);
 border.Fill      = new SolidColorBrush(Color.FromHex('#1e40af')); // a deep blue
-border.BorderBrush     = new SolidColorBrush(Color.Black);
+border.Stroke          = new Pen(new SolidColorBrush(Color.Black));
 border.BorderThickness = new Thickness(3);
 border.Padding         = new Thickness(20);
 border.HorizontalAlignment = HorizontalAlignment.Stretch;

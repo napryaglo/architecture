@@ -35,7 +35,7 @@ resources PenEditorDemo {
                 Border
                     [ DockPanel.Dock  = Bottom,
                       Fill      = @SurfaceContainerLow,
-                      BorderBrush     = @OutlineVariant,
+                      Stroke     = Pen [ Brush = @OutlineVariant ],
                       BorderThickness = (0,1,0,0),
                       Padding         = (20,10,20,10) ] {
                     StackPanel [ Orientation = Horizontal ] {
@@ -79,7 +79,7 @@ resources PenEditorDemo {
                             [ Width           = 320,
                               Padding         = (16,16,16,16),
                               Fill      = @SurfaceContainerLow,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               CornerRadius    = 8,
                               Margin          = (0,0,20,0) ] {
@@ -104,7 +104,7 @@ resources PenEditorDemo {
                               Height          = 420,
                               Padding         = (20),
                               Fill      = @SurfaceContainer,
-                              BorderBrush     = @OutlineVariant,
+                              Stroke     = Pen [ Brush = @OutlineVariant ],
                               BorderThickness = (1),
                               CornerRadius    = 8 ] {
                             Ellipse [ Width = 480, Height = 380, Stroke = $Pen ]

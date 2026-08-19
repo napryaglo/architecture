@@ -4,7 +4,7 @@ import { ColorPicker } from "@pragmatic-lab/mural/framework";
 import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
 import { ComboBox } from "@pragmatic-lab/mural/framework/list/combo-box.js";
 import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontFamily, FontManager, FontSourceKind, FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontFamily, FontManager, FontSourceKind, FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_TextOnPathDemo = Symbol("TextOnPathDemo.ctor");
@@ -56,7 +56,7 @@ export class TextOnPathDemo extends ResourceDictionary {
             const _border9 = new Border();
             _border9.set_property_value(DockPanel.DockKey, Dock.Top);
             _border9.set_property_value(Border.PaddingKey, new Thickness(20, 12, 20, 12));
-            _border9.set_property_value(Border.BorderBrushKey, DynamicResource(_border9, "OutlineVariant"));
+            _border9.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border9.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
             const _stackPanel10 = new StackPanel();
             _stackPanel10.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
@@ -191,7 +191,7 @@ export class TextOnPathDemo extends ResourceDictionary {
             _border36.set_property_value(Border.PaddingKey, new Thickness(20, 20, 20, 20));
             const _border37 = new Border();
             _border37.set_property_value(Border.FillKey, DynamicResource(_border37, "Surface"));
-            _border37.set_property_value(Border.BorderBrushKey, DynamicResource(_border37, "OutlineVariant"));
+            _border37.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border37.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border37.set_property_value(Border.PaddingKey, new Thickness(0));
             _canvas1 = new Canvas();

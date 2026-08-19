@@ -9,7 +9,7 @@ import ButtonGroupVM from "./button-group-vm.mjs"
 
 resources ButtonGroupDemo {
     DataTemplate [DataType = ButtonGroupVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             DockPanel {
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock

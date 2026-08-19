@@ -46,7 +46,7 @@ resources WordToolboxDemo {
     // — the tile itself fills its 100×100 cell, so the ListBoxItem's
     // selection chrome (PART_Border) aligns with the painted border.
     DataTemplate [DataType = WordVM] {
-        Border [ BorderBrush = @Outline, BorderThickness = (1) ] {
+        Border [ Stroke = Pen [ Brush = @Outline ], BorderThickness = (1) ] {
             TextBlock
                 [ Text                = $Word,
                   FontSize            = 14,
@@ -105,7 +105,7 @@ resources WordToolboxDemo {
     DataTemplate [DataType = WordToolboxVM] {
         Border x:root
             [ Fill      = @SurfaceContainerLow,
-              BorderBrush     = @OutlineVariant,
+              Stroke     = Pen [ Brush = @OutlineVariant ],
               BorderThickness = (1) ] {
             resources: {
                 // Left-pane drag source. The toolbox is an ItemsControl
@@ -161,7 +161,7 @@ resources WordToolboxDemo {
                     // StackPanel inside a ScrollViewer.
                     Border
                         [ DockPanel.Dock  = Left,
-                          BorderBrush     = @OutlineVariant,
+                          Stroke     = Pen [ Brush = @OutlineVariant ],
                           BorderThickness = (0,0,1,0) ] {
                         DockPanel {
                             Border
@@ -185,7 +185,7 @@ resources WordToolboxDemo {
                     // RIGHT — listbox. Virtualizing WrapPanel hosting
                     // 2000 tiles. ListReorderBehavior auto-detects
                     // wrap mode from the panel instance.
-                    Border [ BorderBrush = @OutlineVariant, BorderThickness = (0) ] {
+                    Border [ Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (0) ] {
                         DockPanel {
                             Border
                                 [ DockPanel.Dock = Top,

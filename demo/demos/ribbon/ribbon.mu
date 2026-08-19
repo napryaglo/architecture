@@ -131,7 +131,7 @@ resources RibbonDemo {
             Border
                 [ DockPanel.Dock  = Bottom,
                   Fill      = @SurfaceContainerLow,
-                  BorderBrush     = @OutlineVariant,
+                  Stroke     = Pen [ Brush = @OutlineVariant ],
                   BorderThickness = (0,1,0,0),
                   Padding         = (12,6,12,6) ] {
                 TextBlock [ Text = $Status, Foreground = @OnSurfaceVariant, Style = @LabelMedium ]

@@ -1,7 +1,7 @@
 import { DashboardVM } from "./dashboard-vm.mjs";
 import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
 import { Color, CornerRadius, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@pragmatic-lab/mural/runtime";
-import { SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_DashboardDemo = Symbol("DashboardDemo.ctor");
@@ -15,7 +15,7 @@ export class DashboardDemo extends ResourceDictionary {
     static Clone() {
         const t = new DashboardDemo(_gate_DashboardDemo);
         const _setter0 = new Setter(Border, "Fill", new SolidColorBrush(Color.FromHex('#4caf50')));
-        const _setter1 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#1b5e20')));
+        const _setter1 = new Setter(Border, "Stroke", ((_e) => { _e.Brush = new SolidColorBrush(Color.FromHex('#1b5e20')); return _e; })(new Pen()));
         const _setter2 = new Setter(Border, "BorderThickness", new Thickness(2));
         const _setter3 = new Setter(Border, "CornerRadius", new CornerRadius(8));
         const _setter4 = new Setter(Border, "Padding", new Thickness(16));
@@ -30,7 +30,7 @@ export class DashboardDemo extends ResourceDictionary {
         const _style13 = new Style(Border, [_setter0, _setter1, _setter2, _setter3, _setter4], undefined, [_trigger8, _trigger12], []);
         t.Set("DashboardPrimaryCard", _style13);
         const _setter14 = new Setter(Border, "Fill", new SolidColorBrush(Color.FromHex('#d32f2f')));
-        const _setter15 = new Setter(Border, "BorderBrush", new SolidColorBrush(Color.FromHex('#7f0000')));
+        const _setter15 = new Setter(Border, "Stroke", ((_e) => { _e.Brush = new SolidColorBrush(Color.FromHex('#7f0000')); return _e; })(new Pen()));
         const _setter16 = new Setter(Border, "BorderThickness", new Thickness(2));
         const _setter17 = new Setter(Border, "CornerRadius", new CornerRadius(8));
         const _setter18 = new Setter(Border, "Padding", new Thickness(16));
@@ -45,7 +45,7 @@ export class DashboardDemo extends ResourceDictionary {
         const _style27 = new Style(Border, [_setter14, _setter15, _setter16, _setter17, _setter18], undefined, [_trigger22, _trigger26], []);
         t.Set("DashboardDangerCard", _style27);
         const _setter28 = new Setter(Border, "Fill", new SetterFactory((_t) => DynamicResource(_t, "Surface")));
-        const _setter29 = new Setter(Border, "BorderBrush", new SetterFactory((_t) => DynamicResource(_t, "OutlineVariant")));
+        const _setter29 = new Setter(Border, "Stroke", ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
         const _setter30 = new Setter(Border, "BorderThickness", new Thickness(1));
         const _setter31 = new Setter(Border, "CornerRadius", new CornerRadius(6));
         const _setter32 = new Setter(Border, "Padding", new Thickness(20));

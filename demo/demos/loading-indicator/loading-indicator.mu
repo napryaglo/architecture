@@ -15,7 +15,7 @@ import LoadingIndicatorVM from "./loading-indicator-vm.mjs"
 
 resources LoadingIndicatorDemo {
     DataTemplate [DataType = LoadingIndicatorVM] {
-        Border [ Fill = @Surface, BorderBrush = @OutlineVariant, BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
             StackPanel [ Orientation = Vertical, Margin = (32,32,32,32) ] {
                 TextBlock
                     [ Text       = "LoadingIndicator — M3's \"still working\" spinner (variable-amplitude sweep)",

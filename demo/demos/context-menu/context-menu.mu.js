@@ -2,7 +2,7 @@ import { ContextMenuVM } from "./context-menu-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
 import { ContextMenu, ContextMenuService, MenuItem, MenuSeparator } from "@pragmatic-lab/mural/framework/surface.js";
 import { Color, DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_ContextMenuDemo = Symbol("ContextMenuDemo.ctor");
@@ -75,7 +75,7 @@ export class ContextMenuDemo extends ResourceDictionary {
         const _tmpl15 = new DataTemplate((_data) => {
             const _border16 = new Border();
             _border16.set_property_value(Border.FillKey, DynamicResource(_border16, "Surface"));
-            _border16.set_property_value(Border.BorderBrushKey, DynamicResource(_border16, "OutlineVariant"));
+            _border16.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border16.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel17 = new DockPanel();
             const _border18 = new Border();

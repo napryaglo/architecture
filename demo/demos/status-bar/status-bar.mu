@@ -20,7 +20,7 @@ resources StatusBarDemo {
     DataTemplate [DataType = StatusBarVM] {
         Border
             [ Fill        = @Surface,
-              BorderBrush       = @OutlineVariant,
+              Stroke       = Pen [ Brush = @OutlineVariant ],
               BorderThickness   = (1),
               CornerRadius      = 4,
               VerticalAlignment = Top,

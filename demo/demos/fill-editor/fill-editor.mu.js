@@ -2,7 +2,7 @@ import { FillEditorDemoVM } from "./fill-editor-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, Rectangle, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
 import { FillEditor } from "@pragmatic-lab/mural/framework";
 import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_FillEditorDemo = Symbol("FillEditorDemo.ctor");
@@ -43,7 +43,7 @@ export class FillEditorDemo extends ResourceDictionary {
             const _border7 = new Border();
             _border7.set_property_value(DockPanel.DockKey, Dock.Bottom);
             _border7.set_property_value(Border.FillKey, DynamicResource(_border7, "SurfaceContainerLow"));
-            _border7.set_property_value(Border.BorderBrushKey, DynamicResource(_border7, "OutlineVariant"));
+            _border7.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border7.set_property_value(Border.BorderThicknessKey, new Thickness(0, 1, 0, 0));
             _border7.set_property_value(Border.PaddingKey, new Thickness(20, 10, 20, 10));
             const _textBlock8 = new TextBlock();
@@ -61,7 +61,7 @@ export class FillEditorDemo extends ResourceDictionary {
             _border11.set_property_value(Border.WidthKey, 380);
             _border11.set_property_value(Border.PaddingKey, new Thickness(16, 16, 16, 16));
             _border11.set_property_value(Border.FillKey, DynamicResource(_border11, "SurfaceContainerLow"));
-            _border11.set_property_value(Border.BorderBrushKey, DynamicResource(_border11, "OutlineVariant"));
+            _border11.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border11.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border11.set_property_value(Border.CornerRadiusKey, 8);
             _border11.set_property_value(Border.MarginKey, new Thickness(0, 0, 20, 0));
@@ -84,7 +84,7 @@ export class FillEditorDemo extends ResourceDictionary {
             _border15.set_property_value(Border.HeightKey, 420);
             _border15.set_property_value(Border.PaddingKey, new Thickness(20));
             _border15.set_property_value(Border.FillKey, DynamicResource(_border15, "SurfaceContainer"));
-            _border15.set_property_value(Border.BorderBrushKey, DynamicResource(_border15, "OutlineVariant"));
+            _border15.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border15.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border15.set_property_value(Border.CornerRadiusKey, 8);
             const _rectangle16 = new Rectangle();

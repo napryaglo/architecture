@@ -135,7 +135,7 @@ export class CommandsDemo extends ResourceDictionary {
                 let _stackPanel33, _border34, _diagram35;
                 const _border36 = new Border();
                 _border36.set_property_value(Border.FillKey, DynamicResource(_border36, "Surface"));
-                _border36.set_property_value(Border.BorderBrushKey, DynamicResource(_border36, "OutlineVariant"));
+                _border36.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
                 _border36.set_property_value(Border.BorderThicknessKey, new Thickness(1));
                 const _dockPanel37 = new DockPanel();
                 const _border38 = new Border();
@@ -164,7 +164,7 @@ export class CommandsDemo extends ResourceDictionary {
                 _stackPanel33.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
                 const _border42 = new Border();
                 _border42.set_property_value(Border.FillKey, DynamicResource(_border42, "SurfaceContainerLow"));
-                _border42.set_property_value(Border.BorderBrushKey, DynamicResource(_border42, "OutlineVariant"));
+                _border42.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
                 _border42.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
                 _border42.set_property_value(Border.PaddingKey, new Thickness(8, 6, 8, 6));
                 const _stackPanel43 = new StackPanel();
@@ -240,7 +240,7 @@ export class CommandsDemo extends ResourceDictionary {
                 const _border59 = new Border();
                 _border59.set_property_value(DockPanel.DockKey, Dock.Top);
                 _border59.set_property_value(Border.FillKey, DynamicResource(_border59, "Surface"));
-                _border59.set_property_value(Border.BorderBrushKey, DynamicResource(_border59, "OutlineVariant"));
+                _border59.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
                 _border59.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
                 const _toolBar60 = new ToolBar();
                 const _toolBarButton61 = new ToolBarButton();

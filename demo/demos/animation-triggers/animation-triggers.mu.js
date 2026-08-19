@@ -2,7 +2,7 @@ import { AnimationTriggersVM } from "./animation-triggers-vm.mjs";
 import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
 import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
 import { BeginStoryboardAction, Color, DoubleAnimation, DynamicResource, EventTrigger, NameScope, PropertyTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_AnimationTriggersDemo = Symbol("AnimationTriggersDemo.ctor");
@@ -20,7 +20,7 @@ export class AnimationTriggersDemo extends ResourceDictionary {
             const _border3 = new Border();
             _border3.SetNameScope(new NameScope());
             _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Surface"));
-            _border3.set_property_value(Border.BorderBrushKey, DynamicResource(_border3, "OutlineVariant"));
+            _border3.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
             _border3.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd4 = _border3.Resources;
             const _act6 = new BeginStoryboardAction((_target) => {
