@@ -61,7 +61,7 @@ import { DiagramSettings } from './diagram-settings.js';
 // per-instance basis via the fromKind / fromSource factories.
 
 // Figure DP names whose change should re-resolve the label's {field} tokens.
-const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width', 'Height', 'Kind', 'Id']);
+const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width', 'Height', 'Id']);
 
 // Default fill for a fresh Figure. Tuned to read on @Surface in both Material
 // light / dark schemes. Consumers replace by assignment. Stroke width comes
@@ -100,8 +100,6 @@ export interface FigureFromSourceOptions
 {
     readonly width?:  number;
     readonly height?: number;
-    /** Optional kind label for serialization round-trip. */
-    readonly kind?:   string;
 }
 
 export class Figure extends ContentControl implements ISideEndpointHost
@@ -118,12 +116,6 @@ export class Figure extends ContentControl implements ISideEndpointHost
     
     public static readonly TopKey = Model.RegisterProperty<number>(
         Figure, 'Top', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
-
-    // Catalog key — populated when the figure was constructed via
-    // fromKind() or when a catalog-known kind was passed to fromSource().
-    // Empty string for combined-geometry figures (boolean ops).
-    public static readonly KindKey = Model.RegisterProperty<string>(
-        Figure, 'Kind', '', MetaData.None);
 
     // Fill brush and Stroke pen are inherited from Visual (Visual.Fill /
     // Visual.Stroke). Figure's historic Fill default rides on the
@@ -242,15 +234,15 @@ export class Figure extends ContentControl implements ISideEndpointHost
         f.Width  = options?.width  ?? DiagramSettings.ShapeDefaultSize();
         f.Height = options?.height ?? DiagramSettings.ShapeDefaultSize();
         f._source = source;
-        if (options?.kind !== undefined) f.set_property_value(Figure.KindKey, options.kind);
         f._rebuildGeometry();
         return f;
     }
 
-    /** @internal — used by fromKind and by Load paths that have a cached source. */
-    public _setKindFromCatalog(kind: string, source: PathGeometry): void
+    /** @internal — used by fromKind and by Load paths that have a cached source.
+     *  `kind` selects the catalog entry at the call site; it is no longer stored
+     *  (Figure carries no Kind — every figure realizes uniformly from _source). */
+    public _setKindFromCatalog(_kind: string, source: PathGeometry): void
     {
-        this.set_property_value(Figure.KindKey, kind);
         this._source = source;
         this._rebuildGeometry();
     }
@@ -439,7 +431,6 @@ export class Figure extends ContentControl implements ISideEndpointHost
             case FieldKind.Height: return String(Math.round(this.Height));
             case FieldKind.Left:   return String(Math.round(this.Left));
             case FieldKind.Top:    return String(Math.round(this.Top));
-            case FieldKind.Kind:   return this.Kind;
             case FieldKind.Id:     return this.Id ?? '';
             default:               return undefined;
         }
@@ -450,8 +441,6 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public get Top(): number        { return this.get_property_value(Figure.TopKey); }
     public set Top(value: number)   { this.set_property_value(Figure.TopKey, value); }
 
-    public get Kind(): string                  { return this.get_property_value(Figure.KindKey); }
-    public set Kind(value: string)             { this.set_property_value(Figure.KindKey, value); }
     // Read-only view of the scaled silhouette (was a DP). Kept because the port
     // resolver's outline mode reads `host.Geometry` (see port.ts / PortResolver);
     // the stored state now lives in _shape, driven by the geometry seams below.
@@ -486,7 +475,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
     {
         const explicit = this.ExplicitPorts;
         if (explicit !== undefined) return explicit;
-        const provider = this.PortProvider ?? resolveDefaultPortProvider(this);
+        const provider = this.PortProvider ?? resolveDefaultPortProvider();
         return provider.GetPorts(this);
     }
 

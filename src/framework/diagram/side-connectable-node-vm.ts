@@ -32,7 +32,7 @@ export class SideConnectableNodeVM extends NodeViewModel implements ISideEndpoin
 
     public get Ports(): readonly Port[]
     {
-        return resolveDefaultPortProvider(this).GetPorts(this);
+        return resolveDefaultPortProvider().GetPorts(this);
     }
 
     // IPortHost surface — bbox port resolution reads ArrangedRect; also the
