@@ -5,7 +5,7 @@ import {
     Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { Color, FontWeight, SolidColorBrush, type Brush } from '../../visual-engine/index.js';
+import { Color, FontWeight, SolidColorBrush } from '../../visual-engine/index.js';
 import { Control } from './control.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { TextBlock, TextWrapping } from '../../basic/text-block.js';
@@ -34,15 +34,13 @@ export class ContentControl extends Control
         ContentControl, 'Content', undefined, MetaData.Measure);
 
     // Border chrome (WPF Control parity): the default template wraps its
-    // ContentPresenter in a Border whose Fill / BorderBrush /
-    // BorderThickness TemplateBind to the control. `Fill` already rides on
-    // Visual, so only the two border DPs are declared here — same shape as
-    // Border's own. A bare ContentControl leaves them unset (transparent brush,
-    // zero thickness → no visible chrome); a consumer sets them to give the
-    // content host a background/outline without a bespoke template.
-    public static readonly BorderBrushKey = Model.RegisterProperty<Brush | undefined>(
-        ContentControl, 'BorderBrush', undefined, MetaData.Render);
-
+    // ContentPresenter in a Border whose Fill / Stroke / BorderThickness
+    // TemplateBind to the control. `Fill` and `Stroke` already ride on Visual
+    // (the library-wide Fill/Stroke chrome standard), so only BorderThickness
+    // is declared here. A bare ContentControl leaves them unset (transparent
+    // brush, zero thickness → no visible chrome); a consumer sets Fill / Stroke
+    // / BorderThickness to give the content host a background/outline without a
+    // bespoke template.
     public static readonly BorderThicknessKey = Model.RegisterProperty<Thickness>(
         ContentControl, 'BorderThickness', Thickness.Zero,
         MetaData.Measure | MetaData.Arrange | MetaData.Render);
@@ -63,9 +61,6 @@ export class ContentControl extends Control
 
     public get ReuseContentViews(): boolean { return this.get_property_value(ContentControl.ReuseContentViewsKey); }
     public set ReuseContentViews(v: boolean) { this.set_property_value(ContentControl.ReuseContentViewsKey, v); }
-
-    public get BorderBrush(): Brush | undefined  { return this.get_property_value(ContentControl.BorderBrushKey); }
-    public set BorderBrush(v: Brush | undefined) { this.set_property_value(ContentControl.BorderBrushKey, v); }
 
     public get BorderThickness(): Thickness  { return this.get_property_value(ContentControl.BorderThicknessKey); }
     public set BorderThickness(v: Thickness) { this.set_property_value(ContentControl.BorderThicknessKey, v); }
