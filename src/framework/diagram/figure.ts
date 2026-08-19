@@ -5,10 +5,11 @@ import {
     Rect,
     Size,
     Visual,
+    type DrawingContext,
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { type PathGeometry, type Point, Pen, SolidColorBrush } from '../../visual-engine/index.js';
+import { type Geometry, type PathGeometry, type Point, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { Color } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { Border } from '../../basic/border.js';
@@ -60,7 +61,7 @@ import { DiagramSettings } from './diagram-settings.js';
 // per-instance basis via the fromKind / fromSource factories.
 
 // Figure DP names whose change should re-resolve the label's {field} tokens.
-const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width', 'Height', 'Kind', 'Id']);
+const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width', 'Height', 'Id']);
 
 // Default fill for a fresh Figure. Tuned to read on @Surface in both Material
 // light / dark schemes. Consumers replace by assignment. Stroke width comes
@@ -99,8 +100,6 @@ export interface FigureFromSourceOptions
 {
     readonly width?:  number;
     readonly height?: number;
-    /** Optional kind label for serialization round-trip. */
-    readonly kind?:   string;
 }
 
 export class Figure extends ContentControl implements ISideEndpointHost
@@ -117,18 +116,6 @@ export class Figure extends ContentControl implements ISideEndpointHost
     
     public static readonly TopKey = Model.RegisterProperty<number>(
         Figure, 'Top', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
-
-    // Catalog key — populated when the figure was constructed via
-    // fromKind() or when a catalog-known kind was passed to fromSource().
-    // Empty string for combined-geometry figures (boolean ops).
-    public static readonly KindKey = Model.RegisterProperty<string>(
-        Figure, 'Kind', '', MetaData.None);
-
-    // The rendered PathGeometry — built from the catalog (kind-based) or
-    // parsed from a saved unit-1 source. Resize rebuilds it via
-    // scaleGeometry against the cached _source.
-    public static readonly GeometryKey = Model.RegisterProperty<PathGeometry | undefined>(
-        Figure, 'Geometry', undefined, MetaData.None);
 
     // Fill brush and Stroke pen are inherited from Visual (Visual.Fill /
     // Visual.Stroke). Figure's historic Fill default rides on the
@@ -191,6 +178,15 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // state, so a plain field instead of a DP.
     private _source: PathGeometry | undefined = undefined;
 
+    // The scaled silhouette this Figure paints and clips its children to,
+    // rebuilt from _source on resize. Replaces the old Geometry DP; surfaced
+    // through the buildPaintGeometry / buildChildClipGeometry / buildClipGeometry
+    // seams so the inherited Visual paints it (crisp own stroke) and ChildClip
+    // masks the label/content to it. Never routed through the raw Clip DP — that
+    // masks own paint too and would shave the stroke, with no arbitrary-path
+    // inset to compensate.
+    private _shape: PathGeometry | undefined = undefined;
+
     // Group back-reference. undefined ≡ "top-level". Set by Group when a
     // Figure is added to its Members. Typed via a type-only import to
     // break the figure ↔ group module cycle at runtime; structurally
@@ -238,15 +234,15 @@ export class Figure extends ContentControl implements ISideEndpointHost
         f.Width  = options?.width  ?? DiagramSettings.ShapeDefaultSize();
         f.Height = options?.height ?? DiagramSettings.ShapeDefaultSize();
         f._source = source;
-        if (options?.kind !== undefined) f.set_property_value(Figure.KindKey, options.kind);
         f._rebuildGeometry();
         return f;
     }
 
-    /** @internal — used by fromKind and by Load paths that have a cached source. */
-    public _setKindFromCatalog(kind: string, source: PathGeometry): void
+    /** @internal — used by fromKind and by Load paths that have a cached source.
+     *  `kind` selects the catalog entry at the call site; it is no longer stored
+     *  (Figure carries no Kind — every figure realizes uniformly from _source). */
+    public _setKindFromCatalog(_kind: string, source: PathGeometry): void
     {
-        this.set_property_value(Figure.KindKey, kind);
         this._source = source;
         this._rebuildGeometry();
     }
@@ -435,7 +431,6 @@ export class Figure extends ContentControl implements ISideEndpointHost
             case FieldKind.Height: return String(Math.round(this.Height));
             case FieldKind.Left:   return String(Math.round(this.Left));
             case FieldKind.Top:    return String(Math.round(this.Top));
-            case FieldKind.Kind:   return this.Kind;
             case FieldKind.Id:     return this.Id ?? '';
             default:               return undefined;
         }
@@ -446,10 +441,10 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public get Top(): number        { return this.get_property_value(Figure.TopKey); }
     public set Top(value: number)   { this.set_property_value(Figure.TopKey, value); }
 
-    public get Kind(): string                  { return this.get_property_value(Figure.KindKey); }
-    public set Kind(value: string)             { this.set_property_value(Figure.KindKey, value); }
-    public get Geometry(): PathGeometry | undefined  { return this.get_property_value(Figure.GeometryKey); }
-    public set Geometry(value: PathGeometry | undefined) { this.set_property_value(Figure.GeometryKey, value); }
+    // Read-only view of the scaled silhouette (was a DP). Kept because the port
+    // resolver's outline mode reads `host.Geometry` (see port.ts / PortResolver);
+    // the stored state now lives in _shape, driven by the geometry seams below.
+    public get Geometry(): PathGeometry | undefined  { return this._shape; }
     public get SizeToContent(): boolean        { return this.get_property_value(Figure.SizeToContentKey); }
     public set SizeToContent(value: boolean)   { this.set_property_value(Figure.SizeToContentKey, value); }
     public get UserSized(): boolean            { return this.get_property_value(Figure.UserSizedKey); }
@@ -480,7 +475,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
     {
         const explicit = this.ExplicitPorts;
         if (explicit !== undefined) return explicit;
-        const provider = this.PortProvider ?? resolveDefaultPortProvider(this);
+        const provider = this.PortProvider ?? resolveDefaultPortProvider();
         return provider.GetPorts(this);
     }
 
@@ -619,8 +614,51 @@ export class Figure extends ContentControl implements ISideEndpointHost
 
     private _rebuildGeometry(): void
     {
-        if (this._source === undefined) return;
-        this.set_property_value(Figure.GeometryKey, scaleGeometry(this._source, this.Width, this.Height));
+        if (this._source === undefined)
+        {
+            this._shape = undefined;
+            this.ClipChildren = false;
+            return;
+        }
+        this._shape = scaleGeometry(this._source, this.Width, this.Height);
+        // Clip content + label to the silhouette (own paint stays crisp — see the
+        // seams below). Re-arrange to rebuild ChildClip from the new _shape, and
+        // repaint the own silhouette (both were driven by the old MetaData on the
+        // Geometry DP / the inner Shape; _shape is a plain field, so invalidate).
+        this.ClipChildren = this._shape !== undefined;
+        this.InvalidateArrange();
+        this.InvalidateVisual();
+    }
+
+    // The silhouette drives own paint (buildPaintGeometry → inherited
+    // Visual.RenderOverride draws Fill + Stroke over it), the children-only clip
+    // (buildChildClipGeometry, applied via ClipChildren), and hit / clip-to-bounds
+    // (buildClipGeometry). No inset is applied to the paint geometry: own paint is
+    // NOT self-clipped (the raw Clip DP is never set), so a centred stroke straddles
+    // the outline exactly as a Shape primitive does. All three fall back to super
+    // when there is no shape (a neutral container Figure).
+    protected override buildPaintGeometry(size: Size, inset: number): Geometry
+    {
+        return this._shape ?? super.buildPaintGeometry(size, inset);
+    }
+
+    protected override buildChildClipGeometry(size: Size): Geometry | undefined
+    {
+        return this._shape ?? super.buildChildClipGeometry(size);
+    }
+
+    protected override buildClipGeometry(size: Size): Geometry
+    {
+        return this._shape ?? super.buildClipGeometry(size);
+    }
+
+    // Paint the silhouette as own paint. Guard: a neutral container Figure (no
+    // _source → no _shape) paints nothing, rather than the base bounds rect —
+    // which also removes the historic stray-rect-behind-the-shape artifact.
+    protected override RenderOverride(dc: DrawingContext): void
+    {
+        if (this._shape === undefined) return;
+        super.RenderOverride(dc);
     }
 
     protected override OnPropertyChanged(

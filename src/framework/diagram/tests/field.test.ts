@@ -68,10 +68,9 @@ describe('Field — Figure reactivity', () => {
 
     test('identity fields resolve too', () => {
         const f = new Figure();
-        f.Kind = 'diamond';
         f.Id   = 'n7';
-        f.Text.Document = documentWithFields('{Kind}#{Id}');
-        assert.equal(flowDocumentToPlainText(f.Text.Document), 'diamond#n7');
+        f.Text.Document = documentWithFields('id={Id}');
+        assert.equal(flowDocumentToPlainText(f.Text.Document), 'id=n7');
     });
 });
 

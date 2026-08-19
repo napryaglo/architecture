@@ -11,29 +11,17 @@
 resources Diagrams {
     // ── Figure: per-item shape host ────────────────────────────────
     //
-    // Template = Canvas { Shape + PART_LabelHost }. The Shape primitive
-    // paints the Figure's Geometry / Fill / Stroke; PART_LabelHost hosts the
-    // Figure's ShapeText block (Figure.Text), slotted after applyDefaultStyle.
-    // Width / Height template-bind to the Figure's measured size so a resize
-    // re-paints both at the new dimensions (Figure._rebuildGeometry re-scales
-    // the unit-1 source into Geometry whenever Width / Height change, so the
-    // Shape's Geometry binding fires in lock-step with the dimensional
-    // bindings).
-    //
-    // No ContentPresenter — the framework's intended use is items-are-
-    // Figures (data and visual fused). The fallback wrap-non-Figure
-    // path in Diagram.GetContainerForItemOverride sets Content but the
-    // shape painted is the Figure's own, not the wrapped value; the
-    // unused Content there is a known wart inherited from earlier
-    // iterations and not in scope for this template.
+    // Template = Canvas { PART_Content + PART_LabelHost }. The Figure paints its
+    // OWN silhouette via the inherited Visual paint path (buildPaintGeometry =
+    // the scaled shape), so there is no inner Shape primitive. PART_Content hosts
+    // the (wrapped-VM) content and PART_LabelHost hosts the Figure's ShapeText
+    // block (Figure.Text), slotted after applyDefaultStyle. Both are children, so
+    // the Figure's ChildClip (ClipChildren, built from the same silhouette in
+    // Figure._rebuildGeometry) masks them to the shape while the own stroke keeps
+    // painting. Width / Height template-bind to the measured size so a resize
+    // re-lays the content; the silhouette re-scales in _rebuildGeometry.
     Template x:key="DefaultFigure" [TargetType = Figure] {
         Canvas {
-            Shape x:name="PART_Shape"
-                [ Geometry = $$Geometry,
-                  Fill     = $$Fill,
-                  Stroke   = $$Stroke,
-                  Width    = $$Width,
-                  Height   = $$Height ]
             ContentPresenter x:name="PART_Content"
                 [ Width = $$Width, Height = $$Height, IsHitTestVisible = false ]
             // Text-block host. Figure slots its own ShapeText instance

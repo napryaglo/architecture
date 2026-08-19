@@ -226,58 +226,25 @@ describe('CustomPortProvider', () => {
 
 // ── resolveDefaultPortProvider ───────────────────────────────────────
 
-describe('resolveDefaultPortProvider — kind dispatch', () => {
-    test('rectangle → BoundingBoxPorts(portsPerSide=1)', () => {
-        const provider = resolveDefaultPortProvider({ Kind: 'rectangle' });
-        // 4 ports at midpoints — checks dispatch via output shape rather
-        // than instanceof (the kind→provider map could swap impls).
-        const ports = provider.GetPorts(HOST(new Rect(0, 0, 100, 100)));
-        assert.equal(ports.length, 4);
-    });
-
-    test('ellipse → RadialPorts(count=4)', () => {
-        const provider = resolveDefaultPortProvider({ Kind: 'ellipse' });
-        const ports = provider.GetPorts(HOST(Rect.Zero));
-        assert.equal(ports.length, 4);
-        // RadialPorts emits Auto side; BoundingBoxPorts emits explicit
-        // cardinals. Discriminates the two impls without instanceof.
-        assert.equal(ports[0]!.Side, PortSide.Auto);
-    });
-
-    test('triangle → VertexPorts(includeMidpoints=false)', () => {
-        const host = HOST(new Rect(0, 0, 100, 100), unitTriangleGeometry());
-        const provider = resolveDefaultPortProvider({ Kind: 'triangle' });
-        // VertexPorts on a triangle: 3 vertices, no midpoints.
-        assert.equal(provider.GetPorts(host).length, 3);
-    });
-
-    test('heart → CustomPortProvider with 3 anatomical named ports', () => {
-        const provider = resolveDefaultPortProvider({ Kind: 'heart' });
-        const ports = provider.GetPorts(HOST(Rect.Zero));
-        assert.equal(ports.length, 3);
-        const names = ports.map(p => p.Name);
-        assert.deepEqual(names, ['top-left', 'top-right', 'bottom']);
-        // Outline-mode ports — exercises the cross-CoordSpace mix.
-        for (const p of ports) assert.equal(p.CoordSpace, PortCoordSpace.Outline);
-    });
-
-    test('unknown kind falls through to BoundingBoxPorts default', () => {
-        const provider = resolveDefaultPortProvider({ Kind: 'utterly-unknown' });
-        assert.equal(provider.GetPorts(HOST(Rect.Zero)).length, 4);
-    });
-
-    test('empty-Kind combined-geometry figures fall through to default', () => {
-        const provider = resolveDefaultPortProvider({ Kind: '' });
-        assert.equal(provider.GetPorts(HOST(Rect.Zero)).length, 4);
+describe('resolveDefaultPortProvider — bbox for all', () => {
+    // Figures are uniform (no Kind), so the default topology is bounding-box
+    // (1 port per side = 4) for every figure. Special topologies are opt-in via
+    // Figure.PortProvider.
+    test('returns bounding-box ports (4) regardless of shape', () => {
+        const provider = resolveDefaultPortProvider();
+        assert.ok(provider instanceof BoundingBoxPorts);
+        assert.equal(provider.GetPorts(HOST(new Rect(0, 0, 100, 100))).length, 4);
+        // Explicit cardinals (not RadialPorts' Auto) — confirms the bbox impl.
+        assert.notEqual(provider.GetPorts(HOST(new Rect(0, 0, 100, 100)))[0]!.Side, PortSide.Auto);
     });
 });
 
 // ── Figure.Ports integration ─────────────────────────────────────────
 
 describe('Figure.Ports — precedence', () => {
-    test('default Figure (no explicit, no provider) routes through resolveDefaultPortProvider by Kind', () => {
+    test('default Figure (no explicit, no provider) routes through resolveDefaultPortProvider', () => {
         const fig = Figure.fromKind('rectangle', 0, 0);
-        // rectangle → BoundingBoxPorts → 4 ports.
+        // bbox default → 4 ports.
         assert.equal(fig.Ports.length, 4);
     });
 
@@ -316,14 +283,5 @@ describe('Figure.Ports — precedence', () => {
         assert.equal(fig.Ports.length, 1);
         fig.PortProvider = undefined;
         assert.equal(fig.Ports.length, 4);   // BoundingBoxPorts default
-    });
-
-    test('Kind change re-dispatches the default provider', () => {
-        // Manually flip Kind via the DP. heart's CustomPortProvider
-        // emits 3 ports — rectangle's BoundingBoxPorts emits 4.
-        const fig = Figure.fromKind('rectangle', 0, 0);
-        assert.equal(fig.Ports.length, 4);
-        fig.Kind = 'heart';
-        assert.equal(fig.Ports.length, 3);
     });
 });
