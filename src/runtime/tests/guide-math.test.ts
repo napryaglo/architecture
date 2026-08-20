@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { Rect } from '../../visual-engine/primitives.js';
 import { AlignmentAxis, EdgeKind } from '../alignment-math.js';
 import {
-    snapGuidePosition, snapRectToGuides, chooseTickInterval, ticksInRange,
+    snapGuidePosition, snapRectToGuides, chooseTickInterval, ticksInRange, guideCursorFor,
     type PersistentGuide,
 } from '../guide-math.js';
 
@@ -36,6 +36,15 @@ describe('snapRectToGuides', () => {
         const res = snapRectToGuides(r, guides, 5);
         assert.equal(res.snapped.X, 0);
         assert.equal(res.x, undefined);
+    });
+});
+
+describe('guideCursorFor', () => {
+    test('a vertical (X) guide slides horizontally -> ew-resize', () => {
+        assert.equal(guideCursorFor(AlignmentAxis.X), 'ew-resize');
+    });
+    test('a horizontal (Y) guide slides vertically -> ns-resize', () => {
+        assert.equal(guideCursorFor(AlignmentAxis.Y), 'ns-resize');
     });
 });
 

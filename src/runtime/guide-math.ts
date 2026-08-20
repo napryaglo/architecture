@@ -21,6 +21,24 @@ export interface PersistentGuide
     readonly glued:    readonly GuideGlue[];
 }
 
+// A transient placement hint: where a guide WOULD land if the user dragged out
+// right now (the hover preview line). Just an axis + content position — no glue.
+export interface GuidePreview
+{
+    readonly axis:     AlignmentAxis;
+    readonly position: number;
+}
+
+// The CSS cursor that advertises "drag here to move a guide of this axis". A
+// vertical guide (X) slides horizontally → ew-resize; a horizontal guide (Y)
+// slides vertically → ns-resize. Shared by the ruler strips and the in-canvas
+// create-band hover so both agree. Freeform CSS string (like Splitter's cursor),
+// not an enum — Visual.Cursor is an open CSS value.
+export function guideCursorFor(axis: AlignmentAxis): string
+{
+    return axis === AlignmentAxis.X ? 'ew-resize' : 'ns-resize';
+}
+
 const DEFAULT_TOLERANCE = 5;
 const EDGES: readonly EdgeKind[] = [EdgeKind.Min, EdgeKind.Mid, EdgeKind.Max];
 

@@ -7,6 +7,7 @@ import {
     Model,
     type ObservableCollection,
     type PersistentGuide,
+    type GuidePreview,
     Rect,
     Visibility,
     type KeyEventArgs,
@@ -340,6 +341,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly SelectedGuideKey = Model.RegisterProperty<number>(
         Diagram, 'SelectedGuide', -1, MetaData.None);
 
+    // Transient hover placement hint: where a guide would land if the user dragged
+    // out right now, or undefined when not over a drag-out zone. The behavior sets
+    // it on idle pointer-move; the adorner subscribes to paint the faint preview
+    // line. Never persisted (view-only).
+    public static readonly GuidePreviewKey = Model.RegisterProperty<GuidePreview | undefined>(
+        Diagram, 'GuidePreview', undefined, MetaData.None);
+
     // Selection-resize opt-in. Default off. When flipped true, a
     // SelectionBoundsAdorner mounts in the ItemsPanel's AdornerLayer
     // and drives resize gestures through DiagramSelectionSource (which
@@ -504,6 +512,24 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         while (cur !== undefined) { ox += cur.ArrangedRect.X; oy += cur.ArrangedRect.Y; cur = cur.GetVisualParent(); }
         const z = this.Zoom || 1;
         return new Point((hostX - ox) / z, (hostY - oy) / z);
+    }
+
+    // The content coordinate at the viewport's top-left — the EFFECTIVE pan,
+    // read from the live arrange rather than ScrollX/ScrollY. When one axis'
+    // content fits the viewport, the ScrollViewer offset on that axis can stay
+    // non-zero (stale/unclamped) while the content actually sits at 0; mapping
+    // the scroll host's own screen origin through HostToContent recovers the true
+    // visible edge on both axes. Rulers + the guide create-band use this so they
+    // never trust a stale scroll offset.
+    public VisibleContentOrigin(): Point {
+        const sv = this.ScrollHost;
+        const z = this.Zoom || 1;
+        if (sv === undefined || this.ItemsPanelInstance === undefined)
+            return new Point(this.ScrollX / z, this.ScrollY / z);
+        let ax = 0, ay = 0;
+        let cur: Visual | undefined = sv as unknown as Visual;
+        while (cur !== undefined) { ax += cur.ArrangedRect.X; ay += cur.ArrangedRect.Y; cur = cur.GetVisualParent(); }
+        return this.HostToContent(ax, ay);
     }
 
     public get ZoomInCommand():         RelayCommand | undefined { return this.get_property_value(Diagram.ZoomInCommandKey); }
@@ -675,6 +701,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
 
     public get SelectedGuide(): number { return this.get_property_value(Diagram.SelectedGuideKey); }
     public set SelectedGuide(v: number) { this.set_property_value(Diagram.SelectedGuideKey, v); }
+
+    public get GuidePreview(): GuidePreview | undefined { return this.get_property_value(Diagram.GuidePreviewKey); }
+    public set GuidePreview(v: GuidePreview | undefined) { this.set_property_value(Diagram.GuidePreviewKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
     public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
     public get TextBlockAdornerEnabled():  boolean { return this.get_property_value(Diagram.TextBlockAdornerEnabledKey); }
@@ -1500,8 +1529,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         const feed = (): void => {
             const { top, left } = this._rulerParts();
             const vp = this._viewportSize();
-            if (top !== undefined)  { top.Zoom  = this.Zoom; top.Offset  = this.ScrollX; top.Extent  = vp.Width; }
-            if (left !== undefined) { left.Zoom = this.Zoom; left.Offset = this.ScrollY; left.Extent = vp.Height; }
+            // Offset the rulers by the EFFECTIVE pan (host px) so ticks line up
+            // with the content even when an axis' ScrollX/Y is stale (content fits).
+            const origin = this.VisibleContentOrigin();
+            const z = this.Zoom;
+            if (top !== undefined)  { top.Zoom  = z; top.Offset  = origin.X * z; top.Extent  = vp.Width; }
+            if (left !== undefined) { left.Zoom = z; left.Offset = origin.Y * z; left.Extent = vp.Height; }
         };
         feed();
         const scroll = this.ScrollHost;

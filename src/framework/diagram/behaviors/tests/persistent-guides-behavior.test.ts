@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, AlignmentAxis, EdgeKind, Key, Rect, Size, Visual, ObservableCollection, snapRectToGuides } from '../../../../runtime/index.js';
+import { Application, AlignmentAxis, EdgeKind, Key, Point, Rect, Size, Visual, ObservableCollection, snapRectToGuides } from '../../../../runtime/index.js';
 import { Border, ItemsPanelTemplate } from '../../../../basic/index.js';
 import { PaginatedCanvas } from '../../../../basic/panels/paginated-canvas.js';
 import { initTestApp } from '../../../../basic/tests/test-app.js';
@@ -133,6 +133,53 @@ describe('persistent-guides behavior — live interactions', () => {
         const { diagram } = setup();
         down(diagram, 400, 4, diagram);
         up(diagram, 400, 4, diagram);       // no move
+        assert.equal(diagram.Guides.length, 0);
+    });
+
+    test('hovering the top create band shows a resize cursor + Y preview line', () => {
+        const { diagram } = setup();
+        move(diagram, 400, 4, diagram);      // idle move into the top band (content y=4 <= 14)
+        assert.equal(diagram.Cursor, 'ns-resize');
+        assert.ok(diagram.GuidePreview !== undefined, 'preview published');
+        assert.equal(diagram.GuidePreview!.axis, AlignmentAxis.Y);
+        assert.ok(Math.abs(diagram.GuidePreview!.position - 4) < 1);
+    });
+
+    test('hovering an existing guide shows the grab cursor and no preview', () => {
+        const { diagram } = setup();
+        diagram.Guides = [{ axis: AlignmentAxis.X, position: 300, glued: [] }];
+        move(diagram, 300, 200, diagram);    // on the guide line, clear of the bands
+        assert.equal(diagram.Cursor, 'grab');
+        assert.equal(diagram.GuidePreview, undefined);
+    });
+
+    test('moving off any zone clears the hover cursor + preview', () => {
+        const { diagram } = setup();
+        move(diagram, 400, 4, diagram);      // arm hover in the band
+        assert.equal(diagram.Cursor, 'ns-resize');
+        move(diagram, 400, 300, diagram);    // empty canvas, away from bands + guides
+        assert.equal(diagram.Cursor, undefined);
+        assert.equal(diagram.GuidePreview, undefined);
+    });
+
+    test('the create band tracks the EFFECTIVE visible edge, not raw ScrollX/Y', () => {
+        const { diagram } = setup();
+        // Pretend the content pane's visible origin sits at content (50, 0) — e.g.
+        // horizontally panned — regardless of what a stale ScrollX would say.
+        (diagram as unknown as { VisibleContentOrigin(): Point }).VisibleContentOrigin = () => new Point(50, 0);
+
+        // A drag starting just inside the shifted left edge (content x in [50,64])
+        // pulls out a vertical guide.
+        down(diagram, 52, 300, diagram);
+        move(diagram, 61, 300, diagram);     // move >3 px along x so it "counts"
+        up(diagram, 61, 300, diagram);
+        assert.equal(diagram.Guides.length, 1);
+        assert.equal(diagram.Guides[0]!.axis, AlignmentAxis.X);
+
+        // A press left of the shifted edge (content x=10) is NOT in the band.
+        diagram.Guides = [];
+        down(diagram, 10, 300, diagram);
+        up(diagram, 10, 300, diagram);
         assert.equal(diagram.Guides.length, 0);
     });
 

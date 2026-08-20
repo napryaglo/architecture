@@ -1,6 +1,6 @@
 import {
     Rect, AlignmentAxis, EdgeKind, Key,
-    snapGuidePosition, snapRectToGuides,
+    snapGuidePosition, snapRectToGuides, guideCursorFor,
     type PointerEventArgs, type KeyEventArgs, type Visual, type PersistentGuide, type GuideGlue, type GuideSnap,
 } from '../../../runtime/index.js';
 import { Orientation } from '../../../basic/index.js';
@@ -33,6 +33,7 @@ export interface PersistentGuidesHandlers
 enum Mode { None, Create, Reposition, NodeDrag }
 
 const MOVE_THRESHOLD = 3;   // content px a create/reposition must travel to "count"
+const GRAB_CURSOR = 'grab'; // hover affordance over an existing (grabbable) guide
 
 /** @internal */
 export function attachPersistentGuides(diagram: Diagram): () => void
@@ -103,8 +104,12 @@ export function attachPersistentGuides(diagram: Diagram): () => void
     const createEdgeAxis = (p: { x: number; y: number }): AlignmentAxis | undefined => {
         const zoom = diagram.Zoom || 1;
         const m = DiagramSettings.GuideCreateMargin() / zoom;
-        const topD  = p.y - diagram.ScrollY / zoom;
-        const leftD = p.x - diagram.ScrollX / zoom;
+        // Measure from the EFFECTIVE visible edge (live arrange), not raw
+        // ScrollX/Y — a stale scroll offset on a fits-content axis would shift the
+        // band away from the real edge (that was the vertical-band-shifted bug).
+        const origin = diagram.VisibleContentOrigin();
+        const topD  = p.y - origin.Y;
+        const leftD = p.x - origin.X;
         const nearTop  = topD  >= 0 && topD  <= m;
         const nearLeft = leftD >= 0 && leftD <= m;
         if (nearTop && nearLeft) return topD <= leftD ? AlignmentAxis.Y : AlignmentAxis.X;
@@ -160,8 +165,39 @@ export function attachPersistentGuides(diagram: Diagram): () => void
         (diagram as unknown as { Focus?(): void }).Focus?.();
     };
 
+    // Clear the transient hover affordance (cursor + preview line).
+    const clearHover = (): void => {
+        if (diagram.Cursor !== undefined) diagram.Cursor = undefined;
+        if (diagram.GuidePreview !== undefined) diagram.GuidePreview = undefined;
+    };
+
+    // Idle pointer-move (no active gesture): advertise where a guide could be
+    // created / grabbed via the cursor + a faint preview line. Mirrors the
+    // onDown zone order so the affordance predicts exactly what a press would do.
+    const hover = (args: PointerEventArgs): void => {
+        // Over a ruler strip the RulerBar owns its own cursor — leave the canvas clean.
+        if (findAncestor(args.Source, RulerBar) !== undefined) { clearHover(); return; }
+        const p = contentPoint(args);
+        // Over an existing guide -> grab affordance (no preview; it already shows).
+        if (guideNear(p) >= 0) {
+            if (diagram.Cursor !== GRAB_CURSOR) diagram.Cursor = GRAB_CURSOR;
+            if (diagram.GuidePreview !== undefined) diagram.GuidePreview = undefined;
+            return;
+        }
+        // In a create band next to a ruler -> resize cursor + preview at the drop line.
+        const edge = createEdgeAxis(p);
+        if (edge !== undefined) {
+            const cursor = guideCursorFor(edge);
+            if (diagram.Cursor !== cursor) diagram.Cursor = cursor;
+            diagram.GuidePreview = { axis: edge, position: edge === AlignmentAxis.X ? p.x : p.y };
+            return;
+        }
+        clearHover();
+    };
+
     const onDown = (args: PointerEventArgs): void => {
         if (args.Handled) return;
+        clearHover();   // a gesture is starting; the committed guide (if any) takes over
         // 1) on a ruler -> create (top ruler -> Y guide, left ruler -> X guide)
         const ruler = findAncestor(args.Source, RulerBar);
         if (ruler !== undefined) {
@@ -193,6 +229,7 @@ export function attachPersistentGuides(diagram: Diagram): () => void
     };
 
     const onMove = (args: PointerEventArgs): void => {
+        if (mode === Mode.None) { hover(args); return; }
         if (mode !== Mode.Create && mode !== Mode.Reposition) return;
         const p = contentPoint(args);
         const raw = axis === AlignmentAxis.X ? p.x : p.y;
@@ -240,6 +277,7 @@ export function attachPersistentGuides(diagram: Diagram): () => void
     return (): void => {
         diagram._setPersistentGuidesHandlers(undefined);
         diagram.PositionSnap = previousSnap;
+        clearHover();
     };
 }
 

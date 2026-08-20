@@ -14,10 +14,13 @@ import { DiagramSettings } from '../diagram-settings.js';
 const POOL_SIZE = 64;
 const HIDE_OFFSCREEN = -10000;
 
+const PREVIEW_OPACITY = 0.4;   // the hover preview line reads as a faint ghost
+
 export class PersistentGuidesAdorner extends Adorner
 {
     private readonly _diagram: Diagram;
     private readonly _pool:    Border[] = [];
+    private readonly _preview: Border;
     private readonly _onChange: () => void;
 
     constructor(adornedElement: Visual, diagram: Diagram)
@@ -35,17 +38,24 @@ export class PersistentGuidesAdorner extends Adorner
             this.AttachVisual(v);
             this._pool.push(v);
         }
+        // The transient hover preview line — faint, driven by Diagram.GuidePreview.
+        this._preview = new Border();
+        this._preview.IsHitTestVisible = false;
+        this._preview.Opacity = PREVIEW_OPACITY;
+        this.AttachVisual(this._preview);
         this._onChange = (): void => this.InvalidateArrange();
         diagram.AddPropertyChangedListener(Diagram.GuidesKey, this._onChange);
         diagram.AddPropertyChangedListener(Diagram.SelectedGuideKey, this._onChange);
+        diagram.AddPropertyChangedListener(Diagram.GuidePreviewKey, this._onChange);
     }
 
-    public override get visualChildren(): Visual[] { return this._pool.slice(); }
+    public override get visualChildren(): Visual[] { return [...this._pool, this._preview]; }
 
     public override MeasureOverride(_available: Size): Size
     {
         const big = new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY);
         for (const v of this._pool) v.Measure(big);
+        this._preview.Measure(big);
         return Size.Zero;
     }
 
@@ -79,6 +89,28 @@ export class PersistentGuidesAdorner extends Adorner
         }
         for (let i = used; i < this._pool.length; i++)
             this._pool[i]!.Arrange(new Rect(HIDE_OFFSCREEN, HIDE_OFFSCREEN, 0, 0));
+
+        // The hover preview line (faint, distinct colour) at the would-be drop
+        // position, or parked off-screen when the pointer isn't over a create band.
+        const preview = this._diagram.GuidePreview;
+        if (preview !== undefined)
+        {
+            this._preview.Fill = DiagramSettings.PersistentGuidePreviewColor();
+            if (preview.axis === AlignmentAxis.X)
+            {
+                const x = m.IsIdentity ? preview.position : m.Transform(new Point(preview.position, 0)).X;
+                this._preview.Arrange(new Rect(x - baseThickness / 2, 0, baseThickness, H));
+            }
+            else
+            {
+                const y = m.IsIdentity ? preview.position : m.Transform(new Point(0, preview.position)).Y;
+                this._preview.Arrange(new Rect(0, y - baseThickness / 2, W, baseThickness));
+            }
+        }
+        else
+        {
+            this._preview.Arrange(new Rect(HIDE_OFFSCREEN, HIDE_OFFSCREEN, 0, 0));
+        }
         return finalSize;
     }
 
@@ -86,5 +118,6 @@ export class PersistentGuidesAdorner extends Adorner
     {
         this._diagram.RemovePropertyChangedListener(Diagram.GuidesKey, this._onChange);
         this._diagram.RemovePropertyChangedListener(Diagram.SelectedGuideKey, this._onChange);
+        this._diagram.RemovePropertyChangedListener(Diagram.GuidePreviewKey, this._onChange);
     }
 }
