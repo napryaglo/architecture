@@ -14,7 +14,6 @@ import { Pen, Point, TextAlignment } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Group } from './group.js';
 import { NodeViewModel } from './node-view-model.js';
-import { TextNode } from './text-node.js';
 import { Callout } from './callout.js';
 import { NodeVisualStore, type NodeVisual } from './node-visual-store.js';
 import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
@@ -303,7 +302,30 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         if (id === undefined || id === '') return;
         const v = this._visuals.Get(id);
         if (v !== undefined) this._visuals.Apply(v, container);
+        this._repointEndpointsToContainer(id, item, container);
     };
+
+    // Re-point any connector endpoint that references this VM node — by
+    // preserved id (rehydrateEndpoint deferred it) or directly by the VM object
+    // — at the freshly-bound container Figure, which owns the geometry and side-
+    // endpoint host. Setting Node clears the UnresolvedNodeId hold so the
+    // connector routes against the container.
+    private _repointEndpointsToContainer(id: string, item: NodeViewModel, container: Figure): void
+    {
+        for (let i = 0; i < this.Connectors.Count; i++)
+        {
+            const c = this.Connectors.Get(i)!;
+            for (const ep of [c.Source, c.Target])
+            {
+                if (ep === undefined || ep.Node === container) continue;
+                if (ep.UnresolvedNodeId === id || ep.Node === item)
+                {
+                    ep.Node             = container;
+                    ep.UnresolvedNodeId = undefined;
+                }
+            }
+        }
+    }
 
     constructor(storage?: DiagramStorage)
     {
@@ -973,10 +995,12 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         this.Connectors.Clear();
 
         // Round-trip nodes first so connectors can resolve their endpoint
-        // nodeIds against the freshly-rehydrated Nodes set.
-        // byId accepts Figure, TextNode, or Callout;
-        // ConnectorEndpoint.Node is typed Model so all are accepted.
-        const byId = new Map<string, Figure | TextNode | Callout>();
+        // nodeIds against the freshly-rehydrated Nodes set. byId holds Figure
+        // shapes (incl. TextNode/Callout, which extend Figure) AND content VMs;
+        // ConnectorEndpoint.Node is typed Model so all are accepted. Endpoints
+        // to a Figure bind directly; endpoints to a VM defer to the VM's
+        // container (see rehydrateEndpoint).
+        const byId = new Map<string, Figure | NodeViewModel>();
         // Callout leader targets resolve in a second pass (the target node may
         // be deserialized after the callout).
         const pendingLeaders: { callout: Callout; targetId: string }[] = [];
@@ -1005,7 +1029,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         {
             const s = serializerByType(n.type);
             if (s === undefined) continue;   // unknown serializer type — skip
-            const node = s.deserialize(n.data ?? {}) as Figure | TextNode | Callout;
+            const node = s.deserialize(n.data ?? {}) as Figure | NodeViewModel;
 
             // Geometry: apply the visual record keyed by the SAVED record id
             // (before any '' → fresh-id reassignment below). Self-painting Figure
@@ -1146,13 +1170,14 @@ function nodeEndpoint(nodeId: string, ep: ConnectorEndpoint): SerializedConnecto
 
 function rehydrateEndpoint(
     s: SerializedConnectorEndpoint,
-    byId: ReadonlyMap<string, Figure | TextNode | Callout>,
+    byId: ReadonlyMap<string, Figure | NodeViewModel>,
 ): ConnectorEndpoint
 {
     if (s.nodeId !== undefined)
     {
         const node = byId.get(s.nodeId);
-        if (node !== undefined)
+        // A self-painting Figure IS the geometry owner — bind directly.
+        if (node instanceof Figure)
         {
             return new ConnectorEndpoint({
                 Node:      node,
@@ -1161,13 +1186,16 @@ function rehydrateEndpoint(
                 PortIndex: s.portIndex,
             });
         }
-        // Node absent from THIS load (e.g. a node type whose serializer wasn't
-        // registered when Load ran, so its record was skipped). PRESERVE the
-        // id — a later load with the node present re-binds the endpoint. The
-        // old behaviour fell through to FreePoint(0,0), which permanently
-        // destroyed the reference (a one-time ordering glitch corrupted the
-        // scene forever). Connector treats an UnresolvedNodeId endpoint as
-        // un-routable, so it stays hidden rather than snapping to the origin.
+        // Either the node is absent from THIS load (a serializer not registered
+        // when Load ran, so its record was skipped) OR it is a content VM whose
+        // geometry + side-endpoint host live on its container Figure, which is
+        // not realized yet. Both cases PRESERVE the id: a later load with the
+        // Figure present, or ContainerBound when the VM's container binds
+        // (_repointEndpointsToContainer), re-binds the endpoint at the geometry
+        // owner. The old behaviour fell through to FreePoint(0,0), which
+        // permanently destroyed the reference. Connector treats an
+        // UnresolvedNodeId endpoint as un-routable, so it stays hidden rather
+        // than snapping to the origin.
         return new ConnectorEndpoint({
             UnresolvedNodeId: s.nodeId,
             PortName:         s.portName,
