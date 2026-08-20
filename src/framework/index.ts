@@ -201,6 +201,7 @@ export {
 export { DiagramEditingContext, DiagramCommandId } from './diagram/diagram-command-contexts.js';
 export { DiagramInspector } from './diagram/diagram-inspector.js';
 export { Figure } from './diagram/figure.js';
+export { PositionAnchor } from './diagram/position-anchor.js';
 export { NodeViewModel } from './diagram/node-view-model.js';
 export { SideConnectableNodeVM } from './diagram/side-connectable-node-vm.js';
 export { TextNodeVM } from './diagram/text-node-vm.js';
