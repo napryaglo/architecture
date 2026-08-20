@@ -1,19 +1,18 @@
 // Regression: the side-intersection optimizer lived only on Figure, and the
-// connector invoked it duck-typed with optional chaining — so on VM-backed
-// nodes (SideConnectableNodeVM → ArchNodeVM / the shape Figure, what real diagrams
-// use) the call resolved to undefined and was silently swallowed. Connectors
-// sharing a VM node's side were therefore never fanned out to avoid crossings.
-//
-// The optimizer now lives in the shared SideEndpointRegistry, both hosts
-// delegate to it, and it is part of the ISideEndpointHost contract (a typed
-// call, no ?. no-op). These tests pin the fix on the VM host.
+// connector invoked it duck-typed with optional chaining — so connectors sharing
+// a node's side were never fanned out to avoid crossings unless the host carried
+// the optimizer. The optimizer now lives in the shared SideEndpointRegistry, the
+// container Figure (the sole side-endpoint host for every node kind) delegates to
+// it, and it is part of the ISideEndpointHost contract (a typed call, no ?.
+// no-op). These tests pin the fix on Figure hosts (content nodes now route
+// through their container Figure, which is exactly what these shape Figures are).
 
 import { describe, test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { initTestApp } from '../../../basic/tests/test-app.js';
 import { PathGeometry, Point } from '../../../visual-engine/index.js';
-import { SideConnectableNodeVM } from '../side-connectable-node-vm.js';
+import { Figure } from '../figure.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Connector } from '../connector.js';
 import { PortSide } from '../port.js';
@@ -23,11 +22,9 @@ import '../routing/straight-router.js';
 import '../routing/orthogonal-router.js';
 import '../routing/bezier-router.js';
 
-function makeVM(left: number, top: number, w: number, h: number): SideConnectableNodeVM
+function makeVM(left: number, top: number, w: number, h: number): Figure
 {
-    const vm = new SideConnectableNodeVM();
-    vm.Left = left; vm.Top = top; vm.Width = w; vm.Height = h;
-    return vm;
+    return Figure.fromKind('rectangle', left, top, { width: w, height: h });
 }
 
 function startY(conn: Connector): number
@@ -35,12 +32,12 @@ function startY(conn: Connector): number
     return (conn.Geometry as PathGeometry).Figures[0]!.StartPoint.Y;
 }
 
-describe('SideConnectableNodeVM — side-intersection optimizer runs on VM hosts', () => {
+describe('Figure — side-intersection optimizer runs on Figure hosts', () => {
     beforeEach(() => { initTestApp(); });
 
     test('two crossing connectors on a VM node’s E side get swapped to un-cross', () => {
         // Same topology as the Figure optimizer test, but the source + targets
-        // are SideConnectableNodeVMs. Built in CROSSING order: c1 → T2 (lower)
+        // are Figures. Built in CROSSING order: c1 → T2 (lower)
         // first takes top slot 0, c2 → T1 (upper) second takes bottom slot 1,
         // so the two straight runs cross. The optimizer must swap them.
         const F  = makeVM(100, 100, 80, 80);
@@ -82,7 +79,7 @@ describe('SideConnectableNodeVM — side-intersection optimizer runs on VM hosts
         const T3 = makeVM(400, 220, 80, 80);   // bottom
 
         // Insertion order deliberately scrambled: bottom target first.
-        const mk = (tgt: SideConnectableNodeVM): Connector => {
+        const mk = (tgt: Figure): Connector => {
             const c = new Connector();
             c.RoutingMode = RoutingMode.Straight;
             c.Source = new ConnectorEndpoint({ Node: F,   PortSide: PortSide.E });

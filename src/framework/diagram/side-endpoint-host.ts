@@ -6,17 +6,17 @@ import type { ConnectorEndpoint } from './connector-endpoint.js';
 // Duck-typed shape of a Connector for the side-intersection optimizer.
 // The optimizer only needs the resolved Geometry to extract a polyline and
 // test crossings — anything else stays out of the contract. Lives here (not
-// in figure.ts) so BOTH side-hosts — Figure and SideConnectableNodeVM — can
-// share the one optimizer implementation the registry owns.
+// in figure.ts) so any Figure host can share the one optimizer implementation
+// the registry owns.
 export interface ISideAnchoredConnector
 {
     readonly Geometry: Geometry | undefined;
 }
 
 // Duck-typed contract for a node that exposes Figure's side-endpoint
-// surface. Both Figure and SideConnectableNodeVM implement this.
-// The connector reads it duck-typed (via asSideSlotHost in B2) so the
-// two classes need not share a common base.
+// surface. The container Figure is the sole side-endpoint host for every node
+// kind (content VMs route through their container). The connector reads it
+// duck-typed (via asSideSlotHost) so hosts need not share a common base.
 //
 // Parameter order for _registerSideEndpoint matches the calling convention
 // in connector.ts: (side, ep, onRebalance, owner?) — rebalance before owner.
@@ -36,9 +36,8 @@ export interface ISideEndpointHost
 
 // Reusable implementation of Figure's per-side endpoint registry.
 // Holds NO Figure-specific state; bounds are supplied via a `bounds`
-// callback so both Figure (ArrangedRect) and a SideConnectableNodeVM
-// (Left/Top/Width/Height built on the fly) can supply their coordinate frame
-// without coupling this class to either host type.
+// callback so any host (a Figure via its Left/Top/Width/Height) can supply its
+// coordinate frame without coupling this class to the host type.
 export class SideEndpointRegistry
 {
     private readonly _sideEndpoints: Map<ResolvedPortSide, ConnectorEndpoint[]> = new Map();

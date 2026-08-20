@@ -1,7 +1,5 @@
 import {
     Application,
-    Binding,
-    BindingMode,
     Element,
     MetaData,
     Model,
@@ -24,6 +22,7 @@ import { NodeViewModel } from './node-view-model.js';
 import type { DataTemplate } from '../../basic/templates/data-template.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
 import { Figure, resolveEditTarget } from './figure.js';
+import type { IPortProvider } from './port-providers/port-provider.js';
 import { Group } from './group.js';
 import { ensureToolboxDefaults } from './toolbox/ensure-toolbox-defaults.js';
 import { connectorCapOptions } from './caps/connector-cap-options.js';
@@ -1826,18 +1825,19 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             node.Content     = item;
             if (item instanceof NodeViewModel)
             {
-                // Two-way position bind: NodeViewModel ↔ Figure container.
-                // The runtime accepts a Binding at value-position on any DP;
-                // `as unknown as number` satisfies TS without a suppression comment.
-                node.set_property_value(Figure.LeftKey,   new Binding(item, 'Left',   BindingMode.TwoWay) as unknown as number);
-                node.set_property_value(Figure.TopKey,    new Binding(item, 'Top',    BindingMode.TwoWay) as unknown as number);
-                node.set_property_value(Visual.WidthKey,  new Binding(item, 'Width',  BindingMode.TwoWay) as unknown as number);
-                node.set_property_value(Visual.HeightKey, new Binding(item, 'Height', BindingMode.TwoWay) as unknown as number);
-                // Content-sizing mode + the user-resized latch travel with the VM
-                // so a content node (icon+label tile) fits its content and a
-                // hand-resize pins it. Geometric shapes leave SizeToContent false.
-                node.set_property_value(Figure.SizeToContentKey, new Binding(item, 'SizeToContent', BindingMode.OneWay) as unknown as boolean);
-                node.set_property_value(Figure.UserSizedKey,     new Binding(item, 'UserSized',     BindingMode.TwoWay) as unknown as boolean);
+                // The container Figure is the geometry owner + side-endpoint host;
+                // the VM carries only content + Id. Mirror the Id so connector
+                // endpoints (which resolve to the container) serialize by the
+                // node's stable id, and mark the container a content tile so it
+                // fits its rendered content. Position/size + the UserSized latch
+                // are seeded from the document's NodeVisualStore via ContainerBound
+                // (fired below), not bound off the VM.
+                node.Id            = item.Id;
+                node.SizeToContent = true;
+                // A per-instance port topology the VM opts into (duck-typed) —
+                // else the container keeps its default bbox ports.
+                const provider = (item as { PortProvider?: IPortProvider }).PortProvider;
+                node.PortProvider = provider;
             }
             // Signal the owning document so it can seed the container's geometry
             // from the visual store and re-point id-referencing connectors — the

@@ -3,7 +3,6 @@ import type { Diagram } from '../diagram.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import type { Figure } from '../figure.js';
-import { NodeViewModel } from '../node-view-model.js';
 import type { Model } from '../../../runtime/index.js';
 import type { ResolvedPortSide } from '../port.js';
 import { RoutingMode } from '../routing/router.js';
@@ -131,16 +130,17 @@ export class ConnectorCreateBehavior
     }
 }
 
-// A container Figure wraps a node VM (its DataContext); connectors should
-// reference that VM so routing/serialize/delete track the data item. Text/
-// callout figures have no VM DataContext and reference the Figure itself.
-// Shared with the edit adorner so a REPOSITIONED endpoint binds to the same
-// object a CREATED one does — otherwise the two live on different side
-// registries (container vs item) and connectors stack instead of fanning.
+// The endpoint host for a figure. The container Figure is now the sole geometry
+// owner + side-endpoint host for every node kind (shape / text / callout figures
+// ARE their own container; a content VM's container wraps it and mirrors its Id),
+// so connectors reference the FIGURE — never the VM, which no longer hosts side
+// endpoints or carries geometry. Kept as a named seam (rather than inlined) so
+// the CREATE path (makeSideEndpoint) and the REPOSITION path (edit adorner) are
+// provably referencing the same object: both live on the one container-side
+// registry and fan, instead of stacking on two registries.
 export function itemOf(figure: Figure): Model
 {
-    const dc = figure.DataContext;
-    return dc instanceof NodeViewModel ? dc : figure;
+    return figure;
 }
 
 // Side-anchored endpoint constructor. The slot index on the side is

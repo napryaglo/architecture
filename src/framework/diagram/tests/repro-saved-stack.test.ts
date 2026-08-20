@@ -1,15 +1,19 @@
 // Regression: the user's saved-diagram connector stacking. Rebuilds the exact
 // node positions + connector (node, side) topology from their diagram.diagram
 // and asserts (a) the three shared sides fan into distinct slots on load and
-// (b) repositioning an endpoint onto an occupied side fans rather than stacks
-// (the itemOf binding fix — reposition must bind to the same VM item a create
-// does, not the container Figure, so both share one side registry).
+// (b) repositioning an endpoint onto an occupied side fans rather than stacks.
+//
+// Post-redesign: the container Figure is the sole side-endpoint host for every
+// node kind (content VMs route through their container, which mirrors the VM
+// Id). Both the CREATE path (makeSideEndpoint → itemOf) and the REPOSITION path
+// (edit adorner → itemOf) reference that Figure — so they share one side
+// registry and fan. These nodes are modelled directly as shape Figures (what a
+// content node's container is).
 
 import { describe, test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { initTestApp } from '../../../basic/tests/test-app.js';
-import { SideConnectableNodeVM } from '../side-connectable-node-vm.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Connector } from '../connector.js';
 import { Figure } from '../figure.js';
@@ -61,26 +65,25 @@ describe('repro — saved-diagram shared-side fan', () => {
     beforeEach(() => { initTestApp(); });
 
     test('the three shared sides fan into distinct slots on load', () => {
-        const vms: Record<string, SideConnectableNodeVM> = {};
+        const nodes: Record<string, Figure> = {};
         for (const [id, p] of Object.entries(NODES)) {
-            const vm = new SideConnectableNodeVM();
-            vm.Left = p.left; vm.Top = p.top; vm.Width = 80; vm.Height = 80;
-            vm.Id = id;
-            vms[id] = vm;
+            const f = Figure.fromKind('rectangle', p.left, p.top, { width: 80, height: 80 });
+            f.Id = id;
+            nodes[id] = f;
         }
 
         const conns: Connector[] = [];
         for (const [s, ss, t, ts] of EDGES) {
             const c = new Connector();
             c.RoutingMode = RoutingMode.Orthogonal;
-            c.Source = new ConnectorEndpoint({ Node: vms[s], PortSide: ss });
-            c.Target = new ConnectorEndpoint({ Node: vms[t], PortSide: ts });
+            c.Source = new ConnectorEndpoint({ Node: nodes[s], PortSide: ss });
+            c.Target = new ConnectorEndpoint({ Node: nodes[t], PortSide: ts });
             conns.push(c);
         }
 
         // The three sides that host two connectors each.
         for (const [id, side] of [['n9', PortSide.N], ['n11', PortSide.W], ['n11', PortSide.S]] as const) {
-            const count = vms[id]!.GetSideEndpointCount(side);
+            const count = nodes[id]!.GetSideEndpointCount(side);
             assert.equal(count, 2, `${id}|${side} should host 2 connectors`);
         }
 
@@ -88,8 +91,8 @@ describe('repro — saved-diagram shared-side fan', () => {
         const slotIdx = (id: string, side: ResolvedPortSide): number[] =>
             conns
                 .flatMap(c => [c.Source, c.Target])
-                .filter((e): e is ConnectorEndpoint => e !== undefined && e.Node === vms[id] && e.PortSide === side)
-                .map(e => vms[id]!.GetSideSlot(e, side)?.index ?? -1);
+                .filter((e): e is ConnectorEndpoint => e !== undefined && e.Node === nodes[id] && e.PortSide === side)
+                .map(e => nodes[id]!.GetSideSlot(e, side)?.index ?? -1);
 
         for (const [id, side] of [['n9', PortSide.N], ['n11', PortSide.W], ['n11', PortSide.S]] as const) {
             const idxs = slotIdx(id, side).sort();
@@ -97,49 +100,37 @@ describe('repro — saved-diagram shared-side fan', () => {
         }
     });
 
-    test('repositioning a connector endpoint onto a side that a sibling already holds FANS, not stacks', () => {
-        // The exact user gesture: node N already hosts connector B on its N side
-        // (B bound to the node VM, as created). The user drags connector A's
-        // endpoint onto that same N side. The drop resolves a CONTAINER Figure
-        // whose DataContext is the VM. A must bind to the VM (like B) so both
-        // share ONE side registry and fan — not to the container (a second
-        // registry) which lands A on the side centre atop B.
-        const diamond = new SideConnectableNodeVM();
-        diamond.Left = 300; diamond.Top = 300; diamond.Width = 80; diamond.Height = 80;
-        diamond.Id = 'diamond';
-        const other = new SideConnectableNodeVM();
-        other.Left = 300; other.Top = 0; other.Width = 80; other.Height = 80; other.Id = 'other';
-        const src = new SideConnectableNodeVM();
-        src.Left = 0; src.Top = 300; src.Width = 80; src.Height = 80; src.Id = 'src';
+    test('repositioning a connector endpoint onto a side a sibling already holds FANS, not stacks', () => {
+        // Node HOST already hosts connector B on its N side (created bound to the
+        // host, as makeSideEndpoint → itemOf yields). The user drags connector A's
+        // endpoint onto that same N side; EndDragOverTarget resolves the host
+        // Figure. A must bind to the host (like B) so both share ONE side registry
+        // and fan — not two registries stacking at the side centre.
+        const host  = Figure.fromKind('rectangle', 300, 300, { width: 80, height: 80 }); host.Id  = 'host';
+        const other = Figure.fromKind('rectangle', 300, 0,   { width: 80, height: 80 }); other.Id = 'other';
+        const src   = Figure.fromKind('rectangle', 0,   300, { width: 80, height: 80 }); src.Id   = 'src';
 
-        // B: already on diamond's N side (VM-bound, like a created connector).
+        // B: already on host's N side.
         const b = new Connector();
         b.RoutingMode = RoutingMode.Orthogonal;
-        b.Source = new ConnectorEndpoint({ Node: other,   PortSide: PortSide.S });
-        b.Target = new ConnectorEndpoint({ Node: diamond, PortSide: PortSide.N });
+        b.Source = new ConnectorEndpoint({ Node: other, PortSide: PortSide.S });
+        b.Target = new ConnectorEndpoint({ Node: host,  PortSide: PortSide.N });
 
-        // A: currently on diamond's W side; we'll reposition its target to N.
+        // A: currently on host's W side; reposition its target onto N.
         const a = new Connector();
         a.RoutingMode = RoutingMode.Orthogonal;
-        a.Source = new ConnectorEndpoint({ Node: src,     PortSide: PortSide.E });
-        a.Target = new ConnectorEndpoint({ Node: diamond, PortSide: PortSide.W });
-
-        // The drop target the interaction hands the adorner is the CONTAINER
-        // Figure whose DataContext is the diamond VM (arch nodes render this way).
-        const container = new Figure();
-        container.Left = 300; container.Top = 300; container.Width = 80; container.Height = 80;
-        container.ExplicitPorts = [];
-        container.DataContext = diamond;
+        a.Source = new ConnectorEndpoint({ Node: src,  PortSide: PortSide.E });
+        a.Target = new ConnectorEndpoint({ Node: host, PortSide: PortSide.W });
 
         const adorner = new ConnectorEditAdorner();
         adorner.BeginEndpointDrag(a, ConnectorEnd.Target, new Point(340, 340));
-        adorner.EndDragOverTarget(container, PortSide.N);
+        adorner.EndDragOverTarget(host, PortSide.N);
 
-        // A's target must now reference the VM, and diamond's N side hosts BOTH.
-        assert.equal(a.Target!.Node, diamond, 'repositioned endpoint binds to the VM item, not the container');
-        assert.equal(diamond.GetSideEndpointCount(PortSide.N), 2, 'both connectors register on the SAME side registry');
-        const ia = diamond.GetSideSlot(a.Target as ConnectorEndpoint, PortSide.N)?.index;
-        const ib = diamond.GetSideSlot(b.Target as ConnectorEndpoint, PortSide.N)?.index;
+        // A's target must now reference the host Figure, and its N side hosts BOTH.
+        assert.equal(a.Target!.Node, host, 'repositioned endpoint binds to the container/host Figure');
+        assert.equal(host.GetSideEndpointCount(PortSide.N), 2, 'both connectors register on the SAME side registry');
+        const ia = host.GetSideSlot(a.Target as ConnectorEndpoint, PortSide.N)?.index;
+        const ib = host.GetSideSlot(b.Target as ConnectorEndpoint, PortSide.N)?.index;
         assert.ok(ia !== undefined && ib !== undefined && ia !== ib, 'they occupy distinct slots (no centre stack)');
     });
 });

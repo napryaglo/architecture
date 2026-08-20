@@ -1,9 +1,9 @@
-// Content-node sizing: a NodeViewModel with SizeToContent=true is hosted in a
-// Figure container that measures its rendered content and writes Width/Height
-// back through the two-way bind — so the selection adorner (which tracks the
-// VM's Width/Height) covers the whole tile, not a fixed box. A hand-resize sets
-// UserSized, which pins the size and stops the auto-fit. Geometric nodes
-// (SizeToContent=false) are unaffected.
+// Content-node sizing: a content VM is hosted in a Figure container that is a
+// content tile (bindContainer sets SizeToContent=true) and measures its rendered
+// content, fitting its OWN Width/Height to it — the VM carries no geometry. A
+// hand-resize sets the container's UserSized latch, which pins the size and stops
+// the auto-fit. (Geometric nodes are self-painting shape Figures, not VMs, and
+// keep their explicit size — covered by the figure tests.)
 
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
@@ -72,32 +72,25 @@ describe('Figure — SizeToContent', () => {
         return { diagram, surface, container };
     }
 
-    test('a SizeToContent node fits its Width/Height to the content', () => {
+    test('a VM container fits its Width/Height to the content', () => {
         const vm = new TileVM();
-        vm.SizeToContent = true;
         const { container } = place(vm);
         assert.ok(container instanceof Figure);
-        assert.ok(Math.abs(vm.Width  - TILE_W) < 1, `vm.Width should fit content (${vm.Width})`);
-        assert.ok(Math.abs(vm.Height - TILE_H) < 1, `vm.Height should fit content (${vm.Height})`);
+        assert.equal(container.SizeToContent, true, 'a VM container is a content tile');
+        assert.ok(Math.abs(container.Width  - TILE_W) < 1, `container.Width should fit content (${container.Width})`);
+        assert.ok(Math.abs(container.Height - TILE_H) < 1, `container.Height should fit content (${container.Height})`);
     });
 
-    test('a geometric node (SizeToContent=false) keeps its explicit size', () => {
+    test('UserSized on the container pins the size — auto-fit stops', () => {
         const vm = new TileVM();
-        vm.Width = 40;
-        vm.Height = 40;   // SizeToContent stays false
-        const { } = place(vm);
-        assert.equal(vm.Width, 40, 'width unchanged');
-        assert.equal(vm.Height, 40, 'height unchanged');
-    });
-
-    test('UserSized pins the size — auto-fit stops', () => {
-        const vm = new TileVM();
-        vm.SizeToContent = true;
-        vm.UserSized = true;   // as if the user hand-resized
-        vm.Width = 55;
-        vm.Height = 55;
-        const { } = place(vm);
-        assert.equal(vm.Width, 55, 'user size kept');
-        assert.equal(vm.Height, 55, 'user size kept');
+        const { surface, container } = place(vm);
+        // Simulate a hand-resize: pin the container to an explicit size.
+        container.UserSized = true;
+        container.Width  = 55;
+        container.Height = 55;
+        // Re-layout — the auto-fit must NOT override the pinned size.
+        layout(surface);
+        assert.equal(container.Width,  55, 'user size kept');
+        assert.equal(container.Height, 55, 'user size kept');
     });
 });

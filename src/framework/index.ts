@@ -205,7 +205,6 @@ export { Figure } from './diagram/figure.js';
 export { PositionAnchor } from './diagram/position-anchor.js';
 export { SizePositionControl } from './diagram/size-position-control.js';
 export { NodeViewModel } from './diagram/node-view-model.js';
-export { SideConnectableNodeVM } from './diagram/side-connectable-node-vm.js';
 export { TextNode } from './diagram/text-node.js';
 export { Callout, type ILeaderTarget } from './diagram/callout.js';
 export {

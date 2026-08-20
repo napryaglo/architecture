@@ -23,12 +23,13 @@ function mount(): { diagram: Diagram; a: Figure; b: Figure } {
 }
 
 // A VM-backed node (content node, e.g. Plexus ArchNodeVM) — the Diagram wraps
-// it in a Figure container, two-way binding Left/Top/Width/Height. SelectedItems
-// surfaces the VM, not the container.
-function mountVM(): { diagram: Diagram; vm: NodeViewModel } {
+// it in a Figure container that OWNS the geometry (the VM carries only content +
+// Id). Geometry is set on the container directly here (the document's store is
+// the production path). SelectedItems surfaces the VM, not the container.
+function mountVM(): { diagram: Diagram; vm: NodeViewModel; container: Figure } {
     Application.current = null; new Application();
     const vm = new NodeViewModel();
-    vm.Id = 'v'; vm.Left = 15; vm.Top = 25; vm.Width = 120; vm.Height = 60;
+    vm.Id = 'v';
     const coll = new ObservableCollection<NodeViewModel>(); coll.Add(vm);
     const diagram = new Diagram();
     diagram.SelectionMode = SelectionMode.Extended;
@@ -37,7 +38,10 @@ function mountVM(): { diagram: Diagram; vm: NodeViewModel } {
     const surface = new Border(); (surface as unknown as { Child: Visual }).Child = diagram;
     (surface as Visual).Measure(new Size(800, 600));
     (surface as Visual).Arrange({ X: 0, Y: 0, Width: 800, Height: 600 } as never);
-    return { diagram, vm };
+    // Geometry lives on the container Figure now, not the VM.
+    const container = diagram.Generator.ContainerFromItem(vm) as Figure;
+    container.Left = 15; container.Top = 25; container.Width = 120; container.Height = 60;
+    return { diagram, vm, container };
 }
 
 function select(diagram: Diagram, item: unknown, mods: ModifierKeys = ModifierKeys.None): void {
@@ -77,13 +81,13 @@ describe('SelectionGeometryMirror', () => {
         assert.equal(diagram.SelectedShapeLeft, 15);
         assert.equal(diagram.SelectedShapeWidth, 120);
     });
-    test('VM-backed node: writing a SelectedShape DP propagates to the VM', () => {
-        const { diagram, vm } = mountVM();
+    test('VM-backed node: writing a SelectedShape DP propagates to the container', () => {
+        const { diagram, vm, container } = mountVM();
         select(diagram, vm);
         diagram.SelectedShapeLeft = 40;
-        assert.equal(vm.Left, 40);
+        assert.equal(container.Left, 40);
         diagram.SelectedShapeWidth = 200;
-        assert.equal(vm.Width, 200);
+        assert.equal(container.Width, 200);
     });
     test('multi selection => HasSelectedShape false, writes ignored', () => {
         const { diagram, a, b } = mount();

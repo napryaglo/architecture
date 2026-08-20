@@ -1,42 +1,24 @@
 import type { Group } from './group.js';
 import { MetaData, Model } from '../../runtime/index.js';
-import { DiagramSettings } from './diagram-settings.js';
 
-// Position/size contract every diagram node view-model satisfies. The Figure
-// container two-way binds its Left/Top/Width/Height to these; the per-VM
-// serializers (later stage) read them. Data-driven content node kinds (e.g.
-// Plexus ArchNodeVM) extend this; text/callout and geometric shape nodes are
-// self-painting Figures (TextNode / Callout / shape Figures), not VMs.
+// Identity + content contract every diagram content node view-model satisfies.
+// A content VM carries NO visual information: its container Figure owns geometry
+// (Left/Top/Width/Height/Rotation), the sizing mode (SizeToContent/UserSized),
+// and the side-endpoint host role. The document's NodeVisualStore is the durable
+// geometry truth, keyed by this VM's Id; the container is seeded from it on
+// realize (diagram.ts bindContainer → Diagram.ContainerBound → DiagramDocument).
+// Data-driven content node kinds (e.g. Plexus ArchNodeVM) extend this; text /
+// callout and geometric shape nodes are self-painting Figures (TextNode /
+// Callout / shape Figures), not VMs.
 export class NodeViewModel extends Model
 {
-    public static readonly IdKey     = Model.RegisterProperty<string | undefined>(NodeViewModel, 'Id',     undefined, MetaData.None);
-    public static readonly LeftKey   = Model.RegisterProperty<number>(NodeViewModel, 'Left',   0, MetaData.None);
-    public static readonly TopKey    = Model.RegisterProperty<number>(NodeViewModel, 'Top',    0, MetaData.None);
-    public static readonly WidthKey  = Model.RegisterProperty<number>(NodeViewModel, 'Width',  DiagramSettings.ShapeDefaultSize(), MetaData.None);
-    public static readonly HeightKey = Model.RegisterProperty<number>(NodeViewModel, 'Height', DiagramSettings.ShapeDefaultSize(), MetaData.None);
-    // A content-driven node (icon+label tile) has no geometry to scale — its
-    // size should follow its rendered content, not a fixed box. The container
-    // measures the content and writes Width/Height back through the two-way
-    // bind. Geometric shapes leave this false and stay fixed-size + resizable.
-    public static readonly SizeToContentKey = Model.RegisterProperty<boolean>(NodeViewModel, 'SizeToContent', false, MetaData.None);
-    // Set once the user resizes the node by hand: content auto-fit then stops so
-    // the explicit size sticks (see the container's content-fit).
-    public static readonly UserSizedKey     = Model.RegisterProperty<boolean>(NodeViewModel, 'UserSized',     false, MetaData.None);
+    // Join key between the content VM and its visual record / container. The
+    // ONLY property the container cannot derive on its own, so it stays on the
+    // VM (mirrored onto the container in bindContainer for endpoint resolution).
+    public static readonly IdKey = Model.RegisterProperty<string | undefined>(NodeViewModel, 'Id', undefined, MetaData.None);
 
     public get Id():     string | undefined { return this.get_property_value(NodeViewModel.IdKey); }
     public set Id(v:     string | undefined) { this.set_property_value(NodeViewModel.IdKey, v); }
-    public get Left():   number { return this.get_property_value(NodeViewModel.LeftKey); }
-    public set Left(v:   number) { this.set_property_value(NodeViewModel.LeftKey, v); }
-    public get Top():    number { return this.get_property_value(NodeViewModel.TopKey); }
-    public set Top(v:    number) { this.set_property_value(NodeViewModel.TopKey, v); }
-    public get Width():  number { return this.get_property_value(NodeViewModel.WidthKey); }
-    public set Width(v:  number) { this.set_property_value(NodeViewModel.WidthKey, v); }
-    public get Height(): number { return this.get_property_value(NodeViewModel.HeightKey); }
-    public set Height(v: number) { this.set_property_value(NodeViewModel.HeightKey, v); }
-    public get SizeToContent(): boolean { return this.get_property_value(NodeViewModel.SizeToContentKey); }
-    public set SizeToContent(v: boolean) { this.set_property_value(NodeViewModel.SizeToContentKey, v); }
-    public get UserSized():     boolean { return this.get_property_value(NodeViewModel.UserSizedKey); }
-    public set UserSized(v:     boolean) { this.set_property_value(NodeViewModel.UserSizedKey, v); }
 
     /** Enclosing group, or undefined when top-level. View-invisible
      *  structural metadata, so a plain field (mirrors Figure.Parent). */

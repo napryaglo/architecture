@@ -787,7 +787,11 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
      *  member so its bbox renders BEHIND its members in z-order. */
     public Group(items: readonly unknown[]): void
     {
-        const selection = this._topLevel(items);
+        // Only geometry-bearing nodes (Figures + nested Groups) are groupable;
+        // content VMs delegate geometry to their container and can't be group
+        // members (see Group.GroupMember).
+        const selection = this._topLevel(items).filter(
+            (m): m is Figure | Group => m instanceof Figure || m instanceof Group);
         if (selection.length < 2) return;
         const grp = new Group();
         let minIdx = this.Nodes.Count;
@@ -826,7 +830,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         for (const g of groups)
         {
             const parent = g.Parent;
-            const members: (Figure | Group | NodeViewModel)[] = [];
+            const members: (Figure | Group)[] = [];
             for (let i = 0; i < g.Members.Count; i++) members.push(g.Members.Get(i)!);
             for (const m of members)
             {

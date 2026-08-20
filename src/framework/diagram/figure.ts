@@ -651,8 +651,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
      *  between the connectors that both attach to `side`. Triggered by
      *  Connector._scheduleRecompute after every recompute (registration
      *  changes AND figure moves both reach this entry point). Delegates to
-     *  the shared registry, which owns the hill-climb + its re-entry guard so
-     *  Figure and SideConnectableNodeVM run the identical optimisation. */
+     *  the shared registry, which owns the hill-climb + its re-entry guard. */
     public _optimizeSideIntersections(side: ResolvedPortSide): void
     {
         this._sideHost.optimizeIntersections(side);
@@ -1137,6 +1136,6 @@ export class Figure extends ContentControl implements ISideEndpointHost
 }
 
 // The side-intersection optimizer + its crossing/overlap geometry helpers
-// moved to side-endpoint-host.ts so Figure and SideConnectableNodeVM share
-// one implementation via the SideEndpointRegistry.
+// live in side-endpoint-host.ts (the shared SideEndpointRegistry), so any
+// Figure host shares one implementation.
 

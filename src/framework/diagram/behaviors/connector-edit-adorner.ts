@@ -332,11 +332,11 @@ export class ConnectorEditAdorner
         // is set would route through a node-less state (→ origin). With Node set
         // first, FreePoint is already ignored by resolution, so its clear is safe.
         //
-        // Bind to the container's data ITEM (the node VM), NOT the container
-        // Figure — this is what the CREATE path does (makeSideEndpoint →
-        // itemOf). A created endpoint and a repositioned one must reference the
-        // same object, else they land on DIFFERENT per-object side registries
-        // (VM vs container) and stack at the side centre instead of fanning.
+        // Bind to the container Figure — the sole geometry owner + side-endpoint
+        // host. This is what the CREATE path does (makeSideEndpoint → itemOf). A
+        // created endpoint and a repositioned one must reference the same object,
+        // else they land on different side registries and stack at the side
+        // centre instead of fanning.
         ep.Node      = itemOf(targetFigure);
         ep.PortSide  = targetSide;
         ep.PortName  = undefined;

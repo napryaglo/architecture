@@ -9,9 +9,13 @@ import {
 import { Canvas } from '../../basic/index.js';
 import { ContentControl } from '../base/content-control.js';
 import { Figure } from './figure.js';
-import { NodeViewModel } from './node-view-model.js';
 
-type GroupMember = Figure | Group | NodeViewModel;
+// A group's members are geometry-bearing nodes: leaf Figures (shape / text /
+// callout — all self-painting Figures) and nested Groups. Content view-models
+// are NOT members: their geometry lives on their container Figure (not the VM),
+// which a data-model Group can't reach — so grouping content nodes is a deferred
+// capability (would track VM ids and derive bounds from containers).
+type GroupMember = Figure | Group;
 
 // First-class group entity for the framework Diagram. A Group sits in
 // the Diagram's flat Items collection alongside leaf Figures and renders
@@ -161,8 +165,8 @@ export class Group extends ContentControl
         this._shiftBy(dx, dy);
     }
 
-    /** Recursively enumerate every leaf Figure or NodeViewModel contained (transitively). */
-    public *EnumerateLeaves(): Iterable<Figure | NodeViewModel>
+    /** Recursively enumerate every leaf Figure contained (transitively). */
+    public *EnumerateLeaves(): Iterable<Figure>
     {
         for (let i = 0; i < this.Members.Count; i++)
         {
@@ -248,15 +252,12 @@ export class Group extends ContentControl
 
     private _listenMember(m: GroupMember): () => void
     {
-        // The four geometry DPs share the same name across Figure, Group, and
-        // NodeViewModel, but the key objects differ. Pick the right keys based
-        // on the member's class.
+        // The four geometry DPs share the same name across Figure and Group, but
+        // the key objects differ. Pick the right keys based on the member's class.
         const keys =
             m instanceof Group
                 ? { l: Group.LeftKey, t: Group.TopKey, w: Group.WidthKey, h: Group.HeightKey }
-                : m instanceof NodeViewModel
-                    ? { l: NodeViewModel.LeftKey, t: NodeViewModel.TopKey, w: NodeViewModel.WidthKey, h: NodeViewModel.HeightKey }
-                    : { l: Figure.LeftKey, t: Figure.TopKey, w: Figure.WidthKey, h: Figure.HeightKey };
+                : { l: Figure.LeftKey, t: Figure.TopKey, w: Figure.WidthKey, h: Figure.HeightKey };
         const handler = (): void => { if (this._shiftSuppressed) return; this._recomputeBounds(); };
         m.AddPropertyChangedListener(keys.l, handler);
         m.AddPropertyChangedListener(keys.t, handler);

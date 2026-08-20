@@ -105,11 +105,10 @@ describe('Diagram — NodeViewModel container content + position binding (m1)', 
         assert.ok(!hasErrorBlock, 'unresolved-template error TextBlock must not be present');
     });
 
-    test('position two-way bind: VM→container and container→VM', () => {
+    test('container owns geometry + mirrors the VM Id; VM stays content-only', () => {
         const { diagram, surface } = build();
         const vm = new TestNodeVM();
-        vm.Left = 120;
-        vm.Top  = 80;
+        vm.Id = 'v1';
 
         const col = new ObservableCollection<TestNodeVM>();
         col.Add(vm);
@@ -119,15 +118,17 @@ describe('Diagram — NodeViewModel container content + position binding (m1)', 
         const container = diagram.Generator.ContainerFromItem(vm) as Figure;
         assert.ok(container instanceof Figure, 'container must be a Figure');
 
-        // VM → container (forward direction): bindings must have propagated.
-        assert.equal(container.Left, 120, 'Figure.Left should reflect vm.Left after layout');
-        assert.equal(container.Top,  80,  'Figure.Top should reflect vm.Top after layout');
+        // The container carries the geometry (owner) — set directly (production
+        // seeds it from the NodeVisualStore). The VM has no geometry to reflect.
+        container.Left = 60; container.Top = 30;
+        assert.equal(container.Left, 60);
+        assert.equal(container.Top,  30);
+        assert.equal((vm as unknown as { Left?: number }).Left, undefined, 'VM carries no geometry');
 
-        // container → VM (reverse direction, simulates a drag commit).
-        container.Left = 60;
-        assert.equal(vm.Left, 60, 'vm.Left should update when Figure.Left is set (two-way)');
-        container.Top = 30;
-        assert.equal(vm.Top, 30, 'vm.Top should update when Figure.Top is set (two-way)');
+        // The container mirrors the VM Id (so container-bound connector endpoints
+        // serialize by the node's stable id) and is a content tile.
+        assert.equal(container.Id, 'v1', 'container mirrors the VM Id');
+        assert.equal(container.SizeToContent, true, 'a VM container fits its content');
     });
 
     test('selection surfaces the VM, not the container Figure', () => {
