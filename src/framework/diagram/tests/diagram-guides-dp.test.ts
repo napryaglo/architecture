@@ -23,4 +23,17 @@ describe('Diagram guide DPs', () => {
         d.RulersVisible = true;
         assert.equal(d.RulersVisible, true);
     });
+    test('GuidePreview defaults undefined and round-trips a hint', () => {
+        Application.current = null; new Application();
+        const d = new Diagram();
+        assert.equal(d.GuidePreview, undefined);
+        let fired = 0;
+        d.AddPropertyChangedListener(Diagram.GuidePreviewKey, () => { fired++; });
+        d.GuidePreview = { axis: AlignmentAxis.Y, position: 42 };
+        assert.equal(d.GuidePreview?.position, 42);
+        assert.equal(fired, 1);
+        d.GuidePreview = undefined;
+        assert.equal(d.GuidePreview, undefined);
+        assert.equal(fired, 2);
+    });
 });

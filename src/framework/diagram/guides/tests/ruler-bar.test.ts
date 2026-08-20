@@ -48,6 +48,33 @@ describe('RulerBar', () => {
         assert.ok(tickXs.every(x => x >= -1 && x <= 401), 'ticks projected within the strip');
     });
 
+    test('advertises a resize cursor matching its orientation', () => {
+        Application.current = null; new Application();
+        const top = new RulerBar();
+        top.Orientation = Orientation.Horizontal;
+        assert.equal(top.Cursor, 'ns-resize', 'top ruler pulls out a horizontal guide (moves vertically)');
+        const left = new RulerBar();
+        left.Orientation = Orientation.Vertical;
+        assert.equal(left.Cursor, 'ew-resize', 'left ruler pulls out a vertical guide (moves horizontally)');
+    });
+
+    test('paints an extra hover wash while the pointer is over the strip', () => {
+        Application.current = null; new Application();
+        const ruler = new RulerBar();
+        ruler.Orientation = Orientation.Horizontal;
+        ruler.Zoom = 1; ruler.Offset = 0; ruler.Extent = 400;
+        ruler.Measure(new Size(400, 20));
+        ruler.Arrange(new Rect(0, 0, 400, 20));
+
+        const cold = new RecordingDc();
+        (ruler as unknown as { RenderOverride(dc: unknown): void }).RenderOverride(cold);
+        (ruler as unknown as { _setIsMouseOver(v: boolean): void })._setIsMouseOver(true);
+        const hot = new RecordingDc();
+        (ruler as unknown as { RenderOverride(dc: unknown): void }).RenderOverride(hot);
+
+        assert.equal(hot.rects.length, cold.rects.length + 1, 'exactly one extra wash rect on hover');
+    });
+
     test('a vertical ruler measures to the ruler thickness on its cross axis', () => {
         Application.current = null; new Application();
         const ruler = new RulerBar();

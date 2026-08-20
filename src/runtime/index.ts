@@ -240,8 +240,8 @@ export {
     AlignmentAxis,
 } from './alignment-math.js';
 export {
-    snapGuidePosition, snapRectToGuides, chooseTickInterval, ticksInRange,
-    type PersistentGuide, type GuideGlue, type GuideAxisSnap, type GuideSnap,
+    snapGuidePosition, snapRectToGuides, chooseTickInterval, ticksInRange, guideCursorFor,
+    type PersistentGuide, type GuideGlue, type GuideAxisSnap, type GuideSnap, type GuidePreview,
 } from './guide-math.js';
 export { Point, Size, Rect, Color, Matrix, Thickness } from '../visual-engine/primitives.js';
 export { CornerRadius } from '../visual-engine/corner-radius.js';

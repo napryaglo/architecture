@@ -45,6 +45,7 @@ export enum DiagramSettingKey
     ChromeGuideCreateMargin        = 'diagram.chrome.guideCreateMargin',
     ChromePersistentGuideColor     = 'diagram.chrome.persistentGuideColor',
     ChromePersistentGuideSelectedColor = 'diagram.chrome.persistentGuideSelectedColor',
+    ChromePersistentGuidePreviewColor  = 'diagram.chrome.persistentGuidePreviewColor',
 
     ToolboxTileSize             = 'diagram.toolbox.tileSize',
     ToolboxPreviewFill          = 'diagram.toolbox.previewFill',
@@ -53,6 +54,7 @@ export enum DiagramSettingKey
     RulerTickMinSpacing         = 'diagram.ruler.tickMinSpacing',
     RulerFill                   = 'diagram.ruler.fill',
     RulerTickColor              = 'diagram.ruler.tickColor',
+    RulerHoverFill              = 'diagram.ruler.hoverFill',
 }
 
 // One catalogue row: the schema for a tunable constant. The `default` is the
@@ -209,12 +211,18 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
     { key: DiagramSettingKey.ChromePersistentGuideSelectedColor, label: 'Selected guide colour',
       description: 'Colour of the currently-selected ruler guide line.',
       category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#f59e0b')) },
+    { key: DiagramSettingKey.ChromePersistentGuidePreviewColor, label: 'Guide preview colour',
+      description: 'Colour of the faint preview line shown while hovering a guide drag-out zone.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#e5484d')) },
     { key: DiagramSettingKey.RulerFill, label: 'Ruler fill',
       description: 'Background fill of the ruler strips.',
       category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#f3f4f6')) },
     { key: DiagramSettingKey.RulerTickColor, label: 'Ruler tick colour',
       description: 'Colour of ruler tick marks and labels.',
       category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#6b7280')) },
+    { key: DiagramSettingKey.RulerHoverFill, label: 'Ruler hover fill',
+      description: 'Accent wash painted over a ruler strip while the pointer is over it.',
+      category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#dbeafe')) },
 ];
 
 const COLOR_DEFAULTS: ReadonlyMap<DiagramSettingKey, SolidColorBrush> =
@@ -361,6 +369,7 @@ export class DiagramSettings
     public static GuideCreateMargin():        number         { return DiagramSettings.num(DiagramSettingKey.ChromeGuideCreateMargin); }
     public static PersistentGuideColor():     SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromePersistentGuideColor); }
     public static PersistentGuideSelectedColor(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromePersistentGuideSelectedColor); }
+    public static PersistentGuidePreviewColor():  SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromePersistentGuidePreviewColor); }
 
     // ── Toolbox ──────────────────────────────────────────────────────────
     public static ToolboxTileSize():    number          { return DiagramSettings.num(DiagramSettingKey.ToolboxTileSize); }
@@ -371,4 +380,5 @@ export class DiagramSettings
     public static RulerTickMinSpacing(): number          { return DiagramSettings.num(DiagramSettingKey.RulerTickMinSpacing); }
     public static RulerFill():           SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.RulerFill); }
     public static RulerTickColor():      SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.RulerTickColor); }
+    public static RulerHoverFill():      SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.RulerHoverFill); }
 }

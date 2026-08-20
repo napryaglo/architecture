@@ -136,6 +136,32 @@ describe('persistent-guides behavior — live interactions', () => {
         assert.equal(diagram.Guides.length, 0);
     });
 
+    test('hovering the top create band shows a resize cursor + Y preview line', () => {
+        const { diagram } = setup();
+        move(diagram, 400, 4, diagram);      // idle move into the top band (content y=4 <= 14)
+        assert.equal(diagram.Cursor, 'ns-resize');
+        assert.ok(diagram.GuidePreview !== undefined, 'preview published');
+        assert.equal(diagram.GuidePreview!.axis, AlignmentAxis.Y);
+        assert.ok(Math.abs(diagram.GuidePreview!.position - 4) < 1);
+    });
+
+    test('hovering an existing guide shows the grab cursor and no preview', () => {
+        const { diagram } = setup();
+        diagram.Guides = [{ axis: AlignmentAxis.X, position: 300, glued: [] }];
+        move(diagram, 300, 200, diagram);    // on the guide line, clear of the bands
+        assert.equal(diagram.Cursor, 'grab');
+        assert.equal(diagram.GuidePreview, undefined);
+    });
+
+    test('moving off any zone clears the hover cursor + preview', () => {
+        const { diagram } = setup();
+        move(diagram, 400, 4, diagram);      // arm hover in the band
+        assert.equal(diagram.Cursor, 'ns-resize');
+        move(diagram, 400, 300, diagram);    // empty canvas, away from bands + guides
+        assert.equal(diagram.Cursor, undefined);
+        assert.equal(diagram.GuidePreview, undefined);
+    });
+
     test('grabbing and dragging a guide moves it', () => {
         const { diagram } = setup();
         diagram.Guides = [{ axis: AlignmentAxis.X, position: 300, glued: [] }];

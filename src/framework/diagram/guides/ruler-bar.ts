@@ -1,6 +1,6 @@
 import {
-    Element, Model, MetaData, Point, Rect, Size,
-    chooseTickInterval, ticksInRange,
+    Element, Model, MetaData, Point, Rect, Size, PropertyDescriptor,
+    AlignmentAxis, chooseTickInterval, ticksInRange, guideCursorFor,
 } from '../../../runtime/index.js';
 import { Orientation } from '../../../basic/index.js';
 import type { DrawingContext } from '../../../visual-engine/index.js';
@@ -39,6 +39,32 @@ export class RulerBar extends Element
     public get Extent(): number { return this.get_property_value(RulerBar.ExtentKey); }
     public set Extent(v: number) { this.set_property_value(RulerBar.ExtentKey, v); }
 
+    constructor()
+    {
+        super();
+        this.refreshCursor();
+    }
+
+    // The ruler is a live drag-out zone for a new guide, so it advertises the
+    // matching resize cursor: a top (horizontal) ruler pulls out a horizontal
+    // guide (Y) that moves vertically → ns-resize; a left ruler → ew-resize.
+    private refreshCursor(): void
+    {
+        this.Cursor = guideCursorFor(this.horizontal ? AlignmentAxis.Y : AlignmentAxis.X);
+    }
+
+    protected override OnPropertyChanged(
+        descriptor: PropertyDescriptor, oldValue: unknown, newValue: unknown): void
+    {
+        super.OnPropertyChanged(descriptor, oldValue, newValue);
+        // Markup writes bypass the TS setter; catch Orientation here too.
+        if (descriptor.Name === 'Orientation') this.refreshCursor();
+        // IsMouseOver is a MetaData.None flag (no auto-repaint) — drive the hover
+        // wash off it explicitly.
+        if (descriptor.Name === 'Orientation' || descriptor.Name === 'IsMouseOver')
+            this.InvalidateVisual();
+    }
+
     private get horizontal(): boolean { return this.Orientation === Orientation.Horizontal; }
 
     protected override MeasureOverride(_available: Size): Size
@@ -60,6 +86,10 @@ export class RulerBar extends Element
         if (s.Width <= 0 || s.Height <= 0) return;
 
         dc.DrawRectangle(DiagramSettings.RulerFill(), undefined, new Rect(0, 0, s.Width, s.Height));
+        // Hover affordance: accent wash under the ticks while the pointer is over
+        // the strip, signalling "drag out of here to place a guide".
+        if (this.IsMouseOver)
+            dc.DrawRectangle(DiagramSettings.RulerHoverFill(), undefined, new Rect(0, 0, s.Width, s.Height));
 
         const zoom = this.Zoom || 1;
         const offset = this.Offset;

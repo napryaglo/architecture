@@ -105,8 +105,10 @@ describe('DiagramSettings', () => {
         assert.equal(DiagramSettings.PersistentGuideThickness(), 1);
         assert.ok(DiagramSettings.PersistentGuideColor() instanceof SolidColorBrush);
         assert.ok(DiagramSettings.PersistentGuideSelectedColor() instanceof SolidColorBrush);
+        assert.ok(DiagramSettings.PersistentGuidePreviewColor() instanceof SolidColorBrush);
         assert.ok(DiagramSettings.RulerFill() instanceof SolidColorBrush);
         assert.ok(DiagramSettings.RulerTickColor() instanceof SolidColorBrush);
+        assert.ok(DiagramSettings.RulerHoverFill() instanceof SolidColorBrush);
     });
 
     test('Subscribe fires when a Diagram setting changes', () => {

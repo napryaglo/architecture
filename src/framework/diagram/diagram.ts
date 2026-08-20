@@ -7,6 +7,7 @@ import {
     Model,
     type ObservableCollection,
     type PersistentGuide,
+    type GuidePreview,
     Rect,
     Visibility,
     type KeyEventArgs,
@@ -339,6 +340,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // and by the behavior's Delete-key handler.
     public static readonly SelectedGuideKey = Model.RegisterProperty<number>(
         Diagram, 'SelectedGuide', -1, MetaData.None);
+
+    // Transient hover placement hint: where a guide would land if the user dragged
+    // out right now, or undefined when not over a drag-out zone. The behavior sets
+    // it on idle pointer-move; the adorner subscribes to paint the faint preview
+    // line. Never persisted (view-only).
+    public static readonly GuidePreviewKey = Model.RegisterProperty<GuidePreview | undefined>(
+        Diagram, 'GuidePreview', undefined, MetaData.None);
 
     // Selection-resize opt-in. Default off. When flipped true, a
     // SelectionBoundsAdorner mounts in the ItemsPanel's AdornerLayer
@@ -675,6 +683,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
 
     public get SelectedGuide(): number { return this.get_property_value(Diagram.SelectedGuideKey); }
     public set SelectedGuide(v: number) { this.set_property_value(Diagram.SelectedGuideKey, v); }
+
+    public get GuidePreview(): GuidePreview | undefined { return this.get_property_value(Diagram.GuidePreviewKey); }
+    public set GuidePreview(v: GuidePreview | undefined) { this.set_property_value(Diagram.GuidePreviewKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
     public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
     public get TextBlockAdornerEnabled():  boolean { return this.get_property_value(Diagram.TextBlockAdornerEnabledKey); }

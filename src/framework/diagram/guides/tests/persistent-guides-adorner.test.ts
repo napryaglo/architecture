@@ -37,4 +37,23 @@ describe('PersistentGuidesAdorner', () => {
         const expX = m.Transform(new Point(100, 0)).X;
         assert.ok(Math.abs(pool[0].ArrangedRect.X - (expX - 0.5)) < 0.6);
     });
+    test('the preview line arranges to a real line only when GuidePreview is set', () => {
+        Application.current = null; new Application();
+        const diagram = new Diagram();
+        const host = new Border();
+        host.Width = 400; host.Height = 300;
+        host.Measure(new Size(400, 300)); host.Arrange(new Rect(0, 0, 400, 300));
+        const adorner = new PersistentGuidesAdorner(host, diagram);
+        const preview = (adorner as unknown as { _preview: { RenderSize: Size; ArrangedRect: Rect } })._preview;
+
+        // No preview -> parked off-screen (collapsed).
+        adorner.Measure(new Size(400, 300)); adorner.Arrange(new Rect(0, 0, 400, 300));
+        assert.ok(preview.RenderSize.Width <= 0 || preview.RenderSize.Height <= 0);
+
+        // A Y preview -> a full-width horizontal line at y=90.
+        diagram.GuidePreview = { axis: AlignmentAxis.Y, position: 90 };
+        adorner.Measure(new Size(400, 300)); adorner.Arrange(new Rect(0, 0, 400, 300));
+        assert.ok(preview.RenderSize.Width > 0 && preview.RenderSize.Height > 0);
+        assert.ok(Math.abs(preview.ArrangedRect.Y - 90) < 1);
+    });
 });
