@@ -42,7 +42,9 @@ export enum DiagramSettingKey
     ChromeGuideThickness        = 'diagram.chrome.guideThickness',
     ChromePersistentGuideThickness = 'diagram.chrome.persistentGuideThickness',
     ChromeGuideGrabTolerance       = 'diagram.chrome.guideGrabTolerance',
+    ChromeGuideCreateMargin        = 'diagram.chrome.guideCreateMargin',
     ChromePersistentGuideColor     = 'diagram.chrome.persistentGuideColor',
+    ChromePersistentGuideSelectedColor = 'diagram.chrome.persistentGuideSelectedColor',
 
     ToolboxTileSize             = 'diagram.toolbox.tileSize',
     ToolboxPreviewFill          = 'diagram.toolbox.previewFill',
@@ -157,8 +159,11 @@ const SPECS: readonly DiagramSettingSpec[] =
       description: 'Line thickness of a user-placed ruler guide, in pixels.',
       category: CAT_CHROME, default: 1, min: 1, max: 8 },
     { key: DiagramSettingKey.ChromeGuideGrabTolerance, label: 'Guide grab tolerance',
-      description: 'Cursor distance at which a ruler guide can be grabbed, in pixels.',
-      category: CAT_CHROME, default: 4, min: 1, max: 24 },
+      description: 'Cursor distance at which a ruler guide can be grabbed/selected, in pixels.',
+      category: CAT_CHROME, default: 6, min: 1, max: 24 },
+    { key: DiagramSettingKey.ChromeGuideCreateMargin, label: 'Guide create margin',
+      description: 'Canvas band next to a ruler where a drag pulls out a new guide, in pixels.',
+      category: CAT_CHROME, default: 14, min: 0, max: 48 },
 
     { key: DiagramSettingKey.ToolboxTileSize, label: 'Toolbox tile size',
       description: 'Width & height of a shape preview tile in the toolbox, in pixels.',
@@ -201,6 +206,9 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
     { key: DiagramSettingKey.ChromePersistentGuideColor, label: 'Persistent guide colour',
       description: 'Colour of a user-placed ruler guide line.',
       category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#e5484d')) },
+    { key: DiagramSettingKey.ChromePersistentGuideSelectedColor, label: 'Selected guide colour',
+      description: 'Colour of the currently-selected ruler guide line.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#f59e0b')) },
     { key: DiagramSettingKey.RulerFill, label: 'Ruler fill',
       description: 'Background fill of the ruler strips.',
       category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#f3f4f6')) },
@@ -350,7 +358,9 @@ export class DiagramSettings
     public static GuideThickness():        number { return DiagramSettings.num(DiagramSettingKey.ChromeGuideThickness); }
     public static PersistentGuideThickness(): number         { return DiagramSettings.num(DiagramSettingKey.ChromePersistentGuideThickness); }
     public static GuideGrabTolerance():       number         { return DiagramSettings.num(DiagramSettingKey.ChromeGuideGrabTolerance); }
+    public static GuideCreateMargin():        number         { return DiagramSettings.num(DiagramSettingKey.ChromeGuideCreateMargin); }
     public static PersistentGuideColor():     SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromePersistentGuideColor); }
+    public static PersistentGuideSelectedColor(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromePersistentGuideSelectedColor); }
 
     // ── Toolbox ──────────────────────────────────────────────────────────
     public static ToolboxTileSize():    number          { return DiagramSettings.num(DiagramSettingKey.ToolboxTileSize); }

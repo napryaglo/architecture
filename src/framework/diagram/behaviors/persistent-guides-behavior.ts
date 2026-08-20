@@ -1,7 +1,7 @@
 import {
-    Rect, AlignmentAxis, EdgeKind,
+    Rect, AlignmentAxis, EdgeKind, Key,
     snapGuidePosition, snapRectToGuides,
-    type PointerEventArgs, type Visual, type PersistentGuide, type GuideGlue, type GuideSnap,
+    type PointerEventArgs, type KeyEventArgs, type Visual, type PersistentGuide, type GuideGlue, type GuideSnap,
 } from '../../../runtime/index.js';
 import { Orientation } from '../../../basic/index.js';
 import { Figure } from '../figure.js';
@@ -10,42 +10,46 @@ import { RulerBar } from '../guides/ruler-bar.js';
 import { DiagramSettings } from '../diagram-settings.js';
 import type { Diagram } from '../diagram.js';
 
-// The interaction coordinator for persistent (Visio-style) ruler guides. Mirrors
-// alignment-guides-behavior: installs a preview-phase pointer interceptor (Figure
-// swallows the bubble pass by setting Handled, so drag start/end must be observed
-// in the tunnel phase) and composes a PositionSnap link. Owns two modes:
-//   * a guide drag (create from a ruler / reposition an existing guide), driven by
-//     this behavior's own pointer loop; and
-//   * a node drag (observe a Figure drag to snap it to guides + form/break glue).
-// The Diagram forwards its OnPreviewPointer{Down,Move,Up} virtuals to the handler
+// The interaction coordinator for persistent (Visio-style) ruler guides. Installs
+// a preview-phase pointer interceptor (Figure swallows the bubble pass by setting
+// Handled, so drag start/end must be observed in the tunnel phase) plus a
+// composed PositionSnap link and a Delete-key handler. Interactions:
+//   * Create — drag out of a ruler OR out of the thin canvas margin next to it.
+//   * Select — click a guide (within grab tolerance) selects it (Diagram.SelectedGuide).
+//   * Move   — drag a selected/grabbed guide in its plane (glued nodes follow).
+//   * Delete — Delete/Backspace removes the selected guide.
+//   * Glue   — dragging a node snaps its edge to a guide and sticks it on drop.
+// The Diagram forwards its OnPreviewPointer{Down,Move,Up} + OnKeyDown to the
 // bundle installed via _setPersistentGuidesHandlers.
 
-// The four pointer virtuals the Diagram delegates to. `unknown` args mirror the
-// connector/alignment handler bundles so the Diagram stays decoupled from the
-// concrete args type at the dispatch site.
 export interface PersistentGuidesHandlers
 {
     OnPreviewPointerDown(args: unknown): void;
     OnPreviewPointerMove(args: unknown): void;
     OnPreviewPointerUp  (args: unknown): void;
+    OnKeyDown           (args: unknown): void;
 }
 
 enum Mode { None, Create, Reposition, NodeDrag }
+
+const MOVE_THRESHOLD = 3;   // content px a create/reposition must travel to "count"
 
 /** @internal */
 export function attachPersistentGuides(diagram: Diagram): () => void
 {
     let mode = Mode.None;
     let axis = AlignmentAxis.X;
-    let guideIndex = -1;                 // Create / Reposition target index in Guides
+    let guideIndex = -1;
+    let downPos = 0;                     // guide coordinate at pointer-down (move detection)
     let lastPos = 0;                     // last committed guide position (glue delta base)
-    let activeNode: Figure | undefined;  // NodeDrag: the container being dragged
+    let moved = false;
+    let activeNode: Figure | undefined;
 
     const previousSnap = diagram.PositionSnap;
     diagram.PositionSnap = (rect: Rect): Rect => {
         const base = previousSnap !== undefined ? previousSnap(rect) : rect;
         if (mode !== Mode.NodeDrag || activeNode === undefined) return base;
-        return snapRectToGuides(base, diagram.Guides, DiagramSettings.GuideGrabTolerance()).snapped;
+        return snapRectToGuides(base, diagram.Guides).snapped;
     };
 
     const nodeIdOf = (item: unknown): string | undefined => {
@@ -57,8 +61,7 @@ export function attachPersistentGuides(diagram: Diagram): () => void
 
     const findAncestor = <T>(v: unknown, ctor: new (...a: never[]) => T): T | undefined => {
         let cur = v as { GetVisualParent?(): Visual | undefined } | undefined;
-        while (cur !== undefined && cur !== null)
-        {
+        while (cur !== undefined && cur !== null) {
             if (cur instanceof ctor) return cur;
             cur = (cur as { GetVisualParent?(): Visual | undefined }).GetVisualParent?.();
         }
@@ -70,14 +73,11 @@ export function attachPersistentGuides(diagram: Diagram): () => void
         return { x: p.X, y: p.Y };
     };
 
-    // Content-space rects of every realized node container — snap targets for a
-    // guide being placed/moved. Mirrors alignment behavior's collectOtherRects.
     const otherRects = (): Rect[] => {
         const out: Rect[] = [];
         const items = diagram.ItemsSource;
         if (items === undefined) return out;
-        for (const it of items as Iterable<unknown>)
-        {
+        for (const it of items as Iterable<unknown>) {
             const c = diagram.Generator.ContainerFromItem(it);
             if (!(c instanceof Figure)) continue;
             const r = c.ArrangedRect;
@@ -87,25 +87,64 @@ export function attachPersistentGuides(diagram: Diagram): () => void
         return out;
     };
 
+    // Which existing guide (if any) the point is within grab tolerance of.
+    const guideNear = (p: { x: number; y: number }): number => {
+        const tol = DiagramSettings.GuideGrabTolerance() / (diagram.Zoom || 1);
+        for (let i = 0; i < diagram.Guides.length; i++) {
+            const g = diagram.Guides[i]!;
+            const coord = g.axis === AlignmentAxis.X ? p.x : p.y;
+            if (Math.abs(coord - g.position) <= tol) return i;
+        }
+        return -1;
+    };
+
+    // If the point sits in the thin canvas band next to a ruler, the axis of the
+    // guide a drag there pulls out (top band -> horizontal Y line, left -> X line).
+    const createEdgeAxis = (p: { x: number; y: number }): AlignmentAxis | undefined => {
+        const zoom = diagram.Zoom || 1;
+        const m = DiagramSettings.GuideCreateMargin() / zoom;
+        const topD  = p.y - diagram.ScrollY / zoom;
+        const leftD = p.x - diagram.ScrollX / zoom;
+        const nearTop  = topD  >= 0 && topD  <= m;
+        const nearLeft = leftD >= 0 && leftD <= m;
+        if (nearTop && nearLeft) return topD <= leftD ? AlignmentAxis.Y : AlignmentAxis.X;
+        if (nearTop)  return AlignmentAxis.Y;
+        if (nearLeft) return AlignmentAxis.X;
+        return undefined;
+    };
+
+    const startCreate = (a: AlignmentAxis, p: { x: number; y: number }): void => {
+        axis = a;
+        const pos = a === AlignmentAxis.X ? p.x : p.y;
+        const next = diagram.Guides.slice();
+        guideIndex = next.length;
+        next.push({ axis: a, position: pos, glued: [] });
+        diagram.Guides = next;
+        mode = Mode.Create; downPos = pos; lastPos = pos; moved = false;
+    };
+
     const setGuidePos = (i: number, pos: number): void => {
         const next = diagram.Guides.slice();
         next[i] = { ...next[i]!, position: pos };
         diagram.Guides = next;
     };
 
-    // Translate every node glued to `guide` by `delta` along the guide's axis.
+    const removeGuide = (i: number): void => {
+        const next = diagram.Guides.slice();
+        next.splice(i, 1);
+        diagram.Guides = next;
+    };
+
     const moveGluedNodes = (guide: PersistentGuide, delta: number): void => {
         const items = diagram.ItemsSource;
         if (items === undefined || delta === 0 || guide.glued.length === 0) return;
         const byId = new Map<string, Figure>();
-        for (const it of items as Iterable<unknown>)
-        {
+        for (const it of items as Iterable<unknown>) {
             const id = nodeIdOf(it);
             const c = diagram.Generator.ContainerFromItem(it);
             if (id !== undefined && c instanceof Figure) byId.set(id, c);
         }
-        for (const g of guide.glued)
-        {
+        for (const g of guide.glued) {
             const c = byId.get(g.nodeId);
             if (c === undefined) continue;
             if (guide.axis === AlignmentAxis.X) c.Left = c.Left + delta;
@@ -113,38 +152,42 @@ export function attachPersistentGuides(diagram: Diagram): () => void
         }
     };
 
+    // Consume the gesture AND take keyboard focus: setting Handled here (tunnel
+    // phase) halts the bubble pass, so Diagram.OnPointerDown never runs its own
+    // Focus() — without this, Delete on a selected guide wouldn't reach the Diagram.
+    const claim = (args: PointerEventArgs): void => {
+        args.Handled = true;
+        (diagram as unknown as { Focus?(): void }).Focus?.();
+    };
+
     const onDown = (args: PointerEventArgs): void => {
         if (args.Handled) return;
-        // 1) drag out of a ruler -> create a guide (top ruler -> Y line, left -> X line)
+        // 1) on a ruler -> create (top ruler -> Y guide, left ruler -> X guide)
         const ruler = findAncestor(args.Source, RulerBar);
-        if (ruler !== undefined)
-        {
-            axis = ruler.Orientation === Orientation.Horizontal ? AlignmentAxis.Y : AlignmentAxis.X;
-            const p = contentPoint(args);
-            const pos = axis === AlignmentAxis.X ? p.x : p.y;
-            const next = diagram.Guides.slice();
-            guideIndex = next.length;
-            next.push({ axis, position: pos, glued: [] });
-            diagram.Guides = next;
-            mode = Mode.Create; lastPos = pos;
-            args.Handled = true;
+        if (ruler !== undefined) {
+            startCreate(ruler.Orientation === Orientation.Horizontal ? AlignmentAxis.Y : AlignmentAxis.X, contentPoint(args));
+            claim(args);
             return;
         }
-        // 2) grab an existing guide within tolerance -> reposition
         const p = contentPoint(args);
-        const tol = DiagramSettings.GuideGrabTolerance() / (diagram.Zoom || 1);
-        for (let i = 0; i < diagram.Guides.length; i++)
-        {
-            const g = diagram.Guides[i]!;
-            const coord = g.axis === AlignmentAxis.X ? p.x : p.y;
-            if (Math.abs(coord - g.position) <= tol)
-            {
-                mode = Mode.Reposition; guideIndex = i; axis = g.axis; lastPos = g.position;
-                args.Handled = true;
-                return;
-            }
+        // 2) grab an existing guide -> select + reposition
+        const gi = guideNear(p);
+        if (gi >= 0) {
+            diagram.SelectedGuide = gi;
+            mode = Mode.Reposition; guideIndex = gi; axis = diagram.Guides[gi]!.axis;
+            downPos = diagram.Guides[gi]!.position; lastPos = downPos; moved = false;
+            claim(args);
+            return;
         }
-        // 3) otherwise, if a node is being grabbed, arm glue observation (no Handled)
+        // 3) drag out of the canvas margin next to a ruler -> create
+        const edge = createEdgeAxis(p);
+        if (edge !== undefined) {
+            startCreate(edge, p);
+            claim(args);
+            return;
+        }
+        // 4) elsewhere: deselect any guide; arm node-drag glue observation
+        if (diagram.SelectedGuide !== -1) diagram.SelectedGuide = -1;
         const fig = findAncestor(args.Source, Figure);
         if (fig !== undefined) { mode = Mode.NodeDrag; activeNode = fig; }
     };
@@ -153,40 +196,45 @@ export function attachPersistentGuides(diagram: Diagram): () => void
         if (mode !== Mode.Create && mode !== Mode.Reposition) return;
         const p = contentPoint(args);
         const raw = axis === AlignmentAxis.X ? p.x : p.y;
-        const snapped = snapGuidePosition(axis, raw, otherRects(), DiagramSettings.GuideGrabTolerance());
+        const snapped = snapGuidePosition(axis, raw, otherRects());
+        if (Math.abs(snapped - downPos) > MOVE_THRESHOLD) moved = true;
         if (mode === Mode.Reposition) moveGluedNodes(diagram.Guides[guideIndex]!, snapped - lastPos);
         setGuidePos(guideIndex, snapped);
         lastPos = snapped;
     };
 
     const onUp = (args: PointerEventArgs): void => {
-        if (mode === Mode.Create || mode === Mode.Reposition)
-        {
-            // Dropped back onto a ruler: create -> discard, reposition -> delete.
-            if (findAncestor(args.Source, RulerBar) !== undefined && guideIndex >= 0)
-            {
-                const next = diagram.Guides.slice();
-                next.splice(guideIndex, 1);
-                diagram.Guides = next;
-            }
-        }
-        else if (mode === Mode.NodeDrag && activeNode !== undefined)
-        {
+        if (mode === Mode.Create) {
+            const overRuler = findAncestor(args.Source, RulerBar) !== undefined;
+            if (overRuler || !moved) removeGuide(guideIndex);       // click/no-drag or dropped back on ruler -> cancel
+            else                     diagram.SelectedGuide = guideIndex;
+        } else if (mode === Mode.Reposition) {
+            if (findAncestor(args.Source, RulerBar) !== undefined) { removeGuide(guideIndex); diagram.SelectedGuide = -1; }
+        } else if (mode === Mode.NodeDrag && activeNode !== undefined) {
             const r = activeNode.ArrangedRect;
             const finalRect = new Rect(activeNode.Left, activeNode.Top, r?.Width ?? 0, r?.Height ?? 0);
-            const res = snapRectToGuides(finalRect, diagram.Guides, DiagramSettings.GuideGrabTolerance());
-            // Items-are-Figures: the container IS the node (has its own Id).
-            // VM-backed nodes: hop container -> item VM for the stable id.
+            const res = snapRectToGuides(finalRect, diagram.Guides);
             const id = nodeIdOf(activeNode) ?? nodeIdOf(diagram.Generator.ItemFromContainer(activeNode));
             if (id !== undefined) reglue(diagram, id, res);
         }
-        mode = Mode.None; guideIndex = -1; activeNode = undefined;
+        mode = Mode.None; guideIndex = -1; activeNode = undefined; moved = false;
+    };
+
+    const onKeyDown = (args: KeyEventArgs): void => {
+        if (args.Handled) return;
+        if (args.Key !== Key.Delete && args.Key !== Key.Back) return;
+        const sel = diagram.SelectedGuide;
+        if (sel < 0 || sel >= diagram.Guides.length) return;
+        removeGuide(sel);
+        diagram.SelectedGuide = -1;
+        args.Handled = true;
     };
 
     diagram._setPersistentGuidesHandlers({
-        OnPreviewPointerDown: onDown as (a: unknown) => void,
-        OnPreviewPointerMove: onMove as (a: unknown) => void,
-        OnPreviewPointerUp:   onUp   as (a: unknown) => void,
+        OnPreviewPointerDown: onDown    as (a: unknown) => void,
+        OnPreviewPointerMove: onMove    as (a: unknown) => void,
+        OnPreviewPointerUp:   onUp      as (a: unknown) => void,
+        OnKeyDown:            onKeyDown as (a: unknown) => void,
     });
 
     return (): void => {
@@ -201,8 +249,7 @@ function reglue(diagram: Diagram, nodeId: string, res: GuideSnap): void
 {
     const guides = diagram.Guides.map(g => ({ ...g, glued: g.glued.slice() as GuideGlue[] }));
     const applyAxis = (axisSnap: { edge: EdgeKind; guide: number } | undefined, wantAxis: AlignmentAxis): void => {
-        for (let i = 0; i < guides.length; i++)
-        {
+        for (let i = 0; i < guides.length; i++) {
             if (guides[i]!.axis !== wantAxis) continue;
             guides[i]!.glued = guides[i]!.glued.filter(g => g.nodeId !== nodeId);
         }

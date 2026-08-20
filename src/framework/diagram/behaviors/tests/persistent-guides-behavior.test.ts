@@ -1,6 +1,6 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, AlignmentAxis, EdgeKind, Rect, Size, Visual, ObservableCollection, snapRectToGuides } from '../../../../runtime/index.js';
+import { Application, AlignmentAxis, EdgeKind, Key, Rect, Size, Visual, ObservableCollection, snapRectToGuides } from '../../../../runtime/index.js';
 import { Border, ItemsPanelTemplate } from '../../../../basic/index.js';
 import { PaginatedCanvas } from '../../../../basic/panels/paginated-canvas.js';
 import { initTestApp } from '../../../../basic/tests/test-app.js';
@@ -30,9 +30,9 @@ describe('persistent-guides behavior', () => {
     });
 });
 
-// Drive the tunnel (preview) pointer virtuals directly with real Figure items,
-// like the alignment-guides drag-integration test, to exercise onDown -> onUp.
-describe('persistent-guides behavior — glue integration', () => {
+// Drive the tunnel (preview) pointer virtuals + OnKeyDown directly with real
+// Figure items, like the alignment-guides drag-integration test.
+describe('persistent-guides behavior — live interactions', () => {
     function setup(): { diagram: Diagram; a: Figure } {
         initTestApp();
         const a = new Figure(); a.Id = 'na'; a.Left = 197; a.Top = 100; a.Width = 80; a.Height = 60;
@@ -43,7 +43,6 @@ describe('persistent-guides behavior — glue integration', () => {
         diagram.ItemsPanel = new ItemsPanelTemplate(() => new PaginatedCanvas());
         diagram.ItemsSource = coll;
         attachPersistentGuides(diagram);
-        diagram.Guides = [{ axis: AlignmentAxis.X, position: 200, glued: [] }];
         const surface = new Border();
         surface.SetChild(diagram);
         (surface as Visual).Measure(new Size(800, 600));
@@ -51,32 +50,98 @@ describe('persistent-guides behavior — glue integration', () => {
         return { diagram, a };
     }
 
-    function preview(diagram: Diagram, kind: 'PointerDown' | 'PointerUp', source: Figure): void {
-        const args = { Kind: kind, Source: source, Visual: source, Handled: false, HostX: 0, HostY: 0 };
-        const seam = diagram as unknown as {
-            OnPreviewPointerDown(a: unknown): void;
-            OnPreviewPointerUp(a: unknown): void;
-        };
-        if (kind === 'PointerDown') seam.OnPreviewPointerDown(args);
-        else seam.OnPreviewPointerUp(args);
+    // HostToContent is ~identity here (no ruler offset, zoom 1), so host coords
+    // double as content coords for driving gestures.
+    function down(diagram: Diagram, hx: number, hy: number, source: unknown): void {
+        (diagram as unknown as { OnPreviewPointerDown(a: unknown): void })
+            .OnPreviewPointerDown({ Kind: 'PointerDown', Source: source, Visual: source, Handled: false, HostX: hx, HostY: hy });
+    }
+    function move(diagram: Diagram, hx: number, hy: number, source: unknown): void {
+        (diagram as unknown as { OnPreviewPointerMove(a: unknown): void })
+            .OnPreviewPointerMove({ Kind: 'PointerMove', Source: source, Visual: source, Handled: false, HostX: hx, HostY: hy });
+    }
+    function up(diagram: Diagram, hx: number, hy: number, source: unknown): void {
+        (diagram as unknown as { OnPreviewPointerUp(a: unknown): void })
+            .OnPreviewPointerUp({ Kind: 'PointerUp', Source: source, Visual: source, Handled: false, HostX: hx, HostY: hy });
+    }
+    function key(diagram: Diagram, k: Key): boolean {
+        const args = { Key: k, Modifiers: 0, Handled: false };
+        (diagram as unknown as { OnKeyDown(a: unknown): void }).OnKeyDown(args);
+        return args.Handled;
     }
 
     test('dragging a node whose edge lands on a guide glues it on drop', () => {
         const { diagram, a } = setup();
-        // a.Left = 197: its left edge is within tolerance of the x-guide at 200.
-        preview(diagram, 'PointerDown', a);
-        preview(diagram, 'PointerUp', a);
+        diagram.Guides = [{ axis: AlignmentAxis.X, position: 200, glued: [] }];
+        down(diagram, 237, 130, a);      // on the node body, away from the guide + edges
+        up(diagram, 237, 130, a);
         const glued = diagram.Guides[0]!.glued;
-        assert.equal(glued.length, 1, 'one node glued');
+        assert.equal(glued.length, 1);
         assert.equal(glued[0]!.nodeId, 'na');
         assert.equal(glued[0]!.edge, EdgeKind.Min);
     });
 
     test('dropping the node far from the guide leaves it un-glued', () => {
         const { diagram, a } = setup();
-        preview(diagram, 'PointerDown', a);
-        a.Left = 50;                 // dragged well away from the guide at 200
-        preview(diagram, 'PointerUp', a);
-        assert.equal(diagram.Guides[0]!.glued.length, 0, 'no glue formed');
+        diagram.Guides = [{ axis: AlignmentAxis.X, position: 200, glued: [] }];
+        down(diagram, 237, 130, a);
+        a.Left = 50;
+        up(diagram, 237, 130, a);
+        assert.equal(diagram.Guides[0]!.glued.length, 0);
+    });
+
+    test('clicking near a guide selects it', () => {
+        const { diagram } = setup();
+        diagram.Guides = [{ axis: AlignmentAxis.X, position: 300, glued: [] }];
+        down(diagram, 300, 200, diagram);   // on the guide line, clear of edges
+        up(diagram, 300, 200, diagram);
+        assert.equal(diagram.SelectedGuide, 0);
+    });
+
+    test('Delete removes the selected guide and clears the selection', () => {
+        const { diagram } = setup();
+        diagram.Guides = [{ axis: AlignmentAxis.X, position: 300, glued: [] }];
+        diagram.SelectedGuide = 0;
+        const handled = key(diagram, Key.Delete);
+        assert.equal(handled, true, 'guide delete consumes the key');
+        assert.equal(diagram.Guides.length, 0);
+        assert.equal(diagram.SelectedGuide, -1);
+    });
+
+    test('Delete is a no-op (unhandled) when no guide is selected', () => {
+        const { diagram } = setup();
+        diagram.Guides = [{ axis: AlignmentAxis.X, position: 300, glued: [] }];
+        diagram.SelectedGuide = -1;
+        const handled = key(diagram, Key.Delete);
+        assert.equal(handled, false, 'lets the node-delete path run');
+        assert.equal(diagram.Guides.length, 1);
+    });
+
+    test('dragging out of the top margin creates a horizontal guide', () => {
+        const { diagram } = setup();
+        assert.equal(diagram.Guides.length, 0);
+        down(diagram, 400, 4, diagram);     // top margin band (content y=4 <= 14)
+        move(diagram, 400, 130, diagram);   // drag down into the canvas
+        up(diagram, 400, 130, diagram);
+        assert.equal(diagram.Guides.length, 1);
+        assert.equal(diagram.Guides[0]!.axis, AlignmentAxis.Y);   // horizontal line
+        assert.ok(Math.abs(diagram.Guides[0]!.position - 130) < 6);
+        assert.equal(diagram.SelectedGuide, 0, 'new guide is selected');
+    });
+
+    test('a click in the margin without dragging does not create a guide', () => {
+        const { diagram } = setup();
+        down(diagram, 400, 4, diagram);
+        up(diagram, 400, 4, diagram);       // no move
+        assert.equal(diagram.Guides.length, 0);
+    });
+
+    test('grabbing and dragging a guide moves it', () => {
+        const { diagram } = setup();
+        diagram.Guides = [{ axis: AlignmentAxis.X, position: 300, glued: [] }];
+        down(diagram, 300, 200, diagram);
+        move(diagram, 355, 200, diagram);   // no node edge near 355 -> no snap
+        up(diagram, 355, 200, diagram);
+        assert.ok(Math.abs(diagram.Guides[0]!.position - 355) < 6, `moved to ~355, got ${diagram.Guides[0]!.position}`);
     });
 });

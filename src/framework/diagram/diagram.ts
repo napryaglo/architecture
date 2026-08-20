@@ -334,6 +334,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly RulersVisibleKey = Model.RegisterProperty<boolean>(
         Diagram, 'RulersVisible', false, MetaData.None);
 
+    // Index of the currently-selected persistent guide (into Guides), or -1 for
+    // none. Driven by the behavior on click; read by the adorner to highlight it
+    // and by the behavior's Delete-key handler.
+    public static readonly SelectedGuideKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectedGuide', -1, MetaData.None);
+
     // Selection-resize opt-in. Default off. When flipped true, a
     // SelectionBoundsAdorner mounts in the ItemsPanel's AdornerLayer
     // and drives resize gestures through DiagramSelectionSource (which
@@ -666,6 +672,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
 
     public get RulersVisible(): boolean { return this.get_property_value(Diagram.RulersVisibleKey); }
     public set RulersVisible(v: boolean) { this.set_property_value(Diagram.RulersVisibleKey, v); }
+
+    public get SelectedGuide(): number { return this.get_property_value(Diagram.SelectedGuideKey); }
+    public set SelectedGuide(v: number) { this.set_property_value(Diagram.SelectedGuideKey, v); }
     public get SelectionResizeEnabled():  boolean { return this.get_property_value(Diagram.SelectionResizeEnabledKey); }
     public set SelectionResizeEnabled(v: boolean) { this.set_property_value(Diagram.SelectionResizeEnabledKey, v); }
     public get TextBlockAdornerEnabled():  boolean { return this.get_property_value(Diagram.TextBlockAdornerEnabledKey); }
@@ -1614,6 +1623,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // selection navigation should the consumer rely on it.
     protected override OnKeyDown(args: KeyEventArgs): void
     {
+        // Persistent-guides first: a selected guide consumes Delete/Backspace
+        // before the node-deletion path below sees it.
+        this._persistentGuidesHandlers?.OnKeyDown?.(args);
+        if (args.Handled) return;
+
         const key = args.Key;
         const isArrow = key === Key.Left || key === Key.Right
                      || key === Key.Up   || key === Key.Down;
