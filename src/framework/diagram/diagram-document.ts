@@ -282,6 +282,10 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     // IsDirty) stays disabled. Keyed by the node / connector; cleared on removal.
     private readonly _nodeDirtyTeardown      = new Map<object, () => void>();
     private readonly _connectorDirtyTeardown = new Map<object, () => void>();
+    // Content VMs carry no geometry, so _wireNodeDirty finds nothing to watch on
+    // them; their geometry lives on the container Figure. This tracks the dirty
+    // listener wired on that container (in _onContainerBound), keyed by the VM.
+    private readonly _containerDirtyTeardown = new Map<NodeViewModel, () => void>();
 
     // Guards the view→document mirror so a pulled value isn't written straight
     // back out to the view (which would loop).
@@ -302,8 +306,29 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         if (id === undefined || id === '') return;
         const v = this._visuals.Get(id);
         if (v !== undefined) this._visuals.Apply(v, container);
+        // Wire dirty-on-move/resize on the container (AFTER applying the saved
+        // geometry, so the seed itself doesn't self-dirty). Without this a
+        // content node's move never marks the document dirty — its geometry
+        // lives on the container, which _wireNodeDirty (keyed on the VM) can't see.
+        this._wireContainerDirty(item, container);
         this._repointEndpointsToContainer(id, item, container);
     };
+
+    // Mark the document dirty when the user moves / resizes / rotates a content
+    // node's container. Rewired if the container is recycled onto the same VM;
+    // torn down when the node is removed (_wireNodeDirty's teardown) or the view
+    // is swapped (_rebindContainerBound).
+    private _wireContainerDirty(item: NodeViewModel, container: Figure): void
+    {
+        this._containerDirtyTeardown.get(item)?.();
+        const onEdited = (): void => this._markDirty();
+        const keys = (['Left', 'Top', 'Width', 'Height', 'Rotation'] as const)
+            .map(n => resolveKey(container, undefined, n));
+        for (const k of keys) container.AddPropertyChangedListener(k, onEdited);
+        this._containerDirtyTeardown.set(item, () => {
+            for (const k of keys) container.RemovePropertyChangedListener(k, onEdited);
+        });
+    }
 
     // Re-point any connector endpoint that references this VM node — by
     // preserved id (rehydrateEndpoint deferred it) or directly by the VM object
@@ -453,6 +478,10 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             for (const k of keys) node.RemovePropertyChangedListener(k, onEdited);
             if (strokeKey !== undefined) node.RemovePropertyChangedListener(strokeKey, rewirePen);
             offPen();
+            // Content-VM nodes also carry a container-geometry dirty listener
+            // (wired in _onContainerBound) — drop it when the node is removed.
+            const offContainer = this._containerDirtyTeardown.get(node as NodeViewModel);
+            if (offContainer !== undefined) { offContainer(); this._containerDirtyTeardown.delete(node as NodeViewModel); }
         };
     }
 
@@ -593,6 +622,10 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         if (this._boundView !== undefined)
         {
             this._boundView.RemoveContainerBoundListener(this._onContainerBound);
+            // The old view's containers are gone — drop their geometry-dirty
+            // listeners. The sweep below rewires them against the new view.
+            for (const off of this._containerDirtyTeardown.values()) off();
+            this._containerDirtyTeardown.clear();
         }
         this._boundView = view;
         if (view === undefined) return;
