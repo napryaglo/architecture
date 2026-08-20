@@ -5,6 +5,7 @@ import { Border, Canvas, ItemsPanelTemplate } from '../../../basic/index.js';
 import { SelectionMode } from '../../list/list-box.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
+import { NodeViewModel } from '../node-view-model.js';
 
 function mount(): { diagram: Diagram; a: Figure; b: Figure } {
     Application.current = null; new Application();
@@ -21,8 +22,26 @@ function mount(): { diagram: Diagram; a: Figure; b: Figure } {
     return { diagram, a, b };
 }
 
-function select(diagram: Diagram, fig: Figure, mods: ModifierKeys = ModifierKeys.None): void {
-    const container = diagram.Generator.ContainerFromItem(fig);
+// A VM-backed node (content node, e.g. Plexus ArchNodeVM) — the Diagram wraps
+// it in a Figure container, two-way binding Left/Top/Width/Height. SelectedItems
+// surfaces the VM, not the container.
+function mountVM(): { diagram: Diagram; vm: NodeViewModel } {
+    Application.current = null; new Application();
+    const vm = new NodeViewModel();
+    vm.Id = 'v'; vm.Left = 15; vm.Top = 25; vm.Width = 120; vm.Height = 60;
+    const coll = new ObservableCollection<NodeViewModel>(); coll.Add(vm);
+    const diagram = new Diagram();
+    diagram.SelectionMode = SelectionMode.Extended;
+    diagram.ItemsPanel = new ItemsPanelTemplate(() => new Canvas());
+    diagram.ItemsSource = coll;
+    const surface = new Border(); (surface as unknown as { Child: Visual }).Child = diagram;
+    (surface as Visual).Measure(new Size(800, 600));
+    (surface as Visual).Arrange({ X: 0, Y: 0, Width: 800, Height: 600 } as never);
+    return { diagram, vm };
+}
+
+function select(diagram: Diagram, item: unknown, mods: ModifierKeys = ModifierKeys.None): void {
+    const container = diagram.Generator.ContainerFromItem(item);
     if (container === undefined) throw new Error('no container');
     diagram.HandleContainerClick(container, mods);
 }
@@ -49,6 +68,22 @@ describe('SelectionGeometryMirror', () => {
         select(diagram, a);
         a.Left = 77;
         assert.equal(diagram.SelectedShapeLeft, 77);
+    });
+    test('VM-backed node: HasSelectedShape true, mirrors container geometry', () => {
+        const { diagram, vm } = mountVM();
+        select(diagram, vm);
+        assert.equal(diagram.SelectedItems.length, 1);
+        assert.equal(diagram.HasSelectedShape, true);
+        assert.equal(diagram.SelectedShapeLeft, 15);
+        assert.equal(diagram.SelectedShapeWidth, 120);
+    });
+    test('VM-backed node: writing a SelectedShape DP propagates to the VM', () => {
+        const { diagram, vm } = mountVM();
+        select(diagram, vm);
+        diagram.SelectedShapeLeft = 40;
+        assert.equal(vm.Left, 40);
+        diagram.SelectedShapeWidth = 200;
+        assert.equal(vm.Width, 200);
     });
     test('multi selection => HasSelectedShape false, writes ignored', () => {
         const { diagram, a, b } = mount();

@@ -3,12 +3,21 @@ import type { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 
 // One-shape geometry bridge (sibling of FormatMirror): reflects the single
-// selected Figure's geometry into the Diagram's SelectedShape* DPs (seed on
+// selected shape's geometry into the Diagram's SelectedShape* DPs (seed on
 // selection change AND on the shape's own geometry change, so the inspector
-// tracks live drags/resizes) and routes inspector edits back to the Figure.
+// tracks live drags/resizes) and routes inspector edits back to the shape.
 // Reentrancy is gated with `_seeding` so seed→edit→seed can't loop. Only a
-// selection of exactly one Figure counts — otherwise HasSelectedShape is false
+// selection of exactly one node counts — otherwise HasSelectedShape is false
 // and writes are ignored (the Size/Position editor disables itself).
+//
+// The target is always the item's Figure CONTAINER, resolved via
+// Generator.ContainerFromItem. For a geometric shape (a Figure item) the
+// container IS the item. For a content node (a NodeViewModel item, e.g. Plexus
+// ArchNodeVM) the Diagram wraps it in a Figure container that two-way binds
+// Left/Top/Width/Height to the VM (diagram.ts bindContainer) — so mirroring the
+// container works uniformly, and writes propagate back to the VM through those
+// binds. Working on the container (rather than the raw item) also gives
+// rotation + base-size for free, since only Figures carry those DPs.
 export class SelectionGeometryMirror
 {
     private readonly _d: Diagram;
@@ -34,8 +43,10 @@ export class SelectionGeometryMirror
     {
         const items = this._d.SelectedItems;
         if (items.length !== 1) return undefined;
-        const it = items[0];
-        return it instanceof Figure ? it : undefined;
+        // Resolve the item to its Figure container — the item itself may be a
+        // NodeViewModel (content node), whose container carries the geometry.
+        const container = this._d.Generator.ContainerFromItem(items[0]);
+        return container instanceof Figure ? container : undefined;
     }
 
     private _retarget(): void
