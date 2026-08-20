@@ -36,7 +36,7 @@ describe('Callout', () => {
     test('Detach stops tracking: later target moves do not recompute', () => {
         const { c, target } = scene();
         c.LeaderTargetNode = target;
-        c.Detach();
+        c.DetachLeader();
         const after = c.LeaderGeometry;
         target.Left = 999;
         assert.equal(c.LeaderGeometry, after);

@@ -1,12 +1,12 @@
 // Built-in node serializer registrations.
 //
 // This module registers the three default NodeSerializer implementations —
-// 'shape' (self-painting Figure), 'text' (TextNodeVM), 'callout' (CalloutNodeVM) —
+// 'shape' (self-painting Figure), 'text' (TextNodeVM), 'callout' (Callout) —
 // as side effects on import.  diagram-document.ts imports this module once for its
 // side effects so the registry is populated before any Save/Load call.
 //
 // Cycle-avoidance: this module imports FROM the concrete classes (Figure,
-// TextNodeVM, CalloutNodeVM) and FROM node-serialization (registry).  It does NOT
+// TextNodeVM, Callout) and FROM node-serialization (registry).  It does NOT
 // import from diagram-document, so there is no cycle.  diagram-document.ts
 // imports this module and may also import individual helpers exported here
 // (serializeShapeText, applySerializedText, placeNode).
@@ -22,7 +22,7 @@ import {
 import { Figure } from './figure.js';
 import { NodeViewModel } from './node-view-model.js';
 import { TextNodeVM } from './text-node-vm.js';
-import { CalloutNodeVM } from './callout-node-vm.js';
+import { Callout } from './callout.js';
 import { SHAPE_CATALOG_MAP } from './shape-catalog.js';
 import { registerNodeSerializer, type NodeBaseRecord } from './node-serialization.js';
 
@@ -204,10 +204,10 @@ registerNodeSerializer({
 
     matches(node: unknown): boolean
     {
-        // TextNodeVM is a superclass of CalloutNodeVM; exclude CalloutNodeVM
+        // TextNodeVM is a superclass of Callout; exclude Callout
         // so a callout doesn't match here.  The 'callout' serializer is
-        // registered after this one and matches CalloutNodeVM explicitly.
-        return node instanceof TextNodeVM && !(node instanceof CalloutNodeVM);
+        // registered after this one and matches Callout explicitly.
+        return node instanceof TextNodeVM && !(node instanceof Callout);
     },
 
     serialize(node: unknown): Record<string, unknown>
@@ -226,7 +226,7 @@ registerNodeSerializer({
     },
 });
 
-// ── 'callout' serializer (CalloutNodeVM) ─────────────────────────────
+// ── 'callout' serializer (Callout) ─────────────────────────────
 //
 // NOTE: the leader-target wiring is intentionally NOT done here.
 // Wiring requires all nodes to exist first.  The `leaderTargetId` is stored
@@ -239,21 +239,21 @@ registerNodeSerializer({
 
     matches(node: unknown): boolean
     {
-        return node instanceof CalloutNodeVM;
+        return node instanceof Callout;
     },
 
     serialize(node: unknown): Record<string, unknown>
     {
-        const c = node as CalloutNodeVM;
+        const c = node as Callout;
         return {
             text:           serializeShapeText(c.Text),
             leaderTargetId: c.LeaderTargetId,
         };
     },
 
-    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): CalloutNodeVM
+    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): Callout
     {
-        const callout = new CalloutNodeVM();
+        const callout = new Callout();
         placeNode(callout, base);
         callout.Id = base.id;
         if (data.text !== undefined) applySerializedText(callout.Text, data.text as SerializedText);

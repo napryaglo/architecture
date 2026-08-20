@@ -1,11 +1,11 @@
-// Task C3 — CalloutNodeVM headless tests.
-// Strategy: create a CalloutNodeVM `c` and a target Figure `t`,
+// Task C3 — Callout headless tests.
+// Strategy: create a Callout `c` and a target Figure `t`,
 // wire the leader, then assert LeaderGeometry math and reactivity.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
-import { CalloutNodeVM } from '../callout-node-vm.js';
+import { Callout } from '../callout.js';
 import { Figure } from '../figure.js';
 import { PathGeometry } from '../../../visual-engine/index.js';
 
@@ -32,16 +32,16 @@ function leaderEndpoints(g: PathGeometry): [{ x: number; y: number }, { x: numbe
     ];
 }
 
-describe('M4 CalloutNodeVM', () => {
+describe('M4 Callout', () => {
     test('LeaderGeometry is undefined when no target is set', () => {
         app();
-        const c = new CalloutNodeVM();
+        const c = new Callout();
         assert.equal(c.LeaderGeometry, undefined, 'no target → undefined geometry');
     });
 
     test('LeaderGeometry defined after setting LeaderTargetNode', () => {
         app();
-        const c = new CalloutNodeVM();
+        const c = new Callout();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
 
         const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
@@ -52,7 +52,7 @@ describe('M4 CalloutNodeVM', () => {
 
     test('LeaderTargetId returns target Id', () => {
         app();
-        const c = new CalloutNodeVM();
+        const c = new Callout();
         const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         t.Id = 'node-42';
         c.LeaderTargetNode = t;
@@ -62,7 +62,7 @@ describe('M4 CalloutNodeVM', () => {
     test('leader far endpoint is target centre in callout-local coords', () => {
         app();
         // Callout at (0,0), size 120×44.
-        const c = new CalloutNodeVM();
+        const c = new Callout();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
 
         // Target at (300, 200), size 80×60 → centre = (340, 230).
@@ -81,7 +81,7 @@ describe('M4 CalloutNodeVM', () => {
 
     test('leader start is on the callout box edge (not interior)', () => {
         app();
-        const c = new CalloutNodeVM();
+        const c = new Callout();
         c.Left = 100; c.Top = 100; c.Width = 120; c.Height = 44;
 
         const t = Figure.fromKind('rectangle', 400, 300, { width: 80, height: 60 });
@@ -99,7 +99,7 @@ describe('M4 CalloutNodeVM', () => {
 
     test('LeaderGeometry recomputes when target moves', () => {
         app();
-        const c = new CalloutNodeVM();
+        const c = new Callout();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
 
         const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
@@ -119,7 +119,7 @@ describe('M4 CalloutNodeVM', () => {
 
     test('LeaderGeometry recomputes when callout moves', () => {
         app();
-        const c = new CalloutNodeVM();
+        const c = new Callout();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
 
         const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
@@ -143,7 +143,7 @@ describe('M4 CalloutNodeVM', () => {
 
     test('clearing LeaderTargetNode sets LeaderGeometry to undefined', () => {
         app();
-        const c = new CalloutNodeVM();
+        const c = new Callout();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
         const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         c.LeaderTargetNode = t;
@@ -155,7 +155,7 @@ describe('M4 CalloutNodeVM', () => {
 
     test('target move does not update geometry after target is unlinked', () => {
         app();
-        const c = new CalloutNodeVM();
+        const c = new Callout();
         c.Left = 0; c.Top = 0; c.Width = 120; c.Height = 44;
         const t = Figure.fromKind('rectangle', 300, 200, { width: 80, height: 60 });
         c.LeaderTargetNode = t;

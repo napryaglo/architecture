@@ -83,8 +83,10 @@ export class Callout extends TextNode
     }
 
     /** Release the target-geometry subscription (the document calls this when
-     *  the callout is deleted so it stops tracking a node it no longer draws). */
-    public Detach(): void
+     *  the callout is deleted so it stops tracking a node it no longer draws).
+     *  Named DetachLeader, not Detach, to avoid Element's protected visual-tree
+     *  Detach(child). */
+    public DetachLeader(): void
     {
         const prev = this._trackedTarget;
         if (prev !== undefined)

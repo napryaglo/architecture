@@ -95,40 +95,6 @@ resources Diagrams {
         }
     }
 
-    // ── CalloutNodeVM: text-box node with a template-driven leader ──
-    //
-    // DataTemplate for CalloutNodeVM. Includes the full TextNodeVM visual
-    // (Border + PART_LabelHost ContentPresenter) PLUS a leader Shape bound
-    // to $LeaderGeometry. The leader Shape is placed as a sibling of the
-    // Border inside a Canvas so it can draw OUTSIDE the border bounds to
-    // reach the target node — Canvas does not clip children to its own
-    // size, so the leader line is never cut at the callout box edge.
-    //
-    // The Canvas itself has no explicit size (it measures to zero), so the
-    // sizing contract comes from the Border child (via $Width/$Height).
-    // IsHitTestVisible=false on the leader so it never swallows pointer
-    // events that should land on the callout box or the diagram canvas.
-    //
-    // CLIPPING NOTE: The leader Shape's Geometry is in callout-LOCAL coords
-    // (origin = callout's top-left corner). Because the Shape has no
-    // Canvas.Left/Canvas.Top offset it is co-located with the callout box
-    // at (0,0) in the DataTemplate's coordinate frame. The Canvas container
-    // does not clip, so the leader line extends freely to the target.
-    // In live GUI smoke: confirm that the leader is visible beyond the
-    // border edge and is not clipped by any ancestor ContentPresenter
-    // (the Figure PART_Content ContentPresenter should also not clip;
-    // verify ActualClip is unset in a layout pass if in doubt).
-    DataTemplate [DataType = CalloutNodeVM] {
-        Canvas {
-            Border [ Fill = $Fill, Stroke = $Stroke, Width = $Width, Height = $Height ] {
-                ContentPresenter x:name="PART_LabelHost" [ Content = $Text, Width = $Width, Height = $Height ]
-            }
-            Shape
-                [ Geometry          = $LeaderGeometry,
-                  Stroke            = (#64748bff, 1.5),
-                  IsHitTestVisible  = false ]
-        }
-    }
 
     // ── ShapeText: a shape's text block (the Visio "text block") ────
     // A Border (PART_Bg) carries the optional text-background fill + inner

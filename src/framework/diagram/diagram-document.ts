@@ -15,7 +15,7 @@ import { Figure } from './figure.js';
 import { Group } from './group.js';
 import { NodeViewModel } from './node-view-model.js';
 import { TextNodeVM } from './text-node-vm.js';
-import { CalloutNodeVM } from './callout-node-vm.js';
+import { Callout } from './callout.js';
 import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
 import { serializerFor, serializerByType, type NodeBaseRecord } from './node-serialization.js';
 // Importing node-serializers-default.js registers the built-in
@@ -624,12 +624,12 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             // (mirrors the connector DetachFromHosts cascade above).
             for (const item of items)
             {
-                if (item instanceof CalloutNodeVM) item.Detach();
+                if (item instanceof Callout) item.DetachLeader();
             }
             for (let i = 0; i < this.Nodes.Count; i++)
             {
                 const n = this.Nodes.Get(i);
-                if (n instanceof CalloutNodeVM
+                if (n instanceof Callout
                     && n.LeaderTargetNode !== undefined
                     && items.includes(n.LeaderTargetNode as unknown))
                 {
@@ -932,12 +932,12 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
         // Round-trip nodes first so connectors can resolve their endpoint
         // nodeIds against the freshly-rehydrated Nodes set.
-        // byId accepts Figure, TextNodeVM, or CalloutNodeVM;
+        // byId accepts Figure, TextNodeVM, or Callout;
         // ConnectorEndpoint.Node is typed Model so all are accepted.
-        const byId = new Map<string, Figure | TextNodeVM | CalloutNodeVM>();
+        const byId = new Map<string, Figure | TextNodeVM | Callout>();
         // Callout leader targets resolve in a second pass (the target node may
         // be deserialized after the callout).
-        const pendingLeaders: { callout: CalloutNodeVM; targetId: string }[] = [];
+        const pendingLeaders: { callout: Callout; targetId: string }[] = [];
 
         // Ids already claimed by explicit records (or generated below) — the
         // fallback generator must skip these so an empty-id node never collides
@@ -959,7 +959,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             const id = n.id !== '' ? n.id : nextFreeId();
             const base: NodeBaseRecord = { id, left: n.left, top: n.top, w: n.w, h: n.h };
 
-            let node: Figure | TextNodeVM | CalloutNodeVM | undefined;
+            let node: Figure | TextNodeVM | Callout | undefined;
 
             if (typeof n.type === 'string')
             {
@@ -967,7 +967,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 const s = serializerByType(n.type);
                 if (s !== undefined)
                 {
-                    node = s.deserialize(n.data ?? {}, base) as Figure | TextNodeVM | CalloutNodeVM;
+                    node = s.deserialize(n.data ?? {}, base) as Figure | TextNodeVM | Callout;
                 }
                 // Unknown serializer type — skip.
             }
@@ -976,7 +976,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 // Legacy V1 flat record — infer type from the `kind` field and
                 // synthesise a `data` bag matching each serializer's expectation.
                 // The text/callout serializers now build VMs, so legacy scenes
-                // also load as TextNodeVM / CalloutNodeVM automatically.
+                // also load as TextNodeVM / Callout automatically.
                 const kind = typeof n.kind === 'string' ? n.kind : '';
                 if (kind === 'text')
                 {
@@ -986,7 +986,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 else if (kind === 'callout')
                 {
                     const s = serializerByType('callout')!;
-                    node = s.deserialize({ text: n.text, leaderTargetId: n.leaderTargetId }, base) as CalloutNodeVM;
+                    node = s.deserialize({ text: n.text, leaderTargetId: n.leaderTargetId }, base) as Callout;
                 }
                 else
                 {
@@ -999,7 +999,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             if (node === undefined) continue;
 
             // Register callout leaders for second pass.
-            if (node instanceof CalloutNodeVM)
+            if (node instanceof Callout)
             {
                 const targetId = typeof n.type === 'string'
                     ? (typeof n.data?.leaderTargetId === 'string' ? n.data.leaderTargetId : undefined)
@@ -1013,7 +1013,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
         // Wire callout leaders now that every node id resolves.
         // The target may be any rehydrated node type (Figure shape, TextNodeVM,
-        // or CalloutNodeVM) — all satisfy ILeaderTarget at runtime
+        // or Callout) — all satisfy ILeaderTarget at runtime
         // (Left/Top/Width/Height + DPs).
         for (const { callout, targetId } of pendingLeaders)
         {
@@ -1021,7 +1021,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             if (target !== undefined)
             {
                 // ILeaderTarget is satisfied by all node types (duck-typed).
-                callout.LeaderTargetNode = target as import('./callout-node-vm.js').ILeaderTarget;
+                callout.LeaderTargetNode = target as import('./callout.js').ILeaderTarget;
             }
         }
         for (const sc of payload.connectors ?? [])
@@ -1128,7 +1128,7 @@ function nodeEndpoint(nodeId: string, ep: ConnectorEndpoint): SerializedConnecto
 
 function rehydrateEndpoint(
     s: SerializedConnectorEndpoint,
-    byId: ReadonlyMap<string, Figure | TextNodeVM | CalloutNodeVM>,
+    byId: ReadonlyMap<string, Figure | TextNodeVM | Callout>,
 ): ConnectorEndpoint
 {
     if (s.nodeId !== undefined)

@@ -1,10 +1,10 @@
 // Task C4 — text/callout serializer swap + round-trip tests.
 //
 // Verifies:
-//   1. Typed round-trip: TextNodeVM + CalloutNodeVM → Save → Load → VMs with
+//   1. Typed round-trip: TextNodeVM + Callout → Save → Load → VMs with
 //      label + leader restored.
 //   2. Legacy load: hand-written {kind:'text'/'callout'} payload (no `type`)
-//      → loads as TextNodeVM / CalloutNodeVM.
+//      → loads as TextNodeVM / Callout.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 import { TextNodeVM } from '../text-node-vm.js';
-import { CalloutNodeVM } from '../callout-node-vm.js';
+import { Callout } from '../callout.js';
 
 class MemoryStorage implements DiagramStorage
 {
@@ -55,7 +55,7 @@ describe('C4 text/callout serializer — typed round-trip', () => {
         assert.equal((restored as TextNodeVM).Top, 10, 'Top restored');
     });
 
-    test('CalloutNodeVM + TextNodeVM target: reloads as VMs with leader resolved', () => {
+    test('Callout + TextNodeVM target: reloads as VMs with leader resolved', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
 
@@ -65,7 +65,7 @@ describe('C4 text/callout serializer — typed round-trip', () => {
         target.Left = 300; target.Top = 200; target.Width = 80; target.Height = 60;
         doc.Nodes.Add(target);
 
-        const callout = new CalloutNodeVM();
+        const callout = new Callout();
         callout.Id = 'cl1';
         callout.LabelText = 'callout label';
         callout.Left = 0; callout.Top = 0;
@@ -83,17 +83,17 @@ describe('C4 text/callout serializer — typed round-trip', () => {
         const rc = doc2.Nodes.Get(1)!;
 
         assert.ok(rt instanceof TextNodeVM, 'target reloaded as TextNodeVM');
-        assert.ok(rc instanceof CalloutNodeVM, 'callout reloaded as CalloutNodeVM');
-        assert.equal((rc as CalloutNodeVM).LabelText, 'callout label', 'callout label restored');
+        assert.ok(rc instanceof Callout, 'callout reloaded as Callout');
+        assert.equal((rc as Callout).LabelText, 'callout label', 'callout label restored');
         // Leader target must be re-wired to the reloaded node (by id).
         assert.equal(
-            (rc as CalloutNodeVM).LeaderTargetNode,
+            (rc as Callout).LeaderTargetNode,
             rt,
             'leader re-wired to the reloaded target node',
         );
     });
 
-    test('Save emits type=text for TextNodeVM and type=callout for CalloutNodeVM', () => {
+    test('Save emits type=text for TextNodeVM and type=callout for Callout', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
 
@@ -101,7 +101,7 @@ describe('C4 text/callout serializer — typed round-trip', () => {
         txt.Id = 'tx1'; txt.LabelText = 'hi';
         doc.Nodes.Add(txt);
 
-        const callout = new CalloutNodeVM();
+        const callout = new Callout();
         callout.Id = 'cl1'; callout.LabelText = 'co';
         // Wire a leader so leaderTargetId is serialized.
         callout.LeaderTargetNode = txt;
@@ -114,7 +114,7 @@ describe('C4 text/callout serializer — typed round-trip', () => {
         };
         assert.equal(raw.nodes.length, 2, 'two node records');
         assert.equal(raw.nodes[0]!.type, 'text', 'TextNodeVM → type=text');
-        assert.equal(raw.nodes[1]!.type, 'callout', 'CalloutNodeVM → type=callout');
+        assert.equal(raw.nodes[1]!.type, 'callout', 'Callout → type=callout');
         // Payload shape must be identical to M3: {text} / {text, leaderTargetId}
         assert.ok('text' in (raw.nodes[0]!.data ?? {}), 'text serializer data has text key');
         assert.ok('text' in (raw.nodes[1]!.data ?? {}), 'callout serializer data has text key');
@@ -149,7 +149,7 @@ describe('C4 text/callout serializer — legacy load', () => {
         assert.equal((node as TextNodeVM).LabelText, 'legacy note', 'label restored from legacy');
     });
 
-    test('legacy {kind:"callout"} node loads as CalloutNodeVM with leader resolved', () => {
+    test('legacy {kind:"callout"} node loads as Callout with leader resolved', () => {
         const storage = new MemoryStorage();
         const legacy = JSON.stringify({
             nodes: [
@@ -177,7 +177,7 @@ describe('C4 text/callout serializer — legacy load', () => {
         const rc = doc.Nodes.Get(1)!;
 
         assert.ok(rt instanceof TextNodeVM, 'legacy target loads as TextNodeVM');
-        assert.ok(rc instanceof CalloutNodeVM, 'legacy callout loads as CalloutNodeVM');
-        assert.equal((rc as CalloutNodeVM).LeaderTargetNode, rt, 'leader re-wired from legacy payload');
+        assert.ok(rc instanceof Callout, 'legacy callout loads as Callout');
+        assert.equal((rc as Callout).LeaderTargetNode, rt, 'leader re-wired from legacy payload');
     });
 });
