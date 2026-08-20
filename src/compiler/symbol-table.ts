@@ -238,6 +238,8 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['DiagramStorageKey',       '@pragmatic-lab/mural/framework/diagram/diagram-document.js'],
     ['DiagramEditingContext',   '@pragmatic-lab/mural/framework/diagram/diagram-command-contexts.js'],
     ['DiagramInspector',        '@pragmatic-lab/mural/framework/diagram/diagram-inspector.js'],
+    ['ShapeStylePage',          '@pragmatic-lab/mural/framework/diagram/inspector-pages.js'],
+    ['SizePositionPage',        '@pragmatic-lab/mural/framework/diagram/inspector-pages.js'],
     ['Grid',                    '@pragmatic-lab/mural/basic'],
     ['GridLength',              '@pragmatic-lab/mural/basic'],
     ['ColumnDefinition',        '@pragmatic-lab/mural/basic'],

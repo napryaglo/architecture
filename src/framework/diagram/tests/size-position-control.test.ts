@@ -45,4 +45,13 @@ describe('SizePositionControl conversions', () => {
         Application.current = null; new Application();
         assert.equal(new SizePositionControl().HasTarget, false);
     });
+    test('From dropdown label maps to/from PositionFrom', () => {
+        const c = make();
+        assert.deepEqual([...c.FromLabels], ['Top Left Corner', 'Center']);
+        assert.equal(c.SelectedFromLabel, 'Top Left Corner');
+        c.SelectedFromLabel = 'Center';
+        assert.equal(c.PositionFrom, PositionAnchor.Center);
+        c.PositionFrom = PositionAnchor.TopLeftCorner;
+        assert.equal(c.SelectedFromLabel, 'Top Left Corner');
+    });
 });

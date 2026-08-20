@@ -2,6 +2,11 @@ import { MetaData, Model, Element, type PropertyDescriptor } from '../../runtime
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { PositionAnchor } from './position-anchor.js';
 
+// The "From" dropdown labels (rendered directly as ComboBox string items — no
+// item template needed). SelectedFromLabel maps to/from the PositionFrom enum.
+const TOP_LEFT_LABEL = 'Top Left Corner';
+const CENTER_LABEL   = 'Center';
+
 // The Size & Position editor's brain (view logic only). Raw DPs bind to the
 // Diagram's SelectedShape* geometry; the derived DPs the fields bind to
 // (Horizontal/Vertical position, Scale %) are kept in sync both ways with a
@@ -33,10 +38,18 @@ export class SizePositionControl extends TemplatedControl
     public static readonly ScaleHeightKey = Model.RegisterProperty<number>(SizePositionControl, 'ScaleHeight', 100, MetaData.BindsTwoWayByDefault);
     public static readonly PositionFromKey = Model.RegisterProperty<PositionAnchor>(SizePositionControl, 'PositionFrom', PositionAnchor.TopLeftCorner, MetaData.BindsTwoWayByDefault);
     public static readonly LockAspectRatioKey = Model.RegisterProperty<boolean>(SizePositionControl, 'LockAspectRatio', false, MetaData.BindsTwoWayByDefault);
+    // The "From" ComboBox: a static label list + the two-way selected label,
+    // mapped to/from PositionFrom so the enum stays the source of truth.
+    public static readonly FromLabelsKey = Model.RegisterProperty<readonly string[]>(SizePositionControl, 'FromLabels', undefined as unknown as readonly string[], MetaData.None);
+    public static readonly SelectedFromLabelKey = Model.RegisterProperty<string>(SizePositionControl, 'SelectedFromLabel', TOP_LEFT_LABEL, MetaData.BindsTwoWayByDefault);
 
     private _syncing = false;
 
-    constructor() { super(); this.applyDefaultStyle(); }
+    constructor() {
+        super();
+        this.set_property_value(SizePositionControl.FromLabelsKey, [TOP_LEFT_LABEL, CENTER_LABEL]);
+        this.applyDefaultStyle();
+    }
 
     public get Left(): number { return this.get_property_value(SizePositionControl.LeftKey); }
     public set Left(v: number) { this.set_property_value(SizePositionControl.LeftKey, v); }
@@ -66,6 +79,9 @@ export class SizePositionControl extends TemplatedControl
     public set PositionFrom(v: PositionAnchor) { this.set_property_value(SizePositionControl.PositionFromKey, v); }
     public get LockAspectRatio(): boolean { return this.get_property_value(SizePositionControl.LockAspectRatioKey); }
     public set LockAspectRatio(v: boolean) { this.set_property_value(SizePositionControl.LockAspectRatioKey, v); }
+    public get FromLabels(): readonly string[] { return this.get_property_value(SizePositionControl.FromLabelsKey); }
+    public get SelectedFromLabel(): string { return this.get_property_value(SizePositionControl.SelectedFromLabelKey); }
+    public set SelectedFromLabel(v: string) { this.set_property_value(SizePositionControl.SelectedFromLabelKey, v); }
 
     protected override OnPropertyChanged(d: PropertyDescriptor, oldValue: unknown, newValue: unknown): void
     {
@@ -74,7 +90,15 @@ export class SizePositionControl extends TemplatedControl
         this._syncing = true;
         try {
             switch (d.Name) {
-                case 'Left': case 'Top': case 'PositionFrom': case 'BaseWidth': case 'BaseHeight':
+                case 'PositionFrom':
+                    this.SelectedFromLabel = this.PositionFrom === PositionAnchor.Center ? CENTER_LABEL : TOP_LEFT_LABEL;
+                    this._recomputeDerived();
+                    break;
+                case 'SelectedFromLabel':
+                    this.PositionFrom = this.SelectedFromLabel === CENTER_LABEL ? PositionAnchor.Center : PositionAnchor.TopLeftCorner;
+                    this._recomputeDerived();
+                    break;
+                case 'Left': case 'Top': case 'BaseWidth': case 'BaseHeight':
                     this._recomputeDerived();
                     break;
                 case 'WidthValue':

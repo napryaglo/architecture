@@ -315,7 +315,67 @@ resources Diagrams {
     // only to its first segment and go stale on selection change; the VM's `View`
     // hop makes the format state track the live selection (and the DPs are
     // BindsTwoWayByDefault, so edits still broadcast back through the control).
+    // ── Paged inspector: a horizontal NavigationRail over the page bodies ──
+    // The rail (a Selector) TwoWay-binds SelectedItem to the inspector's
+    // SelectedPage; a ContentControl (NOT a bare ContentPresenter — that pins
+    // its DataContext to the presented page and freezes the $SelectedPage
+    // source) presents the selected page, resolving its per-type DataTemplate.
+    // Each page body retargets DataContext = $View so its fields bind the live
+    // Diagram's SINGLE-segment reactive selection DPs (the same reason the old
+    // single-page template hopped through $View).
+
+    // Horizontal text-tab strip (vs the M3 rail's vertical 80dp stack).
+    ItemsPanelTemplate x:key="InspectorRailPanel" {
+        StackPanel [ Orientation = Horizontal ]
+    }
+    Template x:key="InspectorRailItemTemplate" [ TargetType = NavigationItem ] {
+        Border x:name="PART_Outer"
+            [ Fill            = #00000000,
+              Stroke          = Pen [ Brush = #00000000 ],
+              BorderThickness = (0,0,0,2),
+              Padding         = (12,8,12,8) ] {
+            TextBlock x:name="PART_Label"
+                [ Style             = @TitleSmall,
+                  Text              = $Title,
+                  Foreground        = @OnSurfaceVariant,
+                  VerticalAlignment = Center ]
+        }
+        when ( IsSelected ) {
+            PART_Outer.Stroke     = Pen [ Brush = @Primary ];
+            PART_Label.Foreground = @Primary;
+        }
+        when ( IsMouseOver ) { PART_Label.Foreground = @OnSurface; }
+    }
+    Style x:key="InspectorRailItem" [ TargetType = NavigationItem ] {
+        Template = @InspectorRailItemTemplate;
+    }
+    Template x:key="InspectorRailTemplate" [ TargetType = NavigationRail ] {
+        Border x:name="PART_Border"
+            [ Fill            = @Surface,
+              Stroke          = Pen [ Brush = @OutlineVariant ],
+              BorderThickness = (0,0,0,1) ] {
+            ItemsPresenter x:name="PART_ItemsPresenter"
+        }
+    }
+    Style x:key="InspectorRail" [ TargetType = NavigationRail ] {
+        Template   = @InspectorRailTemplate;
+        ItemsPanel = @InspectorRailPanel;
+    }
+
     DataTemplate [DataType = DiagramInspector] {
+        DockPanel [ LastChildFill = true ] {
+            NavigationRail
+                [ DockPanel.Dock     = Top,
+                  Style              = @InspectorRail,
+                  ItemContainerStyle = @InspectorRailItem,
+                  ItemsSource        = $Pages,
+                  SelectedItem       = $SelectedPage ]
+            ContentControl [ Content = $SelectedPage ]
+        }
+    }
+
+    // Page 1 — the existing shape-style control, bound through $View.
+    DataTemplate [DataType = ShapeStylePage] {
         Border [ Padding = (12) ] {
             ScrollViewer
                 [ IsAutoHideScrollBars    = false,
@@ -332,5 +392,79 @@ resources Diagrams {
                       CapOptions        = $ConnectorCapOptions ]
             }
         }
+    }
+
+    // Page 2 — Size & Position, bound through $View to the SelectedShape* DPs.
+    DataTemplate [DataType = SizePositionPage] {
+        Border [ Padding = (12) ] {
+            ScrollViewer
+                [ IsAutoHideScrollBars    = false,
+                  HorizontalScrollEnabled = false,
+                  DataContext             = $View ] {
+                SizePositionControl
+                    [ Left        = $SelectedShapeLeft,
+                      Top         = $SelectedShapeTop,
+                      WidthValue  = $SelectedShapeWidth,
+                      HeightValue = $SelectedShapeHeight,
+                      Rotation    = $SelectedShapeRotation,
+                      BaseWidth   = $SelectedShapeBaseWidth,
+                      BaseHeight  = $SelectedShapeBaseHeight,
+                      HasTarget   = $HasSelectedShape ]
+            }
+        }
+    }
+
+    // SizePositionControl default template — Size + Position sections. Fields
+    // template-bind ($$) the control's own DPs; disabled when no single shape is
+    // selected ($$HasTarget).
+    Template x:key="DefaultSizePositionControl" [ TargetType = SizePositionControl ] {
+        StackPanel [ Orientation = Vertical, IsEnabled = $$HasTarget ] {
+            TextBlock [ Style = @TitleSmall, Text = "Size", Margin = (0,0,0,8) ]
+            DockPanel [ LastChildFill = true, Margin = (0,0,0,6) ] {
+                TextBlock [ DockPanel.Dock = Left, Text = "Height", Style = @BodySmall, Width = 110, VerticalAlignment = Center ]
+                SpinEdit  [ Value = $$HeightValue, Minimum = 1, DecimalPlaces = 0 ]
+            }
+            DockPanel [ LastChildFill = true, Margin = (0,0,0,6) ] {
+                TextBlock [ DockPanel.Dock = Left, Text = "Width", Style = @BodySmall, Width = 110, VerticalAlignment = Center ]
+                SpinEdit  [ Value = $$WidthValue, Minimum = 1, DecimalPlaces = 0 ]
+            }
+            DockPanel [ LastChildFill = true, Margin = (0,0,0,6) ] {
+                TextBlock [ DockPanel.Dock = Left, Text = "Rotation", Style = @BodySmall, Width = 110, VerticalAlignment = Center ]
+                SpinEdit  [ Value = $$Rotation, Minimum = -360, Maximum = 360, DecimalPlaces = 0 ]
+            }
+            DockPanel [ LastChildFill = true, Margin = (0,0,0,6) ] {
+                TextBlock [ DockPanel.Dock = Left, Text = "Scale Height", Style = @BodySmall, Width = 110, VerticalAlignment = Center ]
+                SpinEdit  [ Value = $$ScaleHeight, Minimum = 1, DecimalPlaces = 0 ]
+            }
+            DockPanel [ LastChildFill = true, Margin = (0,0,0,6) ] {
+                TextBlock [ DockPanel.Dock = Left, Text = "Scale Width", Style = @BodySmall, Width = 110, VerticalAlignment = Center ]
+                SpinEdit  [ Value = $$ScaleWidth, Minimum = 1, DecimalPlaces = 0 ]
+            }
+            DockPanel [ LastChildFill = false, Margin = (0,2,0,6) ] {
+                Switch    [ DockPanel.Dock = Right, IsChecked = $$LockAspectRatio ]
+                TextBlock [ Text = "Lock aspect ratio", Style = @BodySmall, VerticalAlignment = Center ]
+            }
+
+            TextBlock [ Style = @TitleSmall, Text = "Position", Margin = (0,12,0,8) ]
+            DockPanel [ LastChildFill = true, Margin = (0,0,0,6) ] {
+                TextBlock [ DockPanel.Dock = Left, Text = "Horizontal", Style = @BodySmall, Width = 110, VerticalAlignment = Center ]
+                SpinEdit  [ Value = $$HorizontalPosition, DecimalPlaces = 0 ]
+            }
+            DockPanel [ LastChildFill = true, Margin = (0,0,0,6) ] {
+                TextBlock [ DockPanel.Dock = Left, Text = "From", Style = @BodySmall, Width = 110, VerticalAlignment = Center ]
+                ComboBox  [ ItemsSource = $$FromLabels, SelectedItem = $$SelectedFromLabel ]
+            }
+            DockPanel [ LastChildFill = true, Margin = (0,0,0,6) ] {
+                TextBlock [ DockPanel.Dock = Left, Text = "Vertical", Style = @BodySmall, Width = 110, VerticalAlignment = Center ]
+                SpinEdit  [ Value = $$VerticalPosition, DecimalPlaces = 0 ]
+            }
+            DockPanel [ LastChildFill = true, Margin = (0,0,0,6) ] {
+                TextBlock [ DockPanel.Dock = Left, Text = "From", Style = @BodySmall, Width = 110, VerticalAlignment = Center ]
+                ComboBox  [ ItemsSource = $$FromLabels, SelectedItem = $$SelectedFromLabel ]
+            }
+        }
+    }
+    Style [ TargetType = SizePositionControl ] {
+        Template = @DefaultSizePositionControl;
     }
 }
