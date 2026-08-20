@@ -104,8 +104,12 @@ export function attachPersistentGuides(diagram: Diagram): () => void
     const createEdgeAxis = (p: { x: number; y: number }): AlignmentAxis | undefined => {
         const zoom = diagram.Zoom || 1;
         const m = DiagramSettings.GuideCreateMargin() / zoom;
-        const topD  = p.y - diagram.ScrollY / zoom;
-        const leftD = p.x - diagram.ScrollX / zoom;
+        // Measure from the EFFECTIVE visible edge (live arrange), not raw
+        // ScrollX/Y — a stale scroll offset on a fits-content axis would shift the
+        // band away from the real edge (that was the vertical-band-shifted bug).
+        const origin = diagram.VisibleContentOrigin();
+        const topD  = p.y - origin.Y;
+        const leftD = p.x - origin.X;
         const nearTop  = topD  >= 0 && topD  <= m;
         const nearLeft = leftD >= 0 && leftD <= m;
         if (nearTop && nearLeft) return topD <= leftD ? AlignmentAxis.Y : AlignmentAxis.X;
