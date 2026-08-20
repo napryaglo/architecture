@@ -5,7 +5,7 @@
 // new node kinds (ArchNodeVM, etc.) never require editing DiagramDocument.
 //
 // This module is deliberately class-free so concrete class modules
-// (Figure shapes, TextNode, CalloutNodeVM) can import from here without creating
+// (Figure shapes, TextNode, Callout) can import from here without creating
 // circular dependencies.  The concrete registrations live in
 // node-serializers-default.ts and are imported by diagram-document.ts for
 // their side-effects.
