@@ -899,6 +899,32 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         this._markDirty();
     }
 
+    // ── Node geometry store (the durable geometry truth) ──────────────
+    //
+    // Write a node's geometry by id. Applies to the node's live container Figure
+    // immediately when it is already realized; otherwise the record waits in the
+    // store and ContainerBound seeds the container when it binds. This is the
+    // path for callers that set geometry BEFORE the container exists — a toolbox
+    // drop (the container realizes on the next measure) or a layout pass over a
+    // not-yet-realized node. Geometry lives here + on the container, never on the
+    // content view-model.
+    public SetNodeVisual(id: string, v: NodeVisual): void
+    {
+        this._visuals.Set(id, v);
+        const view = this.ActiveView;
+        if (view === undefined) return;
+        for (let i = 0; i < this.Nodes.Count; i++)
+        {
+            const n = this.Nodes.Get(i)!;
+            if ((n as { Id?: string }).Id !== id) continue;
+            const fig = n instanceof Figure ? n : view.Generator.ContainerFromItem(n) as Figure | undefined;
+            if (fig !== undefined) this._visuals.Apply(v, fig);
+            break;
+        }
+    }
+
+    public GetNodeVisual(id: string): NodeVisual | undefined { return this._visuals.Get(id); }
+
     // ── Save / Load ──────────────────────────────────────────────────
 
     public Save(): void
