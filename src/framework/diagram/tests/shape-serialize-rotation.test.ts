@@ -1,35 +1,46 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
+import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 import { Figure } from '../figure.js';
-import '../node-serializers-default.js';                 // side-effect: registers 'shape'
-import { serializerByType, type NodeBaseRecord } from '../node-serialization.js';
 
-function shapeSerializer() {
-    const s = serializerByType('shape');
-    assert.ok(s, 'shape serializer registered');
-    return s!;
+class Mem implements DiagramStorage {
+    private m = new Map<string, string>();
+    GetItem(k: string): string | null { return this.m.get(k) ?? null; }
+    SetItem(k: string, v: string): void { this.m.set(k, v); }
 }
+function doc(s?: DiagramStorage): DiagramDocument { Application.current = null; new Application(); return new DiagramDocument(s); }
 
-describe('shape serialize rotation + base size', () => {
-    test('round-trips rotation and base size', () => {
-        Application.current = null; new Application();
-        const f = Figure.fromKind('rectangle', 5, 6, { width: 120, height: 60 });
+// Rotation + scale baseline are geometry — they live in the v3 `visuals`
+// section (keyed by id), not in the shape serializer's content `data`.
+describe('shape rotation + base size round-trip (v3 visuals)', () => {
+    test('rotation + scaled size (baseWidth != width) survive save/load', () => {
+        const s = new Mem(); const d = doc(s);
+        const f = Figure.fromKind('rectangle', 5, 6, { width: 120, height: 60 }); f.Id = 'n1';
         f.Rotation = 45; f.Width = 240;   // scaled 2x from base 120
-        const data = shapeSerializer().serialize(f);
-        assert.equal(data.rotation, 45);
-        assert.equal(data.baseWidth, 120);
-        assert.equal(data.baseHeight, 60);
-        const base: NodeBaseRecord = { id: 'n1', left: 5, top: 6, w: 240, h: 60 };
-        const back = shapeSerializer().deserialize(data, base) as Figure;
+        d.Nodes.Add(f); d.Save();
+
+        const raw = JSON.parse(s.GetItem('mural-diagram-state-v1')!) as {
+            nodes: Array<{ data?: { rotation?: unknown } }>;
+            visuals: Record<string, { rotation?: number; baseWidth?: number }>;
+        };
+        assert.equal(raw.nodes[0]!.data?.rotation, undefined, 'rotation is not in node content');
+        assert.equal(raw.visuals.n1!.rotation, 45);
+        assert.equal(raw.visuals.n1!.baseWidth, 120);
+
+        const d2 = doc(s); d2.Storage = s; d2.Load();
+        const back = d2.Nodes.Get(0)! as Figure;
         assert.equal(back.Rotation, 45);
         assert.equal(back.BaseWidth, 120);
-        assert.equal(back.BaseHeight, 60);
+        assert.equal(back.Width, 240);
     });
-    test('legacy record (no rotation/base) loads as rotation 0, base = size', () => {
-        Application.current = null; new Application();
-        const base: NodeBaseRecord = { id: 'n2', left: 0, top: 0, w: 80, h: 40 };
-        const back = shapeSerializer().deserialize({ kind: 'rectangle' }, base) as Figure;
+    test('a shape with no rotation loads as rotation 0, base = size', () => {
+        const s = new Mem(); const d = doc(s);
+        const f = Figure.fromKind('rectangle', 0, 0, { width: 80, height: 40 }); f.Id = 'n2';
+        d.Nodes.Add(f); d.Save();
+
+        const d2 = doc(s); d2.Storage = s; d2.Load();
+        const back = d2.Nodes.Get(0)! as Figure;
         assert.equal(back.Rotation, 0);
         assert.equal(back.BaseWidth, 80);
         assert.equal(back.BaseHeight, 40);

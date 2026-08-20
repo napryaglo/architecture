@@ -1,10 +1,7 @@
-// Generic per-VM node serialization registry (M3).
-// Tests:
-//   1. Typed round-trip: Figure + TextShape + connector → save (type field
-//      present on each node record) → load into a fresh doc → correct types,
-//      positions, text, connector endpoints.
-//   2. Legacy load: hand-crafted legacy payload (flat {kind,left,top,w,h,d},
-//      no `type` field) → load → one Figure at the correct position.
+// Generic per-node serialization registry (M3).
+// Typed round-trip: Figure + TextNode + connector → save (v3 two-section:
+// content in `nodes`, geometry in `visuals`) → load into a fresh doc → correct
+// types, positions, text, connector endpoints.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -130,55 +127,3 @@ describe('M3 node serialization registry — typed round-trip', () => {
     });
 });
 
-// ── 2. Legacy load ───────────────────────────────────────────────────
-
-describe('M3 node serialization registry — legacy load', () => {
-    test('flat legacy node record (no type field) loads as Figure', () => {
-        const storage = new MemoryStorage();
-        // Hand-write a legacy payload: kind + flat fields, no `type`.
-        const legacy = JSON.stringify({
-            nodes: [
-                { id: 'n1', kind: 'rectangle', left: 5, top: 6, w: 80, h: 80, d: '' },
-            ],
-            connectors: [],
-            nextId: 2,
-        });
-        storage.SetItem('mural-diagram-state-v1', legacy);
-
-        const doc = newDoc(storage);
-        doc.Storage = storage;
-        doc.Load();
-
-        assert.equal(doc.Nodes.Count, 1, 'one node loaded from legacy payload');
-        const node = doc.Nodes.Get(0)!;
-        assert.ok(node instanceof Figure, 'legacy rectangle reloads as Figure');
-        const vm = node as Figure;
-        assert.equal(vm.Kind, 'rectangle');
-        assert.equal(vm.Left, 5);
-        assert.equal(vm.Top,  6);
-    });
-
-    test('legacy text node (kind=text, no type) loads as TextNode', () => {
-        const storage = new MemoryStorage();
-        const legacy = JSON.stringify({
-            nodes: [
-                {
-                    id: 'n1', kind: 'text', left: 10, top: 20, w: 120, h: 44, d: '',
-                    text: { content: 'legacy note' },
-                },
-            ],
-            connectors: [],
-            nextId: 2,
-        });
-        storage.SetItem('mural-diagram-state-v1', legacy);
-
-        const doc = newDoc(storage);
-        doc.Storage = storage;
-        doc.Load();
-
-        assert.equal(doc.Nodes.Count, 1);
-        const node = doc.Nodes.Get(0)!;
-        assert.ok(node instanceof TextNode, 'legacy text reloads as TextNode');
-        assert.equal((node as TextNode).LabelText, 'legacy note');
-    });
-});
