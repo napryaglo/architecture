@@ -41,6 +41,21 @@ resources Diagrams {
     // primitive), so they need no DataTemplate — a shape Figure IS the node and
     // paints its own silhouette. See Figure.fromKind / the 'shape' serializer.
 
+    // ── TextNode: a shapeless Figure text box ──────────────────────────
+    // TextNode is a Figure, so it renders through its OWN control template
+    // (not a DataTemplate). A Border draws the box (Fill/Stroke bound to the
+    // node's own DPs); PART_LabelHost — a Border — is where Figure's ctor slots
+    // the ShapeText (labelHost.SetChild(this.Text)). Shapeless: the Figure
+    // paints no silhouette, so the box comes entirely from this Border.
+    Template x:key="DefaultTextNode" [ TargetType = TextNode ] {
+        Border [ Fill = $$Fill, Stroke = $$Stroke ] {
+            Border x:name="PART_LabelHost" [ Width = $$Width, Height = $$Height ]
+        }
+    }
+    Style [ TargetType = TextNode ] {
+        Template = @DefaultTextNode;
+    }
+
     // ── TextNodeVM: renders a text-box node (VM form of TextShape) ───
     //
     // DataTemplate for TextNodeVM hosted inside the Figure container's
