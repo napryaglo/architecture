@@ -310,6 +310,24 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     // — at the freshly-bound container Figure, which owns the geometry and side-
     // endpoint host. Setting Node clears the UnresolvedNodeId hold so the
     // connector routes against the container.
+    // Re-home a connector endpoint that references a content VM onto the VM's
+    // geometry-owning container Figure when that container is already realized.
+    // This is the path a caller hits when it creates an edge AFTER the containers
+    // bound — e.g. the Plexus arch binding projecting a model edge — where no
+    // fresh ContainerBound will fire to re-point it, so it must resolve up front
+    // or route against a geometry-less VM and never draw. If the container isn't
+    // realized yet, the VM reference is left in place: _repointEndpointsToContainer
+    // catches `ep.Node === item` when the container later binds. Endpoints that
+    // already reference a Figure (or a free point) pass through untouched.
+    private _hostEndpoint(ep: ConnectorEndpoint): ConnectorEndpoint
+    {
+        const node = ep.Node;
+        if (!(node instanceof NodeViewModel)) return ep;
+        const container = this.ActiveView?.Generator.ContainerFromItem(node);
+        if (container instanceof Figure) ep.Node = container;
+        return ep;
+    }
+
     private _repointEndpointsToContainer(id: string, item: NodeViewModel, container: Figure): void
     {
         for (let i = 0; i < this.Connectors.Count; i++)
@@ -753,8 +771,13 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         // application, so the freshly-constructed instance below IS
         // what renders on the diagram.
         const c = new Connector();
-        c.Source = source;
-        c.Target = target;
+        // Geometry lives on the container Figure, never on the content VM
+        // (container-owned-geometry). A caller that hands us a VM endpoint —
+        // e.g. the Plexus arch binding projecting a model edge AFTER the
+        // containers already bound — must be re-homed onto the container, or
+        // the connector routes against a geometry-less VM and never draws.
+        c.Source = this._hostEndpoint(source);
+        c.Target = this._hostEndpoint(target);
         this.Connectors.Add(c);
         this.Status = `Added connector. ${this.Connectors.Count} connectors total.`;
         this._markDirty();

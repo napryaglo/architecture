@@ -11,6 +11,7 @@ import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { NodeViewModel } from '../node-view-model.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
+import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { registerNodeSerializer } from '../node-serialization.js';
 import '../node-serializers-default.js';
 
@@ -98,5 +99,51 @@ describe('connector endpoints resolve to the container Figure for VM nodes', () 
         // The container carries the geometry the router reads (nodeRect).
         assert.equal((c.Target!.Node as Figure).Left, 200);
         assert.equal((c.Target!.Node as Figure).Width, 60);
+    });
+
+    // Regression: a connector CREATED programmatically (e.g. a model-projected
+    // edge in the Plexus arch binding) AFTER the containers already bound. No
+    // fresh ContainerBound fires for an already-realized container, so the old
+    // re-point-on-bind path never catches it. CreateConnector must resolve a
+    // content-VM endpoint to its geometry-owning container up front, or the
+    // connector routes against a geometry-less VM → Geometry undefined → the
+    // edge never draws (the "connectors didn't show" report).
+    test('CreateConnector resolves a VM endpoint to its already-bound container', () => {
+        Application.current = null; new Application();
+        const storage = new MemoryStorage();
+        // Two VM nodes, NO serialized connector — the edge is added later.
+        storage.SetItem('mural-diagram-state-v1', JSON.stringify({
+            version: 3,
+            nodes: [
+                { id: 'a', type: CONN_VM_TYPE, data: {} },
+                { id: 'b', type: CONN_VM_TYPE, data: {} },
+            ],
+            visuals: { a: { left: 0, top: 0, w: 60, h: 40 }, b: { left: 200, top: 0, w: 60, h: 40 } },
+            connectors: [],
+            nextId: 1,
+        }));
+        const doc = new DiagramDocument(storage);
+        doc.Load();
+        const [a, b] = [doc.Nodes.Get(0)!, doc.Nodes.Get(1)!];
+
+        // View up FIRST: both containers realize and bind now.
+        const diagram = mountView(doc);
+        const ca = diagram.Generator.ContainerFromItem(a);
+        const cb = diagram.Generator.ContainerFromItem(b);
+        assert.ok(ca instanceof Figure && cb instanceof Figure, 'VM items wrapped in containers');
+
+        // THEN create the edge pointing at the VMs (the binding's timing).
+        const c = doc.CreateConnector(
+            new ConnectorEndpoint({ Node: a }),
+            new ConnectorEndpoint({ Node: b }),
+        );
+        assert.ok(c !== null);
+
+        // The endpoints must land on the geometry-owning containers, not the VMs.
+        assert.equal(c!.Source!.Node, ca, 'source resolved to container A');
+        assert.equal(c!.Target!.Node, cb, 'target resolved to container B');
+        assert.equal(c!.Source!.UnresolvedNodeId, undefined);
+        // With real geometry to route to, the connector actually draws.
+        assert.notEqual(c!.Geometry, undefined, 'connector routed (Geometry set)');
     });
 });
