@@ -25,7 +25,7 @@ test('a created diamond confines picking to its silhouette', () => {
     assert.ok(!g.Contains(new Point(2, 2)), 'bbox corner outside the diamond');
 });
 
-test('the shape serializer round-trips a Figure', () => {
+test('the shape serializer round-trips a Figure (content only)', () => {
     const doc = new DiagramDocument();
     const f = doc.CreateNode('ellipse', 5, 6)!;
     f.Width = 50; f.Height = 30;
@@ -33,15 +33,17 @@ test('the shape serializer round-trips a Figure', () => {
     assert.ok(s !== undefined && s.type === 'shape', 'shape serializer matches a Figure');
     const data = s!.serialize(f);
     assert.equal(data.kind, 'ellipse');
-    const back = s!.deserialize(data, { id: 'n9', left: 5, top: 6, w: 50, h: 30 });
+    // Geometry-free: the serializer builds the content at the origin; the
+    // document applies position + id from the visuals section.
+    const back = s!.deserialize(data);
     assert.ok(back instanceof Figure);
     assert.equal((back as Figure).Kind, 'ellipse');
-    assert.equal(back.Id, 'n9');
+    assert.equal(back.Left, 0, 'built at the origin, no geometry from the serializer');
 });
 
-test('back-compat: an old shape record (kind + d) loads into a Figure', () => {
+test('a shape record (kind + d) builds a Figure of that kind', () => {
     const s = serializerByType('shape')!;
-    const back = s.deserialize({ kind: 'triangle', d: '' }, { id: 'n1', left: 0, top: 0, w: 40, h: 40 });
+    const back = s.deserialize({ kind: 'triangle', d: '' });
     assert.ok(back instanceof Figure);
     assert.equal((back as Figure).Kind, 'triangle');
 });

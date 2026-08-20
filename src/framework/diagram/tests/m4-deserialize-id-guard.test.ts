@@ -26,13 +26,18 @@ function newDoc(storage?: DiagramStorage): DiagramDocument
 describe('DiagramDocument deserialize — id-collision guard', () => {
     test('an empty-id node does not collide with an explicit "n1"', () => {
         const storage = new MemoryStorage();
-        // Legacy flat records: one explicit id 'n1', one empty id. With _nextId
-        // starting at 1, the empty-id fallback would regenerate 'n1'.
+        // v3 records: one explicit id 'n1', one empty id. With _nextId starting
+        // at 1, the empty-id fallback would regenerate 'n1'.
         storage.SetItem('mural-diagram-state-v1', JSON.stringify({
+            version: 3,
             nodes: [
-                { id: 'n1', kind: 'rectangle', left: 0,  top: 0, w: 60, h: 40, d: '' },
-                { id: '',   kind: 'rectangle', left: 80, top: 0, w: 60, h: 40, d: '' },
+                { id: 'n1', type: 'shape', data: { kind: 'rectangle', d: '' } },
+                { id: '',   type: 'shape', data: { kind: 'rectangle', d: '' } },
             ],
+            visuals: {
+                n1: { left: 0,  top: 0, w: 60, h: 40 },
+                '': { left: 80, top: 0, w: 60, h: 40 },
+            },
             connectors: [],
             nextId: 1,
         }));

@@ -298,9 +298,11 @@ describe('DiagramDocument — Save / Load round-trips connectors', () => {
 
     test('Load with a payload missing the connectors field leaves Connectors empty', () => {
         const storage = new MemoryStorage();
-        // Hand-craft a legacy node-only payload.
+        // Hand-craft a v3 node-only payload (no connectors field).
         storage.SetItem('mural-diagram-state-v1', JSON.stringify({
-            nodes: [{ id: 'n1', kind: 'rectangle', left: 0, top: 0, w: 80, h: 80, d: '' }],
+            version: 3,
+            nodes: [{ id: 'n1', type: 'shape', data: { kind: 'rectangle', d: '' } }],
+            visuals: { n1: { left: 0, top: 0, w: 80, h: 80 } },
             nextId: 2,
         }));
         const doc = newDoc(storage);
