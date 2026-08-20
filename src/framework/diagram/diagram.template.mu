@@ -56,6 +56,27 @@ resources Diagrams {
         Template = @DefaultTextNode;
     }
 
+    // ── Callout: a TextNode with a template-driven leader line ─────────
+    // The TextNode box (Border + PART_LabelHost) PLUS a leader Shape bound to
+    // the Callout's LeaderGeometry, both inside a Canvas so the leader can draw
+    // OUTSIDE the box to reach the target (Canvas does not clip children). The
+    // leader geometry is in callout-LOCAL coords; IsHitTestVisible=false so it
+    // never swallows pointer events.
+    Template x:key="DefaultCallout" [ TargetType = Callout ] {
+        Canvas {
+            Border [ Fill = $$Fill, Stroke = $$Stroke ] {
+                Border x:name="PART_LabelHost" [ Width = $$Width, Height = $$Height ]
+            }
+            Shape
+                [ Geometry          = $$LeaderGeometry,
+                  Stroke            = (#64748bff, 1.5),
+                  IsHitTestVisible  = false ]
+        }
+    }
+    Style [ TargetType = Callout ] {
+        Template = @DefaultCallout;
+    }
+
     // ── TextNodeVM: renders a text-box node (VM form of TextShape) ───
     //
     // DataTemplate for TextNodeVM hosted inside the Figure container's
