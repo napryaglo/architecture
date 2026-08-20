@@ -100,11 +100,12 @@ public import/export on the Diagram.
 }
 ```
 
-- **Save** (always writes v3): `nodes` from each item's serializer
+- **Save** (writes v3): `nodes` from each item's serializer
   (`serialize(node) → data`, geometry-free — already only produces the `data`
   bag today); `visuals` from `store.Snapshot()`.
-- **Load:** parse; build content nodes from the `nodes` section, assign each its
-  `Id`; `store.Seed(visuals)`. Containers apply geometry as they realize.
+- **Load** (reads v3 only): parse; build content nodes from the `nodes` section,
+  assign each its `Id`; `store.Seed(visuals)`. Containers apply geometry as they
+  realize.
 
 ### `NodeSerializer` contract change
 
@@ -118,19 +119,17 @@ at `base` geometry. In the new model geometry is not the serializer's concern:
 This ripples to every in-repo serializer (`shape`, `text`, `callout`); the
 Plexus `arch` serializer migrates in sub-project #2.
 
-## Backward compatibility — versioned dual-reader
+## Migration — clean break, no legacy reader
 
-Save always emits v3. Load detects the shape:
-
-- **v3:** `visuals` section present → read as above.
-- **Legacy (V1/V2, no `visuals`):** nodes carry inline `left/top/w/h`. The reader
-  **synthesizes** the visual map from that inline geometry (keyed by id) and
-  hands the serializer only the content `data`. Also: 0.14.0 shape `data` carried
-  `rotation`/`baseWidth`/`baseHeight` inline — the legacy reader **lifts** those
-  into the visual record so rotated/scaled shapes survive the format bump.
-
-No migration pass, no destructive rewrite: old files load; the next save
-promotes them to v3.
+There is **no versioned dual-reader**. The loader understands only v3. The few
+existing `.diagram` files in the current project are **migrated by hand** once —
+split each node's inline `left/top/w/h` (and any 0.14.0 `rotation`/`baseWidth`/
+`baseHeight` that leaked into shape `data`) into the `visuals` section, keyed by
+id. Mural's own persistence is transient (demo `localStorage` under
+`mural-diagram-state-v1`, clearable) and its serialization tests round-trip
+in-memory, so within this sub-project there is little to migrate; the real
+on-disk files live in Plexus projects and are converted as part of sub-project
+#2. This keeps the loader single-path and the format honest.
 
 ## Component changes (Mural framework)
 
@@ -144,9 +143,9 @@ promotes them to v3.
   (drop/layout write path) and store import/export for the Document.
 - **`DiagramDocument._serialize`:** read `visuals` from the store snapshot
   instead of `node.Left…`; `nodes` = content only; emit `version: 3`.
-- **`DiagramDocument._deserialize`:** split sections; seed the store; build
-  content nodes; keep the V1/V2 legacy branch and add the v3 branch + the
-  0.14.0-rotation-lift.
+- **`DiagramDocument._deserialize`:** single v3 path — split sections, seed the
+  store, build content nodes, assign ids. The V1/V2 legacy branches are
+  **removed** (clean break).
 - **`_wireNodeDirty`:** observe container geometry (through the store write-back)
   rather than node geometry; Fill/Stroke dirty-tracking unchanged.
 - **`SelectionGeometryMirror`:** already targets the container (this branch) —
@@ -165,14 +164,14 @@ promotes them to v3.
 - **Store:** seed→snapshot round-trip; realize applies the record; a container
   geometry change writes back; a simulated recycle (unwire) preserves the record.
 - **Serialization:** v3 round-trip (content and visuals land in the right
-  sections); legacy V1/V2 read synthesizes the visual map; a 0.14.0 file with
-  `rotation` in `data` lifts it into `visuals`; save always emits v3.
+  sections, and reload restores geometry through the store). No legacy-read
+  tests — the old format is not supported.
 - **VM geometry-blind:** `NodeViewModel` (and subclasses) expose no geometry DPs
   (`Model.HasProperty` false for `Left`/`Top`/`Width`/`Height`).
 - **Inspector regression:** the existing `SelectionGeometryMirror` tests
   (Figure path + VM-node path added on this branch) stay green.
-- **Full suite:** existing `diagram-document` / serializer tests pass with the
-  dual-reader.
+- **Full suite:** existing `diagram-document` / serializer tests updated to the
+  v3 format and green (any fixtures written in the old flat shape are converted).
 
 ## Scope boundaries
 
