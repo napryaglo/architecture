@@ -89,7 +89,12 @@ export class DiagramSelectionSource implements SelectionSource
     public beginResize(): void
     {
         const snaps: FigureSnapshot[] = [];
-        for (const item of this._diagram.SelectedItems)
+        // Snapshot the geometry owners — the container Figures — not the data
+        // items. A content node surfaces in SelectedItems as a geometry-less VM
+        // (container-owned-geometry); its geometry, and the UserSized latch a
+        // hand-resize sets, live on its container. For a geometric-shape item
+        // the container IS the item, so this is uniform.
+        for (const item of this._diagram.SelectedContainers)
         {
             if (!(item instanceof Model)) continue;
             const klass = item.constructor as Function;

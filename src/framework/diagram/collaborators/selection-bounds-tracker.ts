@@ -4,7 +4,16 @@ import type { Diagram } from '../diagram.js';
 
 // Internal collaborator owned by Diagram. Derives SelectionLeft / Top /
 // Width / Height / Count (5 read-only DPs on Diagram) from the union
-// bbox of every IFigure-shaped item currently in `Diagram.SelectedItems`.
+// bbox of every IFigure-shaped CONTAINER currently in
+// `Diagram.SelectedContainers`.
+//
+// Geometry lives on the container Figure, not the data item: under
+// container-owned-geometry a selected content node surfaces as a
+// geometry-less VM in `SelectedItems`, so reading bounds off the items
+// would collapse the bbox to zero and hide the adorner. `SelectedContainers`
+// is the Selector's own selection truth (the Figure containers) and always
+// carries geometry — for a geometric-shape item the container IS the item,
+// so this is uniform across shape nodes and content nodes.
 //
 // Re-derives whenever:
 //   * Selector.SelectionChanged fires (selection set membership changes)
@@ -46,12 +55,14 @@ export class SelectionBoundsTracker
         for (const detach of this._itemListeners.values()) detach();
         this._itemListeners.clear();
 
-        // Reattach against the current selection's IFigure-shaped members.
-        for (const item of this._diagram.SelectedItems)
+        // Reattach against the current selection's IFigure-shaped containers
+        // (the geometry owners), not the data items (content VMs carry no
+        // geometry).
+        for (const container of this._diagram.SelectedContainers)
         {
-            if (this._isFigureShape(item))
+            if (this._isFigureShape(container))
             {
-                this._itemListeners.set(item, this._listenItem(item));
+                this._itemListeners.set(container, this._listenItem(container));
             }
         }
 
