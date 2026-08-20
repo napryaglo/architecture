@@ -214,6 +214,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['UniformGrid',             '@pragmatic-lab/mural/basic'],
     ['Orientation',             '@pragmatic-lab/mural/basic'],
     ['PositionAnchor',          '@pragmatic-lab/mural/framework/diagram/position-anchor.js'],
+    ['SizePositionControl',     '@pragmatic-lab/mural/framework/diagram/size-position-control.js'],
     ['ContentControl',          '@pragmatic-lab/mural/framework/base/content-control.js'],
     ['ContentPresenter',        '@pragmatic-lab/mural/basic'],
     ['Figure',                  '@pragmatic-lab/mural/framework/diagram/figure.js'],
