@@ -292,6 +292,18 @@ export class DiagramCommands
                 if (!(parent instanceof Model)) break;
                 top = parent as Model;
             }
+            // A content-node item (NodeViewModel) carries no geometry — its
+            // container Figure does (container-owned-geometry). Resolve to the
+            // container so align/distribute can read+write its bounds; otherwise
+            // _isFigureShape rejects the VM and the node is silently dropped from
+            // the operation (and canAlign disables the toolbar). A geometric-shape
+            // item is already figure-shaped, and a VM can't be a group member, so
+            // this only rescues top-level content nodes.
+            if (!this._isFigureShape(top))
+            {
+                const container = this._diagram.Generator.ContainerFromItem(top);
+                if (container instanceof Model) top = container;
+            }
             if (seen.has(top)) continue;
             seen.add(top);
             if (this._isFigureShape(top))
