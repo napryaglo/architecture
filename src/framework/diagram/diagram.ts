@@ -77,6 +77,7 @@ interface CameraGestureHandlers {
 }
 import { TextPlacement } from './shape-text.js';
 import { FormatMirror } from './collaborators/format-mirror.js';
+import { SelectionGeometryMirror } from './collaborators/selection-geometry-mirror.js';
 import {
     attachCanvasDropBehavior,
     type ItemDroppedArgs,
@@ -186,6 +187,30 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         Diagram, 'SelectionHeight', 0, MetaData.None);
     public static readonly SelectionCountKey  = Model.RegisterReadOnlyProperty<number>(
         Diagram, 'SelectionCount',  0, MetaData.None);
+
+    // Single-selected-shape geometry channel — driven by SelectionGeometryMirror.
+    // Reflects the one selected Figure's geometry (px) and (for the writable
+    // ones) routes edits back to it. HasSelectedShape is false when the selection
+    // isn't exactly one Figure, disabling the Size/Position editor. Registered as
+    // plain read-write DPs (like SelectionFormat*) so the mirror writes via
+    // set_property_value; the writable geometry is BindsTwoWayByDefault for the
+    // inspector's two-way bind.
+    public static readonly HasSelectedShapeKey = Model.RegisterProperty<boolean>(
+        Diagram, 'HasSelectedShape', false, MetaData.None);
+    public static readonly SelectedShapeLeftKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectedShapeLeft', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedShapeTopKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectedShapeTop', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedShapeWidthKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectedShapeWidth', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedShapeHeightKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectedShapeHeight', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedShapeRotationKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectedShapeRotation', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedShapeBaseWidthKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectedShapeBaseWidth', 0, MetaData.None);
+    public static readonly SelectedShapeBaseHeightKey = Model.RegisterProperty<number>(
+        Diagram, 'SelectedShapeBaseHeight', 0, MetaData.None);
 
     // Align commands — RelayCommand-typed DPs. DiagramCommands installs
     // default impls at construction; consumers override by writing their
@@ -604,6 +629,20 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public get SelectionWidth():  number { return this.get_property_value(Diagram.SelectionWidthKey); }
     public get SelectionHeight(): number { return this.get_property_value(Diagram.SelectionHeightKey); }
     public get SelectionCount():  number { return this.get_property_value(Diagram.SelectionCountKey); }
+
+    public get HasSelectedShape(): boolean { return this.get_property_value(Diagram.HasSelectedShapeKey); }
+    public get SelectedShapeLeft(): number { return this.get_property_value(Diagram.SelectedShapeLeftKey); }
+    public set SelectedShapeLeft(v: number) { this.set_property_value(Diagram.SelectedShapeLeftKey, v); }
+    public get SelectedShapeTop(): number { return this.get_property_value(Diagram.SelectedShapeTopKey); }
+    public set SelectedShapeTop(v: number) { this.set_property_value(Diagram.SelectedShapeTopKey, v); }
+    public get SelectedShapeWidth(): number { return this.get_property_value(Diagram.SelectedShapeWidthKey); }
+    public set SelectedShapeWidth(v: number) { this.set_property_value(Diagram.SelectedShapeWidthKey, v); }
+    public get SelectedShapeHeight(): number { return this.get_property_value(Diagram.SelectedShapeHeightKey); }
+    public set SelectedShapeHeight(v: number) { this.set_property_value(Diagram.SelectedShapeHeightKey, v); }
+    public get SelectedShapeRotation(): number { return this.get_property_value(Diagram.SelectedShapeRotationKey); }
+    public set SelectedShapeRotation(v: number) { this.set_property_value(Diagram.SelectedShapeRotationKey, v); }
+    public get SelectedShapeBaseWidth(): number { return this.get_property_value(Diagram.SelectedShapeBaseWidthKey); }
+    public get SelectedShapeBaseHeight(): number { return this.get_property_value(Diagram.SelectedShapeBaseHeightKey); }
 
     public get AlignLeftCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.AlignLeftCommandKey); }
     public get AlignRightCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.AlignRightCommandKey); }
@@ -1129,6 +1168,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         this.set_property_value(Diagram.FitToSelectionCommandKey, new RelayCommand(() => this.FitToSelection()));
         new SelectionBoundsTracker(this);
         this._formatMirror = new FormatMirror(this);
+        new SelectionGeometryMirror(this);
         new SelectionReflector(this);
         this._connectorsMaterializer = new DiagramConnectorsMaterializer(this);
         // Seed the cap dropdown catalog. Safe here despite the cap
