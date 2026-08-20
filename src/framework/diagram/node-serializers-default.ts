@@ -148,6 +148,10 @@ registerNodeSerializer({
             if (strokeHex !== undefined) out.stroke = strokeHex;
             out.strokeWidth = stroke.Thickness;
         }
+        // Size & Position pane geometry: rotation (omit when 0) + scale baseline.
+        if (fig.Rotation !== 0) out.rotation = fig.Rotation;
+        if (!Number.isNaN(fig.BaseWidth))  out.baseWidth  = fig.BaseWidth;
+        if (!Number.isNaN(fig.BaseHeight)) out.baseHeight = fig.BaseHeight;
         return out;
     },
 
@@ -184,6 +188,11 @@ registerNodeSerializer({
             const brush = strokeHex !== undefined ? new SolidColorBrush(Color.FromHex(strokeHex)) : fig.Stroke?.Brush;
             fig.Stroke = new Pen(brush, width);
         }
+        // Restore rotation + scale baseline (fromKind/fromSource already seeded
+        // base = w/h, so a legacy record without these keeps base = size).
+        if (typeof data.rotation   === 'number') fig.Rotation   = data.rotation;
+        if (typeof data.baseWidth  === 'number') fig.BaseWidth  = data.baseWidth;
+        if (typeof data.baseHeight === 'number') fig.BaseHeight = data.baseHeight;
         return fig;
     },
 });
