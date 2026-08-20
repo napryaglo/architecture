@@ -9,7 +9,7 @@
 // TextNode, Callout) and FROM node-serialization (registry).  It does NOT
 // import from diagram-document, so there is no cycle.  diagram-document.ts
 // imports this module and may also import individual helpers exported here
-// (serializeShapeText, applySerializedText, placeNode).
+// (serializeShapeText, applySerializedText).
 
 import { type Brush, Color, FontStyle, FontWeight, pathGeometryFromSvgD, pathGeometryToSvgD, Pen, SolidColorBrush, TextAlignment, VerticalAlignment } from '../../visual-engine/index.js';
 import { Point } from '../../runtime/index.js';
@@ -20,11 +20,10 @@ import {
     type SerializedDoc,
 } from './shape-text-document.js';
 import { Figure } from './figure.js';
-import { NodeViewModel } from './node-view-model.js';
 import { TextNode } from './text-node.js';
 import { Callout } from './callout.js';
 import { SHAPE_CATALOG_MAP } from './shape-catalog.js';
-import { registerNodeSerializer, type NodeBaseRecord } from './node-serialization.js';
+import { registerNodeSerializer } from './node-serialization.js';
 
 // A solid brush's colour as a hex string, or undefined for a non-solid
 // (gradient / image) brush that this serializer doesn't capture.
@@ -106,16 +105,13 @@ export function applySerializedText(st: ShapeText, data: SerializedText): void
     if (data.doc       !== undefined) st.Document              = deserializeFlowDocument(data.doc);
 }
 
-/** Place a Figure or NodeViewModel at the bounds from a base record. */
-export function placeNode(fig: Figure | NodeViewModel, base: NodeBaseRecord): void
-{
-    fig.Left   = base.left;
-    fig.Top    = base.top;
-    fig.Width  = base.w;
-    fig.Height = base.h;
-}
-
 // ── 'shape' serializer (self-painting Figure) ────────────────────────
+//
+// Serializers are geometry-free: `serialize` returns content only, `deserialize`
+// builds the node at the origin. Geometry (position / size / rotation / scale
+// baseline) lives in the `visuals` section and is applied by
+// DiagramDocument._deserialize via the NodeVisualStore; the document also
+// assigns Id.
 
 registerNodeSerializer({
     type: 'shape',
@@ -148,37 +144,32 @@ registerNodeSerializer({
             if (strokeHex !== undefined) out.stroke = strokeHex;
             out.strokeWidth = stroke.Thickness;
         }
-        // Size & Position pane geometry: rotation (omit when 0) + scale baseline.
-        if (fig.Rotation !== 0) out.rotation = fig.Rotation;
-        if (!Number.isNaN(fig.BaseWidth))  out.baseWidth  = fig.BaseWidth;
-        if (!Number.isNaN(fig.BaseHeight)) out.baseHeight = fig.BaseHeight;
         return out;
     },
 
-    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): Figure
+    deserialize(data: Record<string, unknown>): Figure
     {
         const kind = typeof data.kind === 'string' ? data.kind : '';
         const d    = typeof data.d    === 'string' ? data.d    : '';
         let fig: Figure;
         if (kind !== '' && SHAPE_CATALOG_MAP.has(kind))
         {
-            fig = Figure.fromKind(kind, base.left, base.top, { width: base.w, height: base.h });
+            fig = Figure.fromKind(kind, 0, 0);
         }
         else if (d.length > 0)
         {
-            fig = Figure.fromSource(pathGeometryFromSvgD(d), base.left, base.top, {
-                width:  base.w,
-                height: base.h,
-                kind:   kind !== '' ? kind : undefined,
+            fig = Figure.fromSource(pathGeometryFromSvgD(d), 0, 0, {
+                kind: kind !== '' ? kind : undefined,
             });
         }
         else
         {
             // Fallback: empty source — reconstruct as a blank rectangle.
-            fig = Figure.fromKind('rectangle', base.left, base.top, { width: base.w, height: base.h });
+            fig = Figure.fromKind('rectangle', 0, 0);
         }
-        fig.Id = base.id;
-        // Restore Fill / Stroke over the constructed defaults.
+        // Restore Fill / Stroke over the constructed defaults. Geometry
+        // (position / size / rotation / scale baseline) is applied by the
+        // document from the visuals section.
         if (typeof data.fill === 'string') fig.Fill = new SolidColorBrush(Color.FromHex(data.fill));
         const strokeHex   = typeof data.stroke      === 'string' ? data.stroke      : undefined;
         const strokeWidth = typeof data.strokeWidth === 'number' ? data.strokeWidth : undefined;
@@ -188,11 +179,6 @@ registerNodeSerializer({
             const brush = strokeHex !== undefined ? new SolidColorBrush(Color.FromHex(strokeHex)) : fig.Stroke?.Brush;
             fig.Stroke = new Pen(brush, width);
         }
-        // Restore rotation + scale baseline (fromKind/fromSource already seeded
-        // base = w/h, so a legacy record without these keeps base = size).
-        if (typeof data.rotation   === 'number') fig.Rotation   = data.rotation;
-        if (typeof data.baseWidth  === 'number') fig.BaseWidth  = data.baseWidth;
-        if (typeof data.baseHeight === 'number') fig.BaseHeight = data.baseHeight;
         return fig;
     },
 });
@@ -216,11 +202,9 @@ registerNodeSerializer({
         return { text: serializeShapeText(vm.Text) };
     },
 
-    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): TextNode
+    deserialize(data: Record<string, unknown>): TextNode
     {
         const vm = new TextNode();
-        placeNode(vm, base);
-        vm.Id = base.id;
         if (data.text !== undefined) applySerializedText(vm.Text, data.text as SerializedText);
         return vm;
     },
@@ -251,11 +235,9 @@ registerNodeSerializer({
         };
     },
 
-    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): Callout
+    deserialize(data: Record<string, unknown>): Callout
     {
         const callout = new Callout();
-        placeNode(callout, base);
-        callout.Id = base.id;
         if (data.text !== undefined) applySerializedText(callout.Text, data.text as SerializedText);
         // leaderTargetId is read by DiagramDocument._deserialize during the
         // second pass (pendingLeaders).  Nothing to do here.

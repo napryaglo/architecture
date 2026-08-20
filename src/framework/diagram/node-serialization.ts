@@ -43,18 +43,17 @@ export interface NodeSerializer
     matches(node: unknown): boolean;
 
     /**
-     * Produce the `data` payload for this node.
-     * The base fields (id, left, top, w, h) are written by DiagramDocument;
-     * this callback fills only the type-specific inner record.
+     * Produce the `data` payload for this node — content only, no geometry.
+     * The document writes the id + the `visuals` (geometry) record separately.
      */
     serialize(node: unknown): Record<string, unknown>;
 
     /**
-     * Reconstruct the node from its `data` payload + base positional record.
-     * The returned object has its `.Id` set to `base.id` and is placed at
-     * `(base.left, base.top)` with size `(base.w × base.h)`.
+     * Reconstruct the node from its `data` payload — content only, built at the
+     * origin. The document assigns `.Id` and applies geometry from the `visuals`
+     * section (via NodeVisualStore) after construction.
      */
-    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): Figure | NodeViewModel;
+    deserialize(data: Record<string, unknown>): Figure | NodeViewModel;
 }
 
 // ── Registry ─────────────────────────────────────────────────────────

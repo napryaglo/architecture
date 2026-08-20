@@ -16,8 +16,9 @@ import { Group } from './group.js';
 import { NodeViewModel } from './node-view-model.js';
 import { TextNode } from './text-node.js';
 import { Callout } from './callout.js';
+import { NodeVisualStore, type NodeVisual } from './node-visual-store.js';
 import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
-import { serializerFor, serializerByType, type NodeBaseRecord } from './node-serialization.js';
+import { serializerFor, serializerByType } from './node-serialization.js';
 // Importing node-serializers-default.js registers the built-in
 // 'shape' / 'text' / 'callout' serializers as a side effect and
 // also exports the text helpers used by connector serialization.
@@ -57,32 +58,18 @@ export interface DiagramStorage
 // a string.
 export const DiagramStorageKey = new ServiceKey<DiagramStorage>('DiagramStorage');
 
-// V2 node record — typed registry format.
-// `type`  = stable serializer tag ('shape' | 'text' | 'callout' | …)
-// `data`  = type-specific payload; exact fields are owned by each NodeSerializer.
-//
-// Legacy (V1) nodes have no `type` field and carry flat fields (`kind`, `d`,
-// `text`, `leaderTargetId`).  _deserialize tolerates both shapes.
+// v3 node record — content only. Geometry lives in the sibling `visuals`
+// section keyed by id (see NodeVisual). `type` = serializer tag; `data` =
+// type-specific content payload (the callout serializer stashes leaderTargetId
+// there).
 interface SerializedNode
 {
-    // V2 fields (typed registry).
-    readonly type?: string;
+    readonly id:    string;
+    readonly type:  string;
     readonly data?: Record<string, unknown>;
-
-    // V1 legacy fields (flat format — kept for backward compat).
-    readonly id:             string;
-    readonly left:           number;
-    readonly top:            number;
-    readonly w:              number;
-    readonly h:              number;
-    // V1-only geometry/kind fields.
-    readonly kind?:          string;
-    readonly d?:             string;
-    readonly text?:          SerializedText;
-    readonly leaderTargetId?: string;
 }
 
-// (serializeShapeText, applySerializedText, placeNode are now imported from
+// (serializeShapeText, applySerializedText are imported from
 // node-serializers-default.ts so the built-in NodeSerializer registrations
 // can use them without a circular dependency.)
 
@@ -114,7 +101,11 @@ interface SerializedConnector
 
 interface SerializedDiagram
 {
+    readonly version?:    number;
     readonly nodes:       readonly SerializedNode[];
+    // Geometry, keyed by node id — the presentation half of the two-section
+    // format (see NodeVisual). Applied to nodes on load via NodeVisualStore.
+    readonly visuals?:    Record<string, NodeVisual>;
     readonly connectors?: readonly SerializedConnector[];
     readonly nextId:      number;
     // Opaque, app-owned document metadata (mural neither reads nor validates
@@ -271,6 +262,11 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         DiagramDocument, 'ConnectorsModePinned', false, MetaData.None);
 
     private _nextId = 1;
+
+    // The presentation half of the two-section format: an id → geometry map,
+    // rebuilt from the Figure nodes at save and applied to them at load. (Slice
+    // #3 adds live container write-back; serialize/deserialize stay as-is.)
+    private readonly _visuals = new NodeVisualStore();
 
     // Opaque, app-owned document metadata persisted inside the serialized
     // diagram (see SerializedDiagram.metadata). mural never reads the keys;
@@ -883,24 +879,20 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     private _serialize(): SerializedDiagram
     {
         const nodes: SerializedNode[] = [];
+        // Rebuild the visual store from the live nodes (all serializable nodes
+        // are Figures that own their geometry). Content → nodes section,
+        // geometry → visuals section, correlated by id.
+        this._visuals.Clear();
         for (let i = 0; i < this.Nodes.Count; i++)
         {
             const v = this.Nodes.Get(i)!;
             // Groups not persisted — skip them (and anything without a serializer).
             const s = serializerFor(v);
             if (s === undefined) continue;
-            // Both Figure and NodeViewModel expose Id/Left/Top/Width/Height;
-            // Group (which has no serializer) is already skipped above.
-            const nvm = v as Figure | NodeViewModel;
-            nodes.push({
-                type: s.type,
-                id:   nvm.Id ?? '',
-                left: nvm.Left,
-                top:  nvm.Top,
-                w:    nvm.Width,
-                h:    nvm.Height,
-                data: s.serialize(v),
-            });
+            const fig = v as Figure;
+            const id = fig.Id ?? '';
+            nodes.push({ id, type: s.type, data: s.serialize(v) });
+            if (id !== '') this._visuals.Set(id, this._visuals.Read(fig));
         }
         const connectors: SerializedConnector[] = [];
         for (let i = 0; i < this.Connectors.Count; i++)
@@ -922,7 +914,14 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             });
         }
         const hasMetadata = Object.keys(this._metadata).length > 0;
-        return { nodes, connectors, nextId: this._nextId, ...(hasMetadata ? { metadata: { ...this._metadata } } : {}) };
+        return {
+            version: 3,
+            nodes,
+            visuals: this._visuals.Snapshot(),
+            connectors,
+            nextId: this._nextId,
+            ...(hasMetadata ? { metadata: { ...this._metadata } } : {}),
+        };
     }
 
     private _deserialize(payload: SerializedDiagram): void
@@ -954,56 +953,29 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             return candidate;
         };
 
+        // Seed the visual store from the presentation section, then apply each
+        // record onto its (geometry-free-built) node by id.
+        this._visuals.Clear();
+        this._visuals.Seed(payload.visuals ?? {});
+
         for (const n of payload.nodes ?? [])
         {
+            const s = serializerByType(n.type);
+            if (s === undefined) continue;   // unknown serializer type — skip
+            const node = s.deserialize(n.data ?? {}) as Figure | TextNode | Callout;
+
+            // Geometry: apply the visual record keyed by the SAVED record id
+            // (before any '' → fresh-id reassignment below).
+            const v = this._visuals.Get(n.id);
+            if (v !== undefined) this._visuals.Apply(v, node as Figure);
+
             const id = n.id !== '' ? n.id : nextFreeId();
-            const base: NodeBaseRecord = { id, left: n.left, top: n.top, w: n.w, h: n.h };
-
-            let node: Figure | TextNode | Callout | undefined;
-
-            if (typeof n.type === 'string')
-            {
-                // V2 typed record — dispatch through the registry.
-                const s = serializerByType(n.type);
-                if (s !== undefined)
-                {
-                    node = s.deserialize(n.data ?? {}, base) as Figure | TextNode | Callout;
-                }
-                // Unknown serializer type — skip.
-            }
-            else
-            {
-                // Legacy V1 flat record — infer type from the `kind` field and
-                // synthesise a `data` bag matching each serializer's expectation.
-                // The text/callout serializers now build VMs, so legacy scenes
-                // also load as TextNode / Callout automatically.
-                const kind = typeof n.kind === 'string' ? n.kind : '';
-                if (kind === 'text')
-                {
-                    const s = serializerByType('text')!;
-                    node = s.deserialize({ text: n.text }, base) as TextNode;
-                }
-                else if (kind === 'callout')
-                {
-                    const s = serializerByType('callout')!;
-                    node = s.deserialize({ text: n.text, leaderTargetId: n.leaderTargetId }, base) as Callout;
-                }
-                else
-                {
-                    // geometry shape (catalog kind or freeform d-string)
-                    const s = serializerByType('shape')!;
-                    node = s.deserialize({ kind, d: n.d ?? '' }, base) as Figure;
-                }
-            }
-
-            if (node === undefined) continue;
+            node.Id = id;
 
             // Register callout leaders for second pass.
             if (node instanceof Callout)
             {
-                const targetId = typeof n.type === 'string'
-                    ? (typeof n.data?.leaderTargetId === 'string' ? n.data.leaderTargetId : undefined)
-                    : n.leaderTargetId;
+                const targetId = typeof n.data?.leaderTargetId === 'string' ? n.data.leaderTargetId : undefined;
                 if (targetId !== undefined) pendingLeaders.push({ callout: node, targetId });
             }
 
