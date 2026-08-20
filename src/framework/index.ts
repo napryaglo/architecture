@@ -200,6 +200,7 @@ export {
 } from './diagram/diagram-document.js';
 export { DiagramEditingContext, DiagramCommandId } from './diagram/diagram-command-contexts.js';
 export { DiagramInspector } from './diagram/diagram-inspector.js';
+export { InspectorPage, ShapeStylePage, SizePositionPage } from './diagram/inspector-pages.js';
 export { Figure } from './diagram/figure.js';
 export { PositionAnchor } from './diagram/position-anchor.js';
 export { SizePositionControl } from './diagram/size-position-control.js';
