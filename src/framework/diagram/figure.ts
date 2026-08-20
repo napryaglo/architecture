@@ -9,7 +9,7 @@ import {
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { type Geometry, type PathGeometry, type Point, Pen } from '../../visual-engine/index.js';
+import { type Geometry, type PathGeometry, Point, Pen, RotateTransform } from '../../visual-engine/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { Border } from '../../basic/border.js';
 import { ShapeText, TextAutoFit } from './shape-text.js';
@@ -164,6 +164,20 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
         Figure, 'IsSelected', false, MetaData.None);
 
+    // Visual rotation in degrees (clockwise). Applied as a RenderTransform only —
+    // it does NOT affect layout/measure, so Width/Height stay the unrotated Size
+    // (matches PowerPoint). Selection/resize adorners remain axis-aligned (a
+    // documented follow-up). Two-way so the inspector can bind it.
+    public static readonly RotationKey = Model.RegisterProperty<number>(
+        Figure, 'Rotation', 0, MetaData.Render | MetaData.BindsTwoWayByDefault);
+
+    // The shape's baseline size, seeded at creation. Scale % in the inspector is
+    // size ÷ base × 100. Persisted so scale is stable across load.
+    public static readonly BaseWidthKey = Model.RegisterProperty<number>(
+        Figure, 'BaseWidth', Number.NaN, MetaData.None);
+    public static readonly BaseHeightKey = Model.RegisterProperty<number>(
+        Figure, 'BaseHeight', Number.NaN, MetaData.None);
+
     // Per-Figure port-provider override. When set, the `Ports` getter
     // routes through this provider's GetPorts() instead of the
     // framework's kind→provider default table — used for shapes that
@@ -240,6 +254,8 @@ export class Figure extends ContentControl implements ISideEndpointHost
         f.Width  = options?.width  ?? DiagramSettings.ShapeDefaultSize();
         f.Height = options?.height ?? DiagramSettings.ShapeDefaultSize();
         f._setKindFromCatalog(kind, entry.unit());
+        f.BaseWidth  = f.Width;
+        f.BaseHeight = f.Height;
         return f;
     }
 
@@ -253,6 +269,8 @@ export class Figure extends ContentControl implements ISideEndpointHost
         f._source = source;
         f._kind   = options?.kind;
         f._rebuildGeometry();
+        f.BaseWidth  = f.Width;
+        f.BaseHeight = f.Height;
         return f;
     }
 
@@ -460,6 +478,12 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public set Left(value: number)  { this.set_property_value(Figure.LeftKey, value); }
     public get Top(): number        { return this.get_property_value(Figure.TopKey); }
     public set Top(value: number)   { this.set_property_value(Figure.TopKey, value); }
+    public get Rotation(): number   { return this.get_property_value(Figure.RotationKey); }
+    public set Rotation(value: number) { this.set_property_value(Figure.RotationKey, value); }
+    public get BaseWidth(): number  { return this.get_property_value(Figure.BaseWidthKey); }
+    public set BaseWidth(value: number)  { this.set_property_value(Figure.BaseWidthKey, value); }
+    public get BaseHeight(): number { return this.get_property_value(Figure.BaseHeightKey); }
+    public set BaseHeight(value: number) { this.set_property_value(Figure.BaseHeightKey, value); }
 
     // Read-only view of the scaled silhouette (was a DP). Kept because the port
     // resolver's outline mode reads `host.Geometry` (see port.ts / PortResolver);
@@ -748,8 +772,28 @@ export class Figure extends ContentControl implements ISideEndpointHost
         {
             this._rebuildGeometry();
         }
+        // Rotation renders via a persistent RotateTransform (see _applyRotation).
+        else if (descriptor.Name === 'Rotation') this._applyRotation();
         // Slice 6: re-resolve live {field} tokens when a source value changes.
         if (FIELD_SOURCE_NAMES.has(descriptor.Name)) this._refreshLabelFields();
+    }
+
+    // Reused RotateTransform assigned to RenderTransform on first non-zero
+    // rotation. Angle is MetaData.Render, so updating it repaints. Centering is
+    // via RenderTransformOrigin=(0.5,0.5), so the pivot tracks resize for free.
+    private _rotate: RotateTransform | undefined;
+
+    private _applyRotation(): void
+    {
+        const angle = this.Rotation;
+        if (this._rotate === undefined)
+        {
+            if (angle === 0) return;                     // stay transform-free until first rotate
+            this._rotate = new RotateTransform();
+            this.RenderTransformOrigin = new Point(0.5, 0.5);
+            this.RenderTransform = this._rotate;
+        }
+        this._rotate.Angle = angle;
     }
 
     protected override OnPointerDown(args: PointerEventArgs): void
