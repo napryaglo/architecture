@@ -5,9 +5,9 @@ import { initTestApp } from '../../../basic/tests/test-app.js';
 import { Border, ItemsPanelTemplate, TextBlock } from '../../../basic/index.js';
 import { PaginatedCanvas } from '../../../basic/panels/paginated-canvas.js';
 import { TextAutoFit } from '../shape-text.js';
-import { TextNodeVM } from '../text-node-vm.js';
+import { TextNode } from '../text-node.js';
 import { Diagram } from '../diagram.js';
-import { Figure } from '../figure.js';
+import { Figure, resolveEditTarget } from '../figure.js';
 
 class FakeTarget implements MountableTarget {
     public Content: Visual | undefined;
@@ -31,13 +31,13 @@ function collectVisuals(root: Visual): Visual[]
     return result;
 }
 
-describe('M4 TextNodeVM', () => {
+describe('M4 TextNode', () => {
     beforeEach(() => {
         initTestApp();
     });
 
     test('defaults: 120x44, empty label, GrowShape autofit', () => {
-        const vm = new TextNodeVM();
+        const vm = new TextNode();
         assert.equal(vm.Width, 120);
         assert.equal(vm.Height, 44);
         assert.equal(vm.LabelText, '');
@@ -45,26 +45,30 @@ describe('M4 TextNodeVM', () => {
     });
 
     test('LabelText proxies Text.Content', () => {
-        const vm = new TextNodeVM();
+        const vm = new TextNode();
         vm.LabelText = 'note';
         assert.equal(vm.Text.Content, 'note');
         vm.Text.Content = 'changed';
         assert.equal(vm.LabelText, 'changed');
     });
 
-    test('IEditable lifecycle proxies BeginEdit / CommitEdit / CancelEdit to Text', () => {
-        const vm = new TextNodeVM();
+    test('edit target resolves to the node Text (Figure edit path)', () => {
+        const vm = new TextNode();
         const calls: string[] = [];
         vm.Text.BeginEdit  = () => { calls.push('begin'); };
         vm.Text.CommitEdit = () => { calls.push('commit'); };
         vm.Text.CancelEdit = () => { calls.push('cancel'); };
-        vm.BeginEdit();
-        vm.CommitEdit();
-        vm.CancelEdit();
+        // A TextNode is a shapeless Figure with no wrapped content, so the
+        // Figure edit path resolves the edit target to its own ShapeText.
+        const target = resolveEditTarget(vm);
+        assert.equal(target, vm.Text, 'edit target is the node Text');
+        target!.BeginEdit();
+        target!.CommitEdit();
+        target!.CancelEdit();
         assert.deepEqual(calls, ['begin', 'commit', 'cancel']);
     });
 
-    test('renders TextNodeVM via [DataType=TextNodeVM] DataTemplate into the container', () => {
+    test('renders TextNode via [DataType=TextNode] DataTemplate into the container', () => {
         const diagram = new Diagram();
         diagram.ItemsPanel = new ItemsPanelTemplate(() => new PaginatedCanvas());
         const surface = new Border();
@@ -72,9 +76,9 @@ describe('M4 TextNodeVM', () => {
         const target = new FakeTarget();
         target.Content = surface;
 
-        const vm = new TextNodeVM();
+        const vm = new TextNode();
         vm.LabelText = 'hello';
-        const col = new ObservableCollection<TextNodeVM>();
+        const col = new ObservableCollection<TextNode>();
         col.Add(vm);
         diagram.ItemsSource = col;
 

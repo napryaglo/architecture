@@ -14,7 +14,7 @@ import { Pen, Point, TextAlignment } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { Group } from './group.js';
 import { NodeViewModel } from './node-view-model.js';
-import { TextNodeVM } from './text-node-vm.js';
+import { TextNode } from './text-node.js';
 import { Callout } from './callout.js';
 import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
 import { serializerFor, serializerByType, type NodeBaseRecord } from './node-serialization.js';
@@ -932,9 +932,9 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 
         // Round-trip nodes first so connectors can resolve their endpoint
         // nodeIds against the freshly-rehydrated Nodes set.
-        // byId accepts Figure, TextNodeVM, or Callout;
+        // byId accepts Figure, TextNode, or Callout;
         // ConnectorEndpoint.Node is typed Model so all are accepted.
-        const byId = new Map<string, Figure | TextNodeVM | Callout>();
+        const byId = new Map<string, Figure | TextNode | Callout>();
         // Callout leader targets resolve in a second pass (the target node may
         // be deserialized after the callout).
         const pendingLeaders: { callout: Callout; targetId: string }[] = [];
@@ -959,7 +959,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             const id = n.id !== '' ? n.id : nextFreeId();
             const base: NodeBaseRecord = { id, left: n.left, top: n.top, w: n.w, h: n.h };
 
-            let node: Figure | TextNodeVM | Callout | undefined;
+            let node: Figure | TextNode | Callout | undefined;
 
             if (typeof n.type === 'string')
             {
@@ -967,7 +967,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 const s = serializerByType(n.type);
                 if (s !== undefined)
                 {
-                    node = s.deserialize(n.data ?? {}, base) as Figure | TextNodeVM | Callout;
+                    node = s.deserialize(n.data ?? {}, base) as Figure | TextNode | Callout;
                 }
                 // Unknown serializer type — skip.
             }
@@ -976,12 +976,12 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
                 // Legacy V1 flat record — infer type from the `kind` field and
                 // synthesise a `data` bag matching each serializer's expectation.
                 // The text/callout serializers now build VMs, so legacy scenes
-                // also load as TextNodeVM / Callout automatically.
+                // also load as TextNode / Callout automatically.
                 const kind = typeof n.kind === 'string' ? n.kind : '';
                 if (kind === 'text')
                 {
                     const s = serializerByType('text')!;
-                    node = s.deserialize({ text: n.text }, base) as TextNodeVM;
+                    node = s.deserialize({ text: n.text }, base) as TextNode;
                 }
                 else if (kind === 'callout')
                 {
@@ -1012,7 +1012,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         }
 
         // Wire callout leaders now that every node id resolves.
-        // The target may be any rehydrated node type (Figure shape, TextNodeVM,
+        // The target may be any rehydrated node type (Figure shape, TextNode,
         // or Callout) — all satisfy ILeaderTarget at runtime
         // (Left/Top/Width/Height + DPs).
         for (const { callout, targetId } of pendingLeaders)
@@ -1128,7 +1128,7 @@ function nodeEndpoint(nodeId: string, ep: ConnectorEndpoint): SerializedConnecto
 
 function rehydrateEndpoint(
     s: SerializedConnectorEndpoint,
-    byId: ReadonlyMap<string, Figure | TextNodeVM | Callout>,
+    byId: ReadonlyMap<string, Figure | TextNode | Callout>,
 ): ConnectorEndpoint
 {
     if (s.nodeId !== undefined)

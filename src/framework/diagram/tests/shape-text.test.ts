@@ -11,7 +11,7 @@ import { FlowDocument } from '../../../basic/documents/flow-document.js';
 import { Paragraph } from '../../../basic/documents/paragraph.js';
 import { Run } from '../../../basic/documents/inlines.js';
 import { Figure } from '../figure.js';
-import { TextNodeVM } from '../text-node-vm.js';
+import { TextNode } from '../text-node.js';
 import { ShapeText, TextAutoFit, TextPlacement, computeTextBlockAnchor, isOutsideTextPlacement } from '../shape-text.js';
 import {
     cloneFlowDocument, deserializeFlowDocument, flowDocumentFromPlainText,
@@ -126,19 +126,19 @@ describe('ShapeText — save/load persistence', () => {
 
     test('label text survives a Save/Load round-trip (the data-loss fix)', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // C4: TextNodeVM serializes as type='text' and reloads as TextNodeVM.
-        const n = new TextNodeVM(); n.Id = 'n1'; n.Left = 10; n.Top = 20; doc.Nodes.Add(n);
+        // C4: TextNode serializes as type='text' and reloads as TextNode.
+        const n = new TextNode(); n.Id = 'n1'; n.Left = 10; n.Top = 20; doc.Nodes.Add(n);
         n.LabelText = 'Node A';
         doc.Save();
         doc.Load();
-        const reloaded = doc.Nodes.Get(0) as TextNodeVM;
+        const reloaded = doc.Nodes.Get(0) as TextNode;
         assert.equal(reloaded.LabelText, 'Node A', 'content round-trips');
     });
 
     test('non-default formatting round-trips too', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // C4: TextNodeVM serializes as type='text' and reloads as TextNodeVM.
-        const n = new TextNodeVM(); n.Id = 'n1'; doc.Nodes.Add(n);
+        // C4: TextNode serializes as type='text' and reloads as TextNode.
+        const n = new TextNode(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText        = 'Styled';
         n.Text.FontSize    = 18;
         n.Text.FontWeight  = FontWeight.Bold;
@@ -146,7 +146,7 @@ describe('ShapeText — save/load persistence', () => {
         n.Text.TextAlignment = TextAlignment.Left;
         doc.Save();
         doc.Load();
-        const st = (doc.Nodes.Get(0) as TextNodeVM).Text;
+        const st = (doc.Nodes.Get(0) as TextNode).Text;
         assert.equal(st.Content, 'Styled');
         assert.equal(st.FontSize, 18);
         assert.equal(st.FontWeight, FontWeight.Bold);
@@ -156,11 +156,11 @@ describe('ShapeText — save/load persistence', () => {
 
     test('an empty label round-trips as empty (no phantom text)', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // C4: TextNodeVM serializes as type='text' and reloads as TextNodeVM.
-        const n = new TextNodeVM(); n.Id = 'n1'; doc.Nodes.Add(n);
+        // C4: TextNode serializes as type='text' and reloads as TextNode.
+        const n = new TextNode(); n.Id = 'n1'; doc.Nodes.Add(n);
         doc.Save();
         doc.Load();
-        assert.equal((doc.Nodes.Get(0) as TextNodeVM).LabelText, '', 'stays empty');
+        assert.equal((doc.Nodes.Get(0) as TextNode).LabelText, '', 'stays empty');
     });
 });
 
@@ -402,8 +402,8 @@ describe('ShapeText — transform persistence (Slice 3)', () => {
 
     test('offset / angle / placement / block size / vertical align round-trip', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // C4: TextNodeVM serializes as type='text' and reloads as TextNodeVM.
-        const n = new TextNodeVM(); n.Id = 'n1'; doc.Nodes.Add(n);
+        // C4: TextNode serializes as type='text' and reloads as TextNode.
+        const n = new TextNode(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText                    = 'Rotated';
         n.Text.Offset                  = new Point(7, -3);
         n.Text.Angle                   = 42;
@@ -413,7 +413,7 @@ describe('ShapeText — transform persistence (Slice 3)', () => {
         n.Text.VerticalTextAlignment   = VerticalAlignment.Top;
         doc.Save();
         doc.Load();
-        const st = (doc.Nodes.Get(0) as TextNodeVM).Text;
+        const st = (doc.Nodes.Get(0) as TextNode).Text;
         assert.equal(st.Content, 'Rotated');
         assert.deepEqual([st.Offset.X, st.Offset.Y], [7, -3]);
         assert.equal(st.Angle, 42);
@@ -425,12 +425,12 @@ describe('ShapeText — transform persistence (Slice 3)', () => {
 
     test('a plain centred label persists no transform fields (stays compact)', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // C4: TextNodeVM serializes as type='text' and reloads as TextNodeVM.
-        const n = new TextNodeVM(); n.Id = 'n1'; doc.Nodes.Add(n);
+        // C4: TextNode serializes as type='text' and reloads as TextNode.
+        const n = new TextNode(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText = 'Plain';
         doc.Save();
         doc.Load();
-        const st = (doc.Nodes.Get(0) as TextNodeVM).Text;
+        const st = (doc.Nodes.Get(0) as TextNode).Text;
         // Defaults intact after a round-trip that wrote no transform.
         assert.deepEqual([st.Offset.X, st.Offset.Y], [0, 0]);
         assert.equal(st.Angle, 0);
@@ -490,13 +490,13 @@ describe('ShapeText — auto-fit (Slice 7)', () => {
 
     test('AutoFit mode round-trips through Save/Load', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // C4: TextNodeVM serializes as type='text' and reloads as TextNodeVM.
-        const n = new TextNodeVM(); n.Id = 'n1'; doc.Nodes.Add(n);
+        // C4: TextNode serializes as type='text' and reloads as TextNode.
+        const n = new TextNode(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText = 'x';
         n.Text.AutoFit = TextAutoFit.ShrinkText;
         doc.Save();
         doc.Load();
-        assert.equal((doc.Nodes.Get(0) as TextNodeVM).Text.AutoFit, TextAutoFit.ShrinkText);
+        assert.equal((doc.Nodes.Get(0) as TextNode).Text.AutoFit, TextAutoFit.ShrinkText);
     });
 });
 
@@ -590,13 +590,13 @@ describe('ShapeText — rich content persistence (Slice 4)', () => {
 
     test('a rich Document round-trips through Save/Load', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // C4: TextNodeVM serializes as type='text' and reloads as TextNodeVM.
-        const n = new TextNodeVM(); n.Id = 'n1'; doc.Nodes.Add(n);
+        // C4: TextNode serializes as type='text' and reloads as TextNode.
+        const n = new TextNode(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.Text.Document = makeRichDoc();
         n.Text.Content  = flowDocumentToPlainText(n.Text.Document);   // mirror a real commit
         doc.Save();
         doc.Load();
-        const st = (doc.Nodes.Get(0) as TextNodeVM).Text;
+        const st = (doc.Nodes.Get(0) as TextNode).Text;
         assert.ok(st.Document !== undefined, 'Document restored');
         assert.deepEqual(
             serializeFlowDocument(st.Document!),
@@ -607,12 +607,12 @@ describe('ShapeText — rich content persistence (Slice 4)', () => {
 
     test('a plain label persists no doc field and reloads without a Document', () => {
         const doc = new DiagramDocument(new MemoryStorage());
-        // C4: TextNodeVM serializes as type='text' and reloads as TextNodeVM.
-        const n = new TextNodeVM(); n.Id = 'n1'; doc.Nodes.Add(n);
+        // C4: TextNode serializes as type='text' and reloads as TextNode.
+        const n = new TextNode(); n.Id = 'n1'; doc.Nodes.Add(n);
         n.LabelText = 'Plain';
         doc.Save();
         doc.Load();
-        const st = (doc.Nodes.Get(0) as TextNodeVM).Text;
+        const st = (doc.Nodes.Get(0) as TextNode).Text;
         assert.equal(st.Document, undefined, 'stays plain');
         assert.equal(st.Content, 'Plain');
     });

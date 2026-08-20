@@ -4,7 +4,7 @@ import { DiagramSettings } from './diagram-settings.js';
 
 // Position/size contract every diagram node view-model satisfies. The Figure
 // container two-way binds its Left/Top/Width/Height to these; the per-VM
-// serializers (later stage) read them. Content node kinds (TextNodeVM,
+// serializers (later stage) read them. Content node kinds (TextNode,
 // CalloutNodeVM, ArchNodeVM) extend this; geometric shape nodes are
 // self-painting Figures, not VMs.
 export class NodeViewModel extends Model

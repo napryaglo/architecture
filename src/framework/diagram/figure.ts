@@ -69,7 +69,7 @@ const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width',
 // The in-place edit lifecycle a content VM (or the Figure's own ShapeText)
 // exposes: enter edit mode, commit the pending edit, or cancel it. Applied via
 // a named cast (never bracket access) so figure.ts stays decoupled from
-// TextNodeVM (no import cycle risk — only the interface lives here). ShapeText
+// TextNode (no import cycle risk — only the interface lives here). ShapeText
 // implements all three; a content VM delegates to its own ShapeText.
 export interface IEditable
 {
@@ -82,7 +82,7 @@ export interface IEditable
 // IEditable (has its own in-place edit entry), delegate there; otherwise fall
 // back to the Figure's own Text (a ShapeText, itself IEditable). Exported so the
 // Diagram's F2 handler resolves the same target as double-click. BeginEdit
-// presence is the discriminator — the only content type that has it (TextNodeVM)
+// presence is the discriminator — the only content type that has it (TextNode)
 // implements the whole lifecycle.
 export function resolveEditTarget(container: Figure): IEditable | undefined
 {

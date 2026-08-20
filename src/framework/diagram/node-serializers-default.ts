@@ -1,12 +1,12 @@
 // Built-in node serializer registrations.
 //
 // This module registers the three default NodeSerializer implementations —
-// 'shape' (self-painting Figure), 'text' (TextNodeVM), 'callout' (Callout) —
+// 'shape' (self-painting Figure), 'text' (TextNode), 'callout' (Callout) —
 // as side effects on import.  diagram-document.ts imports this module once for its
 // side effects so the registry is populated before any Save/Load call.
 //
 // Cycle-avoidance: this module imports FROM the concrete classes (Figure,
-// TextNodeVM, Callout) and FROM node-serialization (registry).  It does NOT
+// TextNode, Callout) and FROM node-serialization (registry).  It does NOT
 // import from diagram-document, so there is no cycle.  diagram-document.ts
 // imports this module and may also import individual helpers exported here
 // (serializeShapeText, applySerializedText, placeNode).
@@ -21,7 +21,7 @@ import {
 } from './shape-text-document.js';
 import { Figure } from './figure.js';
 import { NodeViewModel } from './node-view-model.js';
-import { TextNodeVM } from './text-node-vm.js';
+import { TextNode } from './text-node.js';
 import { Callout } from './callout.js';
 import { SHAPE_CATALOG_MAP } from './shape-catalog.js';
 import { registerNodeSerializer, type NodeBaseRecord } from './node-serialization.js';
@@ -197,28 +197,28 @@ registerNodeSerializer({
     },
 });
 
-// ── 'text' serializer (TextNodeVM) ────────────────────────────────────
+// ── 'text' serializer (TextNode) ────────────────────────────────────
 
 registerNodeSerializer({
     type: 'text',
 
     matches(node: unknown): boolean
     {
-        // TextNodeVM is a superclass of Callout; exclude Callout
+        // TextNode is a superclass of Callout; exclude Callout
         // so a callout doesn't match here.  The 'callout' serializer is
         // registered after this one and matches Callout explicitly.
-        return node instanceof TextNodeVM && !(node instanceof Callout);
+        return node instanceof TextNode && !(node instanceof Callout);
     },
 
     serialize(node: unknown): Record<string, unknown>
     {
-        const vm = node as TextNodeVM;
+        const vm = node as TextNode;
         return { text: serializeShapeText(vm.Text) };
     },
 
-    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): TextNodeVM
+    deserialize(data: Record<string, unknown>, base: NodeBaseRecord): TextNode
     {
-        const vm = new TextNodeVM();
+        const vm = new TextNode();
         placeNode(vm, base);
         vm.Id = base.id;
         if (data.text !== undefined) applySerializedText(vm.Text, data.text as SerializedText);

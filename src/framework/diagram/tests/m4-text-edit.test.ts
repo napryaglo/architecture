@@ -13,7 +13,7 @@ import {
 import { Border, ItemsPanelTemplate } from '../../../basic/index.js';
 import { PaginatedCanvas } from '../../../basic/panels/paginated-canvas.js';
 import { flowDocumentFromPlainText } from '../shape-text-document.js';
-import { TextNodeVM } from '../text-node-vm.js';
+import { TextNode } from '../text-node.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { RichTextBox } from '../../../basic/rich-text-box.js';
@@ -24,13 +24,13 @@ class FakeTarget implements MountableTarget {
     public GetFocusedVisual(): Visual | undefined { return undefined; }
 }
 
-// Retrieve the RichTextBox editor from a TextNodeVM's ShapeText.
-function editor(vm: TextNodeVM): RichTextBox
+// Retrieve the RichTextBox editor from a TextNode's ShapeText.
+function editor(vm: TextNode): RichTextBox
 {
     return vm.Text.GetTemplateChild('PART_Edit') as RichTextBox;
 }
 
-describe('M4 C2 — in-place text edit for TextNodeVM', () => {
+describe('M4 C2 — in-place text edit for TextNode', () => {
     beforeEach(() => {
         initTestApp();
     });
@@ -54,11 +54,11 @@ describe('M4 C2 — in-place text edit for TextNodeVM', () => {
 
     // ── Test 1: double-click begins editing the VM text; commit writes back ──
 
-    test('double-click a TextNodeVM container edits the VM text; commit writes back', () => {
+    test('double-click a TextNode container edits the VM text; commit writes back', () => {
         const { diagram, surface } = build();
-        const vm = new TextNodeVM();
+        const vm = new TextNode();
         vm.LabelText = 'initial';
-        const col = new ObservableCollection<TextNodeVM>();
+        const col = new ObservableCollection<TextNode>();
         col.Add(vm);
         diagram.ItemsSource = col;
         layout(surface);
@@ -81,13 +81,13 @@ describe('M4 C2 — in-place text edit for TextNodeVM', () => {
         assert.equal(vm.LabelText, 'edited', 'committed change written back to vm.LabelText');
     });
 
-    // ── Test 2: F2 on a selected TextNodeVM also begins editing the VM text ──
+    // ── Test 2: F2 on a selected TextNode also begins editing the VM text ──
 
-    test('F2 on a selected TextNodeVM container edits the VM text', () => {
+    test('F2 on a selected TextNode container edits the VM text', () => {
         const { diagram, surface } = build();
-        const vm = new TextNodeVM();
+        const vm = new TextNode();
         vm.LabelText = 'start';
-        const col = new ObservableCollection<TextNodeVM>();
+        const col = new ObservableCollection<TextNode>();
         col.Add(vm);
         diagram.ItemsSource = col;
         layout(surface);
@@ -111,14 +111,14 @@ describe('M4 C2 — in-place text edit for TextNodeVM', () => {
 
     // ── Test 3: PART_LabelHost tracks VM size after a resize ──
     // Checks the ContentPresenter-vs-ContentControl concern: after resizing the
-    // TextNodeVM (writing Width/Height DPs), the materialized label host should
+    // TextNode (writing Width/Height DPs), the materialized label host should
     // report the updated size. If this test fails, switch PART_LabelHost in
     // diagram.template.mu from ContentPresenter to ContentControl.
 
-    test('resizing TextNodeVM: PART_LabelHost tracks Width/Height after resize', () => {
+    test('resizing TextNode: PART_LabelHost tracks Width/Height after resize', () => {
         const { diagram, surface } = build();
-        const vm = new TextNodeVM();
-        const col = new ObservableCollection<TextNodeVM>();
+        const vm = new TextNode();
+        const col = new ObservableCollection<TextNode>();
         col.Add(vm);
         diagram.ItemsSource = col;
         layout(surface);

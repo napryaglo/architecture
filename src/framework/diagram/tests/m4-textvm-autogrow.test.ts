@@ -1,13 +1,13 @@
 import { describe, test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
-import { TextNodeVM } from '../text-node-vm.js';
+import { TextNode } from '../text-node.js';
 
-describe('TextNodeVM — GrowShape auto-fit', () => {
+describe('TextNode — GrowShape auto-fit', () => {
     beforeEach(() => { initTestApp(); });
 
     test('long text grows Width/Height past the 120x44 default', () => {
-        const vm = new TextNodeVM();
+        const vm = new TextNode();
         const w0 = vm.Width, h0 = vm.Height;
         vm.LabelText = 'A very long label that should not fit inside the default text box footprint';
         assert.ok(vm.Width > w0, `expected Width to grow from ${w0}, got ${vm.Width}`);
@@ -15,7 +15,7 @@ describe('TextNodeVM — GrowShape auto-fit', () => {
     });
 
     test('grow-only: a shorter label does not shrink the box', () => {
-        const vm = new TextNodeVM();
+        const vm = new TextNode();
         vm.LabelText = 'A very long label that grows the box well beyond its default width';
         const wGrown = vm.Width;
         vm.LabelText = 'x';
@@ -23,7 +23,7 @@ describe('TextNodeVM — GrowShape auto-fit', () => {
     });
 
     test('idempotent: re-measuring the same text does not oscillate', () => {
-        const vm = new TextNodeVM();
+        const vm = new TextNode();
         vm.LabelText = 'Stable label content for idempotence';
         const w1 = vm.Width, h1 = vm.Height;
         vm.LabelText = 'Stable label content for idempotence';

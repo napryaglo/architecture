@@ -13,7 +13,7 @@ import { Application } from '../../../runtime/index.js';
 import { Point } from '../../../visual-engine/index.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 import { Figure } from '../figure.js';
-import { TextNodeVM } from '../text-node-vm.js';
+import { TextNode } from '../text-node.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 
@@ -41,7 +41,7 @@ describe('M3 node serialization registry — typed round-trip', () => {
         const shape = doc.CreateNode('rectangle', 12, 34)!;
         assert.ok(shape instanceof Figure);
 
-        const txt = new TextNodeVM();
+        const txt = new TextNode();
         txt.Id = 'tx1'; txt.LabelText = 'hello'; txt.Left = 200; txt.Top = 100;
         doc.Nodes.Add(txt);
 
@@ -81,11 +81,11 @@ describe('M3 node serialization registry — typed round-trip', () => {
         assert.equal(vm.Top,  34);
     });
 
-    test('Save → Load restores TextNodeVM with its label', () => {
+    test('Save → Load restores TextNode with its label', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);
 
-        const txt = new TextNodeVM();
+        const txt = new TextNode();
         txt.Id = 'tx1'; txt.LabelText = 'annotated'; txt.Left = 5; txt.Top = 10;
         doc.Nodes.Add(txt);
 
@@ -97,8 +97,8 @@ describe('M3 node serialization registry — typed round-trip', () => {
 
         assert.equal(doc2.Nodes.Count, 1);
         const restored = doc2.Nodes.Get(0)!;
-        assert.ok(restored instanceof TextNodeVM, 'restored as TextNodeVM');
-        assert.equal((restored as TextNodeVM).LabelText, 'annotated');
+        assert.ok(restored instanceof TextNode, 'restored as TextNode');
+        assert.equal((restored as TextNode).LabelText, 'annotated');
     });
 
     test('connector endpoints resolve by id after typed round-trip', () => {
@@ -158,7 +158,7 @@ describe('M3 node serialization registry — legacy load', () => {
         assert.equal(vm.Top,  6);
     });
 
-    test('legacy text node (kind=text, no type) loads as TextNodeVM', () => {
+    test('legacy text node (kind=text, no type) loads as TextNode', () => {
         const storage = new MemoryStorage();
         const legacy = JSON.stringify({
             nodes: [
@@ -178,7 +178,7 @@ describe('M3 node serialization registry — legacy load', () => {
 
         assert.equal(doc.Nodes.Count, 1);
         const node = doc.Nodes.Get(0)!;
-        assert.ok(node instanceof TextNodeVM, 'legacy text reloads as TextNodeVM');
-        assert.equal((node as TextNodeVM).LabelText, 'legacy note');
+        assert.ok(node instanceof TextNode, 'legacy text reloads as TextNode');
+        assert.equal((node as TextNode).LabelText, 'legacy note');
     });
 });

@@ -77,23 +77,6 @@ resources Diagrams {
         Template = @DefaultCallout;
     }
 
-    // ── TextNodeVM: renders a text-box node (VM form of TextShape) ───
-    //
-    // DataTemplate for TextNodeVM hosted inside the Figure container's
-    // PART_Content ContentPresenter. A Border provides the background
-    // rectangle (transparent fill + slate outline, bound to $Fill/$Stroke,
-    // $Width/$Height). Inside it, a ContentPresenter hosts the VM's Text
-    // (a ShapeText), which self-renders via its own DefaultShapeText style —
-    // the same label-host idiom the Figure template uses for PART_LabelHost.
-    // Using ContentPresenter (not ContentControl) for the label host because
-    // ContentPresenter forwards DataContext through to the ShapeText child
-    // without pinning it, so ancestor-scoped bindings remain live — same
-    // rationale as the library-preview gotcha memo.
-    DataTemplate [DataType = TextNodeVM] {
-        Border [ Fill = $Fill, Stroke = $Stroke, Width = $Width, Height = $Height ] {
-            ContentPresenter x:name="PART_LabelHost" [ Content = $Text, Width = $Width, Height = $Height ]
-        }
-    }
 
 
     // ── ShapeText: a shape's text block (the Visio "text block") ────
