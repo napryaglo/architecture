@@ -4,16 +4,14 @@ import type { Diagram } from '../diagram.js';
 
 // Internal collaborator owned by Diagram. Derives SelectionLeft / Top /
 // Width / Height / Count (5 read-only DPs on Diagram) from the union
-// bbox of every IFigure-shaped CONTAINER currently in
-// `Diagram.SelectedContainers`.
+// bbox of every selected item's GEOMETRY HOST.
 //
-// Geometry lives on the container Figure, not the data item: under
-// container-owned-geometry a selected content node surfaces as a
-// geometry-less VM in `SelectedItems`, so reading bounds off the items
-// would collapse the bbox to zero and hide the adorner. `SelectedContainers`
-// is the Selector's own selection truth (the Figure containers) and always
-// carries geometry — for a geometric-shape item the container IS the item,
-// so this is uniform across shape nodes and content nodes.
+// The geometry host is the item itself when it carries Left/Top/Width/Height
+// DPs (geometric-shape Figures, and legacy item-authoritative data rows), or
+// the item's container Figure otherwise. Under container-owned-geometry a
+// selected content node surfaces as a geometry-less VM in SelectedItems, so
+// reading bounds off the item would collapse the bbox to zero and hide the
+// adorner; resolving to the container keeps it in the box.
 //
 // Re-derives whenever:
 //   * Selector.SelectionChanged fires (selection set membership changes)
@@ -55,18 +53,30 @@ export class SelectionBoundsTracker
         for (const detach of this._itemListeners.values()) detach();
         this._itemListeners.clear();
 
-        // Reattach against the current selection's IFigure-shaped containers
-        // (the geometry owners), not the data items (content VMs carry no
-        // geometry).
-        for (const container of this._diagram.SelectedContainers)
+        // Reattach against each selected item's GEOMETRY HOST. An item that
+        // already carries geometry DPs is its own host (geometric-shape Figures,
+        // and legacy item-authoritative data rows); a content VM carries none,
+        // so its host is the container Figure (container-owned-geometry).
+        // Resolving here — rather than reading SelectedItems directly — is what
+        // keeps a selected content node in the bbox instead of being dropped.
+        for (const item of this._diagram.SelectedItems)
         {
-            if (this._isFigureShape(container))
-            {
-                this._itemListeners.set(container, this._listenItem(container));
-            }
+            const host = this._geometryHost(item);
+            if (host !== undefined) this._itemListeners.set(host, this._listenItem(host));
         }
 
         this._recompute();
+    }
+
+    // The object whose Left/Top/Width/Height describe this item on the canvas:
+    // the item itself when it carries geometry DPs, otherwise its container
+    // Figure. Returns undefined when neither is figure-shaped (e.g. a plain
+    // data row selected in a non-diagram Selector).
+    private _geometryHost(item: unknown): Model | undefined
+    {
+        if (this._isFigureShape(item)) return item;
+        const container = this._diagram.Generator.ContainerFromItem(item);
+        return this._isFigureShape(container) ? container : undefined;
     }
 
     private _listenItem(item: Model): () => void

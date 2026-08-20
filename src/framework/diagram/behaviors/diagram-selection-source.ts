@@ -89,14 +89,15 @@ export class DiagramSelectionSource implements SelectionSource
     public beginResize(): void
     {
         const snaps: FigureSnapshot[] = [];
-        // Snapshot the geometry owners — the container Figures — not the data
-        // items. A content node surfaces in SelectedItems as a geometry-less VM
-        // (container-owned-geometry); its geometry, and the UserSized latch a
-        // hand-resize sets, live on its container. For a geometric-shape item
-        // the container IS the item, so this is uniform.
-        for (const item of this._diagram.SelectedContainers)
+        // Snapshot each selected item's GEOMETRY HOST — the item itself when it
+        // carries geometry DPs (geometric-shape Figures / legacy item-authoritative
+        // rows), else its container Figure. A content node surfaces in SelectedItems
+        // as a geometry-less VM (container-owned-geometry); its geometry, and the
+        // UserSized latch a hand-resize sets, live on its container.
+        for (const raw of this._diagram.SelectedItems)
         {
-            if (!(item instanceof Model)) continue;
+            const item = this._geometryHost(raw);
+            if (item === undefined) continue;
             const klass = item.constructor as Function;
             const leftDesc = findDescriptor(klass, 'Left');
             const topDesc  = findDescriptor(klass, 'Top');
@@ -155,5 +156,26 @@ export class DiagramSelectionSource implements SelectionSource
     public endResize(): void
     {
         this._snapshot = undefined;
+    }
+
+    // The Model whose Left/Top/Width/Height describe this item on the canvas:
+    // the item itself when it carries geometry DPs (geometric-shape Figures /
+    // legacy item-authoritative rows), else its container Figure (content VMs
+    // under container-owned-geometry). Undefined when neither is geometry-shaped.
+    private _geometryHost(item: unknown): Model | undefined
+    {
+        if (this._isFigureShape(item)) return item as Model;
+        const container = this._diagram.Generator.ContainerFromItem(item);
+        return this._isFigureShape(container) ? (container as unknown as Model) : undefined;
+    }
+
+    private _isFigureShape(item: unknown): boolean
+    {
+        if (!(item instanceof Model)) return false;
+        const klass = item.constructor as Function;
+        return findDescriptor(klass, 'Left')   !== undefined
+            && findDescriptor(klass, 'Top')    !== undefined
+            && findDescriptor(klass, 'Width')  !== undefined
+            && findDescriptor(klass, 'Height') !== undefined;
     }
 }
