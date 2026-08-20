@@ -1030,6 +1030,27 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         for (const l of [...this._connectorSelectionChangedListeners]) l();
     }
 
+    // ── Container-bound signal ────────────────────────────────────────
+    //
+    // Raised whenever a Figure container is (re)bound to a data-row item
+    // (a NodeViewModel from an ItemsSource collection) in bindContainer —
+    // the single choke point for both fresh (GetContainerForItemOverride)
+    // and recycled (RebindContainerForItemOverride) containers. The owning
+    // DiagramDocument subscribes so it can seed the container's geometry
+    // from its NodeVisualStore (the container, not the VM, owns geometry)
+    // and re-point connector endpoints that referenced the item by id.
+    // Fires only for Model items — a Figure/Group that is its own container
+    // is not a wrapped data row and does not fire.
+    private readonly _containerBoundListeners: Set<(container: Figure, item: unknown) => void> = new Set();
+
+    public AddContainerBoundListener   (listener: (container: Figure, item: unknown) => void): void { this._containerBoundListeners.add(listener); }
+    public RemoveContainerBoundListener(listener: (container: Figure, item: unknown) => void): void { this._containerBoundListeners.delete(listener); }
+
+    private _fireContainerBound(container: Figure, item: unknown): void
+    {
+        for (const l of [...this._containerBoundListeners]) l(container, item);
+    }
+
     public SelectConnector(c: Connector): void
     {
         if (this._selectedConnectors.has(c)) return;
@@ -1818,6 +1839,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
                 node.set_property_value(Figure.SizeToContentKey, new Binding(item, 'SizeToContent', BindingMode.OneWay) as unknown as boolean);
                 node.set_property_value(Figure.UserSizedKey,     new Binding(item, 'UserSized',     BindingMode.TwoWay) as unknown as boolean);
             }
+            // Signal the owning document so it can seed the container's geometry
+            // from the visual store and re-point id-referencing connectors — the
+            // container, not the VM, is the geometry owner and side-endpoint host.
+            this._fireContainerBound(node, item);
         }
         else
         {

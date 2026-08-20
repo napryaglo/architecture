@@ -291,6 +291,20 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     private _mirrorView: Diagram | undefined;
     private readonly _onViewMirrorChanged = (): void => this._pullFromView();
 
+    // The view whose ContainerBound signal we're subscribed to (kept so we can
+    // detach on ActiveView change). When a Figure container binds to a content
+    // VM, seed the container's geometry from the visual store — the container,
+    // not the VM, owns geometry (slice #3). Connector re-pointing hooks here too.
+    private _boundView: Diagram | undefined;
+    private readonly _onContainerBound = (container: Figure, item: unknown): void =>
+    {
+        if (!(item instanceof NodeViewModel)) return;
+        const id = item.Id;
+        if (id === undefined || id === '') return;
+        const v = this._visuals.Get(id);
+        if (v !== undefined) this._visuals.Apply(v, container);
+    };
+
     constructor(storage?: DiagramStorage)
     {
         super();
@@ -530,6 +544,28 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         }
     }
 
+    // Re-point the ContainerBound subscription at a new ActiveView: detach the
+    // old view's listener, attach the new one's, then sweep its already-realized
+    // VM containers (a document re-activated onto a view whose containers realized
+    // before this subscription existed gets no fresh ContainerBound for them).
+    private _rebindContainerBound(view: Diagram | undefined): void
+    {
+        if (this._boundView !== undefined)
+        {
+            this._boundView.RemoveContainerBoundListener(this._onContainerBound);
+        }
+        this._boundView = view;
+        if (view === undefined) return;
+        view.AddContainerBoundListener(this._onContainerBound);
+        for (let i = 0; i < this.Nodes.Count; i++)
+        {
+            const n = this.Nodes.Get(i)!;
+            if (!(n instanceof NodeViewModel)) continue;
+            const c = view.Generator.ContainerFromItem(n);
+            if (c instanceof Figure) this._onContainerBound(c, n);
+        }
+    }
+
     // Mirror the live view's editable state onto our DPs (guarded so the write-
     // through in OnPropertyChanged doesn't echo it straight back).
     private _pullFromView(): void
@@ -557,6 +593,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         {
             this.Inspector.View = newValue as Diagram | undefined;
             this._rebindViewMirror(newValue as Diagram | undefined);
+            this._rebindContainerBound(newValue as Diagram | undefined);
         }
         // An editor write flows OUT to the view (unless it's the mirror pulling IN).
         else if (!this._syncingFromView && this._mirrorView !== undefined)
@@ -885,14 +922,20 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         this._visuals.Clear();
         for (let i = 0; i < this.Nodes.Count; i++)
         {
-            const v = this.Nodes.Get(i)!;
+            const node = this.Nodes.Get(i)!;
             // Groups not persisted — skip them (and anything without a serializer).
-            const s = serializerFor(v);
+            const s = serializerFor(node);
             if (s === undefined) continue;
-            const fig = v as Figure;
-            const id = fig.Id ?? '';
-            nodes.push({ id, type: s.type, data: s.serialize(v) });
-            if (id !== '') this._visuals.Set(id, this._visuals.Read(fig));
+            const id = (node as { Id?: string }).Id ?? '';
+            nodes.push({ id, type: s.type, data: s.serialize(node) });
+            // Geometry owner: the node itself when it's a self-painting Figure,
+            // else its container Figure (content VMs host geometry on the
+            // container). No container (headless VM edit, no live view) → no
+            // geometry to persist for that node this save.
+            const fig = node instanceof Figure
+                ? node
+                : this.ActiveView?.Generator.ContainerFromItem(node) as Figure | undefined;
+            if (fig !== undefined && id !== '') this._visuals.Set(id, this._visuals.Read(fig));
         }
         const connectors: SerializedConnector[] = [];
         for (let i = 0; i < this.Connectors.Count; i++)
@@ -965,9 +1008,12 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
             const node = s.deserialize(n.data ?? {}) as Figure | TextNode | Callout;
 
             // Geometry: apply the visual record keyed by the SAVED record id
-            // (before any '' → fresh-id reassignment below).
+            // (before any '' → fresh-id reassignment below). Self-painting Figure
+            // nodes own their geometry directly, so apply here. Content VM nodes
+            // host geometry on their container instead — the store stays seeded
+            // (below) and ContainerBound applies it when the container realizes.
             const v = this._visuals.Get(n.id);
-            if (v !== undefined) this._visuals.Apply(v, node as Figure);
+            if (v !== undefined && node instanceof Figure) this._visuals.Apply(v, node);
 
             const id = n.id !== '' ? n.id : nextFreeId();
             node.Id = id;
