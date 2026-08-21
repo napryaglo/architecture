@@ -380,7 +380,35 @@ export function attachMarqueeSelection(selector: Selector): () => void
         const hostMinY = Math.min(startHostY, args.HostY);
         const w = Math.abs(args.HostX - startHostX);
         const h = Math.abs(args.HostY - startHostY);
-        const panelRect = new Rect(hostMinX - panelOrigin.x, hostMinY - panelOrigin.y, w, h);
+
+        // PANEL-LOCAL hit-test rect. When the Selector exposes a host->content
+        // mapping (the Diagram, whose PART_Camera carries a LayoutTransform
+        // zoom), route both endpoints through it so the rect lands in the same
+        // content space as each container's rectInFrame(c, panel) — at ANY
+        // zoom/pan. originIn() only sums ArrangedRect (a pure translation) and
+        // can't see the camera scale, so the plain path is off by the zoom
+        // factor once zoom != 1. Mirrors figure.ts / canvas-drop-behavior's use
+        // of Diagram.HostToContent. Non-diagram Selectors (ListBox, TreeView —
+        // no scale in the chain) have no HostToContent and keep the plain path,
+        // where content space == panel-local up to the originIn translation.
+        const coord = selector as unknown as {
+            HostToContent?(x: number, y: number): { X: number; Y: number };
+        };
+        let panelRect: Rect;
+        if (typeof coord.HostToContent === 'function')
+        {
+            const cs = coord.HostToContent(startHostX, startHostY);
+            const ce = coord.HostToContent(args.HostX, args.HostY);
+            panelRect = new Rect(
+                Math.min(cs.X, ce.X), Math.min(cs.Y, ce.Y),
+                Math.abs(ce.X - cs.X), Math.abs(ce.Y - cs.Y));
+        }
+        else
+        {
+            panelRect = new Rect(hostMinX - panelOrigin.x, hostMinY - panelOrigin.y, w, h);
+        }
+        // LAYER-LOCAL adorner rect stays in host/layer space (the AdornerLayer
+        // sits OUTSIDE PART_Camera), so it keeps drawing at the cursor 1:1.
         const layerRect = new Rect(hostMinX - layerOrigin.x, hostMinY - layerOrigin.y, w, h);
         adorner?.SetRect(layerRect);
 
