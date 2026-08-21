@@ -33,13 +33,9 @@ export class Observable {
   // that common name.
   protected RaisePropertyChanged(name: string, oldValue: unknown, newValue: unknown): void {
     const cbs = this._listeners?.get(name);
-    // `PropertyChangeCallback`'s first parameter is typed `MuralBase` (the
-    // DP-bearing subclass), but a bare Observable has no MuralBase identity.
-    // Cast through the callback's own parameter type: the callback only ever
-    // reads `owner` as the notifying instance, so passing `this` is correct.
-    if (cbs) {
-      const owner = this as unknown as Parameters<PropertyChangeCallback>[0];
-      for (const cb of [...cbs]) cb(owner, name, oldValue, newValue);
-    }
+    // `PropertyChangeCallback`'s owner is typed `Observable`, so `this`
+    // passes with no cast — the callback treats owner as the notifying
+    // identity.
+    if (cbs) for (const cb of [...cbs]) cb(this, name, oldValue, newValue);
   }
 }

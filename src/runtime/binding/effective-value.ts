@@ -1,14 +1,21 @@
 ﻿import { Binding, BindingMode } from './binding.js';
 import { isAnimationProhibited, isNotDataBindable } from '../metadata.js';
 import type { MuralBase } from '../model.js';
+import type { Observable } from '../observable.js';
 import type { PropertyDescriptor } from '../property-descriptor.js';
 import { Validation } from './validation.js';
 
-// Invoked after a property's effective value changes, with the model
-// whose property changed and the old/new effective values. Users get the
-// property *name* (simple, not composite) for ergonomic context.
+// Invoked after a property's effective value changes, with the object
+// whose property changed and the old/new values. Users get the property
+// *name* (simple, not composite) for ergonomic context.
+//
+// `owner` is typed `Observable` — the common base of both a plain
+// `Observable` (name/setter source) and a `MuralBase` (DP source) — so the
+// same callback shape serves both binding branches. Treat `owner` as an
+// opaque notifying identity; it is NOT guaranteed to be a `MuralBase`, so
+// do not reach for the DP surface on it.
 export type PropertyChangeCallback = (
-    model: MuralBase,
+    owner: Observable,
     property: string,
     old_value: any,
     new_value: any,

@@ -1,4 +1,5 @@
 ﻿import { MuralBase } from '../runtime/model.js';
+import type { Observable } from '../runtime/observable.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import { findDescriptor, propertyValues } from '../runtime/model-internals.js';
 import { inherits } from '../runtime/metadata.js';
@@ -297,7 +298,7 @@ export class StyleApplicator
             if (writebackEnabled)
             {
                 targetListener = (
-                    _owner: MuralBase, _propertyName: string,
+                    _owner: Observable, _propertyName: string,
                     _oldValue: unknown, newValue: unknown,
                 ): void => {
                     if (suppressTargetListener) return;

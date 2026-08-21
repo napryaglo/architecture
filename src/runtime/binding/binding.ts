@@ -457,7 +457,7 @@ class PropertyPath
         }
     }
 
-    OnChanged(model: MuralBase, property: string, _old_value: any, new_value: any): void
+    OnChanged(model: Observable, property: string, _old_value: any, new_value: any): void
     {
         for (let i = 0; i < this.segments.length; i++)
         {
