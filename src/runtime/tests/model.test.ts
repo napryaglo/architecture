@@ -4923,3 +4923,29 @@ describe('IsNotDataBindable / IsAnimationProhibited gates', () => {
         assert.equal(base.get_property_value(resolveKey(base, undefined, 'kind')), 'X');
     });
 });
+
+describe('AddPropertyChangedListener name resolution', () =>
+{
+    class Widget extends MuralBase
+    {
+        static readonly CaptionKey = MuralBase.RegisterProperty<string>(Widget, 'Caption', '', MetaData.None);
+    }
+
+    test('subscribing by a registered name attaches like a key', () =>
+    {
+        const w = new Widget();
+        const seen: string[] = [];
+        w.AddPropertyChangedListener('Caption', (_o, _n, _old, nv) => seen.push(nv as string));
+        w.set_property_value(Widget.CaptionKey, 'Hi');
+        assert.deepEqual(seen, ['Hi']);
+    });
+
+    test('subscribing by an unregistered name throws a named diagnostic, not a TypeError', () =>
+    {
+        const w = new Widget();
+        assert.throws(
+            () => w.AddPropertyChangedListener('Nope', () => {}),
+            /No dependency property named 'Nope' is registered on 'Widget'\./,
+        );
+    });
+});

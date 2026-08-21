@@ -445,14 +445,30 @@ export class MuralBase extends Observable
     // resolves via `find_descriptor(this.constructor, name)` to the key,
     // then the same EVD path. MuralBase notifications flow through the EVD
     // listeners — it does not use Observable's name-keyed listener store.
+    // Resolves the `string | PropertyKey` argument of the notification
+    // overloads to a `PropertyKey`. A string is looked up against this
+    // instance's class via `find_descriptor`; an unregistered name throws
+    // a named diagnostic rather than building `new PropertyKey(undefined)`
+    // and faulting on a later `.descriptor` access.
+    private resolve_listener_key(nameOrKey: string | PropertyKey<unknown>): PropertyKey<unknown>
+    {
+        if (typeof nameOrKey !== 'string') return nameOrKey;
+        const descriptor = MuralBase.find_descriptor(this.constructor, nameOrKey);
+        if (descriptor === undefined)
+        {
+            throw new Error(
+                `No dependency property named '${nameOrKey}' is registered on '${this.constructor.name}'.`,
+            );
+        }
+        return new PropertyKey(descriptor);
+    }
+
     public override AddPropertyChangedListener(
         nameOrKey: string | PropertyKey<unknown>,
         callback: PropertyChangeCallback,
     ): void
     {
-        const key = typeof nameOrKey === 'string'
-            ? new PropertyKey(MuralBase.find_descriptor(this.constructor, nameOrKey)!)
-            : nameOrKey;
+        const key = this.resolve_listener_key(nameOrKey);
         this.ensure_effective_value_for(key.descriptor).AddChangeListener(callback);
     }
 
@@ -461,9 +477,7 @@ export class MuralBase extends Observable
         callback: PropertyChangeCallback,
     ): void
     {
-        const key = typeof nameOrKey === 'string'
-            ? new PropertyKey(MuralBase.find_descriptor(this.constructor, nameOrKey)!)
-            : nameOrKey;
+        const key = this.resolve_listener_key(nameOrKey);
         const composed = key.descriptor.ComposedKey;
         this.property_values.get(composed)?.RemoveChangeListener(callback);
     }
