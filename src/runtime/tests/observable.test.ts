@@ -1,26 +1,48 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Observable, MetaData } from '../index.js';
+import { Observable } from '../index.js';
 
+// A plain Observable subclass: real typed field + getter/setter + notify.
 class Loc extends Observable {
-    static LabelKey = Observable.RegisterProperty<string>(Loc, 'label', '', MetaData.None);
-    get label() { return this.get_property_value(Loc.LabelKey); }
-    set label(v: string) { this.set_property_value(Loc.LabelKey, v); }
+  private _label = '';
+  get label(): string { return this._label; }
+  set label(v: string) {
+    const old = this._label;
+    if (old === v) return;
+    this._label = v;
+    this.notify('label', old, v);
+  }
 }
 
-test('Observable stores + notifies without the EVD system', () => {
-    const l = new Loc();
-    assert.equal(l.label, '');                         // default before set
-    const seen: string[] = [];
-    l.AddPropertyChangedListener(Loc.LabelKey, (_o, _d, _old, nv) => seen.push(nv as string));
-    l.label = 'Azure';
-    assert.equal(l.label, 'Azure');
-    assert.deepEqual(seen, ['Azure']);
+test('Observable notifies by name on setter change', () => {
+  const l = new Loc();
+  assert.equal(l.label, '');
+  const seen: Array<[string, unknown]> = [];
+  l.AddPropertyChangedListener('label', (_o, name, _old, nv) => seen.push([name, nv]));
+  l.label = 'Azure';
+  assert.equal(l.label, 'Azure');
+  assert.deepEqual(seen, [['label', 'Azure']]);
 });
 
-test('an unbound Observable allocates no per-property EVD map', () => {
-    const l = new Loc();
-    // No value written, no listener attached: the light stores stay unallocated.
-    assert.equal((l as unknown as { _values?: unknown })._values, undefined);
-    assert.equal((l as unknown as { _listeners?: unknown })._listeners, undefined);
+test('setting an equal value fires nothing', () => {
+  const l = new Loc();
+  let fired = 0;
+  l.AddPropertyChangedListener('label', () => { fired++; });
+  l.label = '';            // equal to default; setter guards
+  assert.equal(fired, 0);
+});
+
+test('an unsubscribed Observable allocates no listener map', () => {
+  const l = new Loc();
+  assert.equal((l as unknown as { _listeners?: unknown })._listeners, undefined);
+});
+
+test('RemovePropertyChangedListener stops delivery', () => {
+  const l = new Loc();
+  let fired = 0;
+  const cb = (): void => { fired++; };
+  l.AddPropertyChangedListener('label', cb);
+  l.RemovePropertyChangedListener('label', cb);
+  l.label = 'x';
+  assert.equal(fired, 0);
 });

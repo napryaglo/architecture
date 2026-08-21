@@ -1,34 +1,48 @@
-﻿import { Binding } from './binding/binding.js';
+import { Binding } from './binding/binding.js';
 import { EffectiveValueDescriptor, PropertyValueSource } from './binding/effective-value.js';
 import type { InternalPropertyChangeCallback, PropertyChangeCallback } from './binding/effective-value.js';
-import { Observable, PropertyKey } from './observable.js';
+import { Observable } from './observable.js';
 import { PropertyDescriptor } from './property-descriptor.js';
 import type { CoerceValue, PropertyMetadata, ValidateTarget, ValidateValue } from './property-descriptor.js';
-import type { MetaData } from './metadata.js';
+import { inherits, type MetaData } from './metadata.js';
 
-// Re-exported for the many consumers that import `PropertyKey` from
-// `./model.js`. Its definition moved to `observable.ts` (alongside the
-// static registry that mints it) to keep `Observable` self-contained and
-// avoid a `model.ts ↔ observable.ts` import cycle; this re-export keeps
-// every existing `import { PropertyKey } from './model.js'` working.
-export { PropertyKey } from './observable.js';
-
-// The dependency-property model. `MuralBase` extends `Observable` (which
-// owns the per-class descriptor registry and a light instance store) and
-// OVERRIDES the instance accessors with a full effective-value
-// implementation: per-instance `property_values` (EffectiveValueDescriptor
-// slots) and a virtual OnPropertyChanged hook that fires for every
-// effective-value change. The base hook is a no-op; Visual (in visual.ts)
-// overrides it to route layout/render invalidation and property value
-// inheritance through the visual tree.
+// Branded handle returned by MuralBase.RegisterProperty (and the read-only /
+// attached variants). Serves two purposes:
 //
-// The static registry (`RegisterProperty`, `find_descriptor`,
-// `compose_key`, `find_class`, …) is inherited from `Observable`
-// unchanged — `MuralBase.RegisterProperty(...)` resolves the inherited
-// static, so existing call sites are unaffected. `MuralBase` keeps the
-// DP-only statics: `RegisterAttachedProperty`, `OverrideMetadata`, and
-// the inheritable-descriptor registry (which it wires in by overriding
-// `Observable.register_inheritable`).
+//   * Typed identity — `PropertyKey<T>` carries a phantom `T` so the
+//     typed overloads of `get_property_value` / `set_property_value`
+//     can read and write the property with no `as` cast at the call
+//     site. The descriptor field is the runtime identity; `T` is purely
+//     a compile-time contract authored by whoever declared the DP.
+//
+//   * Write capability — for read-only properties, possession of the
+//     key is what grants write access via `set_property_value_with_key`
+//     / `ClearValueWithKey`. Read/write properties also get a key from
+//     RegisterProperty; the capability bit is moot for them (anyone can
+//     write a read/write DP), so the key is just typed identity.
+//
+// `_phantom` is never assigned — it exists only to make the generic
+// parameter load-bearing at the type level so `PropertyKey<number>` and
+// `PropertyKey<string>` are not assignable to each other.
+export class PropertyKey<T = unknown>
+{
+    declare private readonly _phantom: T;
+    constructor(public readonly descriptor: PropertyDescriptor) {}
+}
+
+// Root of the property/binding system. `MuralBase extends Observable`
+// (a minimal name/setter INotifyPropertyChanged); MuralBase owns the
+// per-class descriptor registry, `PropertyKey`, per-instance value state
+// (`property_values`), and a virtual OnPropertyChanged hook that fires for
+// every effective-value change. The base hook is a no-op; Visual (in
+// visual.ts) overrides it to route layout/render invalidation and property
+// value inheritance through the visual tree.
+//
+// MuralBase's notification surface (AddPropertyChangedListener /
+// RemovePropertyChangedListener) OVERRIDES Observable's virtual, widened to
+// `string | PropertyKey`, and routes through the EffectiveValueDescriptor
+// listeners — MuralBase does NOT use Observable's name-keyed `_listeners`
+// store or its `notify`; its notifications flow through the EVD system.
 //
 // Property storage uses composite keys `${descriptor.RootOwner.name}.${name}`
 // uniformly. This lets any property registered on any class be set on
@@ -41,6 +55,18 @@ export { PropertyKey } from './observable.js';
 //     bypasses the hierarchy walk; uses the supplied owner directly.
 export class MuralBase extends Observable
 {
+    // Per-class descriptor bags keyed by class constructor. WeakMap means
+    // a class becoming unreachable lets its bag be GC'd; lookup walks the
+    // prototype chain to support inherited and overridden metadata.
+    private static property_bags: WeakMap<Function, Map<string, PropertyDescriptor>> = new WeakMap();
+
+    // Name → class registry used by the PropertyPath parser to resolve
+    // owner-class names in attached-property syntax like '(Grid.Row)'.
+    // Populated whenever a class is used in RegisterProperty /
+    // OverrideMetadata. WeakRef so classes that go out of use can still
+    // be GC'd; stale entries are pruned lazily on first lookup.
+    private static class_registry: Map<string, WeakRef<Function>> = new Map();
+
     // Global registry of every PropertyDescriptor whose registered
     // metadata includes `MetaData.Inherits` (§ 15.2). Populated at
     // RegisterProperty time; consumed by `Visual.collect_inheritable_descriptors`
@@ -70,15 +96,11 @@ export class MuralBase extends Observable
     // the counter exists only to keep the memo correct if that ever changes.
     private static inheritable_generation: number = 0;
 
-    // Overrides `Observable.register_inheritable` — the seam the inherited
-    // RegisterProperty / RegisterReadOnlyProperty bodies funnel every
-    // inheritable registration through. Because those static register
-    // methods call `this.register_inheritable(...)` and DP registration
-    // runs through `MuralBase.RegisterProperty` (this class), `this`
-    // resolves to `MuralBase` and this override tracks the descriptor.
+    // Single funnel for both add-sites (RegisterProperty +
+    // RegisterReadOnlyProperty) so the generation bump can't be forgotten.
     // Only a genuinely new descriptor bumps the generation — re-adding an
     // existing one (Set no-op) leaves memo caches valid.
-    protected static override register_inheritable(descriptor: PropertyDescriptor): void
+    private static register_inheritable(descriptor: PropertyDescriptor): void
     {
         const before = MuralBase.inheritable_descriptors.size;
         MuralBase.inheritable_descriptors.add(descriptor);
@@ -113,16 +135,182 @@ export class MuralBase extends Observable
 
     // ------------------------------------------------------------------
     // Static registry and lookup
-    //
-    // The core registry — `property_bags` / `class_registry`,
-    // `get_property_bag`, `peek_property_bag`, `compose_key`,
-    // `find_descriptor`, `HasProperty`, `find_class`, `EnumerateProperties`,
-    // `remember_class`, `RegisterProperty`, `RegisterReadOnlyProperty` —
-    // moved to `Observable` and is inherited unchanged. `MuralBase` keeps
-    // the DP-only statics below: `RegisterAttachedProperty`,
-    // `OverrideMetadata`, and the inheritable-descriptor registry
-    // (wired in via the `register_inheritable` override above).
     // ------------------------------------------------------------------
+
+    protected static get_property_bag(klass: Function): Map<string, PropertyDescriptor>
+    {
+        let bag = MuralBase.property_bags.get(klass);
+        if (bag === undefined)
+        {
+            bag = new Map<string, PropertyDescriptor>();
+            MuralBase.property_bags.set(klass, bag);
+        }
+        return bag;
+    }
+
+    // Non-creating peek used by Visual.collect_inheritable_descriptors —
+    // iterating the prototype chain shouldn't allocate empty bags for
+    // ancestors that never registered anything.
+    protected static peek_property_bag(klass: Function): Map<string, PropertyDescriptor> | undefined
+    {
+        return MuralBase.property_bags.get(klass);
+    }
+
+    // Composes the per-instance storage key for a given (owner, name).
+    public static compose_key(owner: Function, property: string): string
+    {
+        return `${owner.name}.${property}`;
+    }
+
+    // Walks the given class's prototype chain looking for the first
+    // ancestor that registered `property`. Returns undefined if no
+    // ancestor has it.
+    //
+    // Used in two modes: implicit owner (klass = this.constructor — walks
+    // the target's hierarchy), and explicit owner (klass = the caller-
+    // supplied owner — walks the owner's hierarchy so a subclass
+    // override of metadata wins). Same body for both; the call site
+    // chooses which class to walk.
+    protected static find_descriptor(klass: Function, property: string): PropertyDescriptor | undefined
+    {
+        let current: Function | null = klass;
+        while (current !== null && current !== Function.prototype)
+        {
+            const desc = MuralBase.property_bags.get(current)?.get(property);
+            if (desc !== undefined) return desc;
+            current = Object.getPrototypeOf(current);
+        }
+        return undefined;
+    }
+
+    // Public peek used by bindings to check whether a property is
+    // registered on a class without throwing. Same body as
+    // find_descriptor; exposed so the binding layer (DataContextBinding,
+    // future MultiBinding) can implement WPF-style "silent no-op on
+    // missing path" without reaching into protected internals.
+    public static HasProperty(klass: Function, property: string): boolean
+    {
+        return MuralBase.find_descriptor(klass, property) !== undefined;
+    }
+
+    // Resolves a class-name string (e.g. 'Grid') to the registered class
+    // object. Used by the PropertyPath parser for attached-property
+    // syntax. Returns undefined if no such class has been registered, or
+    // if the class has been garbage-collected.
+    public static find_class(name: string): Function | undefined
+    {
+        const ref = MuralBase.class_registry.get(name);
+        if (ref === undefined) return undefined;
+        const cls = ref.deref();
+        if (cls === undefined)
+        {
+            MuralBase.class_registry.delete(name);
+            return undefined;
+        }
+        return cls;
+    }
+
+    // Public DP enumeration — walks `klass`'s prototype chain and
+    // gathers every PropertyDescriptor registered on it or any ancestor.
+    // Used by tooling (LSP completion / hover) that needs the full DP
+    // surface of a class identified by name from source. When a
+    // descendant overrides a property (rare — typically only changing
+    // metadata), the descendant's descriptor wins.
+    //
+    // Output order: descendant-first within each class's bag (insertion
+    // order), then walks up the prototype chain so child classes'
+    // properties come before parents'. Duplicates by name are
+    // de-duplicated keeping the most-derived descriptor.
+    public static EnumerateProperties(klass: Function): PropertyDescriptor[]
+    {
+        const seen = new Set<string>();
+        const out: PropertyDescriptor[] = [];
+        let current: Function | null = klass;
+        while (current !== null && current !== Function.prototype)
+        {
+            const bag = MuralBase.property_bags.get(current);
+            if (bag !== undefined)
+            {
+                for (const [name, desc] of bag)
+                {
+                    if (seen.has(name)) continue;
+                    seen.add(name);
+                    out.push(desc);
+                }
+            }
+            current = Object.getPrototypeOf(current);
+        }
+        return out;
+    }
+
+    private static remember_class(klass: Function): void
+    {
+        MuralBase.class_registry.set(klass.name, new WeakRef(klass));
+    }
+
+    // Registers a read/write dependency property and returns a typed
+    // `PropertyKey<T>`. Callers that just want the registration side
+    // effect can ignore the return value. Callers that want typed access
+    // (no `as T` casts at the accessor sites) store the key on the class
+    // and pass it to the typed `get_property_value` / `set_property_value`
+    // overloads. The string `property` is still the binding-path name
+    // (`Binding(t, 'Width')` resolves by string), so existing string-
+    // keyed access continues to work.
+    //
+    // Idempotent: re-registering the same (owner, property) leaves the
+    // existing descriptor in place and returns a key pointing at it, so
+    // a module re-imported under HMR doesn't clobber state.
+    public static RegisterProperty<T = unknown>(
+        owner: Function,
+        property: string,
+        default_value: T,
+        meta_data: MetaData,
+        coerce_value?: CoerceValue,
+        validate_value?: ValidateValue,
+        validate_target?: ValidateTarget,
+    ): PropertyKey<T>
+    {
+        if (property.includes('.'))
+        {
+            throw new Error(`Property name '${property}' may not contain '.' (reserved for composite keys).`);
+        }
+        if (validate_value !== undefined && !validate_value(default_value))
+        {
+            throw new Error(
+                `Default value for property '${owner.name}.${property}' fails its validate_value callback.`,
+            );
+        }
+        MuralBase.remember_class(owner);
+        const bag = MuralBase.get_property_bag(owner);
+        let descriptor = bag.get(property);
+        if (descriptor === undefined)
+        {
+            const opts: PropertyMetadata = { default_value, meta_data };
+            if (coerce_value !== undefined)
+            {
+                opts.coerce_value = coerce_value;
+            }
+            if (validate_value !== undefined)
+            {
+                opts.validate_value = validate_value;
+            }
+            if (validate_target !== undefined)
+            {
+                opts.validate_target = validate_target;
+            }
+            descriptor = new PropertyDescriptor(owner, property, opts);
+            bag.set(property, descriptor);
+            // Inheritable descriptors join the global registry so
+            // Visual.collect_inheritable_descriptors can discover them
+            // even when the property's owning class isn't in the
+            // descendant's prototype chain. See § 15.2.
+            if (inherits(meta_data))
+            {
+                MuralBase.register_inheritable(descriptor);
+            }
+        }
+        return new PropertyKey<T>(descriptor);
+    }
 
     // Sugar synonym for RegisterProperty at attached-property declaration
     // sites. Same runtime — any registered property can be set on any
@@ -153,7 +341,54 @@ export class MuralBase extends Observable
         );
     }
 
-    // (RegisterReadOnlyProperty moved to `Observable` and is inherited.)
+    // Registers a read-only property and returns a PropertyKey that
+    // grants write privileges. External code can read the property
+    // (and bind to it) but only the holder of the key can write or
+    // clear it. Throws if the property is already registered on owner.
+    public static RegisterReadOnlyProperty<T = unknown>(
+        owner: Function,
+        property: string,
+        default_value: T,
+        meta_data: MetaData,
+        coerce_value?: CoerceValue,
+        validate_value?: ValidateValue,
+    ): PropertyKey<T>
+    {
+        if (property.includes('.'))
+        {
+            throw new Error(`Property name '${property}' may not contain '.' (reserved for composite keys).`);
+        }
+        if (validate_value !== undefined && !validate_value(default_value))
+        {
+            throw new Error(
+                `Default value for property '${owner.name}.${property}' fails its validate_value callback.`,
+            );
+        }
+        MuralBase.remember_class(owner);
+        const bag = MuralBase.get_property_bag(owner);
+        if (bag.has(property))
+        {
+            throw new Error(`Property '${property}' is already registered on '${owner.name}'.`);
+        }
+        const opts: PropertyMetadata = { default_value, meta_data };
+        if (coerce_value !== undefined)
+        {
+            opts.coerce_value = coerce_value;
+        }
+        if (validate_value !== undefined)
+        {
+            opts.validate_value = validate_value;
+        }
+        const descriptor = new PropertyDescriptor(owner, property, opts, undefined, /* readOnly */ true);
+        bag.set(property, descriptor);
+        // Inheritable read-only DPs also join the global registry — see
+        // § 15.2. Same shape as RegisterProperty above.
+        if (inherits(meta_data))
+        {
+            MuralBase.register_inheritable(descriptor);
+        }
+        return new PropertyKey<T>(descriptor);
+    }
 
     // Overrides metadata (default value / coerce / meta flags) on `klass`
     // for the property identified by `key`. The PropertyKey is the typed
@@ -204,13 +439,31 @@ export class MuralBase extends Observable
 
     // Typed-key public API ---------------------------------------------
 
-    public override AddPropertyChangedListener(key: PropertyKey<unknown>, callback: PropertyChangeCallback): void
+    // Overrides Observable.AddPropertyChangedListener, widened to
+    // `string | PropertyKey`. A PropertyKey routes to the existing EVD
+    // listener-attach path (parity with the pre-split behavior); a string
+    // resolves via `find_descriptor(this.constructor, name)` to the key,
+    // then the same EVD path. MuralBase notifications flow through the EVD
+    // listeners — it does not use Observable's name-keyed listener store.
+    public override AddPropertyChangedListener(
+        nameOrKey: string | PropertyKey<unknown>,
+        callback: PropertyChangeCallback,
+    ): void
     {
+        const key = typeof nameOrKey === 'string'
+            ? new PropertyKey(MuralBase.find_descriptor(this.constructor, nameOrKey)!)
+            : nameOrKey;
         this.ensure_effective_value_for(key.descriptor).AddChangeListener(callback);
     }
 
-    public override RemovePropertyChangedListener(key: PropertyKey<unknown>, callback: PropertyChangeCallback): void
+    public override RemovePropertyChangedListener(
+        nameOrKey: string | PropertyKey<unknown>,
+        callback: PropertyChangeCallback,
+    ): void
     {
+        const key = typeof nameOrKey === 'string'
+            ? new PropertyKey(MuralBase.find_descriptor(this.constructor, nameOrKey)!)
+            : nameOrKey;
         const composed = key.descriptor.ComposedKey;
         this.property_values.get(composed)?.RemoveChangeListener(callback);
     }
@@ -296,7 +549,7 @@ export class MuralBase extends Observable
         this.property_values.get(composed)?.ClearAnimatedValue();
     }
 
-    public override get_property_value<T>(key: PropertyKey<T>): T
+    public get_property_value<T>(key: PropertyKey<T>): T
     {
         const composed = key.descriptor.ComposedKey;
         const evd = this.property_values.get(composed);
@@ -310,7 +563,7 @@ export class MuralBase extends Observable
         return this.resolve_default(descriptor);
     }
 
-    public override set_property_value<T>(key: PropertyKey<T>, value: T): void
+    public set_property_value<T>(key: PropertyKey<T>, value: T): void
     {
         // Read-only gate still applies — a read-only DP's key was
         // returned to the registering class only; passing it back here
@@ -491,7 +744,7 @@ export class MuralBase extends Observable
     // Virtual hook fired after every effective-value change on this model
     // (direct set, binding push, ClearValue, etc.). No-op at the MuralBase
     // layer; Visual overrides this to route invalidation and inheritance.
-    protected override OnPropertyChanged(_descriptor: PropertyDescriptor, _old_value: any, _new_value: any): void
+    protected OnPropertyChanged(_descriptor: PropertyDescriptor, _old_value: any, _new_value: any): void
     {
         // Pure storage layer — nothing to do. Visual override handles
         // Mark*Dirty dispatch and inheritance propagation.
