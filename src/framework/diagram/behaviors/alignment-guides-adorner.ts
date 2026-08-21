@@ -1,11 +1,11 @@
 import {
-    Color,
+    DynamicResource,
     Point,
     Rect,
     Size,
     type Visual,
 } from '../../../runtime/index.js';
-import { Adorner, SolidColorBrush } from '../../../visual-engine/index.js';
+import { Adorner, type Brush } from '../../../visual-engine/index.js';
 import { Border } from '../../../basic/index.js';
 import { Diagram } from '../diagram.js';
 import type { AlignmentGuide } from './alignment-guides-behavior.js';
@@ -25,7 +25,6 @@ import { DiagramSettings } from '../diagram-settings.js';
 // in practice almost never > 12, so the pool absorbs every realistic
 // scene without per-frame allocations.
 
-const GUIDE_STROKE = new SolidColorBrush(Color.FromHex('#1976d2'));
 const POOL_SIZE = 32;
 const HIDE_OFFSCREEN = -10000;
 
@@ -46,7 +45,9 @@ export class AlignmentGuidesAdorner extends Adorner
         for (let i = 0; i < POOL_SIZE; i++)
         {
             const v = new Border();
-            v.Fill       = GUIDE_STROKE;
+            // Snap-guide accent = theme @Primary (live via DynamicResource, adapts
+            // light/dark), matching the selection bbox / group outline / text-block.
+            v.set_property_value(Border.FillKey, DynamicResource(v, 'Primary') as unknown as Brush);
             v.IsHitTestVisible = false;
             // Leave Width/Height UNSET (NaN). Border defaults to Stretch on both
             // axes, so each line fills the exact rect ArrangeOverride gives it

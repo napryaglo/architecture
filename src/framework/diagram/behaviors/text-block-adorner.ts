@@ -35,8 +35,10 @@ import { DiagramSettings } from '../diagram-settings.js';
 // Opt-in via Diagram.TextBlockAdornerEnabled (default off), matching the
 // SelectionResize wiring.
 
-const ACCENT      = new SolidColorBrush(Color.FromHex('#1976d2'));
-const GRIP_FILL   = new SolidColorBrush(Color.FromHex('#ffffff'));
+// Accent = theme @Primary (resolved once per adorner instance below — the
+// adorner is short-lived, re-created on selection change, so it adapts to the
+// theme each time it appears). Fallback when no theme is reachable (tests).
+const ACCENT_FALLBACK = Color.FromHex('#1976d2');
 const HIDE_OFF    = -10000;
 
 // Grip / stem sizing, read live from settings (defaults 9 / 1 / 18) so a
@@ -83,17 +85,23 @@ export class TextBlockAdorner extends Adorner
     private _rotCenterHostX = 0;
     private _rotCenterHostY = 0;
 
+    private readonly _accent: SolidColorBrush;
+
     constructor(adornedElement: Visual, diagram: Diagram)
     {
         super(adornedElement);
         this._diagram = diagram;
+        // Resolve the selection accent (@Primary) live from the theme; fall back
+        // to the Material seed blue when no theme is reachable (tests).
+        const primary = (diagram as unknown as { TryFindResource(k: string): unknown }).TryFindResource('Primary');
+        this._accent = primary instanceof SolidColorBrush ? primary : new SolidColorBrush(ACCENT_FALLBACK);
         // The adorner pad itself never catches pointer events — only the two
         // grips (re-enabled below) do, so clicks on the outline / interior
         // pass through to the shape beneath.
         this.IsHitTestVisible = false;
 
         this._outline = new Border();
-        this._outline.Stroke            = new Pen(ACCENT);
+        this._outline.Stroke            = new Pen(this._accent);
         this._outline.BorderThickness   = new Thickness(1);
         this._outline.IsHitTestVisible  = false;
         this._outline.RenderTransform       = this._outlineRotate;
@@ -101,14 +109,14 @@ export class TextBlockAdorner extends Adorner
         this.AttachVisual(this._outline);
 
         this._stem = new Border();
-        this._stem.Fill       = ACCENT;
+        this._stem.Fill       = this._accent;
         this._stem.IsHitTestVisible = false;
         this._stem.RenderTransform       = this._stemRotate;
         this._stem.RenderTransformOrigin = new Point(0.5, 0.5);
         this.AttachVisual(this._stem);
 
-        this._moveHandle = this.makeGrip(ACCENT, 'move');
-        this._rotateHandle = this.makeGrip(GRIP_FILL, 'grab');
+        this._moveHandle = this.makeGrip(this._accent, 'move');
+        this._rotateHandle = this.makeGrip(DiagramSettings.HandleFill(), 'grab');
         this.AttachVisual(this._moveHandle);
         this.AttachVisual(this._rotateHandle);
 
@@ -132,7 +140,7 @@ export class TextBlockAdorner extends Adorner
     {
         const b = new Border();
         b.Fill      = fill;
-        b.Stroke          = new Pen(ACCENT);
+        b.Stroke          = new Pen(this._accent);
         b.BorderThickness = new Thickness(1);
         b.Width           = handleSize();
         b.Height          = handleSize();

@@ -1,11 +1,8 @@
 import { Application } from '../../../runtime/index.js';
-import {
-    Color,
-    Pen,
-    SolidColorBrush,
-} from '../../../visual-engine/index.js';
+import { Pen } from '../../../visual-engine/index.js';
 import { type DataTemplate } from '../../../basic/templates/data-template.js';
 import { CapOption } from '../../formatting/cap-option.js';
+import { DiagramSettings } from '../diagram-settings.js';
 
 // Builds the standard connector-cap dropdown list for a ShapeFormatControl
 // (its CapOptions DP). Resolves the five built-in @…Cap DataTemplates from
@@ -25,10 +22,9 @@ import { CapOption } from '../../formatting/cap-option.js';
 // (centre line y≈7): filled caps carry GlyphFill, open caps GlyphStroke.
 export function connectorCapOptions(): CapOption[]
 {
-    // Neutral ink that reads on both light and dark format panes. The
-    // preview is an affordance, not themed chrome — a fixed mid-slate
-    // keeps the helper free of resource-resolution timing concerns.
-    const ink = new SolidColorBrush(Color.FromHex('#64748b'));
+    // Neutral ink (mid-slate) that reads on both light and dark format panes,
+    // from DiagramSettings.NeutralInk() — shared with the callout leader line.
+    const ink = DiagramSettings.NeutralInk();
     const pen = new Pen(ink, 1.5);
 
     // Template is a thunk so this list can be built before the cap

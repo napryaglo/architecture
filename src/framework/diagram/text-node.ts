@@ -1,11 +1,12 @@
 import { Model, Element } from '../../runtime/index.js';
-import { type Brush, Color, Pen, SolidColorBrush } from '../../visual-engine/index.js';
+import { Pen } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { TextAutoFit } from './shape-text.js';
+import { DiagramSettings } from './diagram-settings.js';
 
-// Match the legacy TextNodeVM visual: transparent fill + slate outline.
-const TEXT_NODE_FILL: Brush = new SolidColorBrush(Color.FromHex('#00000000'));
-const TEXT_NODE_STROKE = new Pen(new SolidColorBrush(Color.FromHex('#94a3b8')), 1);
+// Text-node fill + outline come from DiagramSettings (transparent fill + slate
+// outline by default — the legacy TextNodeVM look). Default box size stays local.
+const TEXT_NODE_STROKE_WIDTH = 1;
 const TEXT_NODE_DEFAULT_W = 120;
 const TEXT_NODE_DEFAULT_H = 44;
 
@@ -27,8 +28,8 @@ export class TextNode extends Figure
         // them after style resolution updates the box reactively.
         super();
         this.Text.AutoFit = TextAutoFit.GrowShape;
-        this.Fill   = TEXT_NODE_FILL;
-        this.Stroke = new Pen(TEXT_NODE_STROKE.Brush, TEXT_NODE_STROKE.Thickness);
+        this.Fill   = DiagramSettings.TextNodeFill();
+        this.Stroke = new Pen(DiagramSettings.TextNodeStroke(), TEXT_NODE_STROKE_WIDTH);
         this.Width  = TEXT_NODE_DEFAULT_W;
         this.Height = TEXT_NODE_DEFAULT_H;
     }

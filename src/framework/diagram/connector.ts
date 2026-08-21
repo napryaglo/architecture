@@ -10,12 +10,10 @@ import {
 import { resolveKey } from '../../runtime/model-internals.js';
 import {
     type Geometry,
-    Color,
     Pen,
     Point,
     RotateTransform,
     ScaleTransform,
-    SolidColorBrush,
     TransformGroup,
     type Visual,
 } from '../../visual-engine/index.js';
@@ -64,10 +62,9 @@ import './routing/straight-router.js';
 import './routing/orthogonal-router.js';
 import './routing/bezier-router.js';
 
-// Per-instance Stroke colour seed. Cloned in the ctor (with the width from
-// DiagramSettings.ConnectorStrokeWidth()) so PenEditor's in-place mutation
-// can't leak across instances — same convention as figure.ts's stroke seed.
-const DEFAULT_STROKE_BRUSH = new SolidColorBrush(Color.FromHex('#475569'));
+// Per-instance Stroke seed comes from DiagramSettings.ConnectorDefaultStroke()
+// (cloned in the ctor with the width from ConnectorStrokeWidth()) so PenEditor's
+// in-place mutation can't leak across instances — same convention as figure.ts.
 
 // How the geometric-clip fallback (resolution path 5 of § 3.2) treats
 // the host's footprint. Bbox is fast — clip against ArrangedRect.
@@ -349,7 +346,7 @@ export class Connector extends Shape
         // PenEditor's in-place mutation can't leak across connectors.
         this.set_property_value(
             Connector.StrokeKey,
-            new Pen(DEFAULT_STROKE_BRUSH, DiagramSettings.ConnectorStrokeWidth()));
+            new Pen(DiagramSettings.ConnectorDefaultStroke(), DiagramSettings.ConnectorStrokeWidth()));
         // Seed the pointer hit band from settings (default 14 → ±7px). A
         // per-instance write rather than a class-static default so a settings
         // override applies to freshly-drawn connectors; consumers can still

@@ -26,6 +26,21 @@ describe('DiagramSettings', () => {
         assert.equal(DiagramSettings.GuideThickness(), 1);
     });
 
+    test('the new semantic colour tokens carry their compiled-in defaults', () => {
+        Application.current = null;
+        const hex = (b: SolidColorBrush): string => b.Color.ToHex().toLowerCase();
+        // Functional connector-chrome palette.
+        assert.equal(hex(DiagramSettings.ConnectorEndpointColor()), '#ff5722');
+        assert.equal(hex(DiagramSettings.ConnectorHandleColor()),  '#ff9800');
+        assert.equal(hex(DiagramSettings.ConnectorSegmentColor()), '#2196f3');
+        assert.equal(hex(DiagramSettings.HandleFill()),            '#ffffff');
+        // Content defaults.
+        assert.equal(hex(DiagramSettings.ConnectorDefaultStroke()), '#475569');
+        assert.equal(hex(DiagramSettings.ShapeLabelInk()),          '#000000');
+        assert.equal(hex(DiagramSettings.TextNodeStroke()),         '#94a3b8');
+        assert.equal(hex(DiagramSettings.NeutralInk()),             '#64748b');
+    });
+
     test('self-publishes its definitions to the settings host on first resolve', () => {
         const app = appWithSettings();
         const settings = app.Services.getRequired(ApplicationSettings.Key);

@@ -67,6 +67,11 @@ resources Diagrams {
             Border [ Fill = $$Fill, Stroke = $$Stroke ] {
                 Border x:name="PART_LabelHost" [ Width = $$Width, Height = $$Height ]
             }
+            // NOTE: leader stroke colour (#64748b, the NeutralInk token value) is
+            // inlined here — the only remaining hardcoded diagram colour. It's
+            // .mu-bound (DiagramSettings isn't reachable from markup) and would
+            // need a PART_Leader template-part + ctor wiring to tokenize safely;
+            // deferred (see docs/diagram-design-tokens.md).
             Shape
                 [ Geometry          = $$LeaderGeometry,
                   Stroke            = (#64748bff, 1.5),

@@ -1,5 +1,6 @@
 import {
     Application,
+    DynamicResource,
     Element,
     MetaData,
     Model,
@@ -1651,6 +1652,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         if (layer === undefined) return;
         const adorner = new SelectionBoundsAdorner(panel, this._selectionResizeSource);
         layer.Add(adorner);
+        // Selection accent = theme @Primary (live via DynamicResource, adapts
+        // light/dark); handle interiors = the HandleFill token. Unifies the bbox
+        // with the group outline (already @Primary) and the snap/text-block chrome.
+        adorner.set_property_value(
+            SelectionBoundsAdorner.ChromeStrokeKey, DynamicResource(adorner, 'Primary') as unknown as Brush);
+        adorner.ChromeFill = DiagramSettings.HandleFill();
         this._selectionResizeAdorner = adorner;
     }
 

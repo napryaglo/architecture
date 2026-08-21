@@ -18,9 +18,13 @@ export enum DiagramSettingKey
     ShapeMinResize              = 'diagram.shape.minResize',
     ShapeDefaultFill            = 'diagram.shape.defaultFill',
     ShapeDefaultStroke          = 'diagram.shape.defaultStroke',
+    ShapeLabelInk               = 'diagram.shape.labelInk',
     TextDefaultFontSize         = 'diagram.text.defaultFontSize',
+    TextNodeFill                = 'diagram.text.nodeFill',
+    TextNodeStroke              = 'diagram.text.nodeStroke',
 
     ConnectorStrokeWidth        = 'diagram.connector.strokeWidth',
+    ConnectorDefaultStroke      = 'diagram.connector.defaultStroke',
     ConnectorHitWidth           = 'diagram.connector.hitWidth',
     ConnectorOrthogonalStub     = 'diagram.connector.orthogonalStub',
     ConnectorLaneGap            = 'diagram.connector.laneGap',
@@ -46,6 +50,11 @@ export enum DiagramSettingKey
     ChromePersistentGuideColor     = 'diagram.chrome.persistentGuideColor',
     ChromePersistentGuideSelectedColor = 'diagram.chrome.persistentGuideSelectedColor',
     ChromePersistentGuidePreviewColor  = 'diagram.chrome.persistentGuidePreviewColor',
+    ChromeHandleFill               = 'diagram.chrome.handleFill',
+    ChromeConnectorEndpoint        = 'diagram.chrome.connectorEndpoint',
+    ChromeConnectorHandle          = 'diagram.chrome.connectorHandle',
+    ChromeConnectorSegment         = 'diagram.chrome.connectorSegment',
+    ChromeNeutralInk               = 'diagram.chrome.neutralInk',
 
     ToolboxTileSize             = 'diagram.toolbox.tileSize',
     ToolboxPreviewFill          = 'diagram.toolbox.previewFill',
@@ -223,6 +232,35 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
     { key: DiagramSettingKey.RulerHoverFill, label: 'Ruler hover fill',
       description: 'Accent wash painted over a ruler strip while the pointer is over it.',
       category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#dbeafe')) },
+
+    { key: DiagramSettingKey.ShapeLabelInk, label: 'Shape label ink',
+      description: 'Default text colour of a shape label.',
+      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#000000')) },
+    { key: DiagramSettingKey.TextNodeFill, label: 'Text-node fill',
+      description: 'Fill of a text box node (transparent by default).',
+      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#00000000')) },
+    { key: DiagramSettingKey.TextNodeStroke, label: 'Text-node stroke',
+      description: 'Outline colour of a text box node.',
+      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#94a3b8')) },
+    { key: DiagramSettingKey.ConnectorDefaultStroke, label: 'Default connector stroke',
+      description: 'Line colour of a freshly-drawn connector.',
+      category: CAT_CONNECTORS, default: new SolidColorBrush(Color.FromHex('#475569')) },
+
+    { key: DiagramSettingKey.ChromeHandleFill, label: 'Handle fill',
+      description: 'Interior fill of grabbable handles (resize squares, text grips).',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#ffffff')) },
+    { key: DiagramSettingKey.ChromeConnectorEndpoint, label: 'Connector endpoint colour',
+      description: 'Fill of a connector endpoint drag dot.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#ff5722')) },
+    { key: DiagramSettingKey.ChromeConnectorHandle, label: 'Connector handle colour',
+      description: 'Fill of connector waypoint dots, port markers, and side-attach bars.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#ff9800')) },
+    { key: DiagramSettingKey.ChromeConnectorSegment, label: 'Connector segment colour',
+      description: 'Fill of a connector mid-segment drag pad.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#2196f3')) },
+    { key: DiagramSettingKey.ChromeNeutralInk, label: 'Neutral affordance ink',
+      description: 'Neutral slate used for the callout leader line and cap-preview glyphs.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#64748b')) },
 ];
 
 const COLOR_DEFAULTS: ReadonlyMap<DiagramSettingKey, SolidColorBrush> =
@@ -340,10 +378,14 @@ export class DiagramSettings
     public static ShapeMinResize():      number { return DiagramSettings.num(DiagramSettingKey.ShapeMinResize); }
     public static ShapeDefaultFill():    SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ShapeDefaultFill); }
     public static ShapeDefaultStroke():  SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ShapeDefaultStroke); }
+    public static ShapeLabelInk():       SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ShapeLabelInk); }
     public static TextDefaultFontSize(): number { return DiagramSettings.num(DiagramSettingKey.TextDefaultFontSize); }
+    public static TextNodeFill():        SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.TextNodeFill); }
+    public static TextNodeStroke():      SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.TextNodeStroke); }
 
     // ── Connectors ───────────────────────────────────────────────────────
     public static ConnectorStrokeWidth():     number { return DiagramSettings.num(DiagramSettingKey.ConnectorStrokeWidth); }
+    public static ConnectorDefaultStroke():   SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ConnectorDefaultStroke); }
     public static ConnectorHitWidth():        number { return DiagramSettings.num(DiagramSettingKey.ConnectorHitWidth); }
     public static ConnectorOrthogonalStub():  number { return DiagramSettings.num(DiagramSettingKey.ConnectorOrthogonalStub); }
     public static ConnectorLaneGap():         number { return DiagramSettings.num(DiagramSettingKey.ConnectorLaneGap); }
@@ -370,6 +412,11 @@ export class DiagramSettings
     public static PersistentGuideColor():     SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromePersistentGuideColor); }
     public static PersistentGuideSelectedColor(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromePersistentGuideSelectedColor); }
     public static PersistentGuidePreviewColor():  SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromePersistentGuidePreviewColor); }
+    public static HandleFill():            SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeHandleFill); }
+    public static ConnectorEndpointColor():SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeConnectorEndpoint); }
+    public static ConnectorHandleColor():  SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeConnectorHandle); }
+    public static ConnectorSegmentColor(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeConnectorSegment); }
+    public static NeutralInk():            SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeNeutralInk); }
 
     // ── Toolbox ──────────────────────────────────────────────────────────
     public static ToolboxTileSize():    number          { return DiagramSettings.num(DiagramSettingKey.ToolboxTileSize); }

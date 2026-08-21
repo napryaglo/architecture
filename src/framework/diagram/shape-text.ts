@@ -305,6 +305,9 @@ export class ShapeText extends Control
         // font size" applies to freshly-created labels; an author / deserialize
         // FontSize write later overrides it.
         this.set_property_value(ShapeText.FontSizeKey, DiagramSettings.TextDefaultFontSize());
+        // Same for label ink (default black) — a ctor write so a "Shape label ink"
+        // override applies to fresh labels; an explicit Foreground later wins.
+        this.set_property_value(ShapeText.ForegroundKey, DiagramSettings.ShapeLabelInk());
         this._editor = this.GetTemplateChild('PART_Edit') as RichTextBox | undefined;
         // Click-away (the editor losing focus) commits, matching Visio.
         this._editor?.AddRoutedEventListener('LostFocus', () =>

@@ -117,36 +117,25 @@ function projectToLayer(m: Matrix, x: number, y: number): Point
 // cursor is genuinely close to an edge, not from across the gap.
 const figureProximity = (): number => DiagramSettings.FigureProximity();
 
-const SIDE_FILL = new SolidColorBrush(Color.FromHex('#ff9800'));
-const EP_FILL   = new SolidColorBrush(Color.FromHex('#ff5722'));
-const WP_FILL   = new SolidColorBrush(Color.FromHex('#ff9800'));
-// Segment handles use a distinct blue so the "grab to slide the whole
-// segment" affordance reads differently from the orange "move this one
-// point" waypoint dots.
-const SEG_FILL  = new SolidColorBrush(Color.FromHex('#2196f3'));
-// Port markers are the same orange the side bar uses — they read as
-// "this slot belongs to the side bar above me" without needing a
-// second color in the palette.
-const PORT_MARKER_FILL = new SolidColorBrush(Color.FromHex('#ff9800'));
+// Chrome fills come from DiagramSettings (resolved live at construction so a
+// settings override re-tints them). Endpoint dots read distinct from the shared
+// "connector handle" orange (waypoint dots + port markers + side bars), and the
+// segment pad uses its own blue so "grab to slide the segment" reads differently
+// from the orange "move this one point" waypoint dots.
+const sideFill   = (): SolidColorBrush => DiagramSettings.ConnectorHandleColor();
+const epFill     = (): SolidColorBrush => DiagramSettings.ConnectorEndpointColor();
+const wpFill     = (): SolidColorBrush => DiagramSettings.ConnectorHandleColor();
+const segFill    = (): SolidColorBrush => DiagramSettings.ConnectorSegmentColor();
+const portFill   = (): SolidColorBrush => DiagramSettings.ConnectorHandleColor();
 
 // Hover halo: contrasting accent that mirrors the connector's geometry
 // when the cursor hovers an UNSELECTED connector. Hit-testable; clicking
 // it picks the connector and seeds the diagram's shared stroke editor.
-// Color mirrors the @Primary material token used by other selection-
-// affordance chrome (see diagram.template.mu's Group Stroke). The
-// other adorners in this file hard-code their fills the same way, so
-// consistency = same here; promote to a Diagram DP when the design
-// system grows a runtime token resolver for code-only adorners.
-const HOVER_HALO_COLOR     = Color.FromHex('#6750A4');
-const HOVER_HALO_BRUSH     = (() => {
-    // Lower-alpha overlay so the underlying connector reads through
-    // the halo as the user lines up the click. Stroke-as-accent is
-    // the affordance signal; full opacity would otherwise hide the
-    // connector being targeted.
-    const b = new SolidColorBrush(HOVER_HALO_COLOR);
-    b.Opacity = 0.45;
-    return b;
-})();
+// Color is the theme @Primary token — the same selection-affordance accent
+// the bbox / group outline / snap guides use — resolved LIVE from the theme
+// at paint time (adapts light/dark). Falls back to the Material seed when no
+// theme is reachable (tests, embeds).
+const HOVER_HALO_FALLBACK  = Color.FromHex('#6750A4');
 // Minimum effective halo stroke thickness (default 5 DIPs), read live from
 // settings. Per-connector thickness can grow past this — the halo always sits
 // at least this wide so the hit surface is reliable even on hair-thin
@@ -257,7 +246,7 @@ export class SideBarsAdorner extends Adorner
         this.IsHitTestVisible = false;
         for (let i = 0; i < POOL_SIDES; i++)
         {
-            const v = makeBar(SIDE_FILL, SIDE_CURSOR);
+            const v = makeBar(sideFill(), SIDE_CURSOR);
             wireHandle(v, onHandleDown);
             this.AttachVisual(v);
             this._pool.push(v);
@@ -437,14 +426,14 @@ export class EditHandlesAdorner extends Adorner
         this.IsHitTestVisible = false;
         for (let i = 0; i < POOL_EPS; i++)
         {
-            const v = makeDot(epHandleSize(), EP_FILL, ENDPOINT_CURSOR);
+            const v = makeDot(epHandleSize(), epFill(), ENDPOINT_CURSOR);
             wireHandle(v, onHandleDown);
             this.AttachVisual(v);
             this._epPool.push(v);
         }
         for (let i = 0; i < POOL_WPS; i++)
         {
-            const v = makeDot(wpHandleSize(), WP_FILL, WAYPOINT_CURSOR);
+            const v = makeDot(wpHandleSize(), wpFill(), WAYPOINT_CURSOR);
             wireHandle(v, onHandleDown);
             this.AttachVisual(v);
             this._wpPool.push(v);
@@ -454,7 +443,7 @@ export class EditHandlesAdorner extends Adorner
         // the segment orientation, so the ctor seeds a neutral one.
         for (let i = 0; i < POOL_SEGS; i++)
         {
-            const v = makeBar(SEG_FILL, SEG_CURSOR_H);
+            const v = makeBar(segFill(), SEG_CURSOR_H);
             v.Width  = segHandleSize();
             v.Height = segHandleSize();
             wireHandle(v, onHandleDown);
@@ -716,10 +705,13 @@ class HoverHaloAdorner extends Adorner
 function makeHaloPen(conn: Connector): Pen
 {
     const p = new Pen();
-    // Refresh the shared halo brush's opacity from settings at paint time so an
-    // edit takes effect on the next hover without rebuilding the brush.
-    HOVER_HALO_BRUSH.Opacity = DiagramSettings.HoverHaloOpacity();
-    p.Brush      = HOVER_HALO_BRUSH;
+    // Resolve @Primary live from the theme (adapts light/dark) and build a fresh
+    // brush at the settings hover opacity — never mutate the shared theme brush.
+    const primary = (conn as unknown as { TryFindResource(k: string): unknown }).TryFindResource('Primary');
+    const color   = primary instanceof SolidColorBrush ? primary.Color : HOVER_HALO_FALLBACK;
+    const b = new SolidColorBrush(color);
+    b.Opacity    = DiagramSettings.HoverHaloOpacity();
+    p.Brush      = b;
     p.Thickness  = Math.max(conn.Stroke?.Thickness ?? 0, hoverHaloMinThick());
     p.LineCap    = LineCap.Round;
     p.LineJoin   = LineJoin.Round;
@@ -765,7 +757,7 @@ function makePortMarker(): Border
     v.Height = portMarkerSize();
     const r = portMarkerSize() / 2;
     v.CornerRadius     = new CornerRadius(r, r, r, r);
-    v.Fill       = PORT_MARKER_FILL;
+    v.Fill       = portFill();
     v.IsHitTestVisible = false;
     return v;
 }
