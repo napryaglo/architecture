@@ -1,4 +1,4 @@
-﻿import { Binding, BindingMode } from './binding.js';
+﻿import { Binding } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { MuralBase } from '../model.js';
 import type { PropertyKey } from '../model.js';
@@ -43,7 +43,14 @@ class TemplateBindingImpl extends Binding
     constructor(templatedParent: Visual, property: string)
     {
         const watcher = new TemplatedParentWatcher();
-        super(watcher, 'Value', BindingMode.OneWay);
+        // Mode is left unset so the EVD's ResolveDefaultMode hook upgrades it
+        // to TwoWay when the target DP declares BindsTwoWayByDefault (an
+        // editable template field — SpinEdit.Value, TextBox.Text,
+        // ComboBox.SelectedItem, Switch.IsChecked). For an ordinary display DP
+        // it stays OneWay. Same policy as DataContextBinding's `$`; without it
+        // an editable `$$` field is display-only and its edits never reach the
+        // templated parent.
+        super(watcher, 'Value');
         this.watcher         = watcher;
         this.templatedParent = templatedParent;
         this.key             = resolveKey(templatedParent, undefined, property);
@@ -60,6 +67,20 @@ class TemplateBindingImpl extends Binding
     {
         super.dispose();
         this.templatedParent.RemovePropertyChangedListener(this.key, this.callback);
+    }
+
+    // TwoWay writeback: when the target DP changes and the EVD asks the binding
+    // to push back, write the value onto the templated parent's property so the
+    // control's own DP actually updates. Without this the base Binding writes
+    // only the internal `watcher.Value` slot and the templated parent never
+    // sees the edit. Mirrors DataContextBinding.set_value. The base call is
+    // gated on mode (TwoWay / OneWayToSource) — a OneWay `$$` returns false
+    // here and no writeback happens, so display bindings are untouched.
+    public override set_value(value: unknown): boolean
+    {
+        if (!super.set_value(value)) return false;
+        this.templatedParent.set_property_value(this.key, this.applyConvertBack(value));
+        return true;
     }
 }
 
