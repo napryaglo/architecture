@@ -1,25 +1,17 @@
 ﻿import { Binding, BindingMode } from './binding.js';
 import { isAnimationProhibited, isNotDataBindable } from '../metadata.js';
 import type { MuralBase } from '../model.js';
-import type { Observable } from '../observable.js';
 import type { PropertyDescriptor } from '../property-descriptor.js';
 import { Validation } from './validation.js';
+import type { PropertyChangeCallback } from '@pragmatic-lab/todl-runtime';
 
-// Invoked after a property's effective value changes, with the object
-// whose property changed and the old/new values. Users get the property
-// *name* (simple, not composite) for ergonomic context.
-//
-// `owner` is typed `Observable` — the common base of both a plain
-// `Observable` (name/setter source) and a `MuralBase` (DP source) — so the
-// same callback shape serves both binding branches. Treat `owner` as an
-// opaque notifying identity; it is NOT guaranteed to be a `MuralBase`, so
-// do not reach for the DP surface on it.
-export type PropertyChangeCallback = (
-    owner: Observable,
-    property: string,
-    old_value: any,
-    new_value: any,
-) => void;
+// The public change callback now lives with `Observable` in
+// @pragmatic-lab/todl-runtime — its `owner` is typed `Observable`, the common
+// base of a plain Observable source and a MuralBase. Re-exported here so
+// consumers keep importing it from `@pragmatic-lab/mural/runtime`. Treat
+// `owner` as an opaque notifying identity; it is NOT guaranteed to be a
+// `MuralBase`, so do not reach for the DP surface on it.
+export type { PropertyChangeCallback };
 
 // Internal callback used by MuralBase to route invalidation / inheritance.
 // Carries the PropertyDescriptor directly so MuralBase.OnPropertyChanged

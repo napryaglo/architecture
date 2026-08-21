@@ -136,6 +136,7 @@
     "typescript": "^5.7.0"
   },
   "dependencies": {
+    "@pragmatic-lab/todl-runtime": "^0.1.0",
     "opentype.js": "^2.0.0",
     "yaml": "^2.9.0"
   }

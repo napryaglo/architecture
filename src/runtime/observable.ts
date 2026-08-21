@@ -1,41 +1,6 @@
-import type { PropertyChangeCallback } from './binding/effective-value.js';
-
-// Minimal INotifyPropertyChanged analog. Change notification keyed by
-// property NAME, driven by subclass getters/setters that call
-// `RaisePropertyChanged`. No PropertyKey, no descriptor registry, no
-// effective-value machinery — those all live on MuralBase (model.ts),
-// which extends this class.
-export class Observable {
-  // Lazily allocated on first subscribe: name → callbacks. An Observable
-  // that is never subscribed to allocates nothing beyond its own fields.
-  private _listeners?: Map<string, PropertyChangeCallback[]>;
-
-  // Virtual: MuralBase overrides this (widened to string | PropertyKey)
-  // to route through its EVD listeners instead.
-  public AddPropertyChangedListener(name: string, callback: PropertyChangeCallback): void {
-    const listeners = (this._listeners ??= new Map());
-    let arr = listeners.get(name);
-    if (arr === undefined) { arr = []; listeners.set(name, arr); }
-    arr.push(callback);
-  }
-
-  public RemovePropertyChangedListener(name: string, callback: PropertyChangeCallback): void {
-    const arr = this._listeners?.get(name);
-    if (arr === undefined) return;
-    const i = arr.indexOf(callback);
-    if (i >= 0) arr.splice(i, 1);
-  }
-
-  // Subclass setters call this AFTER writing the backing field, only on a
-  // real change. Fires (owner, name, old, new) — the same public callback
-  // arity the binding engine consumes for MuralBase. Named distinctly (not
-  // `notify`) so it does not collide with a subclass's own domain method of
-  // that common name.
-  protected RaisePropertyChanged(name: string, oldValue: unknown, newValue: unknown): void {
-    const cbs = this._listeners?.get(name);
-    // `PropertyChangeCallback`'s owner is typed `Observable`, so `this`
-    // passes with no cast — the callback treats owner as the notifying
-    // identity.
-    if (cbs) for (const cb of [...cbs]) cb(this, name, oldValue, newValue);
-  }
-}
+// Observable now lives in @pragmatic-lab/todl-runtime so TODL-generated entity
+// classes and mural's MuralBase share one class identity — mural's binding and
+// DataTemplate dispatch gate on `instanceof Observable`, so a realized TODL
+// node is recognized as a first-class bindable source. Re-exported here so
+// every existing `./observable.js` import inside mural is unchanged.
+export { Observable } from '@pragmatic-lab/todl-runtime'
