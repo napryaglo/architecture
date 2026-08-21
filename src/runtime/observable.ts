@@ -1,9 +1,10 @@
 import type { PropertyChangeCallback } from './binding/effective-value.js';
 
 // Minimal INotifyPropertyChanged analog. Change notification keyed by
-// property NAME, driven by subclass getters/setters that call `notify`.
-// No PropertyKey, no descriptor registry, no effective-value machinery —
-// those all live on MuralBase (model.ts), which extends this class.
+// property NAME, driven by subclass getters/setters that call
+// `RaisePropertyChanged`. No PropertyKey, no descriptor registry, no
+// effective-value machinery — those all live on MuralBase (model.ts),
+// which extends this class.
 export class Observable {
   // Lazily allocated on first subscribe: name → callbacks. An Observable
   // that is never subscribed to allocates nothing beyond its own fields.
@@ -27,8 +28,10 @@ export class Observable {
 
   // Subclass setters call this AFTER writing the backing field, only on a
   // real change. Fires (owner, name, old, new) — the same public callback
-  // arity the binding engine consumes for MuralBase.
-  protected notify(name: string, oldValue: unknown, newValue: unknown): void {
+  // arity the binding engine consumes for MuralBase. Named distinctly (not
+  // `notify`) so it does not collide with a subclass's own domain method of
+  // that common name.
+  protected RaisePropertyChanged(name: string, oldValue: unknown, newValue: unknown): void {
     const cbs = this._listeners?.get(name);
     // `PropertyChangeCallback`'s first parameter is typed `MuralBase` (the
     // DP-bearing subclass), but a bare Observable has no MuralBase identity.

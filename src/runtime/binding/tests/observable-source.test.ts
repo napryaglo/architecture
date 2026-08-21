@@ -25,7 +25,7 @@ class LabelVM extends Observable
         const old = this._label;
         if (old === v) return;
         this._label = v;
-        this.notify('label', old, v);
+        this.RaisePropertyChanged('label', old, v);
     }
 }
 

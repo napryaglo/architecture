@@ -10,7 +10,7 @@ per-instance dependency-property overhead.
 **Architecture:** `Observable` is a minimal name/setter-based
 `INotifyPropertyChanged` analog — a lazily-allocated `name → callbacks` listener
 map, a virtual `AddPropertyChangedListener(name, cb)`, and a protected
-`notify(name, old, new)` that subclass setters call. It has **no** `PropertyKey`,
+`RaisePropertyChanged(name, old, new)` that subclass setters call. It has **no** `PropertyKey`,
 **no** registry, **no** descriptors. The entire dependency-property system
 (`PropertyKey`, the per-class registry, `RegisterProperty`, descriptors, the
 `EffectiveValueDescriptor` store) lives on `MuralBase`, which `extends Observable`
@@ -55,7 +55,7 @@ its setter (`source[name] = v`). `Visual extends MuralBase`.
 - `src/runtime/observable.ts` — **new**. `Observable`: the minimal name/setter
   INPC — `_listeners: Map<string, cb[]>` (lazy), virtual
   `AddPropertyChangedListener(name, cb)` / `RemovePropertyChangedListener(name,
-  cb)`, protected `notify(name, old, new)`. No `PropertyKey`, no registry, no
+  cb)`, protected `RaisePropertyChanged(name, old, new)`. No `PropertyKey`, no registry, no
   descriptors.
 - `src/runtime/binding/binding.ts`, `data-context-binding.ts`,
   `ancestor-binding.ts` — the source-observation gates: `instanceof Model` →
@@ -226,7 +226,7 @@ virtual `AddPropertyChangedListener`. `MuralBase`/`Visual` behavior is unchanged
   import type { PropertyChangeCallback } from './binding/effective-value.js';
 
   // Minimal INotifyPropertyChanged analog. Change notification keyed by
-  // property NAME, driven by subclass getters/setters that call `notify`.
+  // property NAME, driven by subclass getters/setters that call `RaisePropertyChanged`.
   // No PropertyKey, no descriptor registry, no effective-value machinery —
   // those all live on MuralBase (model.ts), which extends this class.
   export class Observable {
@@ -332,7 +332,7 @@ keys on `value.constructor`.
 
 - [ ] **Step 1: Write the failing binding test** —
   `src/runtime/binding/tests/observable-source.test.ts`: define a plain
-  `Observable` subclass with a `label` field + getter/setter + `notify('label',
+  `Observable` subclass with a `label` field + getter/setter + `RaisePropertyChanged('label',
   …)`; bind a `TextBlock`'s `Text` to `$label` on an instance; assert the target
   shows the initial value, updates when the setter runs, and (two-way) that a
   target edit writes back through the setter. Expected FAIL today (source isn't
@@ -358,7 +358,7 @@ keys on `value.constructor`.
 - [ ] **Step 5: Dual-branch the two-way write-back.** Where a two-way binding
   writes the source (the `MuralBase` `set_property_value(key, v)` path), add the
   else-branch `(source as Record<string, unknown>)[name] = value` so the
-  subclass setter runs (which fires `notify`). Keep `MuralBase` on
+  subclass setter runs (which fires `RaisePropertyChanged`). Keep `MuralBase` on
   `set_property_value(key, v)`.
 - [ ] **Step 6: Widen `DataTemplate` dispatch.** In `content-control.ts`, the
   "non-Visual `MuralBase` → find DataTemplate by `value.constructor`" gate
@@ -452,7 +452,7 @@ rename in Plexus; the split is invisible to Plexus except the identifier.
   concrete; existing-code transformations are named by member/site rather than
   reproduced, which is appropriate for a rename/extract refactor.
 - **Type consistency:** `Observable` exposes name-based
-  `AddPropertyChangedListener(name, cb)` + protected `notify(name, old, new)`;
+  `AddPropertyChangedListener(name, cb)` + protected `RaisePropertyChanged(name, old, new)`;
   `PropertyKey<T>` and the descriptor registry stay on `MuralBase`;
   `PropertyChangeCallback` is the public `(owner, name, old, new)` arity from
   `binding/effective-value.js` — used identically across tasks and matching

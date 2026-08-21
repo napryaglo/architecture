@@ -42,7 +42,7 @@ export class PropertyKey<T = unknown>
 // RemovePropertyChangedListener) OVERRIDES Observable's virtual, widened to
 // `string | PropertyKey`, and routes through the EffectiveValueDescriptor
 // listeners — MuralBase does NOT use Observable's name-keyed `_listeners`
-// store or its `notify`; its notifications flow through the EVD system.
+// store or its `RaisePropertyChanged`; its notifications flow through the EVD system.
 //
 // Property storage uses composite keys `${descriptor.RootOwner.name}.${name}`
 // uniformly. This lets any property registered on any class be set on

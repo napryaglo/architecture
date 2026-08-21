@@ -10,7 +10,7 @@ class Loc extends Observable {
     const old = this._label;
     if (old === v) return;
     this._label = v;
-    this.notify('label', old, v);
+    this.RaisePropertyChanged('label', old, v);
   }
 }
 
@@ -61,7 +61,7 @@ class Point extends Observable {
     const old = this._x;
     if (old === v) return;
     this._x = v;
-    this.notify('x', old, v);
+    this.RaisePropertyChanged('x', old, v);
   }
 
   get y(): number { return this._y; }
@@ -69,7 +69,7 @@ class Point extends Observable {
     const old = this._y;
     if (old === v) return;
     this._y = v;
-    this.notify('y', old, v);
+    this.RaisePropertyChanged('y', old, v);
   }
 }
 

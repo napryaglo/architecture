@@ -126,7 +126,7 @@ class Observable {
 }
 ```
 
-A subclass property is a plain field + getter + setter that calls `notify`:
+A subclass property is a plain field + getter + setter that calls `RaisePropertyChanged`:
 
 ```ts
 class Location extends Observable {
@@ -234,7 +234,7 @@ Observable`, then branches on the concrete type:
      callback receives `(owner, name, old, new)` — the same arity as the
      `MuralBase` branch, so downstream target-update code is shared.
   4. Two-way write-back sets `(source as Record<string, unknown>)[name] = value`
-     — the subclass setter runs and fires `notify`.
+     — the subclass setter runs and fires `RaisePropertyChanged`.
   5. Teardown calls `source.RemovePropertyChangedListener(name, onChanged)`.
 
 ### Data flow — `DataTemplate` dispatch on an `Observable`
@@ -260,7 +260,7 @@ preserved and now names an `Observable` type.
 - **Read of an unwritten `Observable` field:** returns the field's declared
   initializer (ordinary JS), the subclass's chosen default.
 - **Two-way binding into an `Observable`:** the engine assigns `source[name] =
-  value`, running the subclass setter, which fires `notify`; no source
+  value`, running the subclass setter, which fires `RaisePropertyChanged`; no source
   arbitration because there is only the local field.
 
 ## Testing
