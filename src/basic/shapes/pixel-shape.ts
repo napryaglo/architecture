@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -36,8 +36,8 @@ export enum PixelSource
 
 export class PixelArt extends Shape
 {
-    public static readonly GridSizeKey        = Model.RegisterProperty<number>(           PixelArt, 'GridSize',        8,         MetaData.Render);
-    public static readonly SourceKey          = Model.RegisterProperty<PixelSource>(      PixelArt, 'Source',          PixelSource.Circle, MetaData.Render);
+    public static readonly GridSizeKey        = MuralBase.RegisterProperty<number>(           PixelArt, 'GridSize',        8,         MetaData.Render);
+    public static readonly SourceKey          = MuralBase.RegisterProperty<PixelSource>(      PixelArt, 'Source',          PixelSource.Circle, MetaData.Render);
 
     public get GridSize(): number { return this.get_property_value(PixelArt.GridSizeKey); }
     public set GridSize(v: number) { this.set_property_value(PixelArt.GridSizeKey, v); }
@@ -107,7 +107,7 @@ export class PixelArt extends Shape
 export class PixelCircle extends PixelArt
 {
     static {
-        Model.OverrideMetadata(PixelCircle, PixelArt.SourceKey, { default_value: PixelSource.Circle });
+        MuralBase.OverrideMetadata(PixelCircle, PixelArt.SourceKey, { default_value: PixelSource.Circle });
     }
 }
 
@@ -115,7 +115,7 @@ export class PixelCircle extends PixelArt
 export class PixelTriangle extends PixelArt
 {
     static {
-        Model.OverrideMetadata(PixelTriangle, PixelArt.SourceKey, { default_value: PixelSource.Triangle });
+        MuralBase.OverrideMetadata(PixelTriangle, PixelArt.SourceKey, { default_value: PixelSource.Triangle });
     }
 }
 

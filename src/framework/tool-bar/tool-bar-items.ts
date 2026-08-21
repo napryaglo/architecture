@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Thickness,
@@ -66,13 +66,13 @@ export enum ToolBarPosition
 // `Content` as a horizontal StackPanel.
 export class ToolBarButton extends Button
 {
-    public static readonly IconKey     = Model.RegisterProperty<Visual | undefined>(
+    public static readonly IconKey     = MuralBase.RegisterProperty<Visual | undefined>(
         ToolBarButton, 'Icon', undefined, MetaData.Measure,
     );
-    public static readonly TextKey     = Model.RegisterProperty<string | undefined>(
+    public static readonly TextKey     = MuralBase.RegisterProperty<string | undefined>(
         ToolBarButton, 'Text', undefined, MetaData.Measure | MetaData.Render,
     );
-    public static readonly ShowTextKey = Model.RegisterProperty<boolean>(
+    public static readonly ShowTextKey = MuralBase.RegisterProperty<boolean>(
         ToolBarButton, 'ShowText', false, MetaData.Measure,
     );
     // Written by the owning ToolBar's panel after each Arrange pass;
@@ -81,7 +81,7 @@ export class ToolBarButton extends Button
     // Default `None` so a ToolBarButton used standalone (outside a
     // ToolBar) gets square corners — `Only` is reserved for the case
     // where a ToolBar actively reports "you are the sole inline item".
-    public static readonly PositionKey = Model.RegisterProperty<ToolBarPosition>(
+    public static readonly PositionKey = MuralBase.RegisterProperty<ToolBarPosition>(
         ToolBarButton, 'Position', ToolBarPosition.None, MetaData.None,
     );
 
@@ -92,7 +92,7 @@ export class ToolBarButton extends Button
         // Without this override, applyDefaultStyle would walk up to
         // Button's key and pick up the pill chrome, defeating the
         // connected-bar look.
-        Model.OverrideMetadata(ToolBarButton, Element.DefaultStyleKeyKey, { default_value: ToolBarButton });
+        MuralBase.OverrideMetadata(ToolBarButton, Element.DefaultStyleKeyKey, { default_value: ToolBarButton });
         // Surface theme owns the default Style; this registers the
         // bundle's factory with Application on first ToolBarButton load.
     }
@@ -137,24 +137,24 @@ export class ToolBarButton extends Button
 // look.
 export class ToolBarToggleButton extends ToggleButton
 {
-    public static readonly IconKey     = Model.RegisterProperty<Visual | undefined>(
+    public static readonly IconKey     = MuralBase.RegisterProperty<Visual | undefined>(
         ToolBarToggleButton, 'Icon', undefined, MetaData.Measure,
     );
-    public static readonly TextKey     = Model.RegisterProperty<string | undefined>(
+    public static readonly TextKey     = MuralBase.RegisterProperty<string | undefined>(
         ToolBarToggleButton, 'Text', undefined, MetaData.Measure | MetaData.Render,
     );
-    public static readonly ShowTextKey = Model.RegisterProperty<boolean>(
+    public static readonly ShowTextKey = MuralBase.RegisterProperty<boolean>(
         ToolBarToggleButton, 'ShowText', false, MetaData.Measure,
     );
     // Same connected-bar Position protocol as ToolBarButton — see the
     // PositionKey docstring on ToolBarButton above.
-    public static readonly PositionKey = Model.RegisterProperty<ToolBarPosition>(
+    public static readonly PositionKey = MuralBase.RegisterProperty<ToolBarPosition>(
         ToolBarToggleButton, 'Position', ToolBarPosition.None, MetaData.None,
     );
 
     static
     {
-        Model.OverrideMetadata(ToolBarToggleButton, Element.DefaultStyleKeyKey, { default_value: ToolBarToggleButton });
+        MuralBase.OverrideMetadata(ToolBarToggleButton, Element.DefaultStyleKeyKey, { default_value: ToolBarToggleButton });
     }
 
     public get Icon():  Visual | undefined { return this.get_property_value(ToolBarToggleButton.IconKey); }
@@ -196,7 +196,7 @@ export class ToolBarToggleButton extends ToggleButton
 // inset 2px from top + bottom so it doesn't touch the toolbar's edges.
 export class ToolBarSeparator extends Element
 {
-    public static readonly LineBrushKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly LineBrushKey = MuralBase.RegisterProperty<Brush | undefined>(
         ToolBarSeparator, 'LineBrush', undefined, MetaData.Render,
     );
 
@@ -206,7 +206,7 @@ export class ToolBarSeparator extends Element
         // DynamicResource so the divider tints follow the active theme
         // palette without an imperative `?? Theme.fieldBorder` fallback
         // in RenderOverride.
-        Model.OverrideMetadata(ToolBarSeparator, Element.DefaultStyleKeyKey, { default_value: ToolBarSeparator });
+        MuralBase.OverrideMetadata(ToolBarSeparator, Element.DefaultStyleKeyKey, { default_value: ToolBarSeparator });
     }
 
     constructor()

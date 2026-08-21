@@ -1,4 +1,4 @@
-import { APPROXIMATE_TEXT_MEASURER, MetaData, Model } from '../../runtime/index.js';
+﻿import { APPROXIMATE_TEXT_MEASURER, MetaData, MuralBase } from '../../runtime/index.js';
 import { InputManager } from '../../framework/input-manager.js';
 import { Rect, Size } from '../primitives.js';
 import type { TextMeasurer, Visual, Element, VisualHost } from '../../runtime/index.js';
@@ -9,7 +9,7 @@ import { FontManager, type FontConsumer, type RegisteredFont } from '../text/ind
 // Abstract base for the scene-description-plus-host-bridge classes
 // (HtmlTarget, FileTarget, …). Follows the WPF
 // PresentationSource pattern: one class per host environment, sharing a
-// common scene description on the Model layer. Named "Target" rather
+// common scene description on the MuralBase layer. Named "Target" rather
 // than "Source" because in our split this class also fulfills WPF's
 // CompositionTarget role — it's both where the Visual tree is hosted
 // and where pixels are written.
@@ -39,7 +39,7 @@ import { FontManager, type FontConsumer, type RegisteredFont } from '../text/ind
 // pins width and lets height grow with content (e.g. a known-width
 // column whose height is determined by its contents).
 //
-// PresentationTarget is a Model (not a Visual) so its properties
+// PresentationTarget is a MuralBase (not a Visual) so its properties
 // participate in the binding/change-notification system — the subclass's
 // renderer subscribes to Width/Height to know when to re-measure and to
 // Content to know when the visual root was replaced. There is NO
@@ -47,7 +47,7 @@ import { FontManager, type FontConsumer, type RegisteredFont } from '../text/ind
 // assigning the same Visual to two PresentationTargets is undefined
 // behavior.
 //
-// MetaData flags on the properties are advisory only — Model's
+// MetaData flags on the properties are advisory only — MuralBase's
 // OnPropertyChanged is a no-op, so Mark*Dirty does not auto-fire.
 // Subclasses' renderers subscribe via AddPropertyChangedListener.
 //
@@ -55,15 +55,15 @@ import { FontManager, type FontConsumer, type RegisteredFont } from '../text/ind
 // y-down, DIPs. DeviceScale multiplies DIPs to get device pixels for
 // raster output (defaults to 1; HtmlTarget typically reads
 // window.devicePixelRatio at construction and assigns it).
-export abstract class PresentationTarget extends Model implements VisualHost, FontConsumer
+export abstract class PresentationTarget extends MuralBase implements VisualHost, FontConsumer
 {
     // NaN = "auto" — the axis sizes to Content.DesiredSize at Render
     // time. Any finite number = fixed mode for that axis.
-    public static readonly WidthKey       = Model.RegisterProperty<number>(            PresentationTarget, 'Width',       Number.NaN, MetaData.Measure);
-    public static readonly HeightKey      = Model.RegisterProperty<number>(            PresentationTarget, 'Height',      Number.NaN, MetaData.Measure);
-    public static readonly DeviceScaleKey = Model.RegisterProperty<number>(            PresentationTarget, 'DeviceScale', 1,          MetaData.Measure);
-    public static readonly ContentKey     = Model.RegisterProperty<Visual | undefined>(PresentationTarget, 'Content',     undefined,  MetaData.Render);
-    public static readonly BackgroundKey  = Model.RegisterProperty<Brush | undefined>( PresentationTarget, 'Background',  undefined,  MetaData.Render);
+    public static readonly WidthKey       = MuralBase.RegisterProperty<number>(            PresentationTarget, 'Width',       Number.NaN, MetaData.Measure);
+    public static readonly HeightKey      = MuralBase.RegisterProperty<number>(            PresentationTarget, 'Height',      Number.NaN, MetaData.Measure);
+    public static readonly DeviceScaleKey = MuralBase.RegisterProperty<number>(            PresentationTarget, 'DeviceScale', 1,          MetaData.Measure);
+    public static readonly ContentKey     = MuralBase.RegisterProperty<Visual | undefined>(PresentationTarget, 'Content',     undefined,  MetaData.Render);
+    public static readonly BackgroundKey  = MuralBase.RegisterProperty<Brush | undefined>( PresentationTarget, 'Background',  undefined,  MetaData.Render);
 
     private _actualWidth:  number = 0;
     private _actualHeight: number = 0;

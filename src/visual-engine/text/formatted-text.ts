@@ -1,4 +1,4 @@
-import type { TextMetrics } from '../../runtime/index.js';
+﻿import type { TextMetrics } from '../../runtime/index.js';
 import type { Brush } from '../drawing/brush.js';
 
 // Boldness of a glyph. Normal (400) / Medium (500) / Bold (700) cover
@@ -76,7 +76,7 @@ export function decorationsToCss(set: TextDecorations): string
     return parts.join(' ');
 }
 
-// A snapshot of laid-out text ready to be rendered. NOT a Model — it's
+// A snapshot of laid-out text ready to be rendered. NOT a MuralBase — it's
 // an immutable value built by a Visual's OnRender from its own
 // properties (FontFamily, FontSize, …) and handed to
 // DrawingContext.DrawText.

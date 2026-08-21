@@ -1,6 +1,6 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Model, MetaData, ObservableCollection } from '../../../runtime/index.js';
+import { MuralBase, MetaData, ObservableCollection } from '../../../runtime/index.js';
 import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { TabControl, TabItem } from '../tabs.js';
 import { Selector } from '../../list/selector.js';
@@ -16,8 +16,8 @@ import { initTestApp } from '../../../basic/tests/test-app.js';
 // highlighted" symptom, where only a click seemed to highlight because a click
 // also takes focus and lights the separate `when (IsFocused)` overlay.
 
-class Doc extends Model {
-    public static readonly TitleKey = Model.RegisterProperty<string>(Doc, 'Title', '', MetaData.None);
+class Doc extends MuralBase {
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(Doc, 'Title', '', MetaData.None);
     public get Title(): string { return this.get_property_value(Doc.TitleKey); }
     public set Title(v: string) { this.set_property_value(Doc.TitleKey, v); }
 }

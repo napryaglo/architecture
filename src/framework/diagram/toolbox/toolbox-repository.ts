@@ -1,4 +1,4 @@
-import { MetaData, Model, ObservableCollection, ServiceKey } from '../../../runtime/index.js';
+﻿import { MetaData, MuralBase, ObservableCollection, ServiceKey } from '../../../runtime/index.js';
 import { ToolboxPage } from './toolbox-page.js';
 import type { ToolboxItem } from './toolbox-item.js';
 
@@ -6,11 +6,11 @@ import type { ToolboxItem } from './toolbox-item.js';
 // Application.current.Services. Pure structure: no visual-resolution or
 // drop logic lives here. Populated by Diagram first-init (Shapes) and by
 // apps (Plexus, Spec B).
-export class ToolboxRepository extends Model
+export class ToolboxRepository extends MuralBase
 {
     public static readonly Key = new ServiceKey<ToolboxRepository>('ToolboxRepository');
 
-    public static readonly PagesKey = Model.RegisterProperty<ObservableCollection<ToolboxPage>>(
+    public static readonly PagesKey = MuralBase.RegisterProperty<ObservableCollection<ToolboxPage>>(
         ToolboxRepository, 'Pages', undefined as unknown as ObservableCollection<ToolboxPage>, MetaData.None);
 
     constructor()

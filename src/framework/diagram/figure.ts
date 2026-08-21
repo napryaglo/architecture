@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Visual,
@@ -50,7 +50,7 @@ import { DiagramSettings } from './diagram-settings.js';
 //     selection, modifier modes, SelectionChanged batching).
 //
 // Default Template: a single ContentPresenter. ContentControl's content
-// resolution does the rest — when Figure.Content is set to a Model
+// resolution does the rest — when Figure.Content is set to a MuralBase
 // (the per-item NodeVM data), ContentControl looks up the matching
 // [DataType=…] DataTemplate via Application resources and slots the
 // produced Visual into the presenter. Consumers who want chrome around
@@ -111,21 +111,21 @@ export interface FigureFromSourceOptions extends FigureFromKindOptions
 export class Figure extends ContentControl implements ISideEndpointHost
 {
     static {
-        Model.OverrideMetadata(Figure, Element.DefaultStyleKeyKey, { default_value: Figure });
+        MuralBase.OverrideMetadata(Figure, Element.DefaultStyleKeyKey, { default_value: Figure });
         // Figure's fill is the inherited Visual.Fill; keep Figure's historic
         // default brush by overriding the metadata for the Figure subtree.
-        Model.OverrideMetadata(Figure, Visual.FillKey, { default_value: DiagramSettings.ShapeDefaultFill() });
+        MuralBase.OverrideMetadata(Figure, Visual.FillKey, { default_value: DiagramSettings.ShapeDefaultFill() });
         // Every diagram node clips its content to its box: a shaped node to its
         // silhouette (buildChildClipGeometry = _shape), a shapeless / content
         // node to its bounds rect (the super fallback). ClipToBounds is
         // children-only, so the node's own paint / stroke is never masked.
-        Model.OverrideMetadata(Figure, Visual.ClipToBoundsKey, { default_value: true });
+        MuralBase.OverrideMetadata(Figure, Visual.ClipToBoundsKey, { default_value: true });
     }
 
-    public static readonly LeftKey = Model.RegisterProperty<number>(
+    public static readonly LeftKey = MuralBase.RegisterProperty<number>(
         Figure, 'Left', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
     
-    public static readonly TopKey = Model.RegisterProperty<number>(
+    public static readonly TopKey = MuralBase.RegisterProperty<number>(
         Figure, 'Top', 0, MetaData.Arrange | MetaData.BindsTwoWayByDefault);
 
     // Fill brush and Stroke pen are inherited from Visual (Visual.Fill /
@@ -139,7 +139,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // the default template's PART_LabelHost. It renders itself reactively;
     // `LabelText` below is sugar over `Text.Content`. Measure-affecting so a
     // whole-block swap relays out (Content edits invalidate via ShapeText).
-    public static readonly TextKey = Model.RegisterProperty<ShapeText | undefined>(
+    public static readonly TextKey = MuralBase.RegisterProperty<ShapeText | undefined>(
         Figure, 'Text', undefined, MetaData.Measure);
 
     // Content-sizing mode (mirrors the bound VM's SizeToContent). A content
@@ -147,35 +147,35 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // fix; it sizes to its rendered content (see _applyContentFit), and the
     // two-way Width/Height bind carries that back to the VM. Geometric shapes
     // leave this false and stay fixed-size + resizable.
-    public static readonly SizeToContentKey = Model.RegisterProperty<boolean>(
+    public static readonly SizeToContentKey = MuralBase.RegisterProperty<boolean>(
         Figure, 'SizeToContent', false, MetaData.Measure);
     // Set once the user hand-resizes the node: content auto-fit stops so the
     // explicit size sticks.
-    public static readonly UserSizedKey = Model.RegisterProperty<boolean>(
+    public static readonly UserSizedKey = MuralBase.RegisterProperty<boolean>(
         Figure, 'UserSized', false, MetaData.None);
 
     // Stable identifier — used by serialize / deserialize and by external
     // consumers that need to refer back to a specific figure after Load.
-    public static readonly IdKey = Model.RegisterProperty<string | undefined>(
+    public static readonly IdKey = MuralBase.RegisterProperty<string | undefined>(
         Figure, 'Id', undefined, MetaData.None);
 
     // Selection state — duck-typed by SelectionReflector when the
     // owning Diagram has ReflectSelectionToItems=true.
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(
         Figure, 'IsSelected', false, MetaData.None);
 
     // Visual rotation in degrees (clockwise). Applied as a RenderTransform only —
     // it does NOT affect layout/measure, so Width/Height stay the unrotated Size
     // (matches PowerPoint). Selection/resize adorners remain axis-aligned (a
     // documented follow-up). Two-way so the inspector can bind it.
-    public static readonly RotationKey = Model.RegisterProperty<number>(
+    public static readonly RotationKey = MuralBase.RegisterProperty<number>(
         Figure, 'Rotation', 0, MetaData.Render | MetaData.BindsTwoWayByDefault);
 
     // The shape's baseline size, seeded at creation. Scale % in the inspector is
     // size ÷ base × 100. Persisted so scale is stable across load.
-    public static readonly BaseWidthKey = Model.RegisterProperty<number>(
+    public static readonly BaseWidthKey = MuralBase.RegisterProperty<number>(
         Figure, 'BaseWidth', Number.NaN, MetaData.None);
-    public static readonly BaseHeightKey = Model.RegisterProperty<number>(
+    public static readonly BaseHeightKey = MuralBase.RegisterProperty<number>(
         Figure, 'BaseHeight', Number.NaN, MetaData.None);
 
     // Per-Figure port-provider override. When set, the `Ports` getter
@@ -185,7 +185,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // workflow-style node on a generic rectangle, etc.). Leaving it
     // undefined falls through to resolveDefaultPortProvider() per § 3.8
     // of [docs/connectors.md](../../../docs/connectors.md).
-    public static readonly PortProviderKey = Model.RegisterProperty<IPortProvider | undefined>(
+    public static readonly PortProviderKey = MuralBase.RegisterProperty<IPortProvider | undefined>(
         Figure, 'PortProvider', undefined, MetaData.None);
 
     // Explicit hand-listed Ports. When set, wins over BOTH PortProvider
@@ -194,7 +194,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // entities). The two-DP shape mirrors the § 3.8 sketch; the
     // ExplicitPorts ?? PortProvider precedence is intentional per
     // § 7.13 (lifting to a concat strategy is the v2 follow-up).
-    public static readonly ExplicitPortsKey = Model.RegisterProperty<readonly Port[] | undefined>(
+    public static readonly ExplicitPortsKey = MuralBase.RegisterProperty<readonly Port[] | undefined>(
         Figure, 'ExplicitPorts', undefined, MetaData.None);
 
     // Unit-1 source path for this figure. Cached source-of-truth; resize
@@ -874,7 +874,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
             //
             // Fallback to DataContext keeps the duck-type contract intact
             // for the legacy ItemsSource-of-VMs path (Diagram.bindContainer
-            // sets DataContext when wrapping a non-Figure Model).
+            // sets DataContext when wrapping a non-Figure MuralBase).
             const entity = (this as unknown as { Parent?: unknown }).Parent !== undefined
                 ? (this as unknown as { Parent?: unknown })
                 : this.DataContext as { Parent?: unknown } | undefined;
@@ -923,7 +923,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // (same pattern as PositionSnap).
     private beginRigidConnectorDrag(): void
     {
-        const movingSet = new Set<Model>([this, ...(this._dragPartners ?? [])]);
+        const movingSet = new Set<MuralBase>([this, ...(this._dragPartners ?? [])]);
         const selector = Selector.FromContainer<Selector>(
             this, (v: Visual): v is Selector => v instanceof Selector);
         const dragHost = selector as unknown as Partial<RigidConnectorDragHost> | undefined;

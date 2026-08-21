@@ -1,4 +1,4 @@
-import { MetaData, Model, type PropertyDescriptor } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, type PropertyDescriptor } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { pathGeometryFromSvgD, type PathGeometry, Point } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
@@ -11,7 +11,7 @@ import { TextNode } from './text-node.js';
 const TARGET_TRACK: readonly string[] = ['Left', 'Top', 'Width', 'Height'];
 
 // Duck-typed interface: any object that can serve as a leader target.
-export interface ILeaderTarget extends Model
+export interface ILeaderTarget extends MuralBase
 {
     readonly Id?: string;
     Left:   number;
@@ -52,10 +52,10 @@ function boxEdgeToward(x: number, y: number, w: number, h: number, target: Point
 // end = targetCentre - (this.Left, this.Top).
 export class Callout extends TextNode
 {
-    public static readonly LeaderTargetNodeKey = Model.RegisterProperty<ILeaderTarget | undefined>(
+    public static readonly LeaderTargetNodeKey = MuralBase.RegisterProperty<ILeaderTarget | undefined>(
         Callout, 'LeaderTargetNode', undefined, MetaData.None);
 
-    public static readonly LeaderGeometryKey = Model.RegisterProperty<PathGeometry | undefined>(
+    public static readonly LeaderGeometryKey = MuralBase.RegisterProperty<PathGeometry | undefined>(
         Callout, 'LeaderGeometry', undefined, MetaData.None);
 
     private _trackedTarget: ILeaderTarget | undefined = undefined;

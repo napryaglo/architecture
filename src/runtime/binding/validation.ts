@@ -1,4 +1,4 @@
-import { Model, PropertyKey } from '../model.js';
+﻿import { MuralBase, PropertyKey } from '../model.js';
 import { MetaData } from '../metadata.js';
 
 // Single rule's verdict on a value. `errorContent` is the user-visible
@@ -19,7 +19,7 @@ export interface ValidationRule
     validate(value: unknown): ValidationResult;
 }
 
-// One failure on a target Model. The `source` field identifies which
+// One failure on a target MuralBase. The `source` field identifies which
 // binding produced the error so multiple bindings on the same target
 // (e.g., a control with several bound DPs) don't clobber each other's
 // error state when one passes and another fails.
@@ -33,13 +33,13 @@ export interface ValidationError
 const EMPTY_ERRORS: readonly ValidationError[] = Object.freeze([]);
 
 // Per-target registry of errors keyed by the binding (or any opaque
-// source identifier) that produced them. WeakMap so a target Model
+// source identifier) that produced them. WeakMap so a target MuralBase
 // dropping out of use lets its error map be GC'd alongside.
-const ERROR_REGISTRY: WeakMap<Model, Map<object, readonly ValidationError[]>> = new WeakMap();
+const ERROR_REGISTRY: WeakMap<MuralBase, Map<object, readonly ValidationError[]>> = new WeakMap();
 
 // Attached-property bag for validation state. Mirrors WPF's
 // `System.Windows.Controls.Validation` static — `HasError` / `Errors`
-// surface on any Model and are written exclusively by the binding
+// surface on any MuralBase and are written exclusively by the binding
 // pipeline. `Errors` is per-target aggregated across every binding
 // installed on that target; `HasError` is a derived `errors.length > 0`.
 //
@@ -53,15 +53,15 @@ const ERROR_REGISTRY: WeakMap<Model, Map<object, readonly ValidationError[]>> = 
 // the usual attached-property surface (`target.get_property_value(
 // Validation, 'HasError')`).
 //
-// Validation does NOT `extends Model`: the class is a static namespace
+// Validation does NOT `extends MuralBase`: the class is a static namespace
 // for two attached-DP keys plus the SetErrors / GetErrors helpers,
-// never instantiated. Extending Model used to trip a TDZ cycle in
+// never instantiated. Extending MuralBase used to trip a TDZ cycle in
 // single-file test runs (`model.ts → binding/effective-value.ts →
 // binding/validation.ts → model.ts`) — `class Validation extends
-// Model` evaluated before model.ts finished initializing the Model
+// MuralBase` evaluated before model.ts finished initializing the MuralBase
 // class binding. The keys are now lazy-initialized through getters so
-// the `Model.RegisterReadOnlyProperty(...)` call runs on first
-// access, by which time Model is fully defined.
+// the `MuralBase.RegisterReadOnlyProperty(...)` call runs on first
+// access, by which time MuralBase is fully defined.
 export class Validation
 {
     private static _hasErrorKey: PropertyKey<boolean> | undefined;
@@ -69,14 +69,14 @@ export class Validation
 
     public static get HasErrorKey(): PropertyKey<boolean>
     {
-        return this._hasErrorKey ??= Model.RegisterReadOnlyProperty<boolean>(
+        return this._hasErrorKey ??= MuralBase.RegisterReadOnlyProperty<boolean>(
             Validation, 'HasError', false, MetaData.None,
         );
     }
 
     public static get ErrorsKey(): PropertyKey<readonly ValidationError[]>
     {
-        return this._errorsKey ??= Model.RegisterReadOnlyProperty<readonly ValidationError[]>(
+        return this._errorsKey ??= MuralBase.RegisterReadOnlyProperty<readonly ValidationError[]>(
             Validation, 'Errors', EMPTY_ERRORS, MetaData.None,
         );
     }
@@ -87,7 +87,7 @@ export class Validation
     // source's current list, and `Validation.HasError` flips to
     // `errors.length > 0`.
     public static SetErrors(
-        target: Model,
+        target: MuralBase,
         source: object,
         errors: readonly ValidationError[],
     ): void
@@ -125,12 +125,12 @@ export class Validation
     // Convenience reader. `Errors` defaults to an empty frozen array
     // when the target has never seen a validation event, so this never
     // returns `undefined`.
-    public static GetErrors(target: Model): readonly ValidationError[]
+    public static GetErrors(target: MuralBase): readonly ValidationError[]
     {
         return target.get_property_value(Validation.ErrorsKey);
     }
 
-    public static GetHasError(target: Model): boolean
+    public static GetHasError(target: MuralBase): boolean
     {
         return target.get_property_value(Validation.HasErrorKey);
     }

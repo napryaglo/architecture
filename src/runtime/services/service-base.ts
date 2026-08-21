@@ -1,10 +1,10 @@
-import { Model } from '../model.js';
+﻿import { MuralBase } from '../model.js';
 import { MetaData } from '../metadata.js';
 import type { IServiceProvider } from './service-provider.js';
 
 // Base for application services that are also bindable view-models.
 //
-// Extends Model so a service can expose DPs that view content binds to
+// Extends MuralBase so a service can expose DPs that view content binds to
 // directly (`$StatusText`, `$Target`, …) — the same "view-observable
 // state lives on DPs" contract VMs follow. Registering one of these in
 // the ServiceProvider lets the shell hand it to a region as DataContext
@@ -20,7 +20,7 @@ import type { IServiceProvider } from './service-provider.js';
 // holds. A ServiceProvider scope calls Dispose() on every ServiceBase
 // it owns when the scope is disposed (see ServiceProvider.dispose), so
 // a per-shell scope tears its services down with the shell.
-export abstract class ServiceBase extends Model
+export abstract class ServiceBase extends MuralBase
 {
     // The container that built this service, narrowed to the consumer
     // contract (resolve only — no register / scope). Every concrete
@@ -37,9 +37,9 @@ export abstract class ServiceBase extends Model
     // expose its actions; the pane binds it via
     // `Commands = $service(…).ActiveService.HeaderCommands`. `unknown` (not a
     // Visual type) so runtime stays free of a visual-engine dependency — a
-    // ContentPresenter resolves whatever's here (Visual, or Model via
+    // ContentPresenter resolves whatever's here (Visual, or MuralBase via
     // DataTemplate). Unset ⇒ no commands shown.
-    public static readonly HeaderCommandsKey = Model.RegisterProperty<unknown>(
+    public static readonly HeaderCommandsKey = MuralBase.RegisterProperty<unknown>(
         ServiceBase, 'HeaderCommands', undefined, MetaData.None);
 
     constructor(provider: IServiceProvider)

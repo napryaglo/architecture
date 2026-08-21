@@ -1,4 +1,4 @@
-import { MetaData, Model, Visual } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Visual } from '../../runtime/index.js';
 import { FontStyle, FontWeight, TextDecorations } from '../../visual-engine/index.js';
 import { Inline, type InlineHost } from './text-element.js';
 import { InlineCollection } from './inline-collection.js';
@@ -9,7 +9,7 @@ import { InlineCollection } from './inline-collection.js';
 // InlineUIContainer). Setting TextBlock.Text is sugar for a single Run.
 export class Run extends Inline
 {
-    public static readonly TextKey = Model.RegisterProperty<string>(Run, 'Text', '', MetaData.None);
+    public static readonly TextKey = MuralBase.RegisterProperty<string>(Run, 'Text', '', MetaData.None);
 
     constructor(text = '')
     {
@@ -76,7 +76,7 @@ export class LineBreak extends Inline {}
 // content model just holds the reference; all layout is the host's job.
 export class InlineUIContainer extends Inline
 {
-    public static readonly ChildKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly ChildKey = MuralBase.RegisterProperty<Visual | undefined>(
         InlineUIContainer, 'Child', undefined, MetaData.None);
 
     constructor(child?: Visual)

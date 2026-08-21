@@ -1,13 +1,13 @@
-// CarouselVM — backs the carousel demo. A small list of hero cards plus an
+﻿// CarouselVM — backs the carousel demo. A small list of hero cards plus an
 // ActiveIndex the prev/next chevrons page through (bound TwoWay), echoed as
 // a "card N of M" caption.
-import { Model, MetaData, ObservableCollection, type PropertyDescriptor } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, ObservableCollection, type PropertyDescriptor } from '@pragmatic-lab/mural/runtime';
 
 // One hero card. The DataTemplate in carousel.mu renders it by this type.
-export class CarouselCard extends Model
+export class CarouselCard extends MuralBase
 {
-    static TitleKey    = Model.RegisterProperty<string>(CarouselCard, 'Title', '', MetaData.None);
-    static SubtitleKey = Model.RegisterProperty<string>(CarouselCard, 'Subtitle', '', MetaData.None);
+    static TitleKey    = MuralBase.RegisterProperty<string>(CarouselCard, 'Title', '', MetaData.None);
+    static SubtitleKey = MuralBase.RegisterProperty<string>(CarouselCard, 'Subtitle', '', MetaData.None);
 
     get Title():    string { return this.get_property_value(CarouselCard.TitleKey); }
     get Subtitle(): string { return this.get_property_value(CarouselCard.SubtitleKey); }
@@ -29,11 +29,11 @@ const CARDS: ReadonlyArray<readonly [string, string]> = [
     ['Frost',    'Alpine ridgelines in winter'],
 ];
 
-export class CarouselVM extends Model
+export class CarouselVM extends MuralBase
 {
-    static ItemsKey       = Model.RegisterProperty<ObservableCollection<CarouselCard>>(CarouselVM, 'Items', undefined as unknown as ObservableCollection<CarouselCard>, MetaData.None);
-    static ActiveIndexKey = Model.RegisterProperty<number>(CarouselVM, 'ActiveIndex', 0, MetaData.None);
-    static CaptionKey     = Model.RegisterProperty<string>(CarouselVM, 'Caption', '', MetaData.None);
+    static ItemsKey       = MuralBase.RegisterProperty<ObservableCollection<CarouselCard>>(CarouselVM, 'Items', undefined as unknown as ObservableCollection<CarouselCard>, MetaData.None);
+    static ActiveIndexKey = MuralBase.RegisterProperty<number>(CarouselVM, 'ActiveIndex', 0, MetaData.None);
+    static CaptionKey     = MuralBase.RegisterProperty<string>(CarouselVM, 'Caption', '', MetaData.None);
 
     get Items():       ObservableCollection<CarouselCard> { return this.get_property_value(CarouselVM.ItemsKey); }
     get ActiveIndex(): number { return this.get_property_value(CarouselVM.ActiveIndexKey); }

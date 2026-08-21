@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     type ICommand,
 } from '../../runtime/index.js';
 import type { Geometry } from '../../visual-engine/index.js';
@@ -16,13 +16,13 @@ import type { Geometry } from '../../visual-engine/index.js';
 // settings gear) by adding RailActions to those collections — no rail-template
 // override. Icons are app-supplied (the framework ships none): a RailAction
 // carries a Geometry the app resolved from its own icon dictionary.
-export class RailAction extends Model
+export class RailAction extends MuralBase
 {
-    public static readonly IconKey = Model.RegisterProperty<Geometry | undefined>(
+    public static readonly IconKey = MuralBase.RegisterProperty<Geometry | undefined>(
         RailAction, 'Icon', undefined, MetaData.None);
-    public static readonly CommandKey = Model.RegisterProperty<ICommand | undefined>(
+    public static readonly CommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
         RailAction, 'Command', undefined, MetaData.None);
-    public static readonly TooltipKey = Model.RegisterProperty<string>(
+    public static readonly TooltipKey = MuralBase.RegisterProperty<string>(
         RailAction, 'Tooltip', '', MetaData.None);
 
     constructor(icon?: Geometry, command?: ICommand, tooltip = '')

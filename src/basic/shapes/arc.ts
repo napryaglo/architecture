@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -26,8 +26,8 @@ import { Shape } from './shape.js';
 // To draw counter-clockwise, the consumer swaps the two angles.
 export class Arc extends Shape
 {
-    public static readonly StartAngleKey      = Model.RegisterProperty<number>(           Arc, 'StartAngle',      0,         MetaData.Render);
-    public static readonly EndAngleKey        = Model.RegisterProperty<number>(           Arc, 'EndAngle',        360,       MetaData.Render);
+    public static readonly StartAngleKey      = MuralBase.RegisterProperty<number>(           Arc, 'StartAngle',      0,         MetaData.Render);
+    public static readonly EndAngleKey        = MuralBase.RegisterProperty<number>(           Arc, 'EndAngle',        360,       MetaData.Render);
     public get StartAngle(): number { return this.get_property_value(Arc.StartAngleKey); }
     public set StartAngle(v: number) { this.set_property_value(Arc.StartAngleKey, v); }
 

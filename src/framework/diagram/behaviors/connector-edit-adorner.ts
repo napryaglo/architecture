@@ -1,4 +1,4 @@
-import { Point } from '../../../visual-engine/index.js';
+﻿import { Point } from '../../../visual-engine/index.js';
 import type { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import type { Figure } from '../figure.js';
@@ -13,16 +13,16 @@ import { type RouteWaypoint, waypoint, routePoints } from '../route-waypoint.js'
 // restore the endpoint exactly as it was before the drag began.
 interface EndpointSnapshot
 {
-    Node:      Model | undefined;
+    Node:      MuralBase | undefined;
     PortName:  string | undefined;
     PortSide:  PortSide | undefined;
     PortIndex: number | undefined;
     FreePoint: Point | undefined;
 }
 
-// Forwards into the runtime's Model type without dragging an import
-// (this file's only contact with Model is through the endpoint).
-type Model = ConnectorEndpoint['Node'];
+// Forwards into the runtime's MuralBase type without dragging an import
+// (this file's only contact with MuralBase is through the endpoint).
+type MuralBase = ConnectorEndpoint['Node'];
 
 type DragState =
     | { readonly kind: 'idle' }

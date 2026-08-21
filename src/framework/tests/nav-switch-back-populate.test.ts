@@ -1,6 +1,6 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, Model, ServiceProvider, type Visual } from '../../runtime/index.js';
+import { Application, MuralBase, ServiceProvider, type Visual } from '../../runtime/index.js';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { Border } from '../../basic/border.js';
@@ -11,8 +11,8 @@ import { NavigationItem } from '../navigation/navigation-item.js';
 import { Capability, ShellModule } from '../shell/module.js';
 import { ModifierKeys } from '../../runtime/index.js';
 
-class SvcA extends Model {}
-class SvcB extends Model {}
+class SvcA extends MuralBase {}
+class SvcB extends MuralBase {}
 
 function collect<T>(root: Visual, ctor: new (...a: never[]) => T, out: T[] = []): T[] {
     if (root instanceof ctor) out.push(root);

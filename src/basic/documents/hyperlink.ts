@@ -1,4 +1,4 @@
-import { MetaData, Model, type ICommand } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, type ICommand } from '../../runtime/index.js';
 import { TextDecorations } from '../../visual-engine/index.js';
 import { type RunProps } from './text-element.js';
 import { Span } from './inlines.js';
@@ -16,11 +16,11 @@ import { Span } from './inlines.js';
 // Foreground / TextDecorations the author sets.
 export class Hyperlink extends Span
 {
-    public static readonly NavigateUriKey = Model.RegisterProperty<string | undefined>(
+    public static readonly NavigateUriKey = MuralBase.RegisterProperty<string | undefined>(
         Hyperlink, 'NavigateUri', undefined, MetaData.None);
-    public static readonly CommandKey = Model.RegisterProperty<ICommand | undefined>(
+    public static readonly CommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
         Hyperlink, 'Command', undefined, MetaData.None);
-    public static readonly CommandParameterKey = Model.RegisterProperty<unknown>(
+    public static readonly CommandParameterKey = MuralBase.RegisterProperty<unknown>(
         Hyperlink, 'CommandParameter', undefined, MetaData.None);
 
     /** Fired on activation (click / Enter), before the Command runs.

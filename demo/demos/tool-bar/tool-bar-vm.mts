@@ -1,4 +1,4 @@
-// ToolBarVM — backs the tool-bar demo. Holds the shared command
+﻿// ToolBarVM — backs the tool-bar demo. Holds the shared command
 // catalogue + a status string the toolbar items mutate as they fire.
 //
 // Three RelayCommands:
@@ -11,14 +11,14 @@
 
 import {
     MetaData,
-    Model,
+    MuralBase,
     RelayCommand,
 } from '@pragmatic-lab/mural/runtime';
 
-export class ToolBarVM extends Model
+export class ToolBarVM extends MuralBase
 {
-    static StatusKey       = Model.RegisterProperty<string>(ToolBarVM, 'Status',       'Ready.', MetaData.None);
-    static HasSelectionKey = Model.RegisterProperty<boolean>(ToolBarVM, 'HasSelection', false,    MetaData.None);
+    static StatusKey       = MuralBase.RegisterProperty<string>(ToolBarVM, 'Status',       'Ready.', MetaData.None);
+    static HasSelectionKey = MuralBase.RegisterProperty<boolean>(ToolBarVM, 'HasSelection', false,    MetaData.None);
 
     // Command catalogue exposed as plain fields (resolved by the toolbar
     // markup through the VM's own bindings).

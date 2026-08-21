@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     Element, Visual,
     type CollectionChange,
@@ -35,17 +35,17 @@ import { TemplatedControl } from '../../basic/templated-control.js';
 //     Typically a FloatingActionButton pinned to the trailing edge.
 export class BottomAppBar extends TemplatedControl
 {
-    public static readonly ActionsKey = Model.RegisterProperty<ObservableCollection<Visual>>(
+    public static readonly ActionsKey = MuralBase.RegisterProperty<ObservableCollection<Visual>>(
         BottomAppBar, 'Actions', undefined as unknown as ObservableCollection<Visual>,
         MetaData.None,
     );
-    public static readonly FloatingActionKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly FloatingActionKey = MuralBase.RegisterProperty<Visual | undefined>(
         BottomAppBar, 'FloatingAction', undefined, MetaData.None,
     );
 
     static
     {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             BottomAppBar, Element.DefaultStyleKeyKey,
             { default_value: BottomAppBar },
         );

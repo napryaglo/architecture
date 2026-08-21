@@ -1,4 +1,4 @@
-import { MetaData, Model, Panel, Rect, Size, Visual } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Panel, Rect, Size, Visual } from '../../runtime/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 
 // Z-order discriminator for DiagramLayersPanel children. Connectors
@@ -32,7 +32,7 @@ export enum DiagramLayer
 // alone"; live re-routing can be added when a real consumer needs it.
 export class DiagramLayersPanel extends Panel
 {
-    public static readonly LayerKey = Model.RegisterAttachedProperty<DiagramLayer>(
+    public static readonly LayerKey = MuralBase.RegisterAttachedProperty<DiagramLayer>(
         DiagramLayersPanel, 'Layer', DiagramLayer.Figures, MetaData.None);
 
     public static GetLayer(v: Visual): DiagramLayer

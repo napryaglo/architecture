@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Visibility,
     Element, type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -69,13 +69,13 @@ const JOIN_OPTIONS: ReadonlyArray<OptionItem<LineJoin>> = Object.freeze([
 // system (a long-lived Brush-with-extras).
 export class PenEditor extends TemplatedControl
 {
-    public static readonly PenKey       = Model.RegisterProperty<Pen | undefined>(PenEditor, 'Pen',         undefined, MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly BrushKey     = Model.RegisterProperty<Brush | undefined>(PenEditor, 'Brush',     undefined, MetaData.None);
-    public static readonly ThicknessKey = Model.RegisterProperty<number>(           PenEditor, 'Thickness', 1,         MetaData.None);
-    public static readonly DashStyleKey = Model.RegisterProperty<DashStyle>(        PenEditor, 'DashStyle', DashStyle.Solid, MetaData.None);
-    public static readonly LineCapKey   = Model.RegisterProperty<LineCap>(          PenEditor, 'LineCap',   LineCap.Flat,    MetaData.None);
-    public static readonly LineJoinKey  = Model.RegisterProperty<LineJoin>(         PenEditor, 'LineJoin',  LineJoin.Miter,  MetaData.None);
-    public static readonly MiterLimitKey= Model.RegisterProperty<number>(           PenEditor, 'MiterLimit',10,              MetaData.None);
+    public static readonly PenKey       = MuralBase.RegisterProperty<Pen | undefined>(PenEditor, 'Pen',         undefined, MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly BrushKey     = MuralBase.RegisterProperty<Brush | undefined>(PenEditor, 'Brush',     undefined, MetaData.None);
+    public static readonly ThicknessKey = MuralBase.RegisterProperty<number>(           PenEditor, 'Thickness', 1,         MetaData.None);
+    public static readonly DashStyleKey = MuralBase.RegisterProperty<DashStyle>(        PenEditor, 'DashStyle', DashStyle.Solid, MetaData.None);
+    public static readonly LineCapKey   = MuralBase.RegisterProperty<LineCap>(          PenEditor, 'LineCap',   LineCap.Flat,    MetaData.None);
+    public static readonly LineJoinKey  = MuralBase.RegisterProperty<LineJoin>(         PenEditor, 'LineJoin',  LineJoin.Miter,  MetaData.None);
+    public static readonly MiterLimitKey= MuralBase.RegisterProperty<number>(           PenEditor, 'MiterLimit',10,              MetaData.None);
 
     public get Pen():        Pen | undefined   { return this.get_property_value(PenEditor.PenKey); }
     public set Pen(v:        Pen | undefined)  { this.set_property_value(PenEditor.PenKey, v); }
@@ -93,7 +93,7 @@ export class PenEditor extends TemplatedControl
     public set MiterLimit(v: number)   { this.set_property_value(PenEditor.MiterLimitKey, v); }
 
     static {
-        Model.OverrideMetadata(PenEditor, Element.DefaultStyleKeyKey, { default_value: PenEditor });
+        MuralBase.OverrideMetadata(PenEditor, Element.DefaultStyleKeyKey, { default_value: PenEditor });
     }
 
     private _syncing = false;

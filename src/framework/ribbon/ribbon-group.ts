@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Visual,
     type ICommand,
     type PropertyDescriptor,
@@ -28,12 +28,12 @@ import { RibbonButton, RibbonToggleButton, RibbonButtonSize } from './ribbon-but
 // "command is set" — same reason ToolBar toggles its chevron width in code.
 export class RibbonGroup extends HeaderedItemsControl
 {
-    public static readonly LaunchCommandKey = Model.RegisterProperty<ICommand | undefined>(
+    public static readonly LaunchCommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
         RibbonGroup, 'LaunchCommand', undefined, MetaData.None);
 
     static
     {
-        Model.OverrideMetadata(RibbonGroup, Element.DefaultStyleKeyKey, { default_value: RibbonGroup });
+        MuralBase.OverrideMetadata(RibbonGroup, Element.DefaultStyleKeyKey, { default_value: RibbonGroup });
     }
 
     private _launcher: Button | undefined;

@@ -1,4 +1,4 @@
-// ─── SKETCH ──────────────────────────────────────────────────────────────
+﻿// ─── SKETCH ──────────────────────────────────────────────────────────────
 // Module — a capability provider that plugs into the app shell.
 //
 // A ShellModule is a DECLARATION of the elements that make up the
@@ -67,7 +67,7 @@
 
 import {
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     ResourceDictionary,
     ServiceLifetime,
@@ -98,15 +98,15 @@ interface ServiceRegistration
 
 // One capability a module contributes: a destination in the shell's root
 // navigation rail (Icon + Name) that names — via ServiceKey — the service whose
-// content is shown while the capability is active. A Model so it is DP-backed,
+// content is shown while the capability is active. A MuralBase so it is DP-backed,
 // bindable, and declarable in markup (like DiagramTool / CommandBase).
-export class Capability extends Model implements ICapability
+export class Capability extends MuralBase implements ICapability
 {
-    public static readonly NameKey = Model.RegisterProperty<string>(
+    public static readonly NameKey = MuralBase.RegisterProperty<string>(
         Capability, 'Name', '', MetaData.None);
 
     // Vector icon painted into the rail item (Shape[Geometry=Icon]).
-    public static readonly IconKey = Model.RegisterProperty<Geometry | undefined>(
+    public static readonly IconKey = MuralBase.RegisterProperty<Geometry | undefined>(
         Capability, 'Icon', undefined, MetaData.None);
 
     // The DI token (service class or ServiceKey) of the service that backs this
@@ -116,7 +116,7 @@ export class Capability extends Model implements ICapability
     // is active (NavigationService.ActiveService) and a `DataTemplate
     // [DataType=SomeService]` renders it in the content host. Replaces the
     // former eager Panel Visual: content is a service, not a mounted Visual.
-    public static readonly ServiceKeyKey = Model.RegisterProperty<ServiceToken<unknown> | undefined>(
+    public static readonly ServiceKeyKey = MuralBase.RegisterProperty<ServiceToken<unknown> | undefined>(
         Capability, 'ServiceKey', undefined, MetaData.None);
 
     public get Name(): string  { return this.get_property_value(Capability.NameKey); }
@@ -145,9 +145,9 @@ export class Capability extends Model implements ICapability
 //         Capability [ Name = "Shapes", ServiceKey = ShapesService ]
 //         Capability [ Name = "Layers", ServiceKey = LayersService ]
 //     }
-export class ShellModule extends Model implements IShellModule
+export class ShellModule extends MuralBase implements IShellModule
 {
-    public static readonly NameKey = Model.RegisterProperty<string>(
+    public static readonly NameKey = MuralBase.RegisterProperty<string>(
         ShellModule, 'Name', '', MetaData.None);
 
     // Declared capabilities. ObservableCollection so a module that contributes

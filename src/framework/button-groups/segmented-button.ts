@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -29,12 +29,12 @@ import { Selector, SelectionMode } from '../list/selector.js';
 export class SegmentedButton extends Selector
 {
     static {
-        Model.OverrideMetadata(SegmentedButton, Element.DefaultStyleKeyKey,
+        MuralBase.OverrideMetadata(SegmentedButton, Element.DefaultStyleKeyKey,
             { default_value: SegmentedButton });
         // SelectionMode = Single matches M3's "single-select segmented
         // button" variant. The "multi-select" variant just flips this
         // DP — no separate class, no separate chrome.
-        Model.OverrideMetadata(SegmentedButton, Selector.SelectionModeKey,
+        MuralBase.OverrideMetadata(SegmentedButton, Selector.SelectionModeKey,
             { default_value: SelectionMode.Single });
     }
 
@@ -149,16 +149,16 @@ function positionFor(index: number, count: number): SegmentedPosition
 // Position via `when (Position = …)` triggers to pick CornerRadius.
 export class SegmentedItem extends ContentControl
 {
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(
         SegmentedItem, 'IsSelected', false, MetaData.Render);
 
     // Read-only — only SegmentedButton.refreshPositions writes it.
-    private static readonly _PositionPriv = Model.RegisterReadOnlyProperty<SegmentedPosition>(
+    private static readonly _PositionPriv = MuralBase.RegisterReadOnlyProperty<SegmentedPosition>(
         SegmentedItem, 'Position', SegmentedPosition.Single, MetaData.Render);
     public static readonly PositionKey = SegmentedItem._PositionPriv;
 
     static {
-        Model.OverrideMetadata(SegmentedItem, Element.DefaultStyleKeyKey,
+        MuralBase.OverrideMetadata(SegmentedItem, Element.DefaultStyleKeyKey,
             { default_value: SegmentedItem });
     }
 

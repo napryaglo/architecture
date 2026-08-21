@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { PathGeometry } from '../../visual-engine/index.js';
@@ -27,7 +27,7 @@ import { parsePathData } from '../svg-icon-parser.js';
 // rendering blank.
 export class Path extends Shape
 {
-    public static readonly DataKey = Model.RegisterProperty<string>(
+    public static readonly DataKey = MuralBase.RegisterProperty<string>(
         Path, 'Data', '', MetaData.Render);
 
     public get Data(): string { return this.get_property_value(Path.DataKey); }

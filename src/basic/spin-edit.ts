@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Thickness,
     VerticalAlignment,
     Element,
@@ -80,13 +80,13 @@ export class SpinEdit extends TemplatedControl
     // BindsTwoWayByDefault: a numeric editor's committed Value round-trips to
     // its bound source without an explicit Mode, matching Slider.Value and the
     // WPF convention for value editors.
-    public static readonly ValueKey         = Model.RegisterProperty<number>( SpinEdit, 'Value',         0,                  MetaData.BindsTwoWayByDefault);
-    public static readonly MinimumKey       = Model.RegisterProperty<number>( SpinEdit, 'Minimum',       -Number.MAX_VALUE,  MetaData.None);
-    public static readonly MaximumKey       = Model.RegisterProperty<number>( SpinEdit, 'Maximum',       Number.MAX_VALUE,   MetaData.None);
-    public static readonly SmallChangeKey   = Model.RegisterProperty<number>( SpinEdit, 'SmallChange',   1,                  MetaData.None);
-    public static readonly LargeChangeKey   = Model.RegisterProperty<number>( SpinEdit, 'LargeChange',   10,                 MetaData.None);
-    public static readonly DecimalPlacesKey = Model.RegisterProperty<number>( SpinEdit, 'DecimalPlaces', 0,                  MetaData.None);
-    public static readonly IsReadOnlyKey    = Model.RegisterProperty<boolean>(SpinEdit, 'IsReadOnly',    false,              MetaData.None);
+    public static readonly ValueKey         = MuralBase.RegisterProperty<number>( SpinEdit, 'Value',         0,                  MetaData.BindsTwoWayByDefault);
+    public static readonly MinimumKey       = MuralBase.RegisterProperty<number>( SpinEdit, 'Minimum',       -Number.MAX_VALUE,  MetaData.None);
+    public static readonly MaximumKey       = MuralBase.RegisterProperty<number>( SpinEdit, 'Maximum',       Number.MAX_VALUE,   MetaData.None);
+    public static readonly SmallChangeKey   = MuralBase.RegisterProperty<number>( SpinEdit, 'SmallChange',   1,                  MetaData.None);
+    public static readonly LargeChangeKey   = MuralBase.RegisterProperty<number>( SpinEdit, 'LargeChange',   10,                 MetaData.None);
+    public static readonly DecimalPlacesKey = MuralBase.RegisterProperty<number>( SpinEdit, 'DecimalPlaces', 0,                  MetaData.None);
+    public static readonly IsReadOnlyKey    = MuralBase.RegisterProperty<boolean>(SpinEdit, 'IsReadOnly',    false,              MetaData.None);
 
     public get IsEditFocused(): boolean { return this.get_property_value(SpinEdit.IsEditFocusedKey); }
     public get IsEditHovered(): boolean { return this.get_property_value(SpinEdit.IsEditHoveredKey); }
@@ -95,15 +95,15 @@ export class SpinEdit extends TemplatedControl
     // swap PART_Border.Stroke — no imperative refreshChrome
     // routine reaching into the inner TextBox. The forwarding listeners
     // wired in the ctor keep these DPs synced.
-    private static readonly _IsEditFocusedPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsEditFocusedPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         SpinEdit, 'IsEditFocused', false, MetaData.None);
     public  static readonly IsEditFocusedKey  = SpinEdit._IsEditFocusedPriv;
-    private static readonly _IsEditHoveredPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsEditHoveredPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         SpinEdit, 'IsEditHovered', false, MetaData.None);
     public  static readonly IsEditHoveredKey  = SpinEdit._IsEditHoveredPriv;
 
     static {
-        Model.OverrideMetadata(SpinEdit, Element.DefaultStyleKeyKey, { default_value: SpinEdit });
+        MuralBase.OverrideMetadata(SpinEdit, Element.DefaultStyleKeyKey, { default_value: SpinEdit });
     }
 
     // Template parts — all resolved from DefaultSpinEdit in the

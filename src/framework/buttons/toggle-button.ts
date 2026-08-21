@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     type PointerEventArgs,
 } from '../../runtime/index.js';
 import { Button } from './button.js';
@@ -32,7 +32,7 @@ export class ToggleButton extends Button
     // TwoWay by default, so a `IsChecked = $Flag` binding round-trips (click →
     // source) without an explicit Mode. Matches TextBox.Text / Slider.Value /
     // Selector.SelectedItem, which already declare it.
-    public static readonly IsCheckedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsCheckedKey = MuralBase.RegisterProperty<boolean>(
         ToggleButton, 'IsChecked', false, MetaData.Render | MetaData.BindsTwoWayByDefault,
     );
 

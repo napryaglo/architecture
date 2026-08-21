@@ -1,4 +1,4 @@
-// SegmentedButtonVM — backs the segmented-button demo. Two scenarios:
+﻿// SegmentedButtonVM — backs the segmented-button demo. Two scenarios:
 //
 //   * Single-select timeframe picker (Day / Week / Month / Year). The
 //     selected segment binds to SelectedTimeframe.
@@ -7,17 +7,17 @@
 //
 // Each readout below the row shows the live VM state so the bind chain
 // is visible.
-import { Model, MetaData, ObservableCollection } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, ObservableCollection } from '@pragmatic-lab/mural/runtime';
 
-export class SegmentedButtonVM extends Model
+export class SegmentedButtonVM extends MuralBase
 {
-    static TimeframesKey        = Model.RegisterProperty<ObservableCollection<string> | undefined>(SegmentedButtonVM, 'Timeframes',        undefined, MetaData.None);
-    static SelectedTimeframeKey = Model.RegisterProperty<string | undefined>(SegmentedButtonVM, 'SelectedTimeframe', undefined, MetaData.None);
+    static TimeframesKey        = MuralBase.RegisterProperty<ObservableCollection<string> | undefined>(SegmentedButtonVM, 'Timeframes',        undefined, MetaData.None);
+    static SelectedTimeframeKey = MuralBase.RegisterProperty<string | undefined>(SegmentedButtonVM, 'SelectedTimeframe', undefined, MetaData.None);
 
-    static FormatChoicesKey     = Model.RegisterProperty<ObservableCollection<string> | undefined>(SegmentedButtonVM, 'FormatChoices',     undefined, MetaData.None);
-    static SelectedFormatsKey   = Model.RegisterProperty<ObservableCollection<string> | undefined>(SegmentedButtonVM, 'SelectedFormats',   undefined, MetaData.None);
+    static FormatChoicesKey     = MuralBase.RegisterProperty<ObservableCollection<string> | undefined>(SegmentedButtonVM, 'FormatChoices',     undefined, MetaData.None);
+    static SelectedFormatsKey   = MuralBase.RegisterProperty<ObservableCollection<string> | undefined>(SegmentedButtonVM, 'SelectedFormats',   undefined, MetaData.None);
 
-    static SelectedFormatsLabelKey = Model.RegisterProperty<string>(SegmentedButtonVM, 'SelectedFormatsLabel', '', MetaData.None);
+    static SelectedFormatsLabelKey = MuralBase.RegisterProperty<string>(SegmentedButtonVM, 'SelectedFormatsLabel', '', MetaData.None);
 
     get Timeframes():             ObservableCollection<string> | undefined { return this.get_property_value(SegmentedButtonVM.TimeframesKey); }
     set Timeframes(v:            ObservableCollection<string> | undefined) { this.set_property_value(SegmentedButtonVM.TimeframesKey, v); }

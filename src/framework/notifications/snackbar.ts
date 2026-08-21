@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element, Visual } from '../../runtime/index.js';
 import { ContentControl } from '../base/content-control.js';
 
 // M3 Snackbar — transient single-line message that floats at the
@@ -21,14 +21,14 @@ import { ContentControl } from '../base/content-control.js';
 // per M3 spec).
 export class Snackbar extends ContentControl
 {
-    public static readonly ActionsKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly ActionsKey = MuralBase.RegisterProperty<Visual | undefined>(
         Snackbar, 'Actions', undefined, MetaData.Render);
 
     public get Actions(): Visual | undefined { return this.get_property_value(Snackbar.ActionsKey); }
     public set Actions(v: Visual | undefined) { this.set_property_value(Snackbar.ActionsKey, v); }
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             Snackbar, Element.DefaultStyleKeyKey,
             { default_value: Snackbar });
     }

@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element, Visual } from '../../runtime/index.js';
 import { ContentControl } from '../base/content-control.js';
 
 // Material 3 Card variants. Each variant ships its own ControlTemplate
@@ -55,7 +55,7 @@ export enum CardVariant
 //   Card [Variant = Outlined] { TextBlock [Text = "Hello"] }
 export class Card extends ContentControl
 {
-    public static readonly VariantKey = Model.RegisterProperty<CardVariant>(
+    public static readonly VariantKey = MuralBase.RegisterProperty<CardVariant>(
         Card, 'Variant', CardVariant.Filled, MetaData.None,
     );
 
@@ -64,7 +64,7 @@ export class Card extends ContentControl
         // Card instances resolve their own default Style — the theme
         // dictionary holds Style[TargetType=Card] keyed by the Card
         // class function.
-        Model.OverrideMetadata(Card, Element.DefaultStyleKeyKey, { default_value: Card });
+        MuralBase.OverrideMetadata(Card, Element.DefaultStyleKeyKey, { default_value: Card });
     }
 
     constructor(content?: Visual)

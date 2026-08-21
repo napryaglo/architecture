@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
 } from '../../../runtime/index.js';
 import {
     type Brush,
@@ -22,11 +22,11 @@ import {
 // This is the v1 shape of the deferred `ConnectorCapDataContext` from
 // § 3.6 of [docs/connectors.md](../../../../docs/connectors.md):
 // just the paint surface, no per-instance geometry data yet.
-export class ConnectorCapDataContext extends Model
+export class ConnectorCapDataContext extends MuralBase
 {
-    public static readonly BrushKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly BrushKey = MuralBase.RegisterProperty<Brush | undefined>(
         ConnectorCapDataContext, 'Brush', undefined, MetaData.None);
-    public static readonly PenKey = Model.RegisterProperty<Pen | undefined>(
+    public static readonly PenKey = MuralBase.RegisterProperty<Pen | undefined>(
         ConnectorCapDataContext, 'Pen', undefined, MetaData.None);
 
     public get Brush(): Brush | undefined { return this.get_property_value(ConnectorCapDataContext.BrushKey); }

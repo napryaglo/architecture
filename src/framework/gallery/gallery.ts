@@ -1,5 +1,5 @@
-import {
-    Model,
+﻿import {
+    MuralBase,
     Visual,
 } from '../../runtime/index.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
@@ -44,7 +44,7 @@ export class Gallery extends ItemsControl
 {
     static
     {
-        Model.OverrideMetadata(Gallery, ItemsControl.ItemsPanelKey, { default_value: verticalMenuPanel });
+        MuralBase.OverrideMetadata(Gallery, ItemsControl.ItemsPanelKey, { default_value: verticalMenuPanel });
     }
 
     // Composition hook: a host that CONTAINS a gallery (rather than

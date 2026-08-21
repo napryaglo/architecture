@@ -1,17 +1,17 @@
-import { Binding, BindingMode } from './binding.js';
+﻿import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
-import { Model } from '../model.js';
+import { MuralBase } from '../model.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
-// Internal watcher Model — same shape as DataContextWatcher /
+// Internal watcher MuralBase — same shape as DataContextWatcher /
 // TemplatedParentWatcher. Holds the resolved ancestor-property value
 // in a single `Value` slot the outer Binding reads from.
-class AncestorWatcher extends Model
+class AncestorWatcher extends MuralBase
 {
-    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
         AncestorWatcher, 'Value', undefined, MetaData.None);
 
     public get Value(): unknown { return this.get_property_value(AncestorWatcher.ValueKey); }

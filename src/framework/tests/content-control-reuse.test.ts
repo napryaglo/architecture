@@ -1,7 +1,7 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
-import { Model, type Visual } from '../../runtime/index.js';
+import { MuralBase, type Visual } from '../../runtime/index.js';
 import { Border, ContentPresenter, ControlTemplate, DataTemplate, TextBlock } from '../../basic/index.js';
 import { ContentControl } from '@pragmatic-lab/mural/framework';
 
@@ -16,7 +16,7 @@ import { ContentControl } from '@pragmatic-lab/mural/framework';
 // switching away and back preserves state and skips the rebuild. The WeakMap is
 // keyed by the content object, so it survives a clear (the object is still
 // referenced by the nav service) and re-presenting it returns the same view.
-class Doc extends Model
+class Doc extends MuralBase
 {
     public mounted = 0;
     public OnViewMounted(_v: Visual): void { this.mounted++; }

@@ -1,7 +1,7 @@
-import {
+﻿import {
     ApplicationService,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     ServiceBase,
     ServiceKey,
@@ -26,7 +26,7 @@ export class CommandRegistry extends ServiceBase
 {
     public static readonly Key = new ServiceKey<CommandRegistry>('CommandRegistry');
 
-    public static readonly CommandsKey = Model.RegisterProperty<ObservableCollection<CommandDefinition>>(
+    public static readonly CommandsKey = MuralBase.RegisterProperty<ObservableCollection<CommandDefinition>>(
         CommandRegistry, 'Commands',
         undefined as unknown as ObservableCollection<CommandDefinition>, MetaData.None);
 

@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile, instantiate } from '../compile.js';
 import { DEFAULT_SYMBOLS } from '../symbol-table.js';
@@ -139,17 +139,17 @@ describe('instantiate — .services: inline config seeds + injects', () => {
 
     // A service with a settable DP (seed target) and a slot for an injected
     // collaborator (injection target). Both ctors take the provider.
-    class Greeter extends runtime.Model {
+    class Greeter extends runtime.MuralBase {
         public static readonly Key = new ServiceKey<Greeter>('Greeter');
-        public static readonly MsgKey = runtime.Model.RegisterProperty<string>(
+        public static readonly MsgKey = runtime.MuralBase.RegisterProperty<string>(
             Greeter, 'Msg', '', runtime.MetaData.None);
         constructor(_p: unknown) { super(); }
         public get Msg(): string { return this.get_property_value(Greeter.MsgKey); }
         public set Msg(v: string) { this.set_property_value(Greeter.MsgKey, v); }
     }
-    class Consumer extends runtime.Model {
+    class Consumer extends runtime.MuralBase {
         public static readonly Key = new ServiceKey<Consumer>('Consumer');
-        public static readonly DepKey = runtime.Model.RegisterProperty<unknown>(
+        public static readonly DepKey = runtime.MuralBase.RegisterProperty<unknown>(
             Consumer, 'Dep', undefined, runtime.MetaData.None);
         constructor(_p: unknown) { super(); }
         public get Dep(): unknown { return this.get_property_value(Consumer.DepKey); }

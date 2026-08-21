@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -6,7 +6,7 @@ import {
     Color,
     DynamicResource,
     MetaData,
-    Model,
+    MuralBase,
 } from '../index.js';
 import { Border } from '../../basic/border.js';
 import { SolidColorBrush, HeadlessTarget } from '../../visual-engine/index.js';
@@ -95,8 +95,8 @@ describe('§ 12.1 — DynamicResource picks up an ancestor\'s freshly-allocated 
     // couldn't reach an app-level dictionary, so the binding must re-wire once
     // an Application becomes current (then a later `merge` / Set resolves it).
     test('binds before any Application, resolves once one appears + Set', () => {
-        class Holder extends Model {
-            public static readonly ValueKey = Model.RegisterProperty<unknown>(
+        class Holder extends MuralBase {
+            public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
                 Holder, 'Value', undefined, MetaData.None);
             public get Value(): unknown { return this.get_property_value(Holder.ValueKey); }
         }

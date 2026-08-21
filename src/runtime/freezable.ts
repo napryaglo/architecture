@@ -1,11 +1,11 @@
-import { Model, PropertyKey } from './model.js';
+﻿import { MuralBase, PropertyKey } from './model.js';
 import { PropertyValueSource } from './binding/effective-value.js';
 import { ObservableCollection } from './observable-collection.js';
 import type { PropertyDescriptor } from './property-descriptor.js';
 
 // Freezable — WPF `System.Windows.Freezable` analog, and the base for
 // mural's shareable value-like Models (Brush, Pen, Geometry, Transform).
-// It layers two capabilities onto Model that a raw Model doesn't have:
+// It layers two capabilities onto MuralBase that a raw MuralBase doesn't have:
 //
 //   1. CHANGE NOTIFICATION WITH MULTIPLE OWNERS. A Freezable tracks the
 //      set of "owners" registered against it and fires every one whenever
@@ -31,7 +31,7 @@ import type { PropertyDescriptor } from './property-descriptor.js';
 // Freezables (Pen.Brush, Brush.Transform, GeometryGroup.Children, a
 // TransformGroup's Children) are tracked automatically so their inner
 // changes bubble up to the same owners.
-export abstract class Freezable extends Model
+export abstract class Freezable extends MuralBase
 {
     private _frozen = false;
 
@@ -136,7 +136,7 @@ export abstract class Freezable extends Model
         return this.Clone().Freeze();
     }
 
-    // ── Model write-path guard ───────────────────────────────────────
+    // ── MuralBase write-path guard ───────────────────────────────────────
     // Every public setter on a concrete Freezable DP routes through
     // set_property_value; animation through SetAnimatedValue. Guard both so
     // a frozen instance rejects mutation the way WPF's WritePreamble does.
@@ -243,7 +243,7 @@ export abstract class Freezable extends Model
     protected collectFreezableChildren(): Freezable[]
     {
         const out: Freezable[] = [];
-        for (const desc of Model.EnumerateProperties(this.constructor))
+        for (const desc of MuralBase.EnumerateProperties(this.constructor))
         {
             const key = new PropertyKey(desc);
             if (this.GetValueSource(key) === PropertyValueSource.Default) continue;
@@ -280,7 +280,7 @@ export abstract class Freezable extends Model
     // override `cloneExtra` to copy it.
     protected copyFrom(source: this): void
     {
-        for (const desc of Model.EnumerateProperties(source.constructor))
+        for (const desc of MuralBase.EnumerateProperties(source.constructor))
         {
             const key = new PropertyKey(desc);
             if (source.GetValueSource(key) === PropertyValueSource.Default) continue;

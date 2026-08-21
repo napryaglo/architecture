@@ -1,4 +1,4 @@
-// ServiceBinding re-resolves when the target's inherited ServiceScope
+﻿// ServiceBinding re-resolves when the target's inherited ServiceScope
 // changes. A subtree re-parented under a different provider must rebind to
 // THAT provider's service instance — not stay pinned to the scope it first
 // resolved (the §24 "relocatable provider" follow-up).
@@ -6,14 +6,14 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Model, MetaData, ServiceProvider, ServiceKey, Application } from '../index.js';
+import { MuralBase, MetaData, ServiceProvider, ServiceKey, Application } from '../index.js';
 import { ServiceBinding } from '../binding/element-name-binding.js';
 
 // A service exposing one bindable DP.
-class Svc extends Model
+class Svc extends MuralBase
 {
     public static readonly Key = new ServiceKey<Svc>('Svc');
-    public static readonly MsgKey = Model.RegisterProperty<string>(Svc, 'Msg', '', MetaData.None);
+    public static readonly MsgKey = MuralBase.RegisterProperty<string>(Svc, 'Msg', '', MetaData.None);
     public get Msg(): string { return this.get_property_value(Svc.MsgKey); }
     public set Msg(v: string) { this.set_property_value(Svc.MsgKey, v); }
     constructor(msg: string) { super(); this.Msg = msg; }
@@ -21,11 +21,11 @@ class Svc extends Model
 
 // A bind target carrying a `ServiceScope` slot (the inherited DP's role) and
 // a plain bound DP. ServiceBinding reads/watches `ServiceScope` by name.
-class Target extends Model
+class Target extends MuralBase
 {
-    public static readonly ServiceScopeKey = Model.RegisterProperty<unknown>(
+    public static readonly ServiceScopeKey = MuralBase.RegisterProperty<unknown>(
         Target, 'ServiceScope', undefined, MetaData.None);
-    public static readonly TextKey = Model.RegisterProperty<string>(
+    public static readonly TextKey = MuralBase.RegisterProperty<string>(
         Target, 'Text', '', MetaData.None);
     public get ServiceScope(): unknown { return this.get_property_value(Target.ServiceScopeKey); }
     public set ServiceScope(v: unknown) { this.set_property_value(Target.ServiceScopeKey, v); }

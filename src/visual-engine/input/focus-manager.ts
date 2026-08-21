@@ -1,4 +1,4 @@
-// WPF-parity FocusManager façade (System.Windows.Input.FocusManager).
+﻿// WPF-parity FocusManager façade (System.Windows.Input.FocusManager).
 //
 // WPF separates KEYBOARD focus (the single element receiving key events,
 // = Keyboard.FocusedElement) from LOGICAL focus (per focus scope: the
@@ -13,7 +13,7 @@
 //     keyboard focus when called with no scope).
 //   * SetFocusedElement(scope, element) — record + move focus.
 
-import { Model } from '../../runtime/model.js';
+import { MuralBase } from '../../runtime/model.js';
 import { MetaData } from '../../runtime/metadata.js';
 import type { Element } from '../element.js';
 import { Keyboard } from './keyboard.js';
@@ -21,12 +21,12 @@ import { Keyboard } from './keyboard.js';
 export class FocusManager
 {
     // Attached: marks an element a focus scope.
-    public static readonly IsFocusScopeKey = Model.RegisterAttachedProperty<boolean>(
+    public static readonly IsFocusScopeKey = MuralBase.RegisterAttachedProperty<boolean>(
         FocusManager, 'IsFocusScope', false, MetaData.None);
 
     // Attached: the logical-focus element within a focus scope. Stored on
     // the scope element; read back by GetFocusedElement(scope).
-    public static readonly FocusedElementKey = Model.RegisterAttachedProperty<Element | undefined>(
+    public static readonly FocusedElementKey = MuralBase.RegisterAttachedProperty<Element | undefined>(
         FocusManager, 'FocusedElement', undefined, MetaData.None);
 
     public static GetIsFocusScope(element: Element): boolean

@@ -1,9 +1,9 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     MetaData,
-    Model,
+    MuralBase,
     PropertyValueSource,
     validateTargetTypes,
 } from '../index.js';
@@ -13,11 +13,11 @@ import {
 describe('§ 15.1 — RegisterAttachedProperty.validate_target', () => {
 
     test('predicate-accepted targets allow the write', () => {
-        class HostA extends Model {}
-        class HostB extends Model {}
+        class HostA extends MuralBase {}
+        class HostB extends MuralBase {}
         class OwnerA {}
 
-        const key = Model.RegisterAttachedProperty<number>(
+        const key = MuralBase.RegisterAttachedProperty<number>(
             OwnerA, 'TestProp151Accept', 0, MetaData.None,
             undefined,
             undefined,
@@ -30,11 +30,11 @@ describe('§ 15.1 — RegisterAttachedProperty.validate_target', () => {
     });
 
     test('predicate-rejected targets throw on set', () => {
-        class HostA extends Model {}
-        class HostB extends Model {}
+        class HostA extends MuralBase {}
+        class HostB extends MuralBase {}
         class OwnerB {}
 
-        const key = Model.RegisterAttachedProperty<number>(
+        const key = MuralBase.RegisterAttachedProperty<number>(
             OwnerB, 'TestProp151Reject', 0, MetaData.None,
             undefined,
             undefined,
@@ -45,11 +45,11 @@ describe('§ 15.1 — RegisterAttachedProperty.validate_target', () => {
             /not valid on target of type 'HostB'/);
     });
 
-    test('attached properties without validate_target accept any Model (legacy behavior)', () => {
-        class HostX extends Model {}
+    test('attached properties without validate_target accept any MuralBase (legacy behavior)', () => {
+        class HostX extends MuralBase {}
         class OwnerC {}
 
-        const key = Model.RegisterAttachedProperty<number>(
+        const key = MuralBase.RegisterAttachedProperty<number>(
             OwnerC, 'TestProp151NoValidate', 0, MetaData.None,
         );
         const h = new HostX();
@@ -58,12 +58,12 @@ describe('§ 15.1 — RegisterAttachedProperty.validate_target', () => {
     });
 
     test('validateTargetTypes accepts any one of several classes', () => {
-        class HostA extends Model {}
-        class HostB extends Model {}
-        class HostC extends Model {}
+        class HostA extends MuralBase {}
+        class HostB extends MuralBase {}
+        class HostC extends MuralBase {}
         class OwnerD {}
 
-        const key = Model.RegisterAttachedProperty<number>(
+        const key = MuralBase.RegisterAttachedProperty<number>(
             OwnerD, 'TestProp151Multi', 0, MetaData.None,
             undefined, undefined,
             validateTargetTypes(HostA, HostB),
@@ -74,11 +74,11 @@ describe('§ 15.1 — RegisterAttachedProperty.validate_target', () => {
     });
 
     test('subclass instances are accepted when a parent class is allowed', () => {
-        class Parent extends Model {}
+        class Parent extends MuralBase {}
         class Child  extends Parent {}
         class OwnerE {}
 
-        const key = Model.RegisterAttachedProperty<number>(
+        const key = MuralBase.RegisterAttachedProperty<number>(
             OwnerE, 'TestProp151Subclass', 0, MetaData.None,
             undefined, undefined,
             validateTargetTypes(Parent),
@@ -97,48 +97,48 @@ describe('§ 15.2 — global inheritable-descriptor registry', () => {
 
     test('an inheritable attached property is added to the global registry on registration', () => {
         class OwnerInherits1 {}
-        const before = Model._getInheritableDescriptors().size;
+        const before = MuralBase._getInheritableDescriptors().size;
 
-        Model.RegisterAttachedProperty<string>(
+        MuralBase.RegisterAttachedProperty<string>(
             OwnerInherits1, 'TestProp152Inherits', 'default', MetaData.Inherits);
 
-        const after = Model._getInheritableDescriptors().size;
+        const after = MuralBase._getInheritableDescriptors().size;
         assert.equal(after, before + 1);
     });
 
     test('a non-inheritable property is NOT added to the registry', () => {
         class OwnerNoInherit {}
-        const before = Model._getInheritableDescriptors().size;
+        const before = MuralBase._getInheritableDescriptors().size;
 
-        Model.RegisterAttachedProperty<string>(
+        MuralBase.RegisterAttachedProperty<string>(
             OwnerNoInherit, 'TestProp152NoInherit', 'default', MetaData.None);
 
-        const after = Model._getInheritableDescriptors().size;
+        const after = MuralBase._getInheritableDescriptors().size;
         assert.equal(after, before, 'non-Inherits properties skip the registry');
     });
 
     test('descriptor stays unique — re-registration of same (owner, property) is idempotent', () => {
         class OwnerIdem {}
-        Model.RegisterAttachedProperty<string>(
+        MuralBase.RegisterAttachedProperty<string>(
             OwnerIdem, 'TestProp152Idem', 'x', MetaData.Inherits);
-        const sizeAfter1 = Model._getInheritableDescriptors().size;
+        const sizeAfter1 = MuralBase._getInheritableDescriptors().size;
 
         // Re-registering the same descriptor (idempotent path in RegisterProperty
         // when the (owner, property) pair already exists). The registry should
         // NOT grow.
-        Model.RegisterAttachedProperty<string>(
+        MuralBase.RegisterAttachedProperty<string>(
             OwnerIdem, 'TestProp152Idem', 'x', MetaData.Inherits);
-        const sizeAfter2 = Model._getInheritableDescriptors().size;
+        const sizeAfter2 = MuralBase._getInheritableDescriptors().size;
         assert.equal(sizeAfter1, sizeAfter2);
     });
 });
 
 // § 15.3 — RemoveValue drops the EVD slot entirely.
-describe('§ 15.3 — Model.RemoveValue', () => {
+describe('§ 15.3 — MuralBase.RemoveValue', () => {
 
     test('returns true and frees the slot on first call; false on subsequent calls', () => {
-        class Host153A extends Model {}
-        const key = Model.RegisterProperty<number>(Host153A, 'P153A', 0, MetaData.None);
+        class Host153A extends MuralBase {}
+        const key = MuralBase.RegisterProperty<number>(Host153A, 'P153A', 0, MetaData.None);
         const m = new Host153A();
         m.set_property_value(key, 7);
         assert.equal(m.RemoveValue(key), true, 'first call removes the slot');
@@ -146,8 +146,8 @@ describe('§ 15.3 — Model.RemoveValue', () => {
     });
 
     test('after RemoveValue the property reads as default', () => {
-        class Host153B extends Model {}
-        const key = Model.RegisterProperty<number>(Host153B, 'P153B', 99, MetaData.None);
+        class Host153B extends MuralBase {}
+        const key = MuralBase.RegisterProperty<number>(Host153B, 'P153B', 99, MetaData.None);
         const m = new Host153B();
         m.set_property_value(key, 7);
         assert.equal(m.get_property_value(key), 7);
@@ -157,8 +157,8 @@ describe('§ 15.3 — Model.RemoveValue', () => {
     });
 
     test('GetValueSource returns Default after RemoveValue', () => {
-        class Host153C extends Model {}
-        const key = Model.RegisterProperty<number>(Host153C, 'P153C', 0, MetaData.None);
+        class Host153C extends MuralBase {}
+        const key = MuralBase.RegisterProperty<number>(Host153C, 'P153C', 0, MetaData.None);
         const m = new Host153C();
         m.set_property_value(key, 1);
         assert.equal(m.GetValueSource(key), PropertyValueSource.LocalValue);
@@ -167,8 +167,8 @@ describe('§ 15.3 — Model.RemoveValue', () => {
     });
 
     test('a fresh write after RemoveValue creates a brand-new EVD slot', () => {
-        class Host153D extends Model {}
-        const key = Model.RegisterProperty<number>(Host153D, 'P153D', 0, MetaData.None);
+        class Host153D extends MuralBase {}
+        const key = MuralBase.RegisterProperty<number>(Host153D, 'P153D', 0, MetaData.None);
         const m = new Host153D();
         m.set_property_value(key, 1);
         m.RemoveValue(key);
@@ -177,8 +177,8 @@ describe('§ 15.3 — Model.RemoveValue', () => {
     });
 
     test('RemoveValue on a read-only property requires the privileged path', () => {
-        class Host153E extends Model {}
-        const key = Model.RegisterReadOnlyProperty<number>(Host153E, 'P153E', 0, MetaData.None);
+        class Host153E extends MuralBase {}
+        const key = MuralBase.RegisterReadOnlyProperty<number>(Host153E, 'P153E', 0, MetaData.None);
         const m = new Host153E();
         // The ordinary RemoveValue rejects the read-only descriptor —
         // parallel to ClearValue's read-only gate.

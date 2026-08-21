@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -29,7 +29,7 @@ import { Shape } from './shape.js';
 // top arc and may flatten the silhouette.
 export class Ghostish extends Shape
 {
-    public static readonly ScallopCountKey    = Model.RegisterProperty<number>(           Ghostish, 'ScallopCount',    3,         MetaData.Render);
+    public static readonly ScallopCountKey    = MuralBase.RegisterProperty<number>(           Ghostish, 'ScallopCount',    3,         MetaData.Render);
 
     public get ScallopCount(): number { return this.get_property_value(Ghostish.ScallopCountKey); }
     public set ScallopCount(v: number) { this.set_property_value(Ghostish.ScallopCountKey, v); }

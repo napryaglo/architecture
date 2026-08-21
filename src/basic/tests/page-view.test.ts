@@ -1,8 +1,8 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, Model, Rect, Size, Visual } from '../../runtime/index.js';
+import { Application, MuralBase, Rect, Size, Visual } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { Border } from '../border.js';
 import { PageView } from '../page-view.js';
@@ -135,12 +135,12 @@ describe('PageView — Content swap', () => {
 // matching DataTemplate slots that very Visual as Content — so naively
 // re-applying the template on nav-back would re-attach an
 // already-parented Visual and throw "already has a logical parent".
-class PersistentOwner extends Model
+class PersistentOwner extends MuralBase
 {
     public readonly node = new Border();   // built ONCE, lives on the VM
 }
 
-describe('PageView — Model content memoisation (nav-away-and-back)', () => {
+describe('PageView — MuralBase content memoisation (nav-away-and-back)', () => {
     let applies = 0;
 
     beforeEach(() => {
@@ -157,7 +157,7 @@ describe('PageView — Model content memoisation (nav-away-and-back)', () => {
         Application.current!.Resources.Set(PersistentOwner, tpl);
     });
 
-    test('navigating away from a Model demo and back reuses the view — no re-attach throw', () => {
+    test('navigating away from a MuralBase demo and back reuses the view — no re-attach throw', () => {
         const pv    = new PageView();
         const model = new PersistentOwner();
 
@@ -179,7 +179,7 @@ describe('PageView — Model content memoisation (nav-away-and-back)', () => {
             'node keeps its original logical parent (same tree reused)');
     });
 
-    test('a DIFFERENT Model instance still resolves its own fresh view', () => {
+    test('a DIFFERENT MuralBase instance still resolves its own fresh view', () => {
         const pv = new PageView();
         const a  = new PersistentOwner();
         const b  = new PersistentOwner();
@@ -187,9 +187,9 @@ describe('PageView — Model content memoisation (nav-away-and-back)', () => {
         pv.Content = a;
         assert.equal(applies, 1);
         pv.Content = b;                           // distinct identity → fresh resolve
-        assert.equal(applies, 2, 'a different Model gets its own view');
+        assert.equal(applies, 2, 'a different MuralBase gets its own view');
         pv.Content = a;                           // back to a → cached, no re-apply
-        assert.equal(applies, 2, 'returning to the first Model reuses its cached view');
+        assert.equal(applies, 2, 'returning to the first MuralBase reuses its cached view');
     });
 });
 

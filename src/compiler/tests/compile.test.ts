@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile, EmitError } from '../compile.js';
 
@@ -989,7 +989,7 @@ describe('compile — deferred & errored features', () => {
 });
 
 describe('compile — ShellModule (module declaration)', () => {
-    // A module file is a top-level ShellModule (a Model, not a Visual) — it
+    // A module file is a top-level ShellModule (a MuralBase, not a Visual) — it
     // exports the fragment `create()`. Its Capabilities are declarative
     // children (list slot → AddChild → Capabilities.Add); each Capability is
     // attribute-only (Name / Icon / ServiceKey — its content is a SERVICE named

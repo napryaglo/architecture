@@ -1,11 +1,11 @@
-// connectorCapOptions() — the standard cap dropdown list for a
+﻿// connectorCapOptions() — the standard cap dropdown list for a
 // ShapeFormatControl, and the ShapeFormatControl cap DP contract the
 // FormatMirror / demo wiring depends on.
 
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Application, Model } from '../../../runtime/index.js';
+import { Application, MuralBase } from '../../../runtime/index.js';
 import { connectorCapOptions } from '../caps/connector-cap-options.js';
 import { CapOption } from '../../formatting/cap-option.js';
 import { ShapeFormatControl } from '../../formatting/shape-format-control.js';
@@ -59,7 +59,7 @@ describe('Diagram.ConnectorCapOptions — bindable DP', () => {
         // The markup binding (ElementName / DataContext) only walks
         // registered properties — a plain getter would resolve to
         // undefined and leave the dropdowns empty.
-        assert.ok(Model.HasProperty(Diagram, 'ConnectorCapOptions'));
+        assert.ok(MuralBase.HasProperty(Diagram, 'ConnectorCapOptions'));
     });
 
     test('is populated with the 6-row catalog from the ctor', () => {

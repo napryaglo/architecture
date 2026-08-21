@@ -1,9 +1,9 @@
-import type { MetaData } from './metadata.js';
-import type { Model } from './model.js';
+﻿import type { MetaData } from './metadata.js';
+import type { MuralBase } from './model.js';
 
 // Invoked to coerce a property's base value into its allowed range,
 // returning the value that becomes the coerced entry.
-export type CoerceValue = (model: Model, base_value: any) => any;
+export type CoerceValue = (model: MuralBase, base_value: any) => any;
 
 // Invoked to gate a write at the property boundary. `true` accepts the
 // value; `false` rejects it and the set throws. Runs BEFORE coerce on
@@ -13,14 +13,14 @@ export type CoerceValue = (model: Model, base_value: any) => any;
 // companion).
 export type ValidateValue = (value: any) => boolean;
 
-// Invoked when an attached property is set on a Model whose constructor
+// Invoked when an attached property is set on a MuralBase whose constructor
 // chain doesn't reach the property's registering class. Returns `true`
 // if the target is allowed; `false` rejects and the set throws with a
 // "property only valid on …" message. Use the `validateTargetTypes`
 // helper to construct the common "instance of one of these classes"
 // predicate. Optional — descriptors without a validate_target accept
-// any Model (the existing behavior pre-§ 15.1).
-export type ValidateTarget = (target: Model) => boolean;
+// any MuralBase (the existing behavior pre-§ 15.1).
+export type ValidateTarget = (target: MuralBase) => boolean;
 
 // Per-class metadata options. Root registrations must supply default_value
 // and meta_data; overrides may omit any field, in which case reads fall
@@ -36,7 +36,7 @@ export interface PropertyMetadata
 
 // Class-level schema entry for a registered property. One descriptor per
 // (class, property) pair; subclasses can chain a descriptor with a parent
-// reference via Model.OverrideMetadata so unspecified fields fall through.
+// reference via MuralBase.OverrideMetadata so unspecified fields fall through.
 //
 // `propertyClass` is the class this particular descriptor is filed under
 // (the class passed to RegisterProperty or OverrideMetadata). `RootOwner`
@@ -99,7 +99,7 @@ export class PropertyDescriptor
     }
 
     // The per-instance storage key `${RootOwner.name}.${name}` — identical to
-    // `Model.compose_key(descriptor.RootOwner, descriptor.Name)` but computed
+    // `MuralBase.compose_key(descriptor.RootOwner, descriptor.Name)` but computed
     // once and cached. RootOwner and name are fixed at construction, so this is
     // safe to memoise; it removes a template-string allocation from every DP
     // read/write (a top CPU hotspot in the render walk).
@@ -143,7 +143,7 @@ export class PropertyDescriptor
 // one of the supplied classes (or any of their subclasses, since
 // `instanceof` walks the prototype chain). Useful for restricting
 // attached properties to families of Visuals — e.g.,
-// `Grid.SetRow(visual, n)` should only accept `Visual` (not raw Model).
+// `Grid.SetRow(visual, n)` should only accept `Visual` (not raw MuralBase).
 export function validateTargetTypes(
     ...classes: readonly Function[]
 ): ValidateTarget
@@ -156,11 +156,11 @@ export function validateTargetTypes(
         // throwing keeps the registration site forgiving.
         return _ => true;
     }
-    return (target: Model): boolean =>
+    return (target: MuralBase): boolean =>
     {
         for (const c of classes)
         {
-            if (target instanceof (c as new (...args: any[]) => Model)) return true;
+            if (target instanceof (c as new (...args: any[]) => MuralBase)) return true;
         }
         return false;
     };

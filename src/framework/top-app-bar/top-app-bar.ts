@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     Element, Visual,
     type CollectionChange,
@@ -62,16 +62,16 @@ export enum TopAppBarVariant
 // Variant DP picks the template; default is Small.
 export class TopAppBar extends TemplatedControl
 {
-    public static readonly VariantKey = Model.RegisterProperty<TopAppBarVariant>(
+    public static readonly VariantKey = MuralBase.RegisterProperty<TopAppBarVariant>(
         TopAppBar, 'Variant', TopAppBarVariant.Small, MetaData.None,
     );
-    public static readonly NavigationIconKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly NavigationIconKey = MuralBase.RegisterProperty<Visual | undefined>(
         TopAppBar, 'NavigationIcon', undefined, MetaData.None,
     );
-    public static readonly TitleKey = Model.RegisterProperty<string>(
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(
         TopAppBar, 'Title', '', MetaData.None,
     );
-    public static readonly ActionsKey = Model.RegisterProperty<ObservableCollection<Visual>>(
+    public static readonly ActionsKey = MuralBase.RegisterProperty<ObservableCollection<Visual>>(
         TopAppBar, 'Actions', undefined as unknown as ObservableCollection<Visual>,
         MetaData.None,
     );
@@ -84,14 +84,14 @@ export class TopAppBar extends TemplatedControl
     // Undefined (the default) leaves the bar at @Surface always — the
     // appropriate behaviour for the demo platform's static header
     // before scroll integration ships per-screen.
-    public static readonly ScrollSourceKey = Model.RegisterProperty<ScrollViewer | undefined>(
+    public static readonly ScrollSourceKey = MuralBase.RegisterProperty<ScrollViewer | undefined>(
         TopAppBar, 'ScrollSource', undefined, MetaData.None,
     );
 
     // Read-only mirror of `ScrollSource.IsScrolled` (or false when no
     // source is set). Template triggers reach this for the scroll-tint
     // Fill flip.
-    private static readonly _IsScrolledPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsScrolledPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         TopAppBar, 'IsScrolled', false, MetaData.None,
     );
     public static readonly IsScrolledKey = TopAppBar._IsScrolledPriv;
@@ -109,14 +109,14 @@ export class TopAppBar extends TemplatedControl
     // the slot). Driving EffectiveVariant as the trigger key sidesteps
     // that limitation entirely — there's only ever one active trigger
     // matching the current EffectiveVariant.
-    private static readonly _EffectiveVariantPriv = Model.RegisterReadOnlyProperty<TopAppBarVariant>(
+    private static readonly _EffectiveVariantPriv = MuralBase.RegisterReadOnlyProperty<TopAppBarVariant>(
         TopAppBar, 'EffectiveVariant', TopAppBarVariant.Small, MetaData.None,
     );
     public static readonly EffectiveVariantKey = TopAppBar._EffectiveVariantPriv;
 
     static
     {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             TopAppBar, Element.DefaultStyleKeyKey,
             { default_value: TopAppBar },
         );

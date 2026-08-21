@@ -1,4 +1,4 @@
-import { MetaData, Model, Element } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element } from '../../runtime/index.js';
 import { ContentControl } from '../base/content-control.js';
 
 // M3 Bottom Sheet — surface that rises from the bottom edge, used to
@@ -25,7 +25,7 @@ import { ContentControl } from '../base/content-control.js';
 export class BottomSheet extends ContentControl
 {
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             BottomSheet, Element.DefaultStyleKeyKey,
             { default_value: BottomSheet });
     }

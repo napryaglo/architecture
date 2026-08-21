@@ -1,4 +1,4 @@
-// §19-deferred #5 — PathGeometry serialization round-trip.
+﻿// §19-deferred #5 — PathGeometry serialization round-trip.
 //
 // pathGeometryToSvgD writes; pathGeometryFromSvgD parses. The two are
 // geometry-symmetric: write(parse(s)) === write(parse(write(parse(s)))).
@@ -24,7 +24,7 @@ import { pathGeometryFromSvgD } from '../path-from-svg.js';
 const P = (x: number, y: number): Point => new Point(x, y);
 
 // Helpers to inspect parsed output structurally — instanceof + numeric
-// comparisons avoid baking deep-equal expectations on Model internals.
+// comparisons avoid baking deep-equal expectations on MuralBase internals.
 function expectLine(seg: object, x: number, y: number): void
 {
     assert.ok(seg instanceof LineSegment, `expected LineSegment, got ${(seg as object).constructor.name}`);

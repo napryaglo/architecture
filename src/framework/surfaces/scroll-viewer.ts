@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     PropertyTransition,
     Rect,
@@ -101,9 +101,9 @@ export class ScrollViewer extends ContentControl
     // re-measure must run when they change. ArrangeOverride also depends
     // on them (clip-and-translate mode's content translation), so flag
     // both.
-    public static readonly HorizontalOffsetKey = Model.RegisterProperty<number>(
+    public static readonly HorizontalOffsetKey = MuralBase.RegisterProperty<number>(
         ScrollViewer, 'HorizontalOffset', 0, MetaData.Measure | MetaData.Arrange);
-    public static readonly VerticalOffsetKey   = Model.RegisterProperty<number>(
+    public static readonly VerticalOffsetKey   = MuralBase.RegisterProperty<number>(
         ScrollViewer, 'VerticalOffset',   0, MetaData.Measure | MetaData.Arrange);
     // Per-axis scroll opt-out. When false, the matching axis is measured
     // with the bounded available size instead of +Infinity, so a soft-
@@ -112,9 +112,9 @@ export class ScrollViewer extends ContentControl
     // disabled axis even when extent > viewport (the bar would dangle
     // uselessly). Defaults are true so the existing TreeView / ListBox
     // templates behave as before.
-    public static readonly HorizontalScrollEnabledKey = Model.RegisterProperty<boolean>(
+    public static readonly HorizontalScrollEnabledKey = MuralBase.RegisterProperty<boolean>(
         ScrollViewer, 'HorizontalScrollEnabled', true, MetaData.Measure | MetaData.Arrange);
-    public static readonly VerticalScrollEnabledKey   = Model.RegisterProperty<boolean>(
+    public static readonly VerticalScrollEnabledKey   = MuralBase.RegisterProperty<boolean>(
         ScrollViewer, 'VerticalScrollEnabled',   true, MetaData.Measure | MetaData.Arrange);
     // Forwarded to the inner ScrollBars' IsAutoHide DPs in the
     // constructor + via the listener below. Lets a consumer set
@@ -122,7 +122,7 @@ export class ScrollViewer extends ContentControl
     // Slack-style overlay behaviour without reaching for the bars.
     // Default false to match the discoverable always-visible bar shape
     // that TreeView / ListBox lean on.
-    public static readonly IsAutoHideScrollBarsKey = Model.RegisterProperty<boolean>(
+    public static readonly IsAutoHideScrollBarsKey = MuralBase.RegisterProperty<boolean>(
         ScrollViewer, 'IsAutoHideScrollBars', false, MetaData.None);
 
     // Opt-in "keep the latest content visible". When true, an arrange pass whose
@@ -130,14 +130,14 @@ export class ScrollViewer extends ContentControl
     // viewport was already parked at the bottom (sticky). Scrolling up releases
     // it; scrolling back to the bottom resumes it. Default false → no effect on
     // existing ScrollViewers. MetaData.Arrange so toggling it re-arranges.
-    public static readonly AutoScrollToEndKey = Model.RegisterProperty<boolean>(
+    public static readonly AutoScrollToEndKey = MuralBase.RegisterProperty<boolean>(
         ScrollViewer, 'AutoScrollToEnd', false, MetaData.Arrange);
 
     // Edge-gutter width (in viewport-local px) that triggers auto-scroll
     // while a drag is hovering over the ScrollViewer (8.4). Setting `0`
     // disables auto-scroll. Default 24 — matches the Visio / Figma / drawio
     // gutter where dragged items pull the viewport along.
-    public static readonly AutoScrollGutterKey = Model.RegisterProperty<number>(
+    public static readonly AutoScrollGutterKey = MuralBase.RegisterProperty<number>(
         ScrollViewer, 'AutoScrollGutter', 24, MetaData.None);
 
     // Smooth-scroll (§ 10.5). When true, an installed PropertyTransition
@@ -151,16 +151,16 @@ export class ScrollViewer extends ContentControl
     // start a one-shot Storyboard.
     //
     // Default false to preserve the existing direct-write behaviour.
-    public static readonly SmoothScrollKey = Model.RegisterProperty<boolean>(
+    public static readonly SmoothScrollKey = MuralBase.RegisterProperty<boolean>(
         ScrollViewer, 'SmoothScroll', false, MetaData.None);
-    public static readonly SmoothScrollDurationKey = Model.RegisterProperty<number>(
+    public static readonly SmoothScrollDurationKey = MuralBase.RegisterProperty<number>(
         ScrollViewer, 'SmoothScrollDuration', 250, MetaData.None);
-    public static readonly SmoothScrollEasingKey = Model.RegisterProperty<EasingFunction>(
+    public static readonly SmoothScrollEasingKey = MuralBase.RegisterProperty<EasingFunction>(
         ScrollViewer, 'SmoothScrollEasing', Easings.StandardDecelerate, MetaData.None);
     // Pixels per auto-scroll tick. 4px × 30 ticks/sec ≈ 120 px/sec —
     // brisk but controllable. The tick rate uses `setInterval(32)` so a
     // value of 4 yields 125 px/sec.
-    public static readonly AutoScrollStepKey = Model.RegisterProperty<number>(
+    public static readonly AutoScrollStepKey = MuralBase.RegisterProperty<number>(
         ScrollViewer, 'AutoScrollStep', 4, MetaData.None);
 
     // Read-only signal that the viewport has scrolled away from the
@@ -176,12 +176,12 @@ export class ScrollViewer extends ContentControl
     // content scrolls under it (the M3 "scrolled" container colour
     // rule). Any other control with a "this surface is now scrolled-
     // under" cue can subscribe to the same DP.
-    private static readonly _IsScrolledPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsScrolledPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         ScrollViewer, 'IsScrolled', false, MetaData.None);
     public static readonly IsScrolledKey = ScrollViewer._IsScrolledPriv;
 
     static {
-        Model.OverrideMetadata(ScrollViewer, Element.DefaultStyleKeyKey, { default_value: ScrollViewer });
+        MuralBase.OverrideMetadata(ScrollViewer, Element.DefaultStyleKeyKey, { default_value: ScrollViewer });
     }
 
     // ── Template parts ──────────────────────────────────────────────

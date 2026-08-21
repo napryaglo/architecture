@@ -1,11 +1,11 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile, instantiate } from '../compile.js';
 import { DEFAULT_SYMBOLS } from '../symbol-table.js';
 import * as runtime from '../../runtime/index.js';
 import * as controls from '../../basic/index.js';
 import * as engine from '../../visual-engine/index.js';
-import { Application, Model, MetaData, ServiceKey } from '../../runtime/index.js';
+import { Application, MuralBase, MetaData, ServiceKey } from '../../runtime/index.js';
 import { TextBlock } from '../../basic/index.js';
 
 describe('compile — $service(Token) binding emit', () => {
@@ -34,9 +34,9 @@ describe('compile — $service(Token) binding emit', () => {
 describe('instantiate — $service binding resolves + reacts', () => {
     beforeEach(() => { Application.current = null; });
 
-    class Status extends Model {
+    class Status extends MuralBase {
         public static readonly Key = new ServiceKey<Status>('Status');
-        public static readonly MsgKey = Model.RegisterProperty<string>(Status, 'Msg', '', MetaData.None);
+        public static readonly MsgKey = MuralBase.RegisterProperty<string>(Status, 'Msg', '', MetaData.None);
         public get Msg(): string { return this.get_property_value(Status.MsgKey); }
         public set Msg(v: string) { this.set_property_value(Status.MsgKey, v); }
     }

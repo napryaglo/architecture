@@ -1,11 +1,11 @@
-import { Binding } from './binding/binding.js';
+﻿import { Binding } from './binding/binding.js';
 import { EffectiveValueDescriptor, PropertyValueSource } from './binding/effective-value.js';
 import type { InternalPropertyChangeCallback, PropertyChangeCallback } from './binding/effective-value.js';
 import { PropertyDescriptor } from './property-descriptor.js';
 import type { CoerceValue, PropertyMetadata, ValidateTarget, ValidateValue } from './property-descriptor.js';
 import { inherits, type MetaData } from './metadata.js';
 
-// Branded handle returned by Model.RegisterProperty (and the read-only /
+// Branded handle returned by MuralBase.RegisterProperty (and the read-only /
 // attached variants). Serves two purposes:
 //
 //   * Typed identity — `PropertyKey<T>` carries a phantom `T` so the
@@ -29,7 +29,7 @@ export class PropertyKey<T = unknown>
     constructor(public readonly descriptor: PropertyDescriptor) {}
 }
 
-// Root of the property/binding system. A Model owns per-instance value
+// Root of the property/binding system. A MuralBase owns per-instance value
 // state (`property_values`) and a virtual OnPropertyChanged hook that
 // fires for every effective-value change. The base hook is a no-op;
 // Visual (in visual.ts) overrides it to route layout/render invalidation
@@ -37,14 +37,14 @@ export class PropertyKey<T = unknown>
 //
 // Property storage uses composite keys `${descriptor.RootOwner.name}.${name}`
 // uniformly. This lets any property registered on any class be set on
-// any Model instance (WPF-style cross-class / "attached" usage). The
+// any MuralBase instance (WPF-style cross-class / "attached" usage). The
 // accessors expose two surfaces:
 //   * implicit owner — `set_property_value('width', 100)` walks the
 //     target's class hierarchy to find the property, then composes the
 //     key from descriptor.RootOwner.
 //   * explicit owner — `set_property_value(TextBlock, 'fontSize', 14)`
 //     bypasses the hierarchy walk; uses the supplied owner directly.
-export class Model
+export class MuralBase
 {
     // Per-class descriptor bags keyed by class constructor. WeakMap means
     // a class becoming unreachable lets its bag be GC'd; lookup walks the
@@ -93,9 +93,9 @@ export class Model
     // existing one (Set no-op) leaves memo caches valid.
     private static register_inheritable(descriptor: PropertyDescriptor): void
     {
-        const before = Model.inheritable_descriptors.size;
-        Model.inheritable_descriptors.add(descriptor);
-        if (Model.inheritable_descriptors.size !== before) Model.inheritable_generation++;
+        const before = MuralBase.inheritable_descriptors.size;
+        MuralBase.inheritable_descriptors.add(descriptor);
+        if (MuralBase.inheritable_descriptors.size !== before) MuralBase.inheritable_generation++;
     }
 
     /** @internal — Visual.collect_inheritable_descriptors reads this
@@ -104,7 +104,7 @@ export class Model
      *  not depend on the registry shape. */
     public static _getInheritableDescriptors(): ReadonlySet<PropertyDescriptor>
     {
-        return Model.inheritable_descriptors;
+        return MuralBase.inheritable_descriptors;
     }
 
     /** @internal — memoization key for `_collect_inheritable_descriptors`.
@@ -112,7 +112,7 @@ export class Model
      *  per-class descriptor list is valid exactly while this is unchanged. */
     public static _inheritableGeneration(): number
     {
-        return Model.inheritable_generation;
+        return MuralBase.inheritable_generation;
     }
 
     // Per-instance value store keyed by composite `${RootOwner.name}.${name}`.
@@ -130,11 +130,11 @@ export class Model
 
     protected static get_property_bag(klass: Function): Map<string, PropertyDescriptor>
     {
-        let bag = Model.property_bags.get(klass);
+        let bag = MuralBase.property_bags.get(klass);
         if (bag === undefined)
         {
             bag = new Map<string, PropertyDescriptor>();
-            Model.property_bags.set(klass, bag);
+            MuralBase.property_bags.set(klass, bag);
         }
         return bag;
     }
@@ -144,7 +144,7 @@ export class Model
     // ancestors that never registered anything.
     protected static peek_property_bag(klass: Function): Map<string, PropertyDescriptor> | undefined
     {
-        return Model.property_bags.get(klass);
+        return MuralBase.property_bags.get(klass);
     }
 
     // Composes the per-instance storage key for a given (owner, name).
@@ -167,7 +167,7 @@ export class Model
         let current: Function | null = klass;
         while (current !== null && current !== Function.prototype)
         {
-            const desc = Model.property_bags.get(current)?.get(property);
+            const desc = MuralBase.property_bags.get(current)?.get(property);
             if (desc !== undefined) return desc;
             current = Object.getPrototypeOf(current);
         }
@@ -181,7 +181,7 @@ export class Model
     // missing path" without reaching into protected internals.
     public static HasProperty(klass: Function, property: string): boolean
     {
-        return Model.find_descriptor(klass, property) !== undefined;
+        return MuralBase.find_descriptor(klass, property) !== undefined;
     }
 
     // Resolves a class-name string (e.g. 'Grid') to the registered class
@@ -190,12 +190,12 @@ export class Model
     // if the class has been garbage-collected.
     public static find_class(name: string): Function | undefined
     {
-        const ref = Model.class_registry.get(name);
+        const ref = MuralBase.class_registry.get(name);
         if (ref === undefined) return undefined;
         const cls = ref.deref();
         if (cls === undefined)
         {
-            Model.class_registry.delete(name);
+            MuralBase.class_registry.delete(name);
             return undefined;
         }
         return cls;
@@ -219,7 +219,7 @@ export class Model
         let current: Function | null = klass;
         while (current !== null && current !== Function.prototype)
         {
-            const bag = Model.property_bags.get(current);
+            const bag = MuralBase.property_bags.get(current);
             if (bag !== undefined)
             {
                 for (const [name, desc] of bag)
@@ -236,7 +236,7 @@ export class Model
 
     private static remember_class(klass: Function): void
     {
-        Model.class_registry.set(klass.name, new WeakRef(klass));
+        MuralBase.class_registry.set(klass.name, new WeakRef(klass));
     }
 
     // Registers a read/write dependency property and returns a typed
@@ -271,8 +271,8 @@ export class Model
                 `Default value for property '${owner.name}.${property}' fails its validate_value callback.`,
             );
         }
-        Model.remember_class(owner);
-        const bag = Model.get_property_bag(owner);
+        MuralBase.remember_class(owner);
+        const bag = MuralBase.get_property_bag(owner);
         let descriptor = bag.get(property);
         if (descriptor === undefined)
         {
@@ -297,7 +297,7 @@ export class Model
             // descendant's prototype chain. See § 15.2.
             if (inherits(meta_data))
             {
-                Model.register_inheritable(descriptor);
+                MuralBase.register_inheritable(descriptor);
             }
         }
         return new PropertyKey<T>(descriptor);
@@ -305,12 +305,12 @@ export class Model
 
     // Sugar synonym for RegisterProperty at attached-property declaration
     // sites. Same runtime — any registered property can be set on any
-    // Model via the explicit-owner overload of set_property_value — but
+    // MuralBase via the explicit-owner overload of set_property_value — but
     // exposes one extra parameter (`validate_target`) that's primarily
     // useful for attached properties.
     //
     // `validate_target` (§ 15.1): when set, every write to this property
-    // on ANY target Model passes through the predicate first. Returning
+    // on ANY target MuralBase passes through the predicate first. Returning
     // `false` throws with a "property only valid on …" message. Used to
     // constrain attached properties to specific target families — e.g.
     // `Grid.Row` only makes sense on Visuals laid out by a Grid parent,
@@ -326,7 +326,7 @@ export class Model
         validate_target?: ValidateTarget,
     ): PropertyKey<T>
     {
-        return Model.RegisterProperty<T>(
+        return MuralBase.RegisterProperty<T>(
             owner, property, default_value, meta_data,
             coerce_value, validate_value, validate_target,
         );
@@ -355,8 +355,8 @@ export class Model
                 `Default value for property '${owner.name}.${property}' fails its validate_value callback.`,
             );
         }
-        Model.remember_class(owner);
-        const bag = Model.get_property_bag(owner);
+        MuralBase.remember_class(owner);
+        const bag = MuralBase.get_property_bag(owner);
         if (bag.has(property))
         {
             throw new Error(`Property '${property}' is already registered on '${owner.name}'.`);
@@ -376,7 +376,7 @@ export class Model
         // § 15.2. Same shape as RegisterProperty above.
         if (inherits(meta_data))
         {
-            Model.register_inheritable(descriptor);
+            MuralBase.register_inheritable(descriptor);
         }
         return new PropertyKey<T>(descriptor);
     }
@@ -394,11 +394,11 @@ export class Model
         opts: PropertyMetadata,
     ): void
     {
-        Model.remember_class(klass);
+        MuralBase.remember_class(klass);
         const property = key.descriptor.Name;
-        const bag = Model.get_property_bag(klass);
+        const bag = MuralBase.get_property_bag(klass);
         const parent_descriptor = bag.get(property)
-            ?? Model.find_descriptor(Object.getPrototypeOf(klass) as Function, property);
+            ?? MuralBase.find_descriptor(Object.getPrototypeOf(klass) as Function, property);
         if (parent_descriptor === undefined)
         {
             throw new Error(
@@ -418,10 +418,10 @@ export class Model
     // a compile error and threads the value type through the accessor
     // signature so no `as T` cast is needed.
     //
-    // There is no by-name accessor on `Model`. The µ-mural compiler
+    // There is no by-name accessor on `MuralBase`. The µ-mural compiler
     // resolves every markup property write to a typed key at compile
     // time (`compileAttribute` in `src/compiler/compiler.ts` queries
-    // `Model.find_class` + `findDescriptor` and emits `Owner.PropKey`).
+    // `MuralBase.find_class` + `findDescriptor` and emits `Owner.PropKey`).
     // Framework-internal hot paths (binding, Style.Setter / Trigger,
     // animation, trigger evaluators) resolve names through
     // [./model-internals.ts](./model-internals.ts)'s `resolveKey`
@@ -528,10 +528,10 @@ export class Model
         const evd = this.property_values.get(composed);
         if (evd !== undefined) return evd.value;
         // Default-value fallback walks this instance's class chain so
-        // Model.OverrideMetadata on a subclass is honored. The key's
+        // MuralBase.OverrideMetadata on a subclass is honored. The key's
         // own descriptor is the root-owner registration â€” fine as the
         // last-resort fallback when no subclass override exists.
-        const descriptor = Model.find_descriptor(this.constructor, key.descriptor.Name)
+        const descriptor = MuralBase.find_descriptor(this.constructor, key.descriptor.Name)
                         ?? key.descriptor;
         return this.resolve_default(descriptor);
     }
@@ -591,7 +591,7 @@ export class Model
         if (descriptor.IsReadOnly)
         {
             throw new Error(
-                `Property '${descriptor.Name}' is read-only — write via the PropertyKey returned from Model.RegisterReadOnlyProperty.`,
+                `Property '${descriptor.Name}' is read-only — write via the PropertyKey returned from MuralBase.RegisterReadOnlyProperty.`,
             );
         }
     }
@@ -672,7 +672,7 @@ export class Model
     // § 1.14 — Pre-write listener registry. Replaces the prior
     // `OnBeforeBaseValueWrite` protected virtual: subclasses don't
     // have to override an inherited method they didn't ask for, and
-    // the coupling reads as a real event ("Model emits a
+    // the coupling reads as a real event ("MuralBase emits a
     // base-value-write-request, transitions engine subscribes")
     // rather than "Visual override carries EVD tier knowledge."
     private _baseValueWriteListeners: Set<(d: PropertyDescriptor, v: any) => void> | undefined;
@@ -715,7 +715,7 @@ export class Model
     }
 
     // Virtual hook fired after every effective-value change on this model
-    // (direct set, binding push, ClearValue, etc.). No-op at the Model
+    // (direct set, binding push, ClearValue, etc.). No-op at the MuralBase
     // layer; Visual overrides this to route invalidation and inheritance.
     protected OnPropertyChanged(_descriptor: PropertyDescriptor, _old_value: any, _new_value: any): void
     {

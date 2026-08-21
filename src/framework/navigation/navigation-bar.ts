@@ -1,5 +1,5 @@
-import {
-    Model,
+﻿import {
+    MuralBase,
     Element, Visual,
 } from '../../runtime/index.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
@@ -48,7 +48,7 @@ export class NavigationBar extends Selector
 {
     static
     {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             NavigationBar, Element.DefaultStyleKeyKey,
             { default_value: NavigationBar },
         );
@@ -100,7 +100,7 @@ export class NavigationBar extends Selector
         {
             ni.Content = item;
         }
-        else if (item instanceof Model
+        else if (item instanceof MuralBase
               && findDataTemplateForType(item.constructor, this) !== undefined)
         {
             ni.Content = item;

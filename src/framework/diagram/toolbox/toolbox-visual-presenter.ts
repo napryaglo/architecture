@@ -1,4 +1,4 @@
-import { Application, MetaData, Model, type PropertyDescriptor } from '../../../runtime/index.js';
+﻿import { Application, MetaData, MuralBase, type PropertyDescriptor } from '../../../runtime/index.js';
 import { ContentControl } from '../../base/content-control.js';
 import { VisualContext, type IToolboxVisualResolver } from './toolbox-visual-resolver.js';
 import type { ToolboxVisualDescriptor } from './toolbox-visual-descriptor.js';
@@ -10,9 +10,9 @@ import type { ToolboxVisualDescriptor } from './toolbox-visual-descriptor.js';
 // re-hosts in place when the resolver signals the real visual arrived.
 export class ToolboxVisualPresenter extends ContentControl
 {
-    public static readonly DescriptorKey = Model.RegisterProperty<ToolboxVisualDescriptor | undefined>(
+    public static readonly DescriptorKey = MuralBase.RegisterProperty<ToolboxVisualDescriptor | undefined>(
         ToolboxVisualPresenter, 'Descriptor', undefined, MetaData.None);
-    public static readonly ContextKey = Model.RegisterProperty<VisualContext>(
+    public static readonly ContextKey = MuralBase.RegisterProperty<VisualContext>(
         ToolboxVisualPresenter, 'Context', VisualContext.Tile, MetaData.None);
 
     private _resolver: IToolboxVisualResolver | undefined;

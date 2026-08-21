@@ -1,7 +1,7 @@
-import {
+﻿import {
     Matrix,
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -44,8 +44,8 @@ export enum PuffyBase
 
 export class Puffy extends Shape
 {
-    public static readonly BumpsPerSideKey    = Model.RegisterProperty<number>(           Puffy, 'BumpsPerSide',    2,         MetaData.Render);
-    public static readonly BaseKey            = Model.RegisterProperty<PuffyBase>(        Puffy, 'Base',            PuffyBase.Square, MetaData.Render);
+    public static readonly BumpsPerSideKey    = MuralBase.RegisterProperty<number>(           Puffy, 'BumpsPerSide',    2,         MetaData.Render);
+    public static readonly BaseKey            = MuralBase.RegisterProperty<PuffyBase>(        Puffy, 'Base',            PuffyBase.Square, MetaData.Render);
 
     public get BumpsPerSide(): number { return this.get_property_value(Puffy.BumpsPerSideKey); }
     public set BumpsPerSide(v: number) { this.set_property_value(Puffy.BumpsPerSideKey, v); }
@@ -147,7 +147,7 @@ export class Puffy extends Shape
 export class PuffyDiamond extends Puffy
 {
     static {
-        Model.OverrideMetadata(PuffyDiamond, Puffy.BaseKey, { default_value: PuffyBase.Diamond });
+        MuralBase.OverrideMetadata(PuffyDiamond, Puffy.BaseKey, { default_value: PuffyBase.Diamond });
     }
 }
 

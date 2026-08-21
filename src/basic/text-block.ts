@@ -1,8 +1,8 @@
-import {
+﻿import {
     APPROXIMATE_TEXT_MEASURER,
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     Visual,
@@ -96,7 +96,7 @@ export class TextBlock extends Element implements InlineHost
         // active theme tokens via DynamicResource so a theme switch
         // re-tints every untemplated TextBlock without consumers having
         // to set Foreground=@OnSurface on every instance.
-        Model.OverrideMetadata(TextBlock, Element.DefaultStyleKeyKey, { default_value: TextBlock });
+        MuralBase.OverrideMetadata(TextBlock, Element.DefaultStyleKeyKey, { default_value: TextBlock });
     }
 
     // Each of these changes the painted glyph stream, so both Measure
@@ -106,23 +106,23 @@ export class TextBlock extends Element implements InlineHost
     // visuals — without the Render flag a bound Text update would
     // re-layout but the on-screen text would stay stale until something
     // else dirtied this visual.
-    public static readonly TextKey         = Model.RegisterProperty<string>(    TextBlock, 'Text',       '',                  MetaData.Measure | MetaData.Render);
-    public static readonly FontFamilyKey   = Model.RegisterProperty<FontFamily>(TextBlock, 'FontFamily', new FontFamily(DEFAULT_FONT_FAMILY), MetaData.Measure | MetaData.Render | MetaData.Inherits);
-    public static readonly FontSizeKey     = Model.RegisterProperty<number>(    TextBlock, 'FontSize',   14,                  MetaData.Measure | MetaData.Render | MetaData.Inherits);
-    public static readonly FontWeightKey   = Model.RegisterProperty<FontWeight>(TextBlock, 'FontWeight', FontWeight.Normal,   MetaData.Measure | MetaData.Render | MetaData.Inherits);
-    public static readonly FontStyleKey    = Model.RegisterProperty<FontStyle>( TextBlock, 'FontStyle',  FontStyle.Normal,    MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly TextKey         = MuralBase.RegisterProperty<string>(    TextBlock, 'Text',       '',                  MetaData.Measure | MetaData.Render);
+    public static readonly FontFamilyKey   = MuralBase.RegisterProperty<FontFamily>(TextBlock, 'FontFamily', new FontFamily(DEFAULT_FONT_FAMILY), MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontSizeKey     = MuralBase.RegisterProperty<number>(    TextBlock, 'FontSize',   14,                  MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontWeightKey   = MuralBase.RegisterProperty<FontWeight>(TextBlock, 'FontWeight', FontWeight.Normal,   MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontStyleKey    = MuralBase.RegisterProperty<FontStyle>( TextBlock, 'FontStyle',  FontStyle.Normal,    MetaData.Measure | MetaData.Render | MetaData.Inherits);
     // Line embellishments (underline / strikethrough / overline). A
     // combinable flag set — inherited like the other font properties so a
     // TextDecorations set on a container underlines its whole subtree.
     // Render-only: decorations sit on top of the laid-out glyphs and don't
     // change metrics.
-    public static readonly TextDecorationsKey = Model.RegisterProperty<TextDecorations>(TextBlock, 'TextDecorations', TextDecorations.None, MetaData.Render | MetaData.Inherits);
-    public static readonly ForegroundKey   = Model.RegisterProperty<Brush | undefined>(TextBlock, 'Foreground',   undefined,           MetaData.Render  | MetaData.Inherits);
-    public static readonly TextWrappingKey  = Model.RegisterProperty<TextWrapping>( TextBlock, 'TextWrapping',  TextWrapping.NoWrap, MetaData.Measure | MetaData.Render);
+    public static readonly TextDecorationsKey = MuralBase.RegisterProperty<TextDecorations>(TextBlock, 'TextDecorations', TextDecorations.None, MetaData.Render | MetaData.Inherits);
+    public static readonly ForegroundKey   = MuralBase.RegisterProperty<Brush | undefined>(TextBlock, 'Foreground',   undefined,           MetaData.Render  | MetaData.Inherits);
+    public static readonly TextWrappingKey  = MuralBase.RegisterProperty<TextWrapping>( TextBlock, 'TextWrapping',  TextWrapping.NoWrap, MetaData.Measure | MetaData.Render);
     // TextAlignment is render-only — moving the text within the block
     // doesn't change the block's DesiredSize, and the runtime applies
     // the per-line x offset inside RenderOverride.
-    public static readonly TextAlignmentKey = Model.RegisterProperty<TextAlignment>(TextBlock, 'TextAlignment', TextAlignment.Left,  MetaData.Render);
+    public static readonly TextAlignmentKey = MuralBase.RegisterProperty<TextAlignment>(TextBlock, 'TextAlignment', TextAlignment.Left,  MetaData.Render);
     // LineHeight — explicit per-line vertical spacing in DIPs. NaN
     // (default) defers to the measurer's per-line Height (font ascent +
     // descent), preserving the historic "lines pack as close as the
@@ -134,7 +134,7 @@ export class TextBlock extends Element implements InlineHost
     // Inherits so the same value flows from an ancestor (e.g. a Page
     // root with `LineHeight=24`) to every descendant TextBlock without
     // re-stamping on each one.
-    public static readonly LineHeightKey    = Model.RegisterProperty<number>(       TextBlock, 'LineHeight',    Number.NaN,          MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly LineHeightKey    = MuralBase.RegisterProperty<number>(       TextBlock, 'LineHeight',    Number.NaN,          MetaData.Measure | MetaData.Render | MetaData.Inherits);
     // LetterSpacing — extra space between glyphs, in DIPs. M3 typography
     // tokens spec this as `tracking` (e.g. @BodyMedium tracking = 0.25,
     // @LabelLarge tracking = 0.1). The value rides through FormattedText
@@ -149,13 +149,13 @@ export class TextBlock extends Element implements InlineHost
     // Measure | Render so a tracking change re-measures (widths shift) and
     // repaints. Inherits so the typography role's tracking flows down a
     // subtree alongside FontSize / LineHeight in the same per-role setter block.
-    public static readonly LetterSpacingKey = Model.RegisterProperty<number>(       TextBlock, 'LetterSpacing', 0,                   MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly LetterSpacingKey = MuralBase.RegisterProperty<number>(       TextBlock, 'LetterSpacing', 0,                   MetaData.Measure | MetaData.Render | MetaData.Inherits);
     // MeasurementFidelity — Fast (Canvas) vs Exact (paint-engine SVG) width
     // measurement. Measure-only (fidelity changes the measured width, not the
     // painted pixels — render already uses the SVG path). Inherits so a styled
     // control sets it once and it flows into nested label content, exactly
     // like FontSize / LetterSpacing above.
-    public static readonly MeasurementFidelityKey = Model.RegisterProperty<MeasurementFidelity>(TextBlock, 'MeasurementFidelity', MeasurementFidelity.Fast, MetaData.Measure | MetaData.Inherits);
+    public static readonly MeasurementFidelityKey = MuralBase.RegisterProperty<MeasurementFidelity>(TextBlock, 'MeasurementFidelity', MeasurementFidelity.Fast, MetaData.Measure | MetaData.Inherits);
 
     // Lines computed by MeasureOverride when TextWrapping = Wrap. Each
     // entry holds the substring and the measurer-reported metrics for

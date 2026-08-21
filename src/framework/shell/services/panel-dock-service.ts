@@ -1,8 +1,8 @@
-import {
+﻿import {
     type ICommand,
     type IServiceProvider,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     RelayCommand,
     ServiceBase,
@@ -28,28 +28,28 @@ export class PanelDockService extends ServiceBase
 
     // The hosted panel set — a stable per-instance collection the region's
     // TabControl binds (`ItemsSource = $Panels`); the reference never changes.
-    public static readonly PanelsKey = Model.RegisterProperty<ObservableCollection<IDockPanel>>(
+    public static readonly PanelsKey = MuralBase.RegisterProperty<ObservableCollection<IDockPanel>>(
         PanelDockService, 'Panels',
         undefined as unknown as ObservableCollection<IDockPanel>, MetaData.None);
 
     // The active tab — TwoWay-bound to TabControl.SelectedItem so clicking a tab
     // updates it and Add()/Close() re-select programmatically.
-    public static readonly SelectedPanelKey = Model.RegisterProperty<IDockPanel | undefined>(
+    public static readonly SelectedPanelKey = MuralBase.RegisterProperty<IDockPanel | undefined>(
         PanelDockService, 'SelectedPanel', undefined, MetaData.None | MetaData.BindsTwoWayByDefault);
 
     // True while at least one panel is hosted — the region binds its Visibility
     // (and its resize Splitter's) to this so an empty dock collapses out of layout.
-    private static readonly _HasPanelsPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _HasPanelsPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         PanelDockService, 'HasPanels', false, MetaData.None);
     public static readonly HasPanelsKey = PanelDockService._HasPanelsPriv;
 
     // Command a menu binds to open a panel (`Command = $service(PanelDockService)
     // .AddPanelCommand, CommandParameter = $Panel`). Non-IDockPanel params no-op.
-    public static readonly AddPanelCommandKey = Model.RegisterProperty<ICommand>(
+    public static readonly AddPanelCommandKey = MuralBase.RegisterProperty<ICommand>(
         PanelDockService, 'AddPanelCommand', undefined as unknown as ICommand, MetaData.None);
 
     // Command a tab's close affordance binds (`CommandParameter = $Id`).
-    public static readonly ClosePanelCommandKey = Model.RegisterProperty<ICommand>(
+    public static readonly ClosePanelCommandKey = MuralBase.RegisterProperty<ICommand>(
         PanelDockService, 'ClosePanelCommand', undefined as unknown as ICommand, MetaData.None);
 
     constructor(provider: IServiceProvider)

@@ -1,4 +1,4 @@
-import { Application, Element, Model } from '../../runtime/index.js';
+﻿import { Application, Element, MuralBase } from '../../runtime/index.js';
 import { ShellBase } from './shell.js';
 import { NavigationService } from './services/navigation-service.js';
 import { ContentHostService } from './services/content-host-service.js';
@@ -27,7 +27,7 @@ export class EditorShell extends ShellBase
 {
     static
     {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             EditorShell, Element.DefaultStyleKeyKey,
             { default_value: EditorShell });
     }

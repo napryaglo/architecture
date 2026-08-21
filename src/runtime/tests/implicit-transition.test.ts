@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -7,7 +7,7 @@ import {
     Easings,
     ManualClock,
     MetaData,
-    Model,
+    MuralBase,
     PropertyTransition,
     Thickness,
     Element,
@@ -22,11 +22,11 @@ import { resolveKey } from '../model-internals.js';
 class TransitionTest extends Element
 {
     static {
-        Model.RegisterProperty(TransitionTest, 'Number',    0,                MetaData.None);
-        Model.RegisterProperty(TransitionTest, 'Color',     Color.Black,      MetaData.None);
-        Model.RegisterProperty(TransitionTest, 'Thickness', new Thickness(0), MetaData.None);
+        MuralBase.RegisterProperty(TransitionTest, 'Number',    0,                MetaData.None);
+        MuralBase.RegisterProperty(TransitionTest, 'Color',     Color.Black,      MetaData.None);
+        MuralBase.RegisterProperty(TransitionTest, 'Thickness', new Thickness(0), MetaData.None);
         // String DP — used to verify "unanimatable type → snap" fallthrough.
-        Model.RegisterProperty(TransitionTest, 'Label',     '',               MetaData.None);
+        MuralBase.RegisterProperty(TransitionTest, 'Label',     '',               MetaData.None);
     }
     public get Number():    number    { return this.get_property_value(resolveKey(this, undefined, 'Number')); }
     public set Number(v:    number)   { this.set_property_value(resolveKey(this, undefined, 'Number'), v); }

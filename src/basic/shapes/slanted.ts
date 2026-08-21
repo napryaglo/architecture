@@ -1,7 +1,7 @@
-import {
+﻿import {
     Matrix,
     MetaData,
-    Model,
+    MuralBase,
     Size,
     type DrawingContext,
 } from '../../runtime/index.js';
@@ -22,7 +22,7 @@ import { Squircle, buildSquircleFigure } from './squircle.js';
 // Stroke insets by half-thickness (inherited from Squircle).
 export class Slanted extends Squircle
 {
-    public static readonly LeanAngleKey = Model.RegisterProperty<number>(
+    public static readonly LeanAngleKey = MuralBase.RegisterProperty<number>(
         Slanted, 'LeanAngle', -12, MetaData.Render);
 
     public get LeanAngle(): number { return this.get_property_value(Slanted.LeanAngleKey); }

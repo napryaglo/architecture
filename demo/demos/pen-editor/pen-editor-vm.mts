@@ -1,4 +1,4 @@
-// VM for the pen-editor demo. A single Pen DP the editor edits in
+﻿// VM for the pen-editor demo. A single Pen DP the editor edits in
 // place; the .mu file binds the preview Shape's Stroke to the same Pen
 // instance so user gestures repaint the preview live.
 //
@@ -8,7 +8,7 @@
 // listener installed on the Pen rebuilds these mirror DPs on every
 // mutation.
 
-import { MetaData, Model } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
 import {
     Color,
     Pen,
@@ -17,15 +17,15 @@ import {
     type DashStyle,
 } from '@pragmatic-lab/mural/visual-engine';
 
-export class PenEditorDemoVM extends Model
+export class PenEditorDemoVM extends MuralBase
 {
-    static PenKey              = Model.RegisterProperty<Pen | undefined>(PenEditorDemoVM, 'Pen',              undefined, MetaData.None);
-    static BrushSummaryKey     = Model.RegisterProperty<string>(PenEditorDemoVM, 'BrushSummary',     '',        MetaData.None);
-    static ThicknessReadoutKey = Model.RegisterProperty<string>(PenEditorDemoVM, 'ThicknessReadout', '',        MetaData.None);
-    static DashReadoutKey      = Model.RegisterProperty<string>(PenEditorDemoVM, 'DashReadout',      '',        MetaData.None);
-    static CapReadoutKey       = Model.RegisterProperty<string>(PenEditorDemoVM, 'CapReadout',       '',        MetaData.None);
-    static JoinReadoutKey      = Model.RegisterProperty<string>(PenEditorDemoVM, 'JoinReadout',      '',        MetaData.None);
-    static MiterReadoutKey     = Model.RegisterProperty<string>(PenEditorDemoVM, 'MiterReadout',     '',        MetaData.None);
+    static PenKey              = MuralBase.RegisterProperty<Pen | undefined>(PenEditorDemoVM, 'Pen',              undefined, MetaData.None);
+    static BrushSummaryKey     = MuralBase.RegisterProperty<string>(PenEditorDemoVM, 'BrushSummary',     '',        MetaData.None);
+    static ThicknessReadoutKey = MuralBase.RegisterProperty<string>(PenEditorDemoVM, 'ThicknessReadout', '',        MetaData.None);
+    static DashReadoutKey      = MuralBase.RegisterProperty<string>(PenEditorDemoVM, 'DashReadout',      '',        MetaData.None);
+    static CapReadoutKey       = MuralBase.RegisterProperty<string>(PenEditorDemoVM, 'CapReadout',       '',        MetaData.None);
+    static JoinReadoutKey      = MuralBase.RegisterProperty<string>(PenEditorDemoVM, 'JoinReadout',      '',        MetaData.None);
+    static MiterReadoutKey     = MuralBase.RegisterProperty<string>(PenEditorDemoVM, 'MiterReadout',     '',        MetaData.None);
 
     constructor() {
         super();

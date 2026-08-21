@@ -1,5 +1,5 @@
-import { MetaData } from '../../runtime/metadata.js';
-import { Model } from '../../runtime/model.js';
+﻿import { MetaData } from '../../runtime/metadata.js';
+import { MuralBase } from '../../runtime/model.js';
 import { Freezable } from '../../runtime/freezable.js';
 import { Point, Rect, Size } from '../primitives.js';
 import { Transform } from '../drawing/transform.js';
@@ -107,7 +107,7 @@ export class PathFigure
 //                        the result for non-emptiness.
 export abstract class Geometry extends Freezable
 {
-    public static readonly TransformKey = Model.RegisterProperty<Transform>(
+    public static readonly TransformKey = MuralBase.RegisterProperty<Transform>(
         Geometry, 'Transform', Transform.Identity, MetaData.Render);
 
     public get Transform(): Transform { return this.get_property_value(Geometry.TransformKey); }
@@ -163,9 +163,9 @@ export abstract class Geometry extends Freezable
 // rounded corners are drawn (SVG rx/ry attributes, Canvas roundRect).
 export class RectangleGeometry extends Geometry
 {
-    public static readonly RectKey    = Model.RegisterProperty<Rect>(  RectangleGeometry, 'Rect',    Rect.Zero, MetaData.Render);
-    public static readonly RadiusXKey = Model.RegisterProperty<number>(RectangleGeometry, 'RadiusX', 0,         MetaData.Render);
-    public static readonly RadiusYKey = Model.RegisterProperty<number>(RectangleGeometry, 'RadiusY', 0,         MetaData.Render);
+    public static readonly RectKey    = MuralBase.RegisterProperty<Rect>(  RectangleGeometry, 'Rect',    Rect.Zero, MetaData.Render);
+    public static readonly RadiusXKey = MuralBase.RegisterProperty<number>(RectangleGeometry, 'RadiusX', 0,         MetaData.Render);
+    public static readonly RadiusYKey = MuralBase.RegisterProperty<number>(RectangleGeometry, 'RadiusY', 0,         MetaData.Render);
 
     constructor(rect?: Rect, radiusX?: number, radiusY?: number)
     {
@@ -217,9 +217,9 @@ export class RectangleGeometry extends Geometry
 // <ellipse> for SVG, ctx.ellipse for Canvas. Use equal radii for a circle.
 export class EllipseGeometry extends Geometry
 {
-    public static readonly CenterKey  = Model.RegisterProperty<Point>( EllipseGeometry, 'Center',  Point.Zero, MetaData.Render);
-    public static readonly RadiusXKey = Model.RegisterProperty<number>(EllipseGeometry, 'RadiusX', 0,          MetaData.Render);
-    public static readonly RadiusYKey = Model.RegisterProperty<number>(EllipseGeometry, 'RadiusY', 0,          MetaData.Render);
+    public static readonly CenterKey  = MuralBase.RegisterProperty<Point>( EllipseGeometry, 'Center',  Point.Zero, MetaData.Render);
+    public static readonly RadiusXKey = MuralBase.RegisterProperty<number>(EllipseGeometry, 'RadiusX', 0,          MetaData.Render);
+    public static readonly RadiusYKey = MuralBase.RegisterProperty<number>(EllipseGeometry, 'RadiusY', 0,          MetaData.Render);
 
     constructor(center?: Point, radiusX?: number, radiusY?: number)
     {
@@ -262,8 +262,8 @@ export class EllipseGeometry extends Geometry
 // pen contributes. Renderer emits <line>.
 export class LineGeometry extends Geometry
 {
-    public static readonly StartPointKey = Model.RegisterProperty<Point>(LineGeometry, 'StartPoint', Point.Zero, MetaData.Render);
-    public static readonly EndPointKey   = Model.RegisterProperty<Point>(LineGeometry, 'EndPoint',   Point.Zero, MetaData.Render);
+    public static readonly StartPointKey = MuralBase.RegisterProperty<Point>(LineGeometry, 'StartPoint', Point.Zero, MetaData.Render);
+    public static readonly EndPointKey   = MuralBase.RegisterProperty<Point>(LineGeometry, 'EndPoint',   Point.Zero, MetaData.Render);
 
     constructor(startPoint?: Point, endPoint?: Point)
     {
@@ -296,8 +296,8 @@ export class LineGeometry extends Geometry
 // concatenating SVG path commands.
 export class PathGeometry extends Geometry
 {
-    public static readonly FiguresKey  = Model.RegisterProperty<readonly PathFigure[]>(PathGeometry, 'Figures',  [], MetaData.Render);
-    public static readonly FillRuleKey = Model.RegisterProperty<FillRule>(             PathGeometry, 'FillRule', FillRule.EvenOdd, MetaData.Render);
+    public static readonly FiguresKey  = MuralBase.RegisterProperty<readonly PathFigure[]>(PathGeometry, 'Figures',  [], MetaData.Render);
+    public static readonly FillRuleKey = MuralBase.RegisterProperty<FillRule>(             PathGeometry, 'FillRule', FillRule.EvenOdd, MetaData.Render);
 
     constructor(figures?: readonly PathFigure[])
     {
@@ -441,8 +441,8 @@ export class PathGeometry extends Geometry
 // model layer.
 export class GeometryGroup extends Geometry
 {
-    public static readonly ChildrenKey = Model.RegisterProperty<readonly Geometry[]>(GeometryGroup, 'Children', [], MetaData.Render);
-    public static readonly FillRuleKey = Model.RegisterProperty<FillRule>(           GeometryGroup, 'FillRule', FillRule.EvenOdd, MetaData.Render);
+    public static readonly ChildrenKey = MuralBase.RegisterProperty<readonly Geometry[]>(GeometryGroup, 'Children', [], MetaData.Render);
+    public static readonly FillRuleKey = MuralBase.RegisterProperty<FillRule>(           GeometryGroup, 'FillRule', FillRule.EvenOdd, MetaData.Render);
 
     constructor(children?: readonly Geometry[])
     {

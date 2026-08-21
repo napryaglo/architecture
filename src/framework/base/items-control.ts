@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     Panel,
     Rect,
@@ -148,48 +148,48 @@ import { ItemsPanelTemplate, type ItemsPanelFactory } from '../../basic/panels/i
 //   * ItemBindingGroup                      ✗ no validation grouping.
 export class ItemsControl extends Control
 {
-    public static readonly ItemsKey                      = Model.RegisterProperty<readonly unknown[] | ObservableCollection<unknown> | CollectionView | undefined>(ItemsControl, 'Items',                      undefined, MetaData.Measure | MetaData.IsAnimationProhibited);
-    public static readonly ItemsSourceKey                = Model.RegisterProperty<unknown>(                                                                       ItemsControl, 'ItemsSource',                undefined, MetaData.Measure | MetaData.IsAnimationProhibited);
-    public static readonly ItemTemplateKey               = Model.RegisterProperty<DataTemplate | undefined>(                                                      ItemsControl, 'ItemTemplate',               undefined, MetaData.Measure);
-    public static readonly ItemTemplateSelectorKey       = Model.RegisterProperty<ItemTemplateSelector | undefined>(                                              ItemsControl, 'ItemTemplateSelector',       undefined, MetaData.Measure);
-    public static readonly ItemContainerStyleKey         = Model.RegisterProperty<Style | undefined>(                                                             ItemsControl, 'ItemContainerStyle',         undefined, MetaData.Measure);
-    public static readonly ItemContainerStyleSelectorKey = Model.RegisterProperty<ItemContainerStyleSelector | undefined>(                                        ItemsControl, 'ItemContainerStyleSelector', undefined, MetaData.Measure);
-    public static readonly ItemsPanelKey                 = Model.RegisterProperty<ItemsPanelTemplate | ItemsPanelFactory | undefined>(                            ItemsControl, 'ItemsPanel',                 undefined, MetaData.Measure);
+    public static readonly ItemsKey                      = MuralBase.RegisterProperty<readonly unknown[] | ObservableCollection<unknown> | CollectionView | undefined>(ItemsControl, 'Items',                      undefined, MetaData.Measure | MetaData.IsAnimationProhibited);
+    public static readonly ItemsSourceKey                = MuralBase.RegisterProperty<unknown>(                                                                       ItemsControl, 'ItemsSource',                undefined, MetaData.Measure | MetaData.IsAnimationProhibited);
+    public static readonly ItemTemplateKey               = MuralBase.RegisterProperty<DataTemplate | undefined>(                                                      ItemsControl, 'ItemTemplate',               undefined, MetaData.Measure);
+    public static readonly ItemTemplateSelectorKey       = MuralBase.RegisterProperty<ItemTemplateSelector | undefined>(                                              ItemsControl, 'ItemTemplateSelector',       undefined, MetaData.Measure);
+    public static readonly ItemContainerStyleKey         = MuralBase.RegisterProperty<Style | undefined>(                                                             ItemsControl, 'ItemContainerStyle',         undefined, MetaData.Measure);
+    public static readonly ItemContainerStyleSelectorKey = MuralBase.RegisterProperty<ItemContainerStyleSelector | undefined>(                                        ItemsControl, 'ItemContainerStyleSelector', undefined, MetaData.Measure);
+    public static readonly ItemsPanelKey                 = MuralBase.RegisterProperty<ItemsPanelTemplate | ItemsPanelFactory | undefined>(                            ItemsControl, 'ItemsPanel',                 undefined, MetaData.Measure);
     // Template DP is inherited from Control (the optional chrome wrapper
     // that hosts the items panel inside an ItemsPresenter).
     // AlternationCount = 0 → AlternationIndex unused (every container
     // gets 0). >0 → AlternationIndex cycles 0..N-1 across containers in
     // items order. WPF parity.
-    public static readonly AlternationCountKey           = Model.RegisterProperty<number>(                                                                        ItemsControl, 'AlternationCount',           0,         MetaData.None);
+    public static readonly AlternationCountKey           = MuralBase.RegisterProperty<number>(                                                                        ItemsControl, 'AlternationCount',           0,         MetaData.None);
     // HasItems is logically read-only but stored as a plain DP so it
     // goes through the standard change-notification pipeline
     // (PropertyTrigger / Binding can observe it). Only the ItemsControl
     // writes — consumers read.
-    public static readonly HasItemsKey                   = Model.RegisterProperty<boolean>(                                                                       ItemsControl, 'HasItems',                   false,     MetaData.None);
+    public static readonly HasItemsKey                   = MuralBase.RegisterProperty<boolean>(                                                                       ItemsControl, 'HasItems',                   false,     MetaData.None);
     // GroupStyle: when set AND ItemsSource is a grouping CollectionView,
     // each CollectionViewGroup in the projection gets wrapped in a
     // GroupItem rather than rendered through ItemTemplate. Drives the
     // WPF-parity grouped-rendering path.
-    public static readonly GroupStyleKey                 = Model.RegisterProperty<GroupStyle | undefined>(                                                        ItemsControl, 'GroupStyle',                 undefined, MetaData.Measure);
+    public static readonly GroupStyleKey                 = MuralBase.RegisterProperty<GroupStyle | undefined>(                                                        ItemsControl, 'GroupStyle',                 undefined, MetaData.Measure);
     // GroupStyleSelector: per-level GroupStyle picker for nested
     // grouping. Called once per CollectionViewGroup with the group and
     // its nesting level (0 = outermost); the returned GroupStyle drives
     // the GroupItem at that level. Falls back to
     // ItemsControl.GroupStyle when undefined or when the selector
     // returns undefined for a level. WPF parity.
-    public static readonly GroupStyleSelectorKey         = Model.RegisterProperty<GroupStyleSelector | undefined>(                                                ItemsControl, 'GroupStyleSelector',         undefined, MetaData.Measure);
+    public static readonly GroupStyleSelectorKey         = MuralBase.RegisterProperty<GroupStyleSelector | undefined>(                                                ItemsControl, 'GroupStyleSelector',         undefined, MetaData.Measure);
     // DisplayMemberPath: when set AND ItemTemplate is undefined, the
     // default GetContainerForItemOverride builds a minimal DataTemplate
     // that renders the named property of the data as a TextBlock. Sugar
     // for the "I just want item.Name visible" case without authoring an
     // ItemTemplate. WPF parity.
-    public static readonly DisplayMemberPathKey          = Model.RegisterProperty<string | undefined>(                                                            ItemsControl, 'DisplayMemberPath',          undefined, MetaData.Measure);
+    public static readonly DisplayMemberPathKey          = MuralBase.RegisterProperty<string | undefined>(                                                            ItemsControl, 'DisplayMemberPath',          undefined, MetaData.Measure);
 
     // AlternationIndex attached on each generated container during
     // PrepareContainerForItemOverride. Containers read via
     // ItemsControl.GetAlternationIndex(container) — counterpart to
     // Canvas.GetLeft / DockPanel.GetDock.
-    public static readonly AlternationIndexKey           = Model.RegisterAttachedProperty<number>(                                                                ItemsControl, 'AlternationIndex',           0,         MetaData.None);
+    public static readonly AlternationIndexKey           = MuralBase.RegisterAttachedProperty<number>(                                                                ItemsControl, 'AlternationIndex',           0,         MetaData.None);
 
     public static SetAlternationIndex(v: Visual, value: number): void
     {

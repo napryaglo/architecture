@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
 } from '../../runtime/index.js';
 import {
     type Brush,
@@ -18,18 +18,18 @@ import { type DataTemplate } from '../../basic/templates/data-template.js';
 // path-data silhouette for the dropdown preview, and the glyph paint —
 // `GlyphFill` for filled caps, `GlyphStroke` for open (stroked) caps.
 //
-// A Model (not a plain object) so the combobox ItemTemplate's
+// A MuralBase (not a plain object) so the combobox ItemTemplate's
 // `$Label` / `$Glyph` / `$GlyphFill` / `$GlyphStroke` bindings resolve
 // through the DP system.
-export class CapOption extends Model
+export class CapOption extends MuralBase
 {
-    public static readonly LabelKey = Model.RegisterProperty<string>(
+    public static readonly LabelKey = MuralBase.RegisterProperty<string>(
         CapOption, 'Label', '', MetaData.None);
-    public static readonly GlyphKey = Model.RegisterProperty<string>(
+    public static readonly GlyphKey = MuralBase.RegisterProperty<string>(
         CapOption, 'Glyph', '', MetaData.None);
-    public static readonly GlyphFillKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly GlyphFillKey = MuralBase.RegisterProperty<Brush | undefined>(
         CapOption, 'GlyphFill', undefined, MetaData.None);
-    public static readonly GlyphStrokeKey = Model.RegisterProperty<Pen | undefined>(
+    public static readonly GlyphStrokeKey = MuralBase.RegisterProperty<Pen | undefined>(
         CapOption, 'GlyphStroke', undefined, MetaData.None);
 
     // Template is intentionally NOT a DP and may be a thunk. The display

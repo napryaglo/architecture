@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Thickness,
     Visual,
     type PropertyDescriptor,
@@ -124,18 +124,18 @@ export function fillRibbonStack(src: RibbonContentSource, stack: StackPanel): vo
 // the icon/text composition — same escape hatch ToolBarButton offers.
 export class RibbonButton extends Button
 {
-    public static readonly LargeIconKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly LargeIconKey = MuralBase.RegisterProperty<Visual | undefined>(
         RibbonButton, 'LargeIcon', undefined, MetaData.Measure);
-    public static readonly SmallIconKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly SmallIconKey = MuralBase.RegisterProperty<Visual | undefined>(
         RibbonButton, 'SmallIcon', undefined, MetaData.Measure);
-    public static readonly TextKey      = Model.RegisterProperty<string | undefined>(
+    public static readonly TextKey      = MuralBase.RegisterProperty<string | undefined>(
         RibbonButton, 'Text', undefined, MetaData.Measure | MetaData.Render);
-    public static readonly SizeKey      = Model.RegisterProperty<RibbonButtonSize>(
+    public static readonly SizeKey      = MuralBase.RegisterProperty<RibbonButtonSize>(
         RibbonButton, 'Size', RibbonButtonSize.Large, MetaData.Measure);
 
     static
     {
-        Model.OverrideMetadata(RibbonButton, Element.DefaultStyleKeyKey, { default_value: RibbonButton });
+        MuralBase.OverrideMetadata(RibbonButton, Element.DefaultStyleKeyKey, { default_value: RibbonButton });
     }
 
     public get LargeIcon(): Visual | undefined  { return this.get_property_value(RibbonButton.LargeIconKey); }
@@ -170,18 +170,18 @@ export class RibbonButton extends Button
 // a filled-tonal chrome so a sticky toggle stays visible in a group.
 export class RibbonToggleButton extends ToggleButton
 {
-    public static readonly LargeIconKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly LargeIconKey = MuralBase.RegisterProperty<Visual | undefined>(
         RibbonToggleButton, 'LargeIcon', undefined, MetaData.Measure);
-    public static readonly SmallIconKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly SmallIconKey = MuralBase.RegisterProperty<Visual | undefined>(
         RibbonToggleButton, 'SmallIcon', undefined, MetaData.Measure);
-    public static readonly TextKey      = Model.RegisterProperty<string | undefined>(
+    public static readonly TextKey      = MuralBase.RegisterProperty<string | undefined>(
         RibbonToggleButton, 'Text', undefined, MetaData.Measure | MetaData.Render);
-    public static readonly SizeKey      = Model.RegisterProperty<RibbonButtonSize>(
+    public static readonly SizeKey      = MuralBase.RegisterProperty<RibbonButtonSize>(
         RibbonToggleButton, 'Size', RibbonButtonSize.Large, MetaData.Measure);
 
     static
     {
-        Model.OverrideMetadata(RibbonToggleButton, Element.DefaultStyleKeyKey, { default_value: RibbonToggleButton });
+        MuralBase.OverrideMetadata(RibbonToggleButton, Element.DefaultStyleKeyKey, { default_value: RibbonToggleButton });
     }
 
     public get LargeIcon(): Visual | undefined  { return this.get_property_value(RibbonToggleButton.LargeIconKey); }

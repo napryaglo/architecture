@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -26,9 +26,9 @@ import { buildRoundedPolygon, maxCornerRadius } from './polygon-helpers.js';
 // Stroke insets by half-thickness.
 export class Cookie extends Shape
 {
-    public static readonly SidesKey           = Model.RegisterProperty<number>(           Cookie, 'Sides',           6,         MetaData.Render);
-    public static readonly RotationKey        = Model.RegisterProperty<number>(           Cookie, 'Rotation',        -90,       MetaData.Render);
-    public static readonly CornerRadiusKey    = Model.RegisterProperty<number>(           Cookie, 'CornerRadius',    0,         MetaData.Render);
+    public static readonly SidesKey           = MuralBase.RegisterProperty<number>(           Cookie, 'Sides',           6,         MetaData.Render);
+    public static readonly RotationKey        = MuralBase.RegisterProperty<number>(           Cookie, 'Rotation',        -90,       MetaData.Render);
+    public static readonly CornerRadiusKey    = MuralBase.RegisterProperty<number>(           Cookie, 'CornerRadius',    0,         MetaData.Render);
 
     public get Sides(): number { return this.get_property_value(Cookie.SidesKey); }
     public set Sides(v: number) { this.set_property_value(Cookie.SidesKey, v); }
@@ -89,35 +89,35 @@ export class Cookie extends Shape
 export class FourSidedCookie extends Cookie
 {
     static {
-        Model.OverrideMetadata(FourSidedCookie, Cookie.SidesKey, { default_value: 4 });
+        MuralBase.OverrideMetadata(FourSidedCookie, Cookie.SidesKey, { default_value: 4 });
     }
 }
 
 export class SixSidedCookie extends Cookie
 {
     static {
-        Model.OverrideMetadata(SixSidedCookie, Cookie.SidesKey, { default_value: 6 });
+        MuralBase.OverrideMetadata(SixSidedCookie, Cookie.SidesKey, { default_value: 6 });
     }
 }
 
 export class SevenSidedCookie extends Cookie
 {
     static {
-        Model.OverrideMetadata(SevenSidedCookie, Cookie.SidesKey, { default_value: 7 });
+        MuralBase.OverrideMetadata(SevenSidedCookie, Cookie.SidesKey, { default_value: 7 });
     }
 }
 
 export class NineSidedCookie extends Cookie
 {
     static {
-        Model.OverrideMetadata(NineSidedCookie, Cookie.SidesKey, { default_value: 9 });
+        MuralBase.OverrideMetadata(NineSidedCookie, Cookie.SidesKey, { default_value: 9 });
     }
 }
 
 export class TwelveSidedCookie extends Cookie
 {
     static {
-        Model.OverrideMetadata(TwelveSidedCookie, Cookie.SidesKey, { default_value: 12 });
+        MuralBase.OverrideMetadata(TwelveSidedCookie, Cookie.SidesKey, { default_value: 12 });
     }
 }
 
@@ -126,8 +126,8 @@ export class TwelveSidedCookie extends Cookie
 export class Diamond extends Cookie
 {
     static {
-        Model.OverrideMetadata(Diamond, Cookie.SidesKey,    { default_value: 4 });
-        Model.OverrideMetadata(Diamond, Cookie.RotationKey, { default_value: -90 });
+        MuralBase.OverrideMetadata(Diamond, Cookie.SidesKey,    { default_value: 4 });
+        MuralBase.OverrideMetadata(Diamond, Cookie.RotationKey, { default_value: -90 });
     }
 }
 
@@ -135,7 +135,7 @@ export class Diamond extends Cookie
 export class Pentagon extends Cookie
 {
     static {
-        Model.OverrideMetadata(Pentagon, Cookie.SidesKey, { default_value: 5 });
+        MuralBase.OverrideMetadata(Pentagon, Cookie.SidesKey, { default_value: 5 });
     }
 }
 
@@ -144,7 +144,7 @@ export class Pentagon extends Cookie
 export class Gem extends Cookie
 {
     static {
-        Model.OverrideMetadata(Gem, Cookie.SidesKey,    { default_value: 6 });
-        Model.OverrideMetadata(Gem, Cookie.RotationKey, { default_value: 0 });
+        MuralBase.OverrideMetadata(Gem, Cookie.SidesKey,    { default_value: 6 });
+        MuralBase.OverrideMetadata(Gem, Cookie.RotationKey, { default_value: 0 });
     }
 }

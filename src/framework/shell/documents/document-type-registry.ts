@@ -1,7 +1,7 @@
-import {
+﻿import {
     ApplicationService,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     ServiceBase,
     ServiceKey,
@@ -33,7 +33,7 @@ export class DocumentTypeRegistry extends ServiceBase
 {
     public static readonly Key = new ServiceKey<DocumentTypeRegistry>('DocumentTypeRegistry');
 
-    public static readonly DefinitionsKey = Model.RegisterProperty<ObservableCollection<DocumentDefinition>>(
+    public static readonly DefinitionsKey = MuralBase.RegisterProperty<ObservableCollection<DocumentDefinition>>(
         DocumentTypeRegistry, 'Definitions',
         undefined as unknown as ObservableCollection<DocumentDefinition>, MetaData.None);
 

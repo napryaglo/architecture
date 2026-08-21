@@ -1,14 +1,14 @@
-// TimePickerVM — backs the time-picker demo. Hour (0-23) + Minute bind
+﻿// TimePickerVM — backs the time-picker demo. Hour (0-23) + Minute bind
 // TwoWay to the dial; TimeLabel echoes the picked time in 12h form,
 // refreshed from OnPropertyChanged so both direct and binding-driven
 // writes update it.
-import { Model, MetaData, type PropertyDescriptor } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, type PropertyDescriptor } from '@pragmatic-lab/mural/runtime';
 
-export class TimePickerVM extends Model
+export class TimePickerVM extends MuralBase
 {
-    static HourKey      = Model.RegisterProperty<number>(TimePickerVM, 'Hour', 9, MetaData.None);
-    static MinuteKey    = Model.RegisterProperty<number>(TimePickerVM, 'Minute', 30, MetaData.None);
-    static TimeLabelKey = Model.RegisterProperty<string>(TimePickerVM, 'TimeLabel', '', MetaData.None);
+    static HourKey      = MuralBase.RegisterProperty<number>(TimePickerVM, 'Hour', 9, MetaData.None);
+    static MinuteKey    = MuralBase.RegisterProperty<number>(TimePickerVM, 'Minute', 30, MetaData.None);
+    static TimeLabelKey = MuralBase.RegisterProperty<string>(TimePickerVM, 'TimeLabel', '', MetaData.None);
 
     get Hour():      number { return this.get_property_value(TimePickerVM.HourKey); }
     set Hour(v:      number) { this.set_property_value(TimePickerVM.HourKey, v); }

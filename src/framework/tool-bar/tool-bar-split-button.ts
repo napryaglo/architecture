@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Visual,
@@ -41,33 +41,33 @@ import { ToolBarPosition } from './tool-bar-items.js';
 // split MenuButton / RibbonPopupButton use.
 export class ToolBarSplitButton extends Gallery implements ICommandSource
 {
-    public static readonly CommandKey          = Model.RegisterProperty<ICommand | undefined>(
+    public static readonly CommandKey          = MuralBase.RegisterProperty<ICommand | undefined>(
         ToolBarSplitButton, 'Command', undefined, MetaData.None);
-    public static readonly CommandParameterKey = Model.RegisterProperty<unknown>(
+    public static readonly CommandParameterKey = MuralBase.RegisterProperty<unknown>(
         ToolBarSplitButton, 'CommandParameter', undefined, MetaData.None);
     // RoutedCommand dispatch target override; unused for a plain ICommand.
-    public static readonly CommandTargetKey    = Model.RegisterProperty<Visual | undefined>(
+    public static readonly CommandTargetKey    = MuralBase.RegisterProperty<Visual | undefined>(
         ToolBarSplitButton, 'CommandTarget', undefined, MetaData.None);
     // Primary content — the icon / label Visual shown in the primary half.
-    public static readonly ContentKey          = Model.RegisterProperty<Visual | undefined>(
+    public static readonly ContentKey          = MuralBase.RegisterProperty<Visual | undefined>(
         ToolBarSplitButton, 'Content', undefined, MetaData.Measure);
-    public static readonly IsOpenKey           = Model.RegisterProperty<boolean>(
+    public static readonly IsOpenKey           = MuralBase.RegisterProperty<boolean>(
         ToolBarSplitButton, 'IsOpen', false, MetaData.None);
     // Where the button sits inside a ToolBar group — drives the corner
     // rounding of the OUTER pill via the template, exactly like ToolBarButton.
-    public static readonly PositionKey         = Model.RegisterProperty<ToolBarPosition>(
+    public static readonly PositionKey         = MuralBase.RegisterProperty<ToolBarPosition>(
         ToolBarSplitButton, 'Position', ToolBarPosition.Only, MetaData.None);
     // Trigger chrome — the visible split button. Can't share ItemsControl's
     // primary Template slot (that hosts the popup ItemsPresenter), so it
     // lives in a second template DP the default Style sets. The default Style
     // swaps this to a single-chrome dropdown template via a
     // `when ( Command is unset )` trigger; the control re-adopts on change.
-    public static readonly TriggerTemplateKey  = Model.RegisterProperty<ControlTemplate | undefined>(
+    public static readonly TriggerTemplateKey  = MuralBase.RegisterProperty<ControlTemplate | undefined>(
         ToolBarSplitButton, 'TriggerTemplate', undefined, MetaData.Measure);
 
     static
     {
-        Model.OverrideMetadata(ToolBarSplitButton, Element.DefaultStyleKeyKey, { default_value: ToolBarSplitButton });
+        MuralBase.OverrideMetadata(ToolBarSplitButton, Element.DefaultStyleKeyKey, { default_value: ToolBarSplitButton });
     }
 
     public get Command(): ICommand | undefined  { return this.get_property_value(ToolBarSplitButton.CommandKey); }

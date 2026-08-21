@@ -1,9 +1,9 @@
-import { Point } from '../../../visual-engine/index.js';
+﻿import { Point } from '../../../visual-engine/index.js';
 import type { Diagram } from '../diagram.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
 import type { Figure } from '../figure.js';
-import type { Model } from '../../../runtime/index.js';
+import type { MuralBase } from '../../../runtime/index.js';
 import type { ResolvedPortSide } from '../port.js';
 import { RoutingMode } from '../routing/router.js';
 
@@ -138,7 +138,7 @@ export class ConnectorCreateBehavior
 // the CREATE path (makeSideEndpoint) and the REPOSITION path (edit adorner) are
 // provably referencing the same object: both live on the one container-side
 // registry and fan, instead of stacking on two registries.
-export function itemOf(figure: Figure): Model
+export function itemOf(figure: Figure): MuralBase
 {
     return figure;
 }

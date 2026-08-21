@@ -1,18 +1,18 @@
-import { Binding, BindingMode } from './binding.js';
+﻿import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
-import { Model } from '../model.js';
+import { MuralBase } from '../model.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
-// Watcher Model carrying the converter's combined output. Same pattern
+// Watcher MuralBase carrying the converter's combined output. Same pattern
 // as DataContextWatcher in data-context-binding.ts — the underlying
-// Binding pushes the resolved value through this Model's "Value"
+// Binding pushes the resolved value through this MuralBase's "Value"
 // property so the EVD machinery picks it up.
-class MultiBindingWatcher extends Model
+class MultiBindingWatcher extends MuralBase
 {
-    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
         MultiBindingWatcher, 'Value', undefined, MetaData.None);
 
     public get Value(): unknown { return this.get_property_value(MultiBindingWatcher.ValueKey); }
@@ -32,7 +32,7 @@ class MultiBindingWatcher extends Model
 //
 // Reactivity matches DataContextBinding's contract: the host's
 // DataContext changes refresh everything; first-segment property
-// changes on each path's source Model refresh too. Mutations deeper
+// changes on each path's source MuralBase refresh too. Mutations deeper
 // than the first segment don't auto-refresh — documented limitation,
 // inherited from the same one-segment subscription policy.
 class MultiBindingImpl extends Binding
@@ -46,11 +46,11 @@ class MultiBindingImpl extends Binding
     // and the binding listens to it for its entire lifetime.
     private readonly dataContextKey: PropertyKey<unknown>;
 
-    // For each path, the Model we're currently subscribed to on its
+    // For each path, the MuralBase we're currently subscribed to on its
     // first segment, the callback we installed, and the key we
     // registered it under. Cleared on every refresh so re-resolution
     // is idempotent.
-    private currentSources:     (Model | undefined)[];
+    private currentSources:     (MuralBase | undefined)[];
     private sourceCallbacks:    (PropertyChangeCallback | undefined)[];
     private currentSourceKeys:  (PropertyKey<unknown> | undefined)[];
 
@@ -115,10 +115,10 @@ class MultiBindingImpl extends Binding
             values[i] = walkPath(dc, path);
 
             // Subscribe to the first segment for this path if the
-            // current DataContext is a Model. Mutations to deeper
+            // current DataContext is a MuralBase. Mutations to deeper
             // segments aren't picked up — matching DataContextBinding.
             // resolveKey throws when the first segment isn't a DP on dc.
-            if (dc instanceof Model)
+            if (dc instanceof MuralBase)
             {
                 const first = firstSegment(path);
                 const key = resolveKey(dc, undefined, first);
@@ -170,21 +170,21 @@ function walkPath(root: unknown, path: string): unknown
     for (const seg of path.split('.'))
     {
         if (cur === undefined || cur === null) return undefined;
-        if (cur instanceof Model) cur = cur.get_property_value(resolveKey(cur, undefined, seg));
+        if (cur instanceof MuralBase) cur = cur.get_property_value(resolveKey(cur, undefined, seg));
         else if (typeof cur === 'object') cur = (cur as Record<string, unknown>)[seg];
         else return undefined;
     }
     return cur;
 }
 
-// Watcher Model for the general (child-bindings) MultiBinding /
+// Watcher MuralBase for the general (child-bindings) MultiBinding /
 // PriorityBinding forms. Each child is a full Binding (potentially
 // with its own source, converter, ValidationRules, etc.); the watcher
 // holds the composed result and the outer Binding subclass listens on
 // its Value property the same way as the inline-expression form.
-class CombinedBindingWatcher extends Model
+class CombinedBindingWatcher extends MuralBase
 {
-    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
         CombinedBindingWatcher, 'Value', undefined, MetaData.None);
 
     public get Value(): unknown { return this.get_property_value(CombinedBindingWatcher.ValueKey); }

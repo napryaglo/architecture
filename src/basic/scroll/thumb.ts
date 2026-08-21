@@ -1,8 +1,8 @@
-import {
+﻿import {
     DynamicResource,
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Visual,
@@ -82,7 +82,7 @@ export class Thumb extends Element
     // Read-only DP exposing the drag state so triggers can react.
     // Backing store flips through setIsDraggingInternal so external
     // writers can't desync the state machine.
-    public static readonly IsDraggingKey = Model.RegisterReadOnlyProperty<boolean>(
+    public static readonly IsDraggingKey = MuralBase.RegisterReadOnlyProperty<boolean>(
         Thumb, 'IsDragging', false, MetaData.Render);
 
     // Inline-built chrome — a Border that paints the Thumb. Kept as a

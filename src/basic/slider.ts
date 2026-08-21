@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -113,24 +113,24 @@ export class SliderLayout extends Panel
 //   which is what users expect on a vertical slider.
 export class Slider extends TemplatedControl
 {
-    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(Slider, 'Orientation', Orientation.Horizontal, MetaData.Measure | MetaData.Arrange);
-    public static readonly MinimumKey     = Model.RegisterProperty<number>(     Slider, 'Minimum',     0,    MetaData.Arrange);
-    public static readonly MaximumKey     = Model.RegisterProperty<number>(     Slider, 'Maximum',     1,    MetaData.Arrange);
-    public static readonly ValueKey       = Model.RegisterProperty<number>(     Slider, 'Value',       0,    MetaData.Arrange | MetaData.BindsTwoWayByDefault);
-    public static readonly SmallChangeKey = Model.RegisterProperty<number>(     Slider, 'SmallChange', 0.01, MetaData.None);
-    public static readonly LargeChangeKey = Model.RegisterProperty<number>(     Slider, 'LargeChange', 0.1,  MetaData.None);
+    public static readonly OrientationKey = MuralBase.RegisterProperty<Orientation>(Slider, 'Orientation', Orientation.Horizontal, MetaData.Measure | MetaData.Arrange);
+    public static readonly MinimumKey     = MuralBase.RegisterProperty<number>(     Slider, 'Minimum',     0,    MetaData.Arrange);
+    public static readonly MaximumKey     = MuralBase.RegisterProperty<number>(     Slider, 'Maximum',     1,    MetaData.Arrange);
+    public static readonly ValueKey       = MuralBase.RegisterProperty<number>(     Slider, 'Value',       0,    MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+    public static readonly SmallChangeKey = MuralBase.RegisterProperty<number>(     Slider, 'SmallChange', 0.01, MetaData.None);
+    public static readonly LargeChangeKey = MuralBase.RegisterProperty<number>(     Slider, 'LargeChange', 0.1,  MetaData.None);
     // Read-only "thumb is being dragged" state, surfaced as a DP so
     // the default template's `when(IsDragging) { PART_Thumb.Fill
     // = @PrimaryPress; }` trigger fires off the same flag the drag
     // handler flips. Internal write-key keeps the setter private to
     // the drag path; consumers see it through the public boolean getter.
-    private static readonly _IsDraggingPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsDraggingPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         Slider, 'IsDragging', false, MetaData.None,
     );
     public  static readonly IsDraggingKey  = Slider._IsDraggingPriv;
 
     static {
-        Model.OverrideMetadata(Slider, Element.DefaultStyleKeyKey, { default_value: Slider });
+        MuralBase.OverrideMetadata(Slider, Element.DefaultStyleKeyKey, { default_value: Slider });
     }
 
     // ── Template parts ─────────────────────────────────────────────

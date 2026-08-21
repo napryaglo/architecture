@@ -1,4 +1,4 @@
-import type { ServiceToken } from '../../../runtime/index.js';
+﻿import type { ServiceToken } from '../../../runtime/index.js';
 import type { CommandDefinition } from './command-definition.js';
 
 // ICommandTarget — the runtime command-handling surface an active document
@@ -41,7 +41,7 @@ export interface ICommandTarget
 }
 
 // Duck-type guard — an active document is a command target when it exposes the
-// three members. Kept structural (not instanceof) so any document Model can opt
+// three members. Kept structural (not instanceof) so any document MuralBase can opt
 // in without importing a base class, mirroring the diagram's IDiagramViewHost /
 // DiagramMutator duck-typing.
 export function isCommandTarget(value: unknown): value is ICommandTarget

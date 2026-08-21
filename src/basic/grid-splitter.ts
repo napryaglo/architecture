@@ -1,9 +1,9 @@
-import {
+﻿import {
     Adorner,
     AdornerLayer,
     HorizontalAlignment,
     MetaData,
-    Model,
+    MuralBase,
     PropertyDescriptor,
     Rect,
     Size,
@@ -98,26 +98,26 @@ enum AdjacentTrack
 // as a separator track sized to its thickness.
 export class GridSplitter extends Thumb
 {
-    public static readonly ResizeDirectionKey = Model.RegisterProperty<GridResizeDirection>(
+    public static readonly ResizeDirectionKey = MuralBase.RegisterProperty<GridResizeDirection>(
         GridSplitter, 'ResizeDirection', GridResizeDirection.Auto, MetaData.Render);
 
-    public static readonly ResizeBehaviorKey = Model.RegisterProperty<GridResizeBehavior>(
+    public static readonly ResizeBehaviorKey = MuralBase.RegisterProperty<GridResizeBehavior>(
         GridSplitter, 'ResizeBehavior', GridResizeBehavior.BasedOnAlignment, MetaData.None);
 
-    public static readonly ShowsPreviewKey = Model.RegisterProperty<boolean>(
+    public static readonly ShowsPreviewKey = MuralBase.RegisterProperty<boolean>(
         GridSplitter, 'ShowsPreview', false, MetaData.None);
 
-    public static readonly DragIncrementKey = Model.RegisterProperty<number>(
+    public static readonly DragIncrementKey = MuralBase.RegisterProperty<number>(
         GridSplitter, 'DragIncrement', 1, MetaData.None);
 
-    public static readonly KeyboardIncrementKey = Model.RegisterProperty<number>(
+    public static readonly KeyboardIncrementKey = MuralBase.RegisterProperty<number>(
         GridSplitter, 'KeyboardIncrement', 10, MetaData.None);
 
-    public static readonly PreviewBrushKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly PreviewBrushKey = MuralBase.RegisterProperty<Brush | undefined>(
         GridSplitter, 'PreviewBrush', undefined, MetaData.None);
 
     static {
-        Model.OverrideMetadata(GridSplitter, Element.DefaultStyleKeyKey, { default_value: GridSplitter });
+        MuralBase.OverrideMetadata(GridSplitter, Element.DefaultStyleKeyKey, { default_value: GridSplitter });
     }
 
     // Snapshot taken on DragStarted so the drag stays consistent even

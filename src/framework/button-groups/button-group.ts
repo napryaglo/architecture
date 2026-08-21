@@ -1,7 +1,7 @@
-import {
+﻿import {
     Easings,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -34,11 +34,11 @@ import {
 // when a demo motivates it.
 export class ButtonGroup extends Panel
 {
-    public static readonly BaseWidthKey   = Model.RegisterProperty<number>(ButtonGroup, 'BaseWidth',    80, MetaData.Measure | MetaData.Arrange);
-    public static readonly HoverWidthKey  = Model.RegisterProperty<number>(ButtonGroup, 'HoverWidth',  120, MetaData.Measure | MetaData.Arrange);
-    public static readonly SpacingKey     = Model.RegisterProperty<number>(ButtonGroup, 'Spacing',       4, MetaData.Measure | MetaData.Arrange);
-    public static readonly DurationMsKey  = Model.RegisterProperty<number>(ButtonGroup, 'DurationMs',  200, MetaData.None);
-    public static readonly EasingKey      = Model.RegisterProperty<EasingFunction>(ButtonGroup, 'Easing', Easings.Standard, MetaData.None);
+    public static readonly BaseWidthKey   = MuralBase.RegisterProperty<number>(ButtonGroup, 'BaseWidth',    80, MetaData.Measure | MetaData.Arrange);
+    public static readonly HoverWidthKey  = MuralBase.RegisterProperty<number>(ButtonGroup, 'HoverWidth',  120, MetaData.Measure | MetaData.Arrange);
+    public static readonly SpacingKey     = MuralBase.RegisterProperty<number>(ButtonGroup, 'Spacing',       4, MetaData.Measure | MetaData.Arrange);
+    public static readonly DurationMsKey  = MuralBase.RegisterProperty<number>(ButtonGroup, 'DurationMs',  200, MetaData.None);
+    public static readonly EasingKey      = MuralBase.RegisterProperty<EasingFunction>(ButtonGroup, 'Easing', Easings.Standard, MetaData.None);
 
     public get BaseWidth():  number { return this.get_property_value(ButtonGroup.BaseWidthKey); }
     public set BaseWidth(v:  number) { this.set_property_value(ButtonGroup.BaseWidthKey, v); }

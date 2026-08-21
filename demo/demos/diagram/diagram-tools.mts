@@ -1,8 +1,8 @@
-// DiagramTool — one toolbar-command descriptor: an icon geometry paired
+﻿// DiagramTool — one toolbar-command descriptor: an icon geometry paired
 // with the ICommand it invokes. The diagrammer authors inline arrays of
 // these in markup (one array per ToolBar group — Align / Distribute /
 // Group / Combine) and a single shared DataTemplate renders each as a
-// ToolBarButton. Keeping the pair as a tiny DP-backed Model lets the
+// ToolBarButton. Keeping the pair as a tiny DP-backed MuralBase lets the
 // template bind $Icon / $Command, and lets the `$nodes.<X>Command`
 // element-source binding resolve once the Diagram control materialises.
 //
@@ -13,14 +13,14 @@
 // visual-engine types apply to `*-vm.mts` files; this descriptor is the
 // inline-markup data the ToolBars iterate.
 
-import { MetaData, Model, type ICommand } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase, type ICommand } from '@pragmatic-lab/mural/runtime';
 import type { Geometry } from '@pragmatic-lab/mural/visual-engine';
 
-export class DiagramTool extends Model
+export class DiagramTool extends MuralBase
 {
-    public static readonly IconKey = Model.RegisterProperty<Geometry | undefined>(
+    public static readonly IconKey = MuralBase.RegisterProperty<Geometry | undefined>(
         DiagramTool, 'Icon', undefined, MetaData.None);
-    public static readonly CommandKey = Model.RegisterProperty<ICommand | undefined>(
+    public static readonly CommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
         DiagramTool, 'Command', undefined, MetaData.None);
 
     public get Icon(): Geometry | undefined  { return this.get_property_value(DiagramTool.IconKey); }

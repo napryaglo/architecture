@@ -1,10 +1,10 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     Application,
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     ResourceDictionary,
     Setter,
@@ -31,7 +31,7 @@ import { HeadlessTarget } from '../../visual-engine/index.js';
 
 class Widget extends Element
 {
-    static { Model.RegisterProperty(Widget, 'Bias', 0, MetaData.None); }
+    static { MuralBase.RegisterProperty(Widget, 'Bias', 0, MetaData.None); }
     public get Bias(): number { return this.get_property_value(resolveKey(this, undefined, 'Bias')); }
     public set Bias(v: number) { this.set_property_value(resolveKey(this, undefined, 'Bias'), v); }
     protected override MeasureOverride(_a: Size): Size { return Size.Zero; }

@@ -1,4 +1,4 @@
-import { Element, MetaData, Model, Rect, Size, type DrawingContext } from '../runtime/index.js';
+﻿import { Element, MetaData, MuralBase, Rect, Size, type DrawingContext } from '../runtime/index.js';
 import { ImageSource, Stretch } from '../visual-engine/index.js';
 
 // Image control — paints an ImageSource into its layout slot, scaled
@@ -24,9 +24,9 @@ import { ImageSource, Stretch } from '../visual-engine/index.js';
 //     image in a sibling Brush layer or a future Effect.
 export class Image extends Element
 {
-    public static readonly SourceKey  = Model.RegisterProperty<ImageSource | undefined>(
+    public static readonly SourceKey  = MuralBase.RegisterProperty<ImageSource | undefined>(
         Image, 'Source', undefined, MetaData.Measure | MetaData.Render);
-    public static readonly StretchKey = Model.RegisterProperty<Stretch>(
+    public static readonly StretchKey = MuralBase.RegisterProperty<Stretch>(
         Image, 'Stretch', Stretch.Uniform, MetaData.Render);
 
     constructor(source?: ImageSource)

@@ -1,4 +1,4 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     AnimationManager,
@@ -7,7 +7,7 @@ import {
     DynamicResource,
     ManualClock,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     ResourceDictionary,
     Size,
@@ -25,7 +25,7 @@ import { resolveKey } from '../model-internals.js';
 class TargetLeaf extends Element
 {
     static {
-        Model.RegisterProperty(TargetLeaf, 'Brush', undefined, MetaData.None);
+        MuralBase.RegisterProperty(TargetLeaf, 'Brush', undefined, MetaData.None);
     }
     public get Brush(): unknown { return this.get_property_value(resolveKey(this, undefined, 'Brush')); }
     public set Brush(v: unknown) { this.set_property_value(resolveKey(this, undefined, 'Brush'), v); }

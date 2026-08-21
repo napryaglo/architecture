@@ -1,5 +1,5 @@
-import { MetaData, Element } from '../../runtime/index.js';
-import { Model } from '../../runtime/model.js';
+﻿import { MetaData, Element } from '../../runtime/index.js';
+import { MuralBase } from '../../runtime/model.js';
 import { ContentControl } from '../base/content-control.js';
 
 // M3 Tooltip — short overlay surface describing an interactive element.
@@ -33,7 +33,7 @@ export class Tooltip extends ContentControl
     // CommandBase) has a matching KeyBinding in its visual tree —
     // resolved via `CommandManager.FindShortcutForCommand(cmd, anchor)`.
     // Empty by default; the default template hides the row when empty.
-    public static readonly ShortcutKey = Model.RegisterProperty<string>(
+    public static readonly ShortcutKey = MuralBase.RegisterProperty<string>(
         Tooltip, 'Shortcut', '', MetaData.Measure | MetaData.Render);
 
     public get Shortcut():  string  { return this.get_property_value(Tooltip.ShortcutKey); }
@@ -42,7 +42,7 @@ export class Tooltip extends ContentControl
     static {
         // Theme-style lookup key — Tooltip instances resolve their
         // default Style via TryFindResource(Tooltip) on attach.
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             Tooltip, Element.DefaultStyleKeyKey,
             { default_value: Tooltip });
     }

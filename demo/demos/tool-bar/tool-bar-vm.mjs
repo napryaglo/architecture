@@ -1,4 +1,4 @@
-// ToolBarVM — backs the tool-bar demo. Holds the shared command
+﻿// ToolBarVM — backs the tool-bar demo. Holds the shared command
 // catalogue + a status string the toolbar items mutate as they fire.
 //
 // Three RelayCommands:
@@ -8,10 +8,10 @@
 //
 // The toggle on the toolbar's right end flips `HasSelection` and pulses
 // RaiseCanExecuteChanged so Delete's chrome dims / undims live.
-import { MetaData, Model, RelayCommand, } from '@pragmatic-lab/mural/runtime';
-export class ToolBarVM extends Model {
-    static StatusKey = Model.RegisterProperty(ToolBarVM, 'Status', 'Ready.', MetaData.None);
-    static HasSelectionKey = Model.RegisterProperty(ToolBarVM, 'HasSelection', false, MetaData.None);
+import { MetaData, MuralBase, RelayCommand, } from '@pragmatic-lab/mural/runtime';
+export class ToolBarVM extends MuralBase {
+    static StatusKey = MuralBase.RegisterProperty(ToolBarVM, 'Status', 'Ready.', MetaData.None);
+    static HasSelectionKey = MuralBase.RegisterProperty(ToolBarVM, 'HasSelection', false, MetaData.None);
     // Command catalogue exposed as plain fields (resolved by the toolbar
     // markup through the VM's own bindings).
     SaveCommand;

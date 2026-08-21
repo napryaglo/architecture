@@ -1,4 +1,4 @@
-// DrawerVM — drives the drawer demo's two Drawers through a single
+﻿// DrawerVM — drives the drawer demo's two Drawers through a single
 // view-model. NavOpen and OptionsOpen are reactive booleans;
 // ToggleNav / OpenOptions / CloseOptions are commands the markup
 // binds to its Buttons. The template's two Drawers OneWay-bind
@@ -10,16 +10,16 @@
 // initiative) reflects back into the VM's OptionsOpen flag. Without
 // this round-trip the next OpenOptions invocation would do nothing —
 // IsOpen would still bind to `true` from the VM's perspective.
-import { MetaData, Model, RelayCommand, type ICommand, type Visual } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase, RelayCommand, type ICommand, type Visual } from '@pragmatic-lab/mural/runtime';
 import { Drawer, DrawerVariant } from '@pragmatic-lab/mural/framework';
 
-export class DrawerVM extends Model
+export class DrawerVM extends MuralBase
 {
-    static NavOpenKey      = Model.RegisterProperty<boolean>(DrawerVM, 'NavOpen',     false, MetaData.None);
-    static OptionsOpenKey  = Model.RegisterProperty<boolean>(DrawerVM, 'OptionsOpen', false, MetaData.None);
-    static ToggleNavKey    = Model.RegisterProperty<ICommand | undefined>(DrawerVM, 'ToggleNav',    undefined, MetaData.None);
-    static OpenOptionsKey  = Model.RegisterProperty<ICommand | undefined>(DrawerVM, 'OpenOptions',  undefined, MetaData.None);
-    static CloseOptionsKey = Model.RegisterProperty<ICommand | undefined>(DrawerVM, 'CloseOptions', undefined, MetaData.None);
+    static NavOpenKey      = MuralBase.RegisterProperty<boolean>(DrawerVM, 'NavOpen',     false, MetaData.None);
+    static OptionsOpenKey  = MuralBase.RegisterProperty<boolean>(DrawerVM, 'OptionsOpen', false, MetaData.None);
+    static ToggleNavKey    = MuralBase.RegisterProperty<ICommand | undefined>(DrawerVM, 'ToggleNav',    undefined, MetaData.None);
+    static OpenOptionsKey  = MuralBase.RegisterProperty<ICommand | undefined>(DrawerVM, 'OpenOptions',  undefined, MetaData.None);
+    static CloseOptionsKey = MuralBase.RegisterProperty<ICommand | undefined>(DrawerVM, 'CloseOptions', undefined, MetaData.None);
 
     get NavOpen():      boolean { return this.get_property_value(DrawerVM.NavOpenKey); }
     set NavOpen(v:      boolean) { this.set_property_value(DrawerVM.NavOpenKey, v); }

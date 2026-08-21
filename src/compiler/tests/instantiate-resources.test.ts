@@ -1,4 +1,4 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import * as runtime from '../../runtime/index.js';
@@ -8,7 +8,7 @@ import { instantiate } from '../compile.js';
 import { DEFAULT_SYMBOLS } from '../symbol-table.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 
-class Entity extends runtime.Model {}
+class Entity extends runtime.MuralBase {}
 
 describe('instantiate — resources dictionary', () => {
     test('builds a resources {} doc and resolves a keyed template', () => {

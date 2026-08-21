@@ -1,7 +1,7 @@
-import {
+﻿import {
     Color,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -167,23 +167,23 @@ export class TemporaryOverlayHost extends Panel
 // to hear it back).
 export class Drawer extends Control
 {
-    public static readonly AnchorKey     = Model.RegisterProperty<Dock>(             Drawer, 'Anchor',     Dock.Left,                MetaData.Measure | MetaData.Arrange);
+    public static readonly AnchorKey     = MuralBase.RegisterProperty<Dock>(             Drawer, 'Anchor',     Dock.Left,                MetaData.Measure | MetaData.Arrange);
     // Variant is registered MetaData.None: it's effectively structural,
     // locked at first layout, so changing it later shouldn't trigger an
     // invalidation cascade that doesn't go anywhere useful.
-    public static readonly VariantKey    = Model.RegisterProperty<DrawerVariant>(    Drawer, 'Variant',    DrawerVariant.Persistent, MetaData.None);
-    public static readonly IsOpenKey     = Model.RegisterProperty<boolean>(          Drawer, 'IsOpen',     false,                    MetaData.Measure | MetaData.Arrange);
-    public static readonly DrawerSizeKey = Model.RegisterProperty<number>(           Drawer, 'DrawerSize', 360,                      MetaData.Measure | MetaData.Arrange);
-    public static readonly RailSizeKey   = Model.RegisterProperty<number>(           Drawer, 'RailSize',   0,                        MetaData.Measure | MetaData.Arrange);
+    public static readonly VariantKey    = MuralBase.RegisterProperty<DrawerVariant>(    Drawer, 'Variant',    DrawerVariant.Persistent, MetaData.None);
+    public static readonly IsOpenKey     = MuralBase.RegisterProperty<boolean>(          Drawer, 'IsOpen',     false,                    MetaData.Measure | MetaData.Arrange);
+    public static readonly DrawerSizeKey = MuralBase.RegisterProperty<number>(           Drawer, 'DrawerSize', 360,                      MetaData.Measure | MetaData.Arrange);
+    public static readonly RailSizeKey   = MuralBase.RegisterProperty<number>(           Drawer, 'RailSize',   0,                        MetaData.Measure | MetaData.Arrange);
     // ScrimBrush — undefined by default; the scrim render path falls
     // back to the active theme's `@Scrim` token, then to FALLBACK_SCRIM
     // (50% black) when no theme is active. Consumers can still pin the
     // brush explicitly via the DP.
-    public static readonly ScrimBrushKey = Model.RegisterProperty<Brush | undefined>(Drawer, 'ScrimBrush', undefined,                MetaData.Render);
-    public static readonly ContentKey    = Model.RegisterProperty<Visual | undefined>(Drawer, 'Content',   undefined,                MetaData.Measure);
+    public static readonly ScrimBrushKey = MuralBase.RegisterProperty<Brush | undefined>(Drawer, 'ScrimBrush', undefined,                MetaData.Render);
+    public static readonly ContentKey    = MuralBase.RegisterProperty<Visual | undefined>(Drawer, 'Content',   undefined,                MetaData.Measure);
 
     static {
-        Model.OverrideMetadata(Drawer, Element.DefaultStyleKeyKey, { default_value: Drawer });
+        MuralBase.OverrideMetadata(Drawer, Element.DefaultStyleKeyKey, { default_value: Drawer });
         // DefaultStyleKey = Drawer → applyDefaultStyle resolves
         // Style[TargetType=Drawer] (surfaces.template.mu), which sets
         // Template = @DefaultDrawerPane. No resolveXxx-from-ctor (§18.12).

@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -8,7 +8,7 @@ import {
     DoubleAnimation,
     ManualClock,
     MetaData,
-    Model,
+    MuralBase,
     PauseStoryboardAction,
     ResumeStoryboardAction,
     Storyboard,
@@ -22,7 +22,7 @@ import { resolveKey } from '../model-internals.js';
 class NamedTest extends Element
 {
     static {
-        Model.RegisterProperty(NamedTest, 'Width', 0, MetaData.None);
+        MuralBase.RegisterProperty(NamedTest, 'Width', 0, MetaData.None);
     }
     public get Width(): number { return this.get_property_value(resolveKey(this, undefined, 'Width')); }
     public set Width(v: number) { this.set_property_value(resolveKey(this, undefined, 'Width'), v); }

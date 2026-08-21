@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Color,
     Thickness,
     HorizontalAlignment,
@@ -55,14 +55,14 @@ function daysInMonth(year: number, month: number): number
 
 export class DatePicker extends TemplatedControl
 {
-    public static readonly SelectedDateKey = Model.RegisterProperty<Date | undefined>(
+    public static readonly SelectedDateKey = MuralBase.RegisterProperty<Date | undefined>(
         DatePicker, 'SelectedDate', undefined, MetaData.None | MetaData.BindsTwoWayByDefault);
     // First of the currently-displayed month. Undefined until the ctor
     // seeds it from SelectedDate (or today).
-    public static readonly DisplayMonthKey = Model.RegisterProperty<Date | undefined>(
+    public static readonly DisplayMonthKey = MuralBase.RegisterProperty<Date | undefined>(
         DatePicker, 'DisplayMonth', undefined, MetaData.None);
     // Optional "today" marker (an outline ring). Undefined → no marker.
-    public static readonly TodayKey = Model.RegisterProperty<Date | undefined>(
+    public static readonly TodayKey = MuralBase.RegisterProperty<Date | undefined>(
         DatePicker, 'Today', undefined, MetaData.None);
 
     public get SelectedDate(): Date | undefined { return this.get_property_value(DatePicker.SelectedDateKey); }
@@ -76,7 +76,7 @@ export class DatePicker extends TemplatedControl
 
     static
     {
-        Model.OverrideMetadata(DatePicker, Element.DefaultStyleKeyKey, { default_value: DatePicker });
+        MuralBase.OverrideMetadata(DatePicker, Element.DefaultStyleKeyKey, { default_value: DatePicker });
     }
 
     private _monthLabel: TextBlock  | undefined;

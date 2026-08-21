@@ -1,4 +1,4 @@
-// word-toolbox VM — toolbox of 100 words on the left, a virtualized
+﻿// word-toolbox VM — toolbox of 100 words on the left, a virtualized
 // WrapPanel-backed listbox on the right pre-populated with ~2k
 // entries. Drag-from-toolbox copies a word into the listbox; drag-
 // within-listbox reorders.
@@ -21,7 +21,7 @@
 
 import {
     DataObject, DragDropEffects,
-    MetaData, Model, ObservableCollection,
+    MetaData, MuralBase, ObservableCollection,
     type DragStartSpec,
 } from '@pragmatic-lab/mural/runtime';
 import { TOOLBOX_WORDS, buildListBoxSeed } from './word-list.mjs';
@@ -31,10 +31,10 @@ export const FMT_WORD_COPY  = '@pragmatic-lab/mural/word/copy';
 
 const LIST_SEED_COUNT = 2000;
 
-export class WordVM extends Model
+export class WordVM extends MuralBase
 {
-    static WordKey          = Model.RegisterProperty(WordVM, 'Word',          '',        MetaData.None);
-    static BeginDragDataKey = Model.RegisterProperty<(() => DragStartSpec) | undefined>(WordVM, 'BeginDragData', undefined, MetaData.None);
+    static WordKey          = MuralBase.RegisterProperty(WordVM, 'Word',          '',        MetaData.None);
+    static BeginDragDataKey = MuralBase.RegisterProperty<(() => DragStartSpec) | undefined>(WordVM, 'BeginDragData', undefined, MetaData.None);
 
     constructor(word: string) {
         super();
@@ -47,12 +47,12 @@ export class WordVM extends Model
     set BeginDragData(v:  (() => DragStartSpec) | undefined) { this.set_property_value(WordVM.BeginDragDataKey, v); }
 }
 
-export class WordToolboxVM extends Model
+export class WordToolboxVM extends MuralBase
 {
-    static ToolboxWordsKey = Model.RegisterProperty<ObservableCollection<WordVM> | undefined>(WordToolboxVM, 'ToolboxWords', undefined, MetaData.None);
-    static ListBoxWordsKey = Model.RegisterProperty<ObservableCollection<WordVM> | undefined>(WordToolboxVM, 'ListBoxWords', undefined, MetaData.None);
+    static ToolboxWordsKey = MuralBase.RegisterProperty<ObservableCollection<WordVM> | undefined>(WordToolboxVM, 'ToolboxWords', undefined, MetaData.None);
+    static ListBoxWordsKey = MuralBase.RegisterProperty<ObservableCollection<WordVM> | undefined>(WordToolboxVM, 'ListBoxWords', undefined, MetaData.None);
     // Tiny status string — counts only, no per-item details.
-    static StatusKey       = Model.RegisterProperty(WordToolboxVM, 'Status',       '',        MetaData.None);
+    static StatusKey       = MuralBase.RegisterProperty(WordToolboxVM, 'Status',       '',        MetaData.None);
 
     constructor() {
         super();

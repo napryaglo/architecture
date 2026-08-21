@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     type Visual,
 } from '../../../runtime/index.js';
@@ -11,7 +11,7 @@ import { CommandViewModel } from './command-view-model.js';
 // One entry in the shell command bar. The ToolbarService surfaces a mixed,
 // Order-ordered list of these — command GROUPS (below) and editor CONTROLS
 // (ShellControlViewModel) — that the shell dispatches on by concrete type.
-export abstract class ToolbarEntryViewModel extends Model { }
+export abstract class ToolbarEntryViewModel extends MuralBase { }
 
 // A GROUP of toolbar commands the ToolbarService surfaces as one presentation
 // unit. The ToolbarService clusters VisibleCommands by CommandDefinition.Group,
@@ -33,20 +33,20 @@ export abstract class ToolbarGroupViewModel extends ToolbarEntryViewModel
 {
     // The command VMs in this group, already ordered. Bound by a group template
     // as `ItemsSource = $Items`.
-    public static readonly ItemsKey = Model.RegisterProperty<ObservableCollection<CommandViewModel>>(
+    public static readonly ItemsKey = MuralBase.RegisterProperty<ObservableCollection<CommandViewModel>>(
         ToolbarGroupViewModel, 'Items',
         undefined as unknown as ObservableCollection<CommandViewModel>, MetaData.None);
 
     // The dropdown face icon (split presentations).
-    public static readonly IconKey = Model.RegisterProperty<Geometry | undefined>(
+    public static readonly IconKey = MuralBase.RegisterProperty<Geometry | undefined>(
         ToolbarGroupViewModel, 'Icon', undefined, MetaData.None);
 
     // The dropdown face tooltip (split presentations).
-    public static readonly TitleKey = Model.RegisterProperty<string>(
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(
         ToolbarGroupViewModel, 'Title', '', MetaData.None);
 
     // Grid column count (SplitGrid); 0 falls back to the template default.
-    public static readonly ColumnsKey = Model.RegisterProperty<number>(
+    public static readonly ColumnsKey = MuralBase.RegisterProperty<number>(
         ToolbarGroupViewModel, 'Columns', 0, MetaData.None);
 
     constructor(items: ObservableCollection<CommandViewModel>, icon: Geometry | undefined, title: string, columns: number)
@@ -107,16 +107,16 @@ export class ToolbarToggleGroup extends ToolbarGroupViewModel { }
 export class ShellControlViewModel extends ToolbarEntryViewModel
 {
     // The editor UI (the ShellControlDefinition's Template).
-    public static readonly TemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly TemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         ShellControlViewModel, 'Template', undefined, MetaData.None);
 
     // The DataContext the template binds — the active document.
-    public static readonly TargetKey = Model.RegisterProperty<unknown>(
+    public static readonly TargetKey = MuralBase.RegisterProperty<unknown>(
         ShellControlViewModel, 'Target', undefined, MetaData.None);
 
     // The materialized editor Visual — Template applied to Target with Target as
     // its DataContext. The shell binds `Content = $View`.
-    public static readonly ViewKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly ViewKey = MuralBase.RegisterProperty<Visual | undefined>(
         ShellControlViewModel, 'View', undefined, MetaData.None);
 
     constructor(template: DataTemplate | undefined, target: unknown)

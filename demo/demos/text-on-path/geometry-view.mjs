@@ -1,4 +1,4 @@
-// GeometryView — a Visual that fills + strokes an arbitrary
+﻿// GeometryView — a Visual that fills + strokes an arbitrary
 // `Geometry`. Demo-local helper for the text-on-path demo; if a third
 // demo needs the same primitive it gets promoted to
 // `src/basic/geometry-view.ts` and ported to .ts.
@@ -11,17 +11,17 @@
 // can paint a fill-only, stroke-only, or both surface in a single
 // Visual.
 
-import { MetaData, Model, Size, Visual } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase, Size, Visual } from '@pragmatic-lab/mural/runtime';
 import { Pen } from '@pragmatic-lab/mural/visual-engine';
 
 export class GeometryView extends Visual {
-    static GeometryKey    = Model.RegisterProperty(GeometryView, 'Geometry',    undefined, MetaData.Render);
-    static StrokeWidthKey = Model.RegisterProperty(GeometryView, 'StrokeWidth', 1,         MetaData.Render);
+    static GeometryKey    = MuralBase.RegisterProperty(GeometryView, 'Geometry',    undefined, MetaData.Render);
+    static StrokeWidthKey = MuralBase.RegisterProperty(GeometryView, 'StrokeWidth', 1,         MetaData.Render);
     // Fill / Stroke are MetaData.Render — re-render whenever the brush
     // identity changes so an updated SolidColorBrush from the bootstrap's
     // PathColorHex / GlyphColorHex listeners actually repaints the canvas.
-    static FillKey        = Model.RegisterProperty(GeometryView, 'Fill',        undefined, MetaData.Render);
-    static StrokeKey      = Model.RegisterProperty(GeometryView, 'Stroke',      undefined, MetaData.Render);
+    static FillKey        = MuralBase.RegisterProperty(GeometryView, 'Fill',        undefined, MetaData.Render);
+    static StrokeKey      = MuralBase.RegisterProperty(GeometryView, 'Stroke',      undefined, MetaData.Render);
 
     get Geometry()       { return this.get_property_value(GeometryView.GeometryKey); }
     set Geometry(v)      { this.set_property_value(GeometryView.GeometryKey, v); }

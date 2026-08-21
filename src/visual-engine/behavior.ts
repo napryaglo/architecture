@@ -1,4 +1,4 @@
-import { Model } from '../runtime/model.js';
+﻿import { MuralBase } from '../runtime/model.js';
 import type { Visual } from './visual.js';
 
 // Behavior — third leg of the V / VM / B triangle (see CLAUDE.md).
@@ -36,7 +36,7 @@ import type { Visual } from './visual.js';
 //     Visual.AddUnloadedListener primitive.
 //   * Behaviors v3 (planned, not built) — DataTrigger-driven
 //     conditional attach (≡ backlog item 9.2).
-export abstract class Behavior extends Model
+export abstract class Behavior extends MuralBase
 {
     // Wire whatever the behavior does — routed-event listeners,
     // AllowDrop flips, captured references. Called once per

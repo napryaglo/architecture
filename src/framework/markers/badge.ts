@@ -1,4 +1,4 @@
-import { MetaData, Model, Element } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element } from '../../runtime/index.js';
 import { Control } from '../base/control.js';
 
 // M3 Badge — small visual flag, either a 6dp dot (no count) or a pill
@@ -25,7 +25,7 @@ export enum BadgeVariant
 
 export class Badge extends Control
 {
-    public static readonly VariantKey = Model.RegisterProperty<BadgeVariant>(
+    public static readonly VariantKey = MuralBase.RegisterProperty<BadgeVariant>(
         Badge, 'Variant', BadgeVariant.Numeric,
         MetaData.Render);
 
@@ -33,7 +33,7 @@ export class Badge extends Control
     // the Dot variant. Defaulted to 0; the consumer's UI typically
     // hides the badge entirely when Count = 0 (mural doesn't enforce
     // that policy — see the class doc comment).
-    public static readonly CountKey = Model.RegisterProperty<number>(
+    public static readonly CountKey = MuralBase.RegisterProperty<number>(
         Badge, 'Count', 0, MetaData.Render);
 
     public get Variant(): BadgeVariant { return this.get_property_value(Badge.VariantKey); }
@@ -43,7 +43,7 @@ export class Badge extends Control
     public set Count(v: number) { this.set_property_value(Badge.CountKey, v); }
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             Badge, Element.DefaultStyleKeyKey,
             { default_value: Badge });
     }

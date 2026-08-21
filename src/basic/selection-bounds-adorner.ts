@@ -1,4 +1,4 @@
-// SelectionBoundsAdorner — framework-level promotion of the diagram
+﻿// SelectionBoundsAdorner — framework-level promotion of the diagram
 // demo's selection-resize-adorner.mjs (§19.4 follow-up). Decouples the
 // resize chrome from any specific VM shape via the SelectionSource
 // interface; exposes Stroke / Fill / HandleSize as DPs so consumers
@@ -21,7 +21,7 @@ import {
     Adorner,
     AdornerLayer,
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Rect,
     Size,
@@ -122,9 +122,9 @@ export class SelectionBoundsAdorner extends Adorner
     // ChromeStroke/Fill rather than plain Stroke/Fill — Visual already
     // ships a Stroke DP for its own painting; collision-free names keep
     // the inherited Stroke usable for whatever the host needs.
-    public static readonly ChromeStrokeKey = Model.RegisterProperty<Brush>( SelectionBoundsAdorner, 'ChromeStroke', DEFAULT_STROKE, MetaData.Render);
-    public static readonly ChromeFillKey   = Model.RegisterProperty<Brush>( SelectionBoundsAdorner, 'ChromeFill',   DEFAULT_FILL,   MetaData.Render);
-    public static readonly HandleSizeKey   = Model.RegisterProperty<number>(SelectionBoundsAdorner, 'HandleSize',   DEFAULT_HANDLE_SIZE, MetaData.Render);
+    public static readonly ChromeStrokeKey = MuralBase.RegisterProperty<Brush>( SelectionBoundsAdorner, 'ChromeStroke', DEFAULT_STROKE, MetaData.Render);
+    public static readonly ChromeFillKey   = MuralBase.RegisterProperty<Brush>( SelectionBoundsAdorner, 'ChromeFill',   DEFAULT_FILL,   MetaData.Render);
+    public static readonly HandleSizeKey   = MuralBase.RegisterProperty<number>(SelectionBoundsAdorner, 'HandleSize',   DEFAULT_HANDLE_SIZE, MetaData.Render);
 
     // §19.4 follow-up — Animated hint. When true AND the consumer's
     // SelectionSource implements `applyResizeAnimated`, the adorner
@@ -135,7 +135,7 @@ export class SelectionBoundsAdorner extends Adorner
     // implement the variant, this DP is a no-op (direct writes
     // through plain applyResize). MetaData.None — the DP carries
     // intent, not paint state.
-    public static readonly AnimatedKey     = Model.RegisterProperty<boolean>(SelectionBoundsAdorner, 'Animated',     false, MetaData.None);
+    public static readonly AnimatedKey     = MuralBase.RegisterProperty<boolean>(SelectionBoundsAdorner, 'Animated',     false, MetaData.None);
 
     public get ChromeStroke():  Brush  { return this.get_property_value(SelectionBoundsAdorner.ChromeStrokeKey); }
     public set ChromeStroke(v:  Brush) { this.set_property_value(SelectionBoundsAdorner.ChromeStrokeKey, v); }

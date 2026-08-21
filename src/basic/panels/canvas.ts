@@ -1,4 +1,4 @@
-import { MetaData, Model, Panel, Rect, Size, Visual, type DrawingContext } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Panel, Rect, Size, Visual, type DrawingContext } from '../../runtime/index.js';
 
 // Layout panel that places each child at an absolute (Left, Top)
 // position read from attached properties. Children measure with no
@@ -35,8 +35,8 @@ export class Canvas extends Panel
     // extent doesn't grow when a node moves beyond the current bounds.
     // The flag fires OnPropertyChanged on the CHILD; child's
     // InvalidateMeasure cascades to the parent Canvas's measure pass.
-    public static readonly LeftKey = Model.RegisterAttachedProperty<number>(Canvas, 'Left', 0, MetaData.Measure | MetaData.Arrange);
-    public static readonly TopKey  = Model.RegisterAttachedProperty<number>(Canvas, 'Top',  0, MetaData.Measure | MetaData.Arrange);
+    public static readonly LeftKey = MuralBase.RegisterAttachedProperty<number>(Canvas, 'Left', 0, MetaData.Measure | MetaData.Arrange);
+    public static readonly TopKey  = MuralBase.RegisterAttachedProperty<number>(Canvas, 'Top',  0, MetaData.Measure | MetaData.Arrange);
 
     // Static accessors mirror WPF's Canvas.SetLeft / Canvas.GetLeft.
     // The typed keys carry the descriptor identity; the typed

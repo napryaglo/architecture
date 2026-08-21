@@ -1,4 +1,4 @@
-import { MetaData, Model, Point, Size, type DrawingContext } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Point, Size, type DrawingContext } from '../../runtime/index.js';
 import { LineGeometry } from '../../visual-engine/index.js';
 import { Orientation } from '../panels/orientation.js';
 import { Shape } from './shape.js';
@@ -29,11 +29,11 @@ import { Shape } from './shape.js';
 // fill (a line has zero area).
 export class Line extends Shape
 {
-    public static readonly X1Key              = Model.RegisterProperty<number>(           Line, 'X1',              0,         MetaData.Measure | MetaData.Render);
-    public static readonly Y1Key              = Model.RegisterProperty<number>(           Line, 'Y1',              0,         MetaData.Measure | MetaData.Render);
-    public static readonly X2Key              = Model.RegisterProperty<number>(           Line, 'X2',              0,         MetaData.Measure | MetaData.Render);
-    public static readonly Y2Key              = Model.RegisterProperty<number>(           Line, 'Y2',              0,         MetaData.Measure | MetaData.Render);
-    public static readonly OrientationKey     = Model.RegisterProperty<Orientation | undefined>(Line, 'Orientation', undefined, MetaData.Measure | MetaData.Render);
+    public static readonly X1Key              = MuralBase.RegisterProperty<number>(           Line, 'X1',              0,         MetaData.Measure | MetaData.Render);
+    public static readonly Y1Key              = MuralBase.RegisterProperty<number>(           Line, 'Y1',              0,         MetaData.Measure | MetaData.Render);
+    public static readonly X2Key              = MuralBase.RegisterProperty<number>(           Line, 'X2',              0,         MetaData.Measure | MetaData.Render);
+    public static readonly Y2Key              = MuralBase.RegisterProperty<number>(           Line, 'Y2',              0,         MetaData.Measure | MetaData.Render);
+    public static readonly OrientationKey     = MuralBase.RegisterProperty<Orientation | undefined>(Line, 'Orientation', undefined, MetaData.Measure | MetaData.Render);
 
     public get X1(): number { return this.get_property_value(Line.X1Key); }
     public set X1(value: number) { this.set_property_value(Line.X1Key, value); }

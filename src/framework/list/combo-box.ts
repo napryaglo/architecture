@@ -1,9 +1,9 @@
-import {
+﻿import {
     Application,
     Key,
     KeyEventArgs,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -148,11 +148,11 @@ function displayString(item: unknown): string
 // ClickableBorder (which has no default Style today).
 export class ComboBoxItem extends ClickableBorder
 {
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(
         ComboBoxItem, 'IsSelected', false, MetaData.None);
 
     static {
-        Model.OverrideMetadata(ComboBoxItem, Element.DefaultStyleKeyKey, { default_value: ComboBoxItem });
+        MuralBase.OverrideMetadata(ComboBoxItem, Element.DefaultStyleKeyKey, { default_value: ComboBoxItem });
     }
 
     constructor()
@@ -377,31 +377,31 @@ export class ComboBoxItemList extends ItemsControl
 // the visual tree.
 export class ComboBox extends Selector
 {
-    public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
-    public static readonly PlaceholderKey    = Model.RegisterProperty<string>( ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
+    public static readonly IsDropDownOpenKey = MuralBase.RegisterProperty<boolean>(ComboBox, 'IsDropDownOpen', false,     MetaData.Measure);
+    public static readonly PlaceholderKey    = MuralBase.RegisterProperty<string>( ComboBox, 'Placeholder',    'Select…', MetaData.Measure | MetaData.Render);
     // Editable mode. When true, the selection box hosts a Plain TextBox
     // (PART_EditText) the user can type into, and the dropdown becomes a
     // suggestion list rather than the sole input. The default Style's
     // `when(IsEditable)` trigger swaps the label for the field.
-    public static readonly IsEditableKey     = Model.RegisterProperty<boolean>(ComboBox, 'IsEditable',     false,     MetaData.Measure);
+    public static readonly IsEditableKey     = MuralBase.RegisterProperty<boolean>(ComboBox, 'IsEditable',     false,     MetaData.Measure);
     // The editable text. Two-way by default so a consumer can bind a
     // value and read back what the user typed. In editable mode it
     // mirrors PART_EditText live and is set to the picked item's display
     // string when the user chooses from the dropdown. Non-editable combos
     // leave it untouched (SelectedItem is the value there).
-    public static readonly TextKey           = Model.RegisterProperty<string>( ComboBox, 'Text',           '',        MetaData.Measure | MetaData.BindsTwoWayByDefault);
+    public static readonly TextKey           = MuralBase.RegisterProperty<string>( ComboBox, 'Text',           '',        MetaData.Measure | MetaData.BindsTwoWayByDefault);
     // Read-only "the user has picked an item, not the Placeholder" DP.
     // Flipped by refreshSelectionText whenever SelectedItem swaps;
     // the DefaultComboBoxSelection template triggers on it to switch
     // PART_SelectionText.Foreground from @OnSurfaceVariant (placeholder
     // tint) to @OnSurface (selected-item tint) via DynamicResource.
-    private static readonly _HasSelectionPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _HasSelectionPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         ComboBox, 'HasSelection', false, MetaData.None,
     );
     public  static readonly HasSelectionKey   = ComboBox._HasSelectionPriv;
 
     static {
-        Model.OverrideMetadata(ComboBox, Element.DefaultStyleKeyKey, { default_value: ComboBox });
+        MuralBase.OverrideMetadata(ComboBox, Element.DefaultStyleKeyKey, { default_value: ComboBox });
         // Registers the consolidated controls theme exactly once so
         // DefaultComboBoxSelection / DefaultComboBoxPopup resolve via
         // Application.ResolveDefaultResource during construction.

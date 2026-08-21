@@ -1,4 +1,4 @@
-import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
+﻿import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
@@ -12,7 +12,7 @@ import { ScrollViewer } from '../../../framework/surfaces/scroll-viewer.js';
 import { StackPanel } from '../../../basic/panels/stack-panel.js';
 import { Orientation } from '../../../basic/panels/orientation.js';
 import { TextBlock } from '../../../basic/text-block.js';
-import { Model, Rect, Size } from '../../../runtime/index.js';
+import { MuralBase, Rect, Size } from '../../../runtime/index.js';
 import { DataTemplate } from '../../../basic/templates/data-template.js';
 import { ItemsPanelTemplate } from '../../../basic/panels/items-panel-template.js';
 
@@ -416,21 +416,21 @@ describe('ListBox — selection change notifications', () => {
     });
 });
 
-// A Model row that ALSO has an implicit DataTemplate registered by type —
+// A MuralBase row that ALSO has an implicit DataTemplate registered by type —
 // the shape that exposed the tab-strip double-attach bug.
-class TabDoc extends Model
+class TabDoc extends MuralBase
 {
-    public static readonly TitleKey = Model.RegisterProperty<string>(TabDoc, 'Title', '', undefined);
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(TabDoc, 'Title', '', undefined);
     public get Title(): string { return this.get_property_value(TabDoc.TitleKey); }
     public set Title(v: string) { this.set_property_value(TabDoc.TitleKey, v); }
 }
 
-describe('ListBox — ItemTemplate precedence for Model rows', () => {
+describe('ListBox — ItemTemplate precedence for MuralBase rows', () => {
     beforeEach(() => { initTestApp(); });
 
     test('an explicit ItemTemplate wins over an implicit DataType-registered DataTemplate', () => {
         // Register an implicit DataTemplate[TabDoc] in app resources. Before
-        // the fix, a Model row with such a template rendered through IT even
+        // the fix, a MuralBase row with such a template rendered through IT even
         // when the ListBox had an explicit ItemTemplate — so a document tab
         // strip (ItemTemplate = title+close) instead materialized each open
         // document's heavy DataType template (a Diagram), double-attaching

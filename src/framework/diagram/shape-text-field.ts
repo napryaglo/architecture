@@ -1,4 +1,4 @@
-import { MetaData, Model } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase } from '../../runtime/index.js';
 import { FlowDocument } from '../../basic/documents/flow-document.js';
 import { Paragraph } from '../../basic/documents/paragraph.js';
 import { Run } from '../../basic/documents/inlines.js';
@@ -48,7 +48,7 @@ export function isFieldKind(s: string): s is FieldKind
 export class Field extends Run
 {
     // Named FieldKey (not Key) to stay clear of any future generic 'Key'.
-    public static readonly FieldKeyKey = Model.RegisterProperty<FieldKind>(
+    public static readonly FieldKeyKey = MuralBase.RegisterProperty<FieldKind>(
         Field, 'FieldKey', FieldKind.Width, MetaData.None);
 
     constructor(key: FieldKind = FieldKind.Width, initial = '')

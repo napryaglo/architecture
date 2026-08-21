@@ -1,9 +1,9 @@
-import {
+﻿import {
     Element,
     Key,
     type KeyEventArgs,
     MetaData,
-    Model,
+    MuralBase,
     Point,
     type PropertyDescriptor,
     Rect,
@@ -175,11 +175,11 @@ export class ShapeText extends Control
     static {
         // Without this, applyDefaultStyle() silently no-ops and the control
         // renders no template (see memory: diagram-control-default-style-key).
-        Model.OverrideMetadata(ShapeText, Element.DefaultStyleKeyKey, { default_value: ShapeText });
+        MuralBase.OverrideMetadata(ShapeText, Element.DefaultStyleKeyKey, { default_value: ShapeText });
     }
 
     // The text itself. Measure-affecting so a re-word relays out the block.
-    public static readonly ContentKey = Model.RegisterProperty<string>(
+    public static readonly ContentKey = MuralBase.RegisterProperty<string>(
         ShapeText, 'Content', '', MetaData.Measure);
 
     // Optional rich content (§ Slice 4). When set, the shape displays a
@@ -187,47 +187,47 @@ export class ShapeText extends Control
     // display; Content stays the plain-text projection (kept in sync on
     // commit) and backs the LabelText sugar. Measure — a doc swap re-lays
     // out the block.
-    public static readonly DocumentKey = Model.RegisterProperty<FlowDocument | undefined>(
+    public static readonly DocumentKey = MuralBase.RegisterProperty<FlowDocument | undefined>(
         ShapeText, 'Document', undefined, MetaData.Measure);
     // Derived mirror of "Document is set", kept in sync in OnPropertyChanged.
     // The template's display swap needs a boolean a `when (…)` trigger can
     // test (a trigger can't compare Document against null directly).
-    public static readonly HasRichContentKey = Model.RegisterProperty<boolean>(
+    public static readonly HasRichContentKey = MuralBase.RegisterProperty<boolean>(
         ShapeText, 'HasRichContent', false, MetaData.None);
 
     // ── Character formatting ────────────────────────────────────────
     // Defaults tuned for a diagram label (12dp, normal weight). Foreground
     // defaults to black ink (Visio/drawio convention) so labels read the same
     // regardless of the ambient theme; assign a Brush to override per label.
-    public static readonly FontSizeKey = Model.RegisterProperty<number>(
+    public static readonly FontSizeKey = MuralBase.RegisterProperty<number>(
         ShapeText, 'FontSize', 12, MetaData.Measure | MetaData.Render);
-    public static readonly FontWeightKey = Model.RegisterProperty<FontWeight>(
+    public static readonly FontWeightKey = MuralBase.RegisterProperty<FontWeight>(
         ShapeText, 'FontWeight', FontWeight.Normal, MetaData.Measure | MetaData.Render);
-    public static readonly FontStyleKey = Model.RegisterProperty<FontStyle>(
+    public static readonly FontStyleKey = MuralBase.RegisterProperty<FontStyle>(
         ShapeText, 'FontStyle', FontStyle.Normal, MetaData.Measure | MetaData.Render);
-    public static readonly ForegroundKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly ForegroundKey = MuralBase.RegisterProperty<Brush | undefined>(
         ShapeText, 'Foreground', DEFAULT_INK, MetaData.Render);
     // Font family (a CSS-style stack, tolerant of a raw string like TextBlock).
     // undefined → the template TextBlock's own default. Measure — a family swap
     // re-metrics the text.
-    public static readonly FontFamilyKey = Model.RegisterProperty<FontFamily | string | undefined>(
+    public static readonly FontFamilyKey = MuralBase.RegisterProperty<FontFamily | string | undefined>(
         ShapeText, 'FontFamily', undefined, MetaData.Measure | MetaData.Render);
     // Block-level text decorations (underline / strikethrough) for a PLAIN label.
     // Rich content carries decorations per-Run instead; this drives the plain
     // PART_Text display via a TemplateBinding.
-    public static readonly TextDecorationsKey = Model.RegisterProperty<TextDecorations>(
+    public static readonly TextDecorationsKey = MuralBase.RegisterProperty<TextDecorations>(
         ShapeText, 'TextDecorations', TextDecorations.None, MetaData.Render);
 
     // ── Paragraph / block formatting ────────────────────────────────
     // M3/Visio default: centred, wrapping within the block.
-    public static readonly TextAlignmentKey = Model.RegisterProperty<TextAlignment>(
+    public static readonly TextAlignmentKey = MuralBase.RegisterProperty<TextAlignment>(
         ShapeText, 'TextAlignment', TextAlignment.Center, MetaData.Render);
-    public static readonly TextWrappingKey = Model.RegisterProperty<TextWrapping>(
+    public static readonly TextWrappingKey = MuralBase.RegisterProperty<TextWrapping>(
         ShapeText, 'TextWrapping', TextWrapping.Wrap, MetaData.Measure);
     // Inner text inset (Visio's Left/Right/Top/BottomMargin — rendered as the
     // host Border's Padding). Named `Padding` to avoid colliding with Visual's
     // outer layout `Margin`. Default a small inset so text doesn't kiss the edge.
-    public static readonly PaddingKey = Model.RegisterProperty<Thickness>(
+    public static readonly PaddingKey = MuralBase.RegisterProperty<Thickness>(
         ShapeText, 'Padding', new Thickness(2), MetaData.Measure);
     // The optional fill behind the text (Visio's text background, for
     // readability over a busy shape fill) reuses the inherited Visual.Fill
@@ -241,37 +241,37 @@ export class ShapeText extends Control
     // Placement — anchor preset within (or just outside) the footprint.
     // Re-anchors the block → Measure (an inside↔outside flip changes the
     // measure constraint too).
-    public static readonly PlacementKey = Model.RegisterProperty<TextPlacement>(
+    public static readonly PlacementKey = MuralBase.RegisterProperty<TextPlacement>(
         ShapeText, 'Placement', TextPlacement.Center, MetaData.Measure);
     // Offset — fine-tune translation from the placement anchor, in the
     // block's own (pre-rotation) frame. The adorner's move drag writes here.
-    public static readonly OffsetKey = Model.RegisterProperty<Point>(
+    public static readonly OffsetKey = MuralBase.RegisterProperty<Point>(
         ShapeText, 'Offset', new Point(0, 0), MetaData.Arrange);
     // Angle — rotation in degrees about the block centre. Applied as a
     // RenderTransform on the template root (post-layout), so it never
     // re-measures; the manual OnPropertyChanged hook keeps the transform in
     // sync. MetaData.None accordingly.
-    public static readonly AngleKey = Model.RegisterProperty<number>(
+    public static readonly AngleKey = MuralBase.RegisterProperty<number>(
         ShapeText, 'Angle', 0, MetaData.None);
     // BlockWidth / BlockHeight — explicit block size. NaN (default) → the
     // block fills the footprint for inside placements, or auto-sizes to its
     // content for outside placements. Distinct from the control's own
     // Width / Height (which stay auto so ShapeText fills the host).
-    public static readonly BlockWidthKey = Model.RegisterProperty<number>(
+    public static readonly BlockWidthKey = MuralBase.RegisterProperty<number>(
         ShapeText, 'BlockWidth', Number.NaN, MetaData.Measure);
-    public static readonly BlockHeightKey = Model.RegisterProperty<number>(
+    public static readonly BlockHeightKey = MuralBase.RegisterProperty<number>(
         ShapeText, 'BlockHeight', Number.NaN, MetaData.Measure);
     // VerticalTextAlignment — how the text sits vertically within the block
     // (top / centre / bottom), the vertical sibling of TextAlignment. Rides
     // a TemplateBinding to the inner TextBlock's VerticalAlignment.
-    public static readonly VerticalTextAlignmentKey = Model.RegisterProperty<VerticalAlignment>(
+    public static readonly VerticalTextAlignmentKey = MuralBase.RegisterProperty<VerticalAlignment>(
         ShapeText, 'VerticalTextAlignment', VerticalAlignment.Center, MetaData.None);
 
     // Auto-fit mode (§ Slice 7). ShrinkText re-scales the block down to fit
     // its footprint (handled in this control's Measure/Arrange); GrowShape is
     // observed by the owning Figure, which grows to contain the label.
     // Measure — a mode change re-runs the fit.
-    public static readonly AutoFitKey = Model.RegisterProperty<TextAutoFit>(
+    public static readonly AutoFitKey = MuralBase.RegisterProperty<TextAutoFit>(
         ShapeText, 'AutoFit', TextAutoFit.None, MetaData.Measure);
 
     // ── In-place editing (§ diagram-text Slice 2) ───────────────────
@@ -279,7 +279,7 @@ export class ShapeText extends Control
     // (IsEditing)` trigger). Double-click on the shape / F2 begins an edit;
     // Enter or click-away commits, Escape cancels. MetaData.None — it's a
     // trigger-observed state flag, not a layout input.
-    public static readonly IsEditingKey = Model.RegisterProperty<boolean>(
+    public static readonly IsEditingKey = MuralBase.RegisterProperty<boolean>(
         ShapeText, 'IsEditing', false, MetaData.None);
 
     // The template's editable part — a RichTextBox (§ Slice 4: all in-place

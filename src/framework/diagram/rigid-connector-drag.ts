@@ -1,4 +1,4 @@
-import type { Model } from '../../runtime/index.js';
+﻿import type { MuralBase } from '../../runtime/index.js';
 
 // Rigid-translate handshake between the figure-drag mechanics (Figure
 // owns the pointer gesture + the moving set) and the connector store
@@ -36,5 +36,5 @@ export interface RigidConnectorDragHost
      *  both endpoints' nodes in the set — that carry user waypoints.
      *  Returns undefined when none qualify, so the caller can skip the
      *  per-tick translate entirely. */
-    BeginRigidConnectorDrag(movingSet: ReadonlySet<Model>): RigidConnectorDragSession | undefined;
+    BeginRigidConnectorDrag(movingSet: ReadonlySet<MuralBase>): RigidConnectorDragSession | undefined;
 }

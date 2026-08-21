@@ -1,9 +1,9 @@
-// VM for the fill-editor demo. Holds a Fill DP the editor edits; the
+﻿// VM for the fill-editor demo. Holds a Fill DP the editor edits; the
 // view binds the preview Shape's Fill to the same brush so user
 // gestures repaint live. Mirror Pen DP + the previous demo's pattern
 // for a static stroke around the preview shape.
 
-import { MetaData, Model } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
 import {
     Color,
     Pen,
@@ -11,11 +11,11 @@ import {
     type Brush,
 } from '@pragmatic-lab/mural/visual-engine';
 
-export class FillEditorDemoVM extends Model
+export class FillEditorDemoVM extends MuralBase
 {
-    static FillKey        = Model.RegisterProperty<Brush | undefined>(FillEditorDemoVM, 'Fill',        undefined, MetaData.None);
-    static OutlinePenKey  = Model.RegisterProperty<Pen | undefined>(FillEditorDemoVM, 'OutlinePen',  undefined, MetaData.None);
-    static FillSummaryKey = Model.RegisterProperty<string>(FillEditorDemoVM, 'FillSummary', '',        MetaData.None);
+    static FillKey        = MuralBase.RegisterProperty<Brush | undefined>(FillEditorDemoVM, 'Fill',        undefined, MetaData.None);
+    static OutlinePenKey  = MuralBase.RegisterProperty<Pen | undefined>(FillEditorDemoVM, 'OutlinePen',  undefined, MetaData.None);
+    static FillSummaryKey = MuralBase.RegisterProperty<string>(FillEditorDemoVM, 'FillSummary', '',        MetaData.None);
 
     constructor() {
         super();

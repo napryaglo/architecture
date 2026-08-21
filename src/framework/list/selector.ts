@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Visual,
     Element,
     type KeyEventArgs,
@@ -108,30 +108,30 @@ export class Selector extends ItemsControl
     // SelectedValuePath stays None — it's a path-spec string, not a
     // selection-tracking surface, and the few places that bind it
     // typically want OneWay.
-    public static readonly SelectedIndexKey     = Model.RegisterProperty<number>(            Selector, 'SelectedIndex',     -1,        MetaData.BindsTwoWayByDefault);
-    public static readonly SelectedItemKey      = Model.RegisterProperty<unknown>(           Selector, 'SelectedItem',      undefined, MetaData.BindsTwoWayByDefault);
-    public static readonly SelectedValueKey     = Model.RegisterProperty<unknown>(           Selector, 'SelectedValue',     undefined, MetaData.BindsTwoWayByDefault);
-    public static readonly SelectedValuePathKey = Model.RegisterProperty<string | undefined>(Selector, 'SelectedValuePath', undefined, MetaData.None);
-    public static readonly SelectionModeKey     = Model.RegisterProperty<SelectionMode>(    Selector, 'SelectionMode',     SelectionMode.Single, MetaData.None);
+    public static readonly SelectedIndexKey     = MuralBase.RegisterProperty<number>(            Selector, 'SelectedIndex',     -1,        MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedItemKey      = MuralBase.RegisterProperty<unknown>(           Selector, 'SelectedItem',      undefined, MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedValueKey     = MuralBase.RegisterProperty<unknown>(           Selector, 'SelectedValue',     undefined, MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedValuePathKey = MuralBase.RegisterProperty<string | undefined>(Selector, 'SelectedValuePath', undefined, MetaData.None);
+    public static readonly SelectionModeKey     = MuralBase.RegisterProperty<SelectionMode>(    Selector, 'SelectionMode',     SelectionMode.Single, MetaData.None);
 
     // Marquee multi-select — Windows Explorer-style drag-rectangle that
     // selects every container it touches. Opt-in per instance; default
     // off so single-select Selector descendants (ComboBox, TabControl)
     // don't pay for the wiring.
-    public static readonly AllowMarqueeSelectionKey = Model.RegisterProperty<boolean>(
+    public static readonly AllowMarqueeSelectionKey = MuralBase.RegisterProperty<boolean>(
         Selector, 'AllowMarqueeSelection', false, MetaData.None);
 
     // Item-inclusion policy when the marquee crosses an item's bounds.
     // Defaults to Intersect (Explorer parity); flip to Contained for
     // stricter Finder-style semantics.
-    public static readonly MarqueeBoundsPolicyKey = Model.RegisterProperty<MarqueeBoundsPolicy>(
+    public static readonly MarqueeBoundsPolicyKey = MuralBase.RegisterProperty<MarqueeBoundsPolicy>(
         Selector, 'MarqueeBoundsPolicy', MarqueeBoundsPolicy.Intersect, MetaData.None);
 
     // Attached DP — any Visual carrying it represents a selectable row.
     // Source of truth for "is this row selected"; templates and styles
     // observe it via instance-level mirrors on ListBoxItem / TreeViewItem
     // (see those classes for the forwarding shape).
-    public static readonly IsSelectedKey = Model.RegisterAttachedProperty<boolean>(
+    public static readonly IsSelectedKey = MuralBase.RegisterAttachedProperty<boolean>(
         Selector, 'IsSelected', false, MetaData.Render);
 
     public static GetIsSelected(v: Visual): boolean

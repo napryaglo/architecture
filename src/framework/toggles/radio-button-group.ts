@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -30,12 +30,12 @@ import { Selector, SelectionMode } from '../list/selector.js';
 export class RadioButtonGroup extends Selector
 {
     static {
-        Model.OverrideMetadata(RadioButtonGroup, Element.DefaultStyleKeyKey,
+        MuralBase.OverrideMetadata(RadioButtonGroup, Element.DefaultStyleKeyKey,
             { default_value: RadioButtonGroup });
         // A radio group is single-select by definition — pin it so a
         // stray `SelectionMode = Multiple` can't turn it into a checkbox
         // list. (Selector already defaults Single; this documents intent.)
-        Model.OverrideMetadata(RadioButtonGroup, Selector.SelectionModeKey,
+        MuralBase.OverrideMetadata(RadioButtonGroup, Selector.SelectionModeKey,
             { default_value: SelectionMode.Single });
     }
 
@@ -74,18 +74,18 @@ export class RadioButtonGroup extends Selector
     }
 
     // Hand the item to the row's Content. RadioButtonItem is a
-    // ContentControl, so it resolves a data Model through its
+    // ContentControl, so it resolves a data MuralBase through its
     // `DataTemplate [DataType=…]` (label / description / whatever the
     // author registered) and slots the result inside the ring row — a
     // bound `Items = $Options` list of view-models renders richly, not as
     // `[object Object]`. Primitives (a plain `["Small","Medium"]`) are
     // wrapped in a TextBlock label; ContentControl would stringify them
-    // anyway, but the Content DP is typed `Visual | Model`, so wrapping
+    // anyway, but the Content DP is typed `Visual | MuralBase`, so wrapping
     // here keeps the call type-clean.
-    private contentForItem(item: unknown): Visual | Model
+    private contentForItem(item: unknown): Visual | MuralBase
     {
         if (item instanceof Visual) return item;
-        if (item instanceof Model) return item;
+        if (item instanceof MuralBase) return item;
         return new TextBlock(String(item));
     }
 }
@@ -100,11 +100,11 @@ export class RadioButtonGroup extends Selector
 // matching how SegmentedItem draws its own segment chrome.
 export class RadioButtonItem extends ContentControl
 {
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(
         RadioButtonItem, 'IsSelected', false, MetaData.Render);
 
     static {
-        Model.OverrideMetadata(RadioButtonItem, Element.DefaultStyleKeyKey,
+        MuralBase.OverrideMetadata(RadioButtonItem, Element.DefaultStyleKeyKey,
             { default_value: RadioButtonItem });
     }
 

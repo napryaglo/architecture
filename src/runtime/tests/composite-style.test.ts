@@ -1,10 +1,10 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     Application,
     CompositeStyle,
     MetaData,
-    Model,
+    MuralBase,
     PropertyTrigger,
     Setter,
     Size,
@@ -20,10 +20,10 @@ import { initTestApp } from '../../basic/tests/test-app.js';
 class Box extends Element
 {
     static {
-        Model.RegisterProperty(Box, 'Ink',  'black', MetaData.None);
-        Model.RegisterProperty(Box, 'Size', 10,      MetaData.None);
-        Model.RegisterProperty(Box, 'Hot',  false,   MetaData.None);
-        Model.RegisterProperty(Box, 'Lit',  false,   MetaData.None);
+        MuralBase.RegisterProperty(Box, 'Ink',  'black', MetaData.None);
+        MuralBase.RegisterProperty(Box, 'Size', 10,      MetaData.None);
+        MuralBase.RegisterProperty(Box, 'Hot',  false,   MetaData.None);
+        MuralBase.RegisterProperty(Box, 'Lit',  false,   MetaData.None);
     }
     public get Ink(): string { return this.get_property_value(resolveKey(this, undefined, 'Ink')); }
     public set Ink(v: string) { this.set_property_value(resolveKey(this, undefined, 'Ink'), v); }
@@ -49,8 +49,8 @@ class Other extends Element
 class ThemedBox extends Element
 {
     static {
-        Model.RegisterProperty(ThemedBox, 'Ink',  'black', MetaData.None);
-        Model.RegisterProperty(ThemedBox, 'Size', 10,      MetaData.None);
+        MuralBase.RegisterProperty(ThemedBox, 'Ink',  'black', MetaData.None);
+        MuralBase.RegisterProperty(ThemedBox, 'Size', 10,      MetaData.None);
     }
     public get Ink(): string { return this.get_property_value(resolveKey(this, undefined, 'Ink')); }
     public set Ink(v: string) { this.set_property_value(resolveKey(this, undefined, 'Ink'), v); }

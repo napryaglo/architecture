@@ -1,14 +1,14 @@
-// DatePickerVM — backs the date-picker demo. SelectedDate binds TwoWay to
+﻿// DatePickerVM — backs the date-picker demo. SelectedDate binds TwoWay to
 // the DatePicker; SelectedLabel echoes the picked day. Because the picker
 // writes SelectedDate through the binding (bypassing the JS setter), the
 // label is refreshed from OnPropertyChanged, which fires on every write —
 // direct or binding-driven.
-import { Model, MetaData, type PropertyDescriptor } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, type PropertyDescriptor } from '@pragmatic-lab/mural/runtime';
 
-export class DatePickerVM extends Model
+export class DatePickerVM extends MuralBase
 {
-    static SelectedDateKey  = Model.RegisterProperty<Date | undefined>(DatePickerVM, 'SelectedDate', undefined, MetaData.None);
-    static SelectedLabelKey = Model.RegisterProperty<string>(DatePickerVM, 'SelectedLabel', 'No date selected', MetaData.None);
+    static SelectedDateKey  = MuralBase.RegisterProperty<Date | undefined>(DatePickerVM, 'SelectedDate', undefined, MetaData.None);
+    static SelectedLabelKey = MuralBase.RegisterProperty<string>(DatePickerVM, 'SelectedLabel', 'No date selected', MetaData.None);
 
     get SelectedDate():  Date | undefined { return this.get_property_value(DatePickerVM.SelectedDateKey); }
     set SelectedDate(v:  Date | undefined) { this.set_property_value(DatePickerVM.SelectedDateKey, v); }

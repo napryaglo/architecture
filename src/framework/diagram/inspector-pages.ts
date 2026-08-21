@@ -1,15 +1,15 @@
-import { MetaData, Model } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase } from '../../runtime/index.js';
 import type { Diagram } from './diagram.js';
 
 // A tab in the paged DiagramInspector. Both pages edit the SAME Diagram
 // selection, so a page only carries a Title (for the rail) + View (the live
 // Diagram); the page body binds through $View. The concrete subtype is the
 // DataTemplate key (ShapeStylePage vs SizePositionPage).
-export abstract class InspectorPage extends Model
+export abstract class InspectorPage extends MuralBase
 {
-    public static readonly TitleKey = Model.RegisterProperty<string>(
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(
         InspectorPage, 'Title', '', MetaData.None);
-    public static readonly ViewKey = Model.RegisterProperty<Diagram | undefined>(
+    public static readonly ViewKey = MuralBase.RegisterProperty<Diagram | undefined>(
         InspectorPage, 'View', undefined, MetaData.None);
 
     protected constructor(title: string)

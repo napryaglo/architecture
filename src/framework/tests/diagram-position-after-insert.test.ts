@@ -1,10 +1,10 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     SetterFactory,
     Style,
@@ -22,12 +22,12 @@ import { SelectionMode } from '../list/list-box.js';
 
 // Minimal node VM — mirrors a shape node's shape with
 // Left / Top / IsSelected DPs.
-class TestNodeVM extends Model
+class TestNodeVM extends MuralBase
 {
-    public static readonly IdKey   = Model.RegisterProperty<string>(TestNodeVM, 'Id',   '',    MetaData.None);
-    public static readonly LeftKey = Model.RegisterProperty<number>(TestNodeVM, 'Left', 0,     MetaData.None);
-    public static readonly TopKey  = Model.RegisterProperty<number>(TestNodeVM, 'Top',  0,     MetaData.None);
-    public static readonly SizeKey = Model.RegisterProperty<number>(TestNodeVM, 'Size', 80,    MetaData.None);
+    public static readonly IdKey   = MuralBase.RegisterProperty<string>(TestNodeVM, 'Id',   '',    MetaData.None);
+    public static readonly LeftKey = MuralBase.RegisterProperty<number>(TestNodeVM, 'Left', 0,     MetaData.None);
+    public static readonly TopKey  = MuralBase.RegisterProperty<number>(TestNodeVM, 'Top',  0,     MetaData.None);
+    public static readonly SizeKey = MuralBase.RegisterProperty<number>(TestNodeVM, 'Size', 80,    MetaData.None);
     constructor(id: string, left: number, top: number)
     {
         super();

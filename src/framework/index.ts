@@ -1,5 +1,5 @@
-// Barrel for the framework layer — types that sit between the runtime
-// primitives (Visual, Model, Style, Binding, …) and the concrete
+﻿// Barrel for the framework layer — types that sit between the runtime
+// primitives (Visual, MuralBase, Style, Binding, …) and the concrete
 // control library. Holds:
 //
 //   * `Control` — the WPF-parity templated-control base.

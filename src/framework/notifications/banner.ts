@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element, Visual } from '../../runtime/index.js';
 import { ContentControl } from '../base/content-control.js';
 
 // M3 Banner — in-flow alert / message strip with a leading icon and an
@@ -24,9 +24,9 @@ import { ContentControl } from '../base/content-control.js';
 // chosen icon + colour palette, not through a Variant DP.
 export class Banner extends ContentControl
 {
-    public static readonly LeadingKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly LeadingKey = MuralBase.RegisterProperty<Visual | undefined>(
         Banner, 'Leading', undefined, MetaData.Render);
-    public static readonly ActionsKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly ActionsKey = MuralBase.RegisterProperty<Visual | undefined>(
         Banner, 'Actions', undefined, MetaData.Render);
 
     public get Leading(): Visual | undefined { return this.get_property_value(Banner.LeadingKey); }
@@ -36,7 +36,7 @@ export class Banner extends ContentControl
     public set Actions(v: Visual | undefined) { this.set_property_value(Banner.ActionsKey, v); }
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             Banner, Element.DefaultStyleKeyKey,
             { default_value: Banner });
     }

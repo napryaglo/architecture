@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
 } from '../../runtime/index.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { ContentControl } from './content-control.js';
@@ -19,7 +19,7 @@ import { ContentControl } from './content-control.js';
 //                      the Visual case, or pair with HeaderTemplate for
 //                      data-row rendering.
 //   * HeaderTemplate — DataTemplate used to render the Header when it's
-//                      a Model row (not a Visual or a plain string).
+//                      a MuralBase row (not a Visual or a plain string).
 //                      The subclass's template can route through a
 //                      ContentPresenter (Content = $$Header,
 //                      ContentTemplate = $$HeaderTemplate) to dispatch
@@ -32,9 +32,9 @@ import { ContentControl } from './content-control.js';
 // `TabItem [Header="Files"]` against a single recognised contract.
 export class HeaderedContentControl extends ContentControl
 {
-    public static readonly HeaderKey         = Model.RegisterProperty<unknown>(
+    public static readonly HeaderKey         = MuralBase.RegisterProperty<unknown>(
         HeaderedContentControl, 'Header', undefined, MetaData.Measure | MetaData.Render);
-    public static readonly HeaderTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly HeaderTemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         HeaderedContentControl, 'HeaderTemplate', undefined, MetaData.Measure);
 
     public get Header(): unknown { return this.get_property_value(HeaderedContentControl.HeaderKey); }

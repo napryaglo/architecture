@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -58,7 +58,7 @@ import type { ICommand } from '../../runtime/command.js';
 // popup on the OverlayLayer below the row.
 export class MenuStrip extends ItemsControl
 {
-    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
+    public static readonly OrientationKey = MuralBase.RegisterProperty<Orientation>(
         MenuStrip, 'Orientation', Orientation.Horizontal, MetaData.Measure,
     );
 
@@ -67,7 +67,7 @@ export class MenuStrip extends ItemsControl
 
     static
     {
-        Model.OverrideMetadata(MenuStrip, Element.DefaultStyleKeyKey, { default_value: MenuStrip });
+        MuralBase.OverrideMetadata(MenuStrip, Element.DefaultStyleKeyKey, { default_value: MenuStrip });
     }
 
     constructor()
@@ -143,20 +143,20 @@ export class MenuStrip extends ItemsControl
 // to teardown before any Command-launched dialog steals focus.
 export class MenuItem extends HeaderedItemsControl
 {
-    public static readonly IconKey              = Model.RegisterProperty<Visual | undefined>(MenuItem, 'Icon',              undefined, MetaData.Measure);
-    public static readonly InputGestureTextKey  = Model.RegisterProperty<string | undefined>(MenuItem, 'InputGestureText',  undefined, MetaData.Measure | MetaData.Render);
-    public static readonly IsCheckableKey       = Model.RegisterProperty<boolean>(           MenuItem, 'IsCheckable',       false,     MetaData.Render);
-    public static readonly IsCheckedKey         = Model.RegisterProperty<boolean>(           MenuItem, 'IsChecked',         false,     MetaData.Render);
-    public static readonly CommandKey           = Model.RegisterProperty<ICommand | undefined>(MenuItem, 'Command',           undefined, MetaData.None);
-    public static readonly CommandParameterKey  = Model.RegisterProperty<unknown>(            MenuItem, 'CommandParameter',  undefined, MetaData.None);
-    public static readonly IsSubmenuOpenKey     = Model.RegisterProperty<boolean>(           MenuItem, 'IsSubmenuOpen',     false,     MetaData.None);
+    public static readonly IconKey              = MuralBase.RegisterProperty<Visual | undefined>(MenuItem, 'Icon',              undefined, MetaData.Measure);
+    public static readonly InputGestureTextKey  = MuralBase.RegisterProperty<string | undefined>(MenuItem, 'InputGestureText',  undefined, MetaData.Measure | MetaData.Render);
+    public static readonly IsCheckableKey       = MuralBase.RegisterProperty<boolean>(           MenuItem, 'IsCheckable',       false,     MetaData.Render);
+    public static readonly IsCheckedKey         = MuralBase.RegisterProperty<boolean>(           MenuItem, 'IsChecked',         false,     MetaData.Render);
+    public static readonly CommandKey           = MuralBase.RegisterProperty<ICommand | undefined>(MenuItem, 'Command',           undefined, MetaData.None);
+    public static readonly CommandParameterKey  = MuralBase.RegisterProperty<unknown>(            MenuItem, 'CommandParameter',  undefined, MetaData.None);
+    public static readonly IsSubmenuOpenKey     = MuralBase.RegisterProperty<boolean>(           MenuItem, 'IsSubmenuOpen',     false,     MetaData.None);
     // RowTemplate — the ControlTemplate for the inline visible row
     // chrome. MenuItem's primary Template (ItemsControl-inherited) is
     // the SUBMENU popup chrome with an ItemsPresenter; the row
     // ("trigger" in MenuButton parlance) is a separate keyed template
     // applied imperatively. RowTemplate is settable so a parent
     // MenuStrip can swap to a stripped chrome via ItemContainerStyle.
-    public static readonly RowTemplateKey       = Model.RegisterProperty<ControlTemplate | undefined>(
+    public static readonly RowTemplateKey       = MuralBase.RegisterProperty<ControlTemplate | undefined>(
         MenuItem, 'RowTemplate', undefined, MetaData.Measure,
     );
 
@@ -220,7 +220,7 @@ export class MenuItem extends HeaderedItemsControl
         //                    materialised into the ItemsPresenter)
         //   * RowTemplate  = DefaultMenuItemRow      (inline row chrome
         //                    with state triggers; applied imperatively)
-        Model.OverrideMetadata(MenuItem, Element.DefaultStyleKeyKey, { default_value: MenuItem });
+        MuralBase.OverrideMetadata(MenuItem, Element.DefaultStyleKeyKey, { default_value: MenuItem });
     }
 
     constructor()
@@ -761,7 +761,7 @@ function makeGlyph(text: string): TextBlock
 // Same idea as ToolBarSeparator but cross-axis-flipped.
 export class MenuSeparator extends Element
 {
-    public static readonly LineBrushKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly LineBrushKey = MuralBase.RegisterProperty<Brush | undefined>(
         MenuSeparator, 'LineBrush', undefined, MetaData.Render,
     );
 
@@ -772,7 +772,7 @@ export class MenuSeparator extends Element
         // The Style supplies Height / MinWidth / LineBrush via
         // DynamicResource so the line tints flip with the theme
         // palette without consumers having to set LineBrush.
-        Model.OverrideMetadata(MenuSeparator, Element.DefaultStyleKeyKey, { default_value: MenuSeparator });
+        MuralBase.OverrideMetadata(MenuSeparator, Element.DefaultStyleKeyKey, { default_value: MenuSeparator });
     }
 
     constructor()
@@ -851,13 +851,13 @@ export class MenuSeparator extends Element
 // a private field, mounted/unmounted by mountPopup / unmountPopup.
 export class MenuButton extends HeaderedItemsControl
 {
-    public static readonly IsOpenKey          = Model.RegisterProperty<boolean>(           MenuButton, 'IsOpen', false,     MetaData.None);
-    public static readonly IconKey            = Model.RegisterProperty<Visual | undefined>(MenuButton, 'Icon',   undefined, MetaData.Measure);
+    public static readonly IsOpenKey          = MuralBase.RegisterProperty<boolean>(           MenuButton, 'IsOpen', false,     MetaData.None);
+    public static readonly IconKey            = MuralBase.RegisterProperty<Visual | undefined>(MenuButton, 'Icon',   undefined, MetaData.Measure);
     // TriggerTemplate — the inline visible Button chrome. MenuButton's
     // primary Template (ItemsControl-inherited) is the popup chrome,
     // so the trigger has to live in a second template DP that the
     // default Style sets to `@DefaultMenuButtonTrigger`.
-    public static readonly TriggerTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(
+    public static readonly TriggerTemplateKey = MuralBase.RegisterProperty<ControlTemplate | undefined>(
         MenuButton, 'TriggerTemplate', undefined, MetaData.Measure,
     );
 
@@ -895,7 +895,7 @@ export class MenuButton extends HeaderedItemsControl
         // block. Surface theme is kept apart from the main controls
         // theme to avoid the `extends Button` TDZ cycle (see
         // default-resources.ts).
-        Model.OverrideMetadata(MenuButton, Element.DefaultStyleKeyKey, { default_value: MenuButton });
+        MuralBase.OverrideMetadata(MenuButton, Element.DefaultStyleKeyKey, { default_value: MenuButton });
     }
 
     constructor()

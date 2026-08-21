@@ -1,6 +1,6 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, Model, type Visual } from '../../runtime/index.js';
+import { Application, MuralBase, type Visual } from '../../runtime/index.js';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { Border } from '../../basic/border.js';
@@ -11,7 +11,7 @@ import { TabControl, TabItem } from '../tabs/tabs.js';
 
 // A document whose body renders through a registered DataTemplate — mirrors
 // the Plexus DiagramDocument (DataTemplate[DiagramDocument] → a Diagram).
-class DemoDoc extends Model {
+class DemoDoc extends MuralBase {
     constructor(public readonly Id: string, public readonly Title: string) { super(); }
     public readonly IsDirty = false;
     public Save(): void {}

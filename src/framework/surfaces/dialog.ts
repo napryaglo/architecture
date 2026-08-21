@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element, Visual } from '../../runtime/index.js';
 import { ContentControl } from '../base/content-control.js';
 
 // M3 Dialog — modal surface with title + content + actions, anchored
@@ -22,9 +22,9 @@ import { ContentControl } from '../base/content-control.js';
 // row (typically Text Buttons per M3 spec).
 export class Dialog extends ContentControl
 {
-    public static readonly TitleKey = Model.RegisterProperty<string>(
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(
         Dialog, 'Title', '', MetaData.Render);
-    public static readonly ActionsKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly ActionsKey = MuralBase.RegisterProperty<Visual | undefined>(
         Dialog, 'Actions', undefined, MetaData.Render);
 
     public get Title(): string { return this.get_property_value(Dialog.TitleKey); }
@@ -34,7 +34,7 @@ export class Dialog extends ContentControl
     public set Actions(v: Visual | undefined) { this.set_property_value(Dialog.ActionsKey, v); }
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             Dialog, Element.DefaultStyleKeyKey,
             { default_value: Dialog });
     }

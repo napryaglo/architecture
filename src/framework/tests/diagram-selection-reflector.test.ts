@@ -1,4 +1,4 @@
-import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
+﻿import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -6,7 +6,7 @@ import {
     Application,
     Key,
     KeyEventArgs,    MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     RelayCommand,
     Setter,
@@ -24,12 +24,12 @@ import { SelectionMode } from '../list/list-box.js';
 
 // Leaf VM with the conventional Left/Top/Width/Height + IsSelected
 // quintet. Parent points up the tree (undefined = top-level).
-class LeafVM extends Model {
-    public static readonly LeftKey       = Model.RegisterProperty<number>(LeafVM, 'Left',       0,  MetaData.None);
-    public static readonly TopKey        = Model.RegisterProperty<number>(LeafVM, 'Top',        0,  MetaData.None);
-    public static readonly WidthKey      = Model.RegisterProperty<number>(LeafVM, 'Width',      10, MetaData.None);
-    public static readonly HeightKey     = Model.RegisterProperty<number>(LeafVM, 'Height',     10, MetaData.None);
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(LeafVM, 'IsSelected', false, MetaData.None);
+class LeafVM extends MuralBase {
+    public static readonly LeftKey       = MuralBase.RegisterProperty<number>(LeafVM, 'Left',       0,  MetaData.None);
+    public static readonly TopKey        = MuralBase.RegisterProperty<number>(LeafVM, 'Top',        0,  MetaData.None);
+    public static readonly WidthKey      = MuralBase.RegisterProperty<number>(LeafVM, 'Width',      10, MetaData.None);
+    public static readonly HeightKey     = MuralBase.RegisterProperty<number>(LeafVM, 'Height',     10, MetaData.None);
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(LeafVM, 'IsSelected', false, MetaData.None);
     public Parent: GroupMockVM | undefined = undefined;
     public get Left():        number  { return this.get_property_value(LeafVM.LeftKey); }
     public set Left(v:        number) { this.set_property_value(LeafVM.LeftKey, v); }
@@ -41,12 +41,12 @@ class LeafVM extends Model {
 
 // Group VM with IsSelected + Members. Members presence triggers
 // isGroupShape duck-type (used for chrome dispatch in the demo).
-class GroupMockVM extends Model {
-    public static readonly LeftKey       = Model.RegisterProperty<number>(GroupMockVM, 'Left',       0,  MetaData.None);
-    public static readonly TopKey        = Model.RegisterProperty<number>(GroupMockVM, 'Top',        0,  MetaData.None);
-    public static readonly WidthKey      = Model.RegisterProperty<number>(GroupMockVM, 'Width',      10, MetaData.None);
-    public static readonly HeightKey     = Model.RegisterProperty<number>(GroupMockVM, 'Height',     10, MetaData.None);
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(GroupMockVM, 'IsSelected', false, MetaData.None);
+class GroupMockVM extends MuralBase {
+    public static readonly LeftKey       = MuralBase.RegisterProperty<number>(GroupMockVM, 'Left',       0,  MetaData.None);
+    public static readonly TopKey        = MuralBase.RegisterProperty<number>(GroupMockVM, 'Top',        0,  MetaData.None);
+    public static readonly WidthKey      = MuralBase.RegisterProperty<number>(GroupMockVM, 'Width',      10, MetaData.None);
+    public static readonly HeightKey     = MuralBase.RegisterProperty<number>(GroupMockVM, 'Height',     10, MetaData.None);
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(GroupMockVM, 'IsSelected', false, MetaData.None);
     public Members: LeafVM[];
     public Parent:  GroupMockVM | undefined = undefined;
     constructor(members: LeafVM[]) {
@@ -64,10 +64,10 @@ class FakeTarget implements MountableTarget {
     public GetFocusedVisual(): Visual | undefined { return undefined; }
 }
 
-function setup(items: Model[]): { diagram: Diagram } {
+function setup(items: MuralBase[]): { diagram: Diagram } {
     Application.current = null;
     new Application();
-    const coll = new ObservableCollection<Model>();
+    const coll = new ObservableCollection<MuralBase>();
     for (const i of items) coll.Add(i);
     const diagram = new Diagram();
     diagram.SelectionMode = SelectionMode.Extended;

@@ -1,11 +1,11 @@
-import { describe, test, beforeEach } from 'node:test';
+﻿import { describe, test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     Application,
     Color,
     CornerRadius,
     MetaData,
-    Model,
+    MuralBase,
     Element,
     Visual,
     type DrawingContext,
@@ -22,7 +22,7 @@ import { SetTheme, CurrentTheme, ToggleTheme } from '../index.js';
 class BrushTarget extends Element
 {
     static {
-        Model.RegisterProperty(BrushTarget, 'Brush', undefined, MetaData.None);
+        MuralBase.RegisterProperty(BrushTarget, 'Brush', undefined, MetaData.None);
     }
     public get Brush(): SolidColorBrush | undefined
     {

@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
 } from '../../../runtime/index.js';
 import { SettingDefinition, SettingKind } from './setting-definition.js';
 
@@ -13,9 +13,9 @@ import { SettingDefinition, SettingKind } from './setting-definition.js';
 // `Value` is the ONLY mutable state; the definition is a fixed back-reference.
 // The convenience getters (Key / Label / Kind) forward to the definition so a
 // row template can bind them without a `Definition.` hop.
-export class Setting extends Model
+export class Setting extends MuralBase
 {
-    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
         Setting, 'Value', undefined, MetaData.None);
 
     // The schema this value satisfies. A plain readonly field (identity, never

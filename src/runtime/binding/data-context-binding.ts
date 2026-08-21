@@ -1,6 +1,6 @@
-import { Binding, type ValueConverter } from './binding.js';
+﻿import { Binding, type ValueConverter } from './binding.js';
 import { MetaData } from '../metadata.js';
-import { Model } from '../model.js';
+import { MuralBase } from '../model.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
@@ -15,16 +15,16 @@ interface ElementWithInheritedDataContext
     GetInheritedDataContext(): unknown;
 }
 
-// Internal Model that carries the resolved DataContext-path value as
+// Internal MuralBase that carries the resolved DataContext-path value as
 // its own property. DataContextBinding inherits from Binding with this
 // watcher as the source; setting `Value` here fires Binding's change
 // machinery which then propagates to the EVD that owns the binding.
 //
 // Same pattern as `ResourceWatcher` in dynamic-resource.ts. Kept
 // private since DataContextBinding owns the lifecycle.
-class DataContextWatcher extends Model
+class DataContextWatcher extends MuralBase
 {
-    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
         DataContextWatcher, 'Value', undefined, MetaData.None);
 
     public get Value(): unknown { return this.get_property_value(DataContextWatcher.ValueKey); }
@@ -34,11 +34,11 @@ class DataContextWatcher extends Model
 // Binding that resolves a dotted path against the target Visual's
 // DataContext, refreshing whenever DataContext changes (DataContext is
 // inherited so an ancestor mutation flows down via the existing
-// property-inheritance path) or whenever a Model in the resolution
+// property-inheritance path) or whenever a MuralBase in the resolution
 // chain raises a property change on a segment we're watching.
 //
 // Resolution rules:
-//   * `dc instanceof Model` → use `dc.get_property_value(segment)` and
+//   * `dc instanceof MuralBase` → use `dc.get_property_value(segment)` and
 //     subscribe to that segment's property changes for reactivity.
 //   * Plain object → use `dc[segment]` (one-shot read; no reactive
 //     update on plain-object mutation — out of scope for v0).
@@ -57,11 +57,11 @@ class DataContextBindingImpl extends Binding
     private readonly pathStr: string;
     private readonly dcCallback: PropertyChangeCallback;
 
-    // The Model we're currently subscribed to for property changes on
+    // The MuralBase we're currently subscribed to for property changes on
     // the first path segment, the callback we registered, and the key
     // we registered it under. Cleared on each refresh so we can detach
     // cleanly without re-resolving the descriptor.
-    private currentSource:     Model | undefined;
+    private currentSource:     MuralBase | undefined;
     private sourceCallback:    PropertyChangeCallback | undefined;
     private currentSourceKey:  PropertyKey<unknown> | undefined;
     // Cached at construction — `'DataContext'` resolves on every Visual,
@@ -192,7 +192,7 @@ class DataContextBindingImpl extends Binding
         for (let i = 0; i < segments.length - 1; i++)
         {
             const seg = segments[i]!;
-            if (cur instanceof Model)
+            if (cur instanceof MuralBase)
             {
                 cur = cur.get_property_value(resolveKey(cur, undefined, seg));
             }
@@ -210,7 +210,7 @@ class DataContextBindingImpl extends Binding
         // back-converted value to the watcher). No-op when no convertBack.
         const back = this.applyConvertBack(value);
         const lastSeg = segments[segments.length - 1]!;
-        if (cur instanceof Model)
+        if (cur instanceof MuralBase)
         {
             cur.set_property_value(resolveKey(cur, undefined, lastSeg), back);
         }
@@ -255,7 +255,7 @@ class DataContextBindingImpl extends Binding
     // `Foo`). A throw in the brief window would abort template apply
     // and leave the demo blank. The DataContext re-bind triggers a
     // fresh refresh() once the per-item source is set, and the
-    // subscription targets the right Model at that point.
+    // subscription targets the right MuralBase at that point.
     private refresh(): void
     {
         this.unsubscribeSource();
@@ -266,7 +266,7 @@ class DataContextBindingImpl extends Binding
             return;
         }
         const first = this.firstSegment();
-        if (dc instanceof Model && Model.HasProperty(dc.constructor, first))
+        if (dc instanceof MuralBase && MuralBase.HasProperty(dc.constructor, first))
         {
             const key = resolveKey(dc, undefined, first);
             this.currentSource    = dc;
@@ -278,7 +278,7 @@ class DataContextBindingImpl extends Binding
     }
 
     // Walk the dotted path starting from `root`. Each segment reads
-    // either a Model property or a plain-object field; intermediate
+    // either a MuralBase property or a plain-object field; intermediate
     // undefined/null short-circuits to undefined. Same WPF-parity
     // tolerance as `refresh` — a missing segment in the middle of the
     // path resolves to undefined rather than throwing, so a partial
@@ -289,9 +289,9 @@ class DataContextBindingImpl extends Binding
         for (const seg of this.pathStr.split('.'))
         {
             if (cur === undefined || cur === null) return undefined;
-            if (cur instanceof Model)
+            if (cur instanceof MuralBase)
             {
-                if (!Model.HasProperty(cur.constructor, seg)) return undefined;
+                if (!MuralBase.HasProperty(cur.constructor, seg)) return undefined;
                 cur = cur.get_property_value(resolveKey(cur, undefined, seg));
             }
             else if (typeof cur === 'object')

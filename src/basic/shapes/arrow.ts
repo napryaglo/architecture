@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -26,9 +26,9 @@ import { Shape } from './shape.js';
 // Stroke insets by half-thickness.
 export class Arrow extends Shape
 {
-    public static readonly CornerRadiusKey    = Model.RegisterProperty<number>(           Arrow, 'CornerRadius',    0,         MetaData.Render);
+    public static readonly CornerRadiusKey    = MuralBase.RegisterProperty<number>(           Arrow, 'CornerRadius',    0,         MetaData.Render);
     // 0 → straight base (degenerates to Triangle), 1 → base touches top.
-    public static readonly BowDepthKey        = Model.RegisterProperty<number>(           Arrow, 'BowDepth',        0.15,      MetaData.Render);
+    public static readonly BowDepthKey        = MuralBase.RegisterProperty<number>(           Arrow, 'BowDepth',        0.15,      MetaData.Render);
 
     public get CornerRadius(): number { return this.get_property_value(Arrow.CornerRadiusKey); }
     public set CornerRadius(v: number) { this.set_property_value(Arrow.CornerRadiusKey, v); }

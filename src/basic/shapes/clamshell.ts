@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -21,7 +21,7 @@ import { buildRoundedPolygon } from './polygon-helpers.js';
 // Stroke insets by half-thickness.
 export class Clamshell extends Shape
 {
-    public static readonly CornerRadiusKey    = Model.RegisterProperty<number>(           Clamshell, 'CornerRadius',    0,         MetaData.Render);
+    public static readonly CornerRadiusKey    = MuralBase.RegisterProperty<number>(           Clamshell, 'CornerRadius',    0,         MetaData.Render);
 
     public get CornerRadius(): number { return this.get_property_value(Clamshell.CornerRadiusKey); }
     public set CornerRadius(v: number) { this.set_property_value(Clamshell.CornerRadiusKey, v); }

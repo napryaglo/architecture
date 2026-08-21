@@ -1,4 +1,4 @@
-import { Model } from '../../../runtime/index.js';
+﻿import { MuralBase } from '../../../runtime/index.js';
 import { GeometryCombineMode } from '../../../visual-engine/geometry/combine.js';
 
 // Re-export so consumers binding to `Diagram.CombineUnionCommand` etc.
@@ -36,16 +36,16 @@ export interface IGeometricItem {
     readonly Geometry: unknown;
 }
 
-export function isGeometricItem(item: unknown): item is Model & IGeometricItem
+export function isGeometricItem(item: unknown): item is MuralBase & IGeometricItem
 {
-    if (!(item instanceof Model)) return false;
+    if (!(item instanceof MuralBase)) return false;
     const g = (item as unknown as { Geometry?: unknown }).Geometry;
     return g !== undefined && g !== null;
 }
 
 export interface CombineRequestedArgs
 {
-    readonly Items: readonly (Model & IGeometricItem)[];
+    readonly Items: readonly (MuralBase & IGeometricItem)[];
     readonly Mode:  GeometryCombineMode;
 }
 

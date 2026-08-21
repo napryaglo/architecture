@@ -1,22 +1,22 @@
-// TopAppBarVM — backs the top-app-bar demo. One Variant DP that toggles
+﻿// TopAppBarVM — backs the top-app-bar demo. One Variant DP that toggles
 // among the four M3 variants + a click counter for the nav icon and
 // each action button so the dynamic-binding chain is visible.
-import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 import { TopAppBarVariant } from '@pragmatic-lab/mural/framework';
-export class TopAppBarVM extends Model {
-    static NavClicksKey = Model.RegisterProperty(TopAppBarVM, 'NavClicks', 0, MetaData.None);
-    static SearchClicksKey = Model.RegisterProperty(TopAppBarVM, 'SearchClicks', 0, MetaData.None);
-    static MoreClicksKey = Model.RegisterProperty(TopAppBarVM, 'MoreClicks', 0, MetaData.None);
-    static NavCommandKey = Model.RegisterProperty(TopAppBarVM, 'NavCommand', null, MetaData.None);
-    static SearchCommandKey = Model.RegisterProperty(TopAppBarVM, 'SearchCommand', null, MetaData.None);
-    static MoreCommandKey = Model.RegisterProperty(TopAppBarVM, 'MoreCommand', null, MetaData.None);
+export class TopAppBarVM extends MuralBase {
+    static NavClicksKey = MuralBase.RegisterProperty(TopAppBarVM, 'NavClicks', 0, MetaData.None);
+    static SearchClicksKey = MuralBase.RegisterProperty(TopAppBarVM, 'SearchClicks', 0, MetaData.None);
+    static MoreClicksKey = MuralBase.RegisterProperty(TopAppBarVM, 'MoreClicks', 0, MetaData.None);
+    static NavCommandKey = MuralBase.RegisterProperty(TopAppBarVM, 'NavCommand', null, MetaData.None);
+    static SearchCommandKey = MuralBase.RegisterProperty(TopAppBarVM, 'SearchCommand', null, MetaData.None);
+    static MoreCommandKey = MuralBase.RegisterProperty(TopAppBarVM, 'MoreCommand', null, MetaData.None);
     // Exposed so each preview row can pull a label corresponding to its
     // own Variant. Strings instead of an enum so the demo template
     // doesn't need to import TopAppBarVariant.
-    static SmallVariantKey = Model.RegisterProperty(TopAppBarVM, 'SmallVariant', TopAppBarVariant.Small, MetaData.None);
-    static CenterAlignedVariantKey = Model.RegisterProperty(TopAppBarVM, 'CenterAlignedVariant', TopAppBarVariant.CenterAligned, MetaData.None);
-    static MediumVariantKey = Model.RegisterProperty(TopAppBarVM, 'MediumVariant', TopAppBarVariant.Medium, MetaData.None);
-    static LargeVariantKey = Model.RegisterProperty(TopAppBarVM, 'LargeVariant', TopAppBarVariant.Large, MetaData.None);
+    static SmallVariantKey = MuralBase.RegisterProperty(TopAppBarVM, 'SmallVariant', TopAppBarVariant.Small, MetaData.None);
+    static CenterAlignedVariantKey = MuralBase.RegisterProperty(TopAppBarVM, 'CenterAlignedVariant', TopAppBarVariant.CenterAligned, MetaData.None);
+    static MediumVariantKey = MuralBase.RegisterProperty(TopAppBarVM, 'MediumVariant', TopAppBarVariant.Medium, MetaData.None);
+    static LargeVariantKey = MuralBase.RegisterProperty(TopAppBarVM, 'LargeVariant', TopAppBarVariant.Large, MetaData.None);
     get NavClicks() { return this.get_property_value(TopAppBarVM.NavClicksKey); }
     set NavClicks(v) { this.set_property_value(TopAppBarVM.NavClicksKey, v); }
     get SearchClicks() { return this.get_property_value(TopAppBarVM.SearchClicksKey); }

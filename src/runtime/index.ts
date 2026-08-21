@@ -1,4 +1,4 @@
-// Barrel re-exports for the runtime property/binding system.
+﻿// Barrel re-exports for the runtime property/binding system.
 // Consumers should import from here rather than the individual files.
 export {
     MetaData,
@@ -50,7 +50,7 @@ export {
     type ValidationRule,
     type ValueConverter,
 } from './binding/index.js';
-export { Model, PropertyKey } from './model.js';
+export { MuralBase, PropertyKey } from './model.js';
 export { Freezable, cloneFreezableValue } from './freezable.js';
 export { Behavior } from '../visual-engine/behavior.js';
 export {

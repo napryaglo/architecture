@@ -1,5 +1,5 @@
-import { MetaData } from '../../runtime/metadata.js';
-import { Model } from '../../runtime/model.js';
+﻿import { MetaData } from '../../runtime/metadata.js';
+import { MuralBase } from '../../runtime/model.js';
 import { ObservableCollection } from '../../runtime/observable-collection.js';
 import { Freezable } from '../../runtime/freezable.js';
 import { Matrix } from '../primitives.js';
@@ -55,13 +55,13 @@ class IdentityTransform extends Transform
     (Transform as { Identity: Transform }).Identity = identity;
 }
 
-// Pure translation by (X, Y). X and Y are bindable Model properties
+// Pure translation by (X, Y). X and Y are bindable MuralBase properties
 // flagged Render — animating either fires the consumer Visual's render
 // invalidation through the existing property-change pipeline.
 export class TranslateTransform extends Transform
 {
-    public static readonly XKey = Model.RegisterProperty<number>(TranslateTransform, 'X', 0, MetaData.Render);
-    public static readonly YKey = Model.RegisterProperty<number>(TranslateTransform, 'Y', 0, MetaData.Render);
+    public static readonly XKey = MuralBase.RegisterProperty<number>(TranslateTransform, 'X', 0, MetaData.Render);
+    public static readonly YKey = MuralBase.RegisterProperty<number>(TranslateTransform, 'Y', 0, MetaData.Render);
 
     constructor(x?: number, y?: number)
     {
@@ -90,9 +90,9 @@ export class TranslateTransform extends Transform
 // coordinate frame. WPF parity — RotateTransform.Angle is degrees.
 export class RotateTransform extends Transform
 {
-    public static readonly AngleKey   = Model.RegisterProperty<number>(RotateTransform, 'Angle',   0, MetaData.Render);
-    public static readonly CenterXKey = Model.RegisterProperty<number>(RotateTransform, 'CenterX', 0, MetaData.Render);
-    public static readonly CenterYKey = Model.RegisterProperty<number>(RotateTransform, 'CenterY', 0, MetaData.Render);
+    public static readonly AngleKey   = MuralBase.RegisterProperty<number>(RotateTransform, 'Angle',   0, MetaData.Render);
+    public static readonly CenterXKey = MuralBase.RegisterProperty<number>(RotateTransform, 'CenterX', 0, MetaData.Render);
+    public static readonly CenterYKey = MuralBase.RegisterProperty<number>(RotateTransform, 'CenterY', 0, MetaData.Render);
 
     constructor(angle?: number, centerX?: number, centerY?: number)
     {
@@ -131,10 +131,10 @@ export class RotateTransform extends Transform
 // Visual.RenderTransformOrigin = (0.5, 0.5) for center-pivot scales.
 export class ScaleTransform extends Transform
 {
-    public static readonly ScaleXKey  = Model.RegisterProperty<number>(ScaleTransform, 'ScaleX',  1, MetaData.Render);
-    public static readonly ScaleYKey  = Model.RegisterProperty<number>(ScaleTransform, 'ScaleY',  1, MetaData.Render);
-    public static readonly CenterXKey = Model.RegisterProperty<number>(ScaleTransform, 'CenterX', 0, MetaData.Render);
-    public static readonly CenterYKey = Model.RegisterProperty<number>(ScaleTransform, 'CenterY', 0, MetaData.Render);
+    public static readonly ScaleXKey  = MuralBase.RegisterProperty<number>(ScaleTransform, 'ScaleX',  1, MetaData.Render);
+    public static readonly ScaleYKey  = MuralBase.RegisterProperty<number>(ScaleTransform, 'ScaleY',  1, MetaData.Render);
+    public static readonly CenterXKey = MuralBase.RegisterProperty<number>(ScaleTransform, 'CenterX', 0, MetaData.Render);
+    public static readonly CenterYKey = MuralBase.RegisterProperty<number>(ScaleTransform, 'CenterY', 0, MetaData.Render);
 
     constructor(scaleX?: number, scaleY?: number, centerX?: number, centerY?: number)
     {
@@ -188,10 +188,10 @@ export class ScaleTransform extends Transform
 // shear via a T(-c) · Skew · T(c) sandwich, same as Rotate / Scale.
 export class SkewTransform extends Transform
 {
-    public static readonly AngleXKey  = Model.RegisterProperty<number>(SkewTransform, 'AngleX',  0, MetaData.Render);
-    public static readonly AngleYKey  = Model.RegisterProperty<number>(SkewTransform, 'AngleY',  0, MetaData.Render);
-    public static readonly CenterXKey = Model.RegisterProperty<number>(SkewTransform, 'CenterX', 0, MetaData.Render);
-    public static readonly CenterYKey = Model.RegisterProperty<number>(SkewTransform, 'CenterY', 0, MetaData.Render);
+    public static readonly AngleXKey  = MuralBase.RegisterProperty<number>(SkewTransform, 'AngleX',  0, MetaData.Render);
+    public static readonly AngleYKey  = MuralBase.RegisterProperty<number>(SkewTransform, 'AngleY',  0, MetaData.Render);
+    public static readonly CenterXKey = MuralBase.RegisterProperty<number>(SkewTransform, 'CenterX', 0, MetaData.Render);
+    public static readonly CenterYKey = MuralBase.RegisterProperty<number>(SkewTransform, 'CenterY', 0, MetaData.Render);
 
     constructor(angleX?: number, angleY?: number, centerX?: number, centerY?: number)
     {
@@ -233,7 +233,7 @@ export class SkewTransform extends Transform
 // matrix is computed externally and assigned wholesale.
 export class MatrixTransform extends Transform
 {
-    public static readonly MatrixKey = Model.RegisterProperty<Matrix>(
+    public static readonly MatrixKey = MuralBase.RegisterProperty<Matrix>(
         MatrixTransform, 'Matrix', Matrix.Identity, MetaData.Render);
 
     constructor(matrix?: Matrix)

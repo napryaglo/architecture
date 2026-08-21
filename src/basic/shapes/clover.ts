@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -38,10 +38,10 @@ import { Shape } from './shape.js';
 // Stroke insets by half-thickness.
 export class Clover extends Shape
 {
-    public static readonly LeavesKey          = Model.RegisterProperty<number>(           Clover, 'Leaves',          4,         MetaData.Render);
-    public static readonly CuspDepthKey       = Model.RegisterProperty<number>(           Clover, 'CuspDepth',       0.6,       MetaData.Render);
-    public static readonly RotationKey        = Model.RegisterProperty<number>(           Clover, 'Rotation',        -90,       MetaData.Render);
-    public static readonly SamplesKey         = Model.RegisterProperty<number>(           Clover, 'Samples',         24,        MetaData.Render);
+    public static readonly LeavesKey          = MuralBase.RegisterProperty<number>(           Clover, 'Leaves',          4,         MetaData.Render);
+    public static readonly CuspDepthKey       = MuralBase.RegisterProperty<number>(           Clover, 'CuspDepth',       0.6,       MetaData.Render);
+    public static readonly RotationKey        = MuralBase.RegisterProperty<number>(           Clover, 'Rotation',        -90,       MetaData.Render);
+    public static readonly SamplesKey         = MuralBase.RegisterProperty<number>(           Clover, 'Samples',         24,        MetaData.Render);
 
     public get Leaves(): number { return this.get_property_value(Clover.LeavesKey); }
     public set Leaves(v: number) { this.set_property_value(Clover.LeavesKey, v); }
@@ -117,13 +117,13 @@ export class Clover extends Shape
 export class FourLeafClover extends Clover
 {
     static {
-        Model.OverrideMetadata(FourLeafClover, Clover.LeavesKey, { default_value: 4 });
+        MuralBase.OverrideMetadata(FourLeafClover, Clover.LeavesKey, { default_value: 4 });
     }
 }
 
 export class EightLeafClover extends Clover
 {
     static {
-        Model.OverrideMetadata(EightLeafClover, Clover.LeavesKey, { default_value: 8 });
+        MuralBase.OverrideMetadata(EightLeafClover, Clover.LeavesKey, { default_value: 8 });
     }
 }

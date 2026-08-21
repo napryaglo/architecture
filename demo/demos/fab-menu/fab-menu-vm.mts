@@ -1,27 +1,27 @@
-// FabMenuVM — backs the fab-menu demo. Tracks per-action click
+﻿// FabMenuVM — backs the fab-menu demo. Tracks per-action click
 // counts so the user can verify each mini-FAB in the popup fires
 // through to a command target, and the FAB-toggle state for the
 // read-out.
 import {
-    Model,
+    MuralBase,
     MetaData,
     RelayCommand,
     ObservableCollection,
     type Visual,
 } from '@pragmatic-lab/mural/runtime';
 
-export class FabMenuVM extends Model
+export class FabMenuVM extends MuralBase
 {
-    static IsOpenKey         = Model.RegisterProperty<boolean>(FabMenuVM, 'IsOpen',         false, MetaData.None);
-    static ItemsKey          = Model.RegisterProperty<ObservableCollection<Visual> | null>(FabMenuVM, 'Items',          null,  MetaData.None);
+    static IsOpenKey         = MuralBase.RegisterProperty<boolean>(FabMenuVM, 'IsOpen',         false, MetaData.None);
+    static ItemsKey          = MuralBase.RegisterProperty<ObservableCollection<Visual> | null>(FabMenuVM, 'Items',          null,  MetaData.None);
 
-    static CreateClicksKey   = Model.RegisterProperty<number>(FabMenuVM, 'CreateClicks',   0, MetaData.None);
-    static UploadClicksKey   = Model.RegisterProperty<number>(FabMenuVM, 'UploadClicks',   0, MetaData.None);
-    static ShareClicksKey    = Model.RegisterProperty<number>(FabMenuVM, 'ShareClicks',    0, MetaData.None);
+    static CreateClicksKey   = MuralBase.RegisterProperty<number>(FabMenuVM, 'CreateClicks',   0, MetaData.None);
+    static UploadClicksKey   = MuralBase.RegisterProperty<number>(FabMenuVM, 'UploadClicks',   0, MetaData.None);
+    static ShareClicksKey    = MuralBase.RegisterProperty<number>(FabMenuVM, 'ShareClicks',    0, MetaData.None);
 
-    static CreateCommandKey  = Model.RegisterProperty<RelayCommand | null>(FabMenuVM, 'CreateCommand',  null, MetaData.None);
-    static UploadCommandKey  = Model.RegisterProperty<RelayCommand | null>(FabMenuVM, 'UploadCommand',  null, MetaData.None);
-    static ShareCommandKey   = Model.RegisterProperty<RelayCommand | null>(FabMenuVM, 'ShareCommand',   null, MetaData.None);
+    static CreateCommandKey  = MuralBase.RegisterProperty<RelayCommand | null>(FabMenuVM, 'CreateCommand',  null, MetaData.None);
+    static UploadCommandKey  = MuralBase.RegisterProperty<RelayCommand | null>(FabMenuVM, 'UploadCommand',  null, MetaData.None);
+    static ShareCommandKey   = MuralBase.RegisterProperty<RelayCommand | null>(FabMenuVM, 'ShareCommand',   null, MetaData.None);
 
     get IsOpen():         boolean { return this.get_property_value(FabMenuVM.IsOpenKey); }
     set IsOpen(v:        boolean) { this.set_property_value(FabMenuVM.IsOpenKey, v); }

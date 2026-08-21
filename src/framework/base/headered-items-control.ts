@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
 } from '../../runtime/index.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { ItemsControl } from './items-control.js';
@@ -17,9 +17,9 @@ import { ItemsControl } from './items-control.js';
 // doesn't let one class extend both ContentControl and ItemsControl.
 export class HeaderedItemsControl extends ItemsControl
 {
-    public static readonly HeaderKey         = Model.RegisterProperty<unknown>(
+    public static readonly HeaderKey         = MuralBase.RegisterProperty<unknown>(
         HeaderedItemsControl, 'Header', undefined, MetaData.Measure | MetaData.Render);
-    public static readonly HeaderTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly HeaderTemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         HeaderedItemsControl, 'HeaderTemplate', undefined, MetaData.Measure);
 
     public get Header(): unknown { return this.get_property_value(HeaderedItemsControl.HeaderKey); }

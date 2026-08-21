@@ -1,4 +1,4 @@
-import { DataObject, DragDropEffects, MetaData, Model, type ServiceKey } from '../../../runtime/index.js';
+﻿import { DataObject, DragDropEffects, MetaData, MuralBase, type ServiceKey } from '../../../runtime/index.js';
 import { TOOLBOX_ITEM_FORMAT } from '../behaviors/canvas-drop-behavior.js';
 import type { ToolboxVisualDescriptor } from './toolbox-visual-descriptor.js';
 import type { IToolboxDropFactory } from './toolbox-drop-factory.js';
@@ -9,15 +9,15 @@ import type { IToolboxDropFactory } from './toolbox-drop-factory.js';
 // app-specific kinds subclass but the base already carries all palette/drop
 // needs. FactoryKey is a plain field, not a DP — it is read in TS on drop,
 // never bound in markup.
-export class ToolboxItem extends Model
+export class ToolboxItem extends MuralBase
 {
-    public static readonly IdKey = Model.RegisterProperty<string>(
+    public static readonly IdKey = MuralBase.RegisterProperty<string>(
         ToolboxItem, 'Id', '', MetaData.None);
-    public static readonly LabelKey = Model.RegisterProperty<string>(
+    public static readonly LabelKey = MuralBase.RegisterProperty<string>(
         ToolboxItem, 'Label', '', MetaData.None);
-    public static readonly DescriptorKey = Model.RegisterProperty<ToolboxVisualDescriptor | undefined>(
+    public static readonly DescriptorKey = MuralBase.RegisterProperty<ToolboxVisualDescriptor | undefined>(
         ToolboxItem, 'Descriptor', undefined, MetaData.None);
-    public static readonly BeginDragDataKey = Model.RegisterProperty<(() => { data: DataObject; effects: DragDropEffects }) | undefined>(
+    public static readonly BeginDragDataKey = MuralBase.RegisterProperty<(() => { data: DataObject; effects: DragDropEffects }) | undefined>(
         ToolboxItem, 'BeginDragData', undefined, MetaData.None);
 
     constructor(

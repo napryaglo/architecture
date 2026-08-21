@@ -1,7 +1,7 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    Model, PointerButton, NoModifiers,
+    MuralBase, PointerButton, NoModifiers,
     type PointerEventInit,
 } from '../../../runtime/index.js';
 import { HeadlessTarget } from '../../../visual-engine/index.js';
@@ -17,9 +17,9 @@ import { initTestApp } from '../../../basic/tests/test-app.js';
 // tab strip (the document tabs) could only switch programmatically, never on
 // click. TabItem.OnPointerUp now routes HandleContainerClick.
 
-class Doc extends Model
+class Doc extends MuralBase
 {
-    public static readonly TitleKey = Model.RegisterProperty<string>(Doc, 'Title', '', undefined);
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(Doc, 'Title', '', undefined);
     public get Title(): string { return this.get_property_value(Doc.TitleKey); }
     public set Title(v: string) { this.set_property_value(Doc.TitleKey, v); }
 }

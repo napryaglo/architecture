@@ -1,4 +1,4 @@
-import { Model } from '../../../runtime/index.js';
+﻿import { MuralBase } from '../../../runtime/index.js';
 
 // Group / Ungroup commands fire framework events on Diagram (consumer
 // subscribes via Diagram.AddGroupRequestedListener / AddUngroupRequestedListener).
@@ -17,14 +17,14 @@ import { Model } from '../../../runtime/index.js';
 // Walk Parent links up to the root. Same algorithm as the demo's
 // topLevelOf — returns the entity itself when Parent is absent.
 // Used to elevate clicked leaves to their outermost containing group.
-function topLevelOf(entity: Model): Model
+function topLevelOf(entity: MuralBase): MuralBase
 {
     let cur: { Parent?: unknown } = entity as unknown as { Parent?: unknown };
     while (cur.Parent !== undefined)
     {
         cur = cur.Parent as { Parent?: unknown };
     }
-    return cur as unknown as Model;
+    return cur as unknown as MuralBase;
 }
 
 // Reduce a selection (potentially mixing nested members + their group
@@ -33,12 +33,12 @@ function topLevelOf(entity: Model): Model
 // Group / Ungroup operate on this set, never on nested members
 // directly — matches Visio / PowerPoint semantics where selecting
 // inside a group operates on the group as a unit.
-export function selectedTopLevel(selectedItems: readonly unknown[]): Model[]
+export function selectedTopLevel(selectedItems: readonly unknown[]): MuralBase[]
 {
-    const out = new Set<Model>();
+    const out = new Set<MuralBase>();
     for (const item of selectedItems)
     {
-        if (item instanceof Model) out.add(topLevelOf(item));
+        if (item instanceof MuralBase) out.add(topLevelOf(item));
     }
     return [...out];
 }
@@ -48,14 +48,14 @@ export function selectedTopLevel(selectedItems: readonly unknown[]): Model[]
 // shape; Group has it via DataContext semantics, GroupVM has it
 // directly as `_members`). Consumers' group VM classes are duck-
 // typed; the framework does no `instanceof` check.
-export function selectedTopLevelGroups(selectedItems: readonly unknown[]): Model[]
+export function selectedTopLevelGroups(selectedItems: readonly unknown[]): MuralBase[]
 {
     return selectedTopLevel(selectedItems).filter(isGroupShape);
 }
 
-export function isGroupShape(item: unknown): item is Model
+export function isGroupShape(item: unknown): item is MuralBase
 {
-    if (!(item instanceof Model)) return false;
+    if (!(item instanceof MuralBase)) return false;
     return 'Members' in (item as object);
 }
 
@@ -69,12 +69,12 @@ export function isGroupShape(item: unknown): item is Model
 // emits the member only once. Iteration over `Members` is duck-typed:
 // supports both `ObservableCollection` (Count + Get) and plain
 // `Iterable<unknown>`.
-export function flattenToLeaves(selectedItems: readonly unknown[]): Model[]
+export function flattenToLeaves(selectedItems: readonly unknown[]): MuralBase[]
 {
-    const seen = new Set<Model>();
-    const out:  Model[] = [];
+    const seen = new Set<MuralBase>();
+    const out:  MuralBase[] = [];
     const visit = (entity: unknown): void => {
-        if (!(entity instanceof Model)) return;
+        if (!(entity instanceof MuralBase)) return;
         if (isGroupShape(entity))
         {
             const members = (entity as unknown as { Members: unknown }).Members;
@@ -111,12 +111,12 @@ function iterateMembers(members: unknown, fn: (m: unknown) => void): void
 
 export interface GroupRequestedArgs
 {
-    readonly Items: readonly Model[];
+    readonly Items: readonly MuralBase[];
 }
 
 export interface UngroupRequestedArgs
 {
-    readonly Groups: readonly Model[];
+    readonly Groups: readonly MuralBase[];
 }
 
 export type GroupRequestedListener   = (args: GroupRequestedArgs)   => void;

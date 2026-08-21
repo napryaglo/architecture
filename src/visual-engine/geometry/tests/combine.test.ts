@@ -1,9 +1,9 @@
-// §19.7 — CombinedGeometry + combine() + intersectsExact tests.
+﻿// §19.7 — CombinedGeometry + combine() + intersectsExact tests.
 //
 // The pathops boolean-ops engine has its own deep test corpus at
 // src/visual-engine/geometry/pathops/tests/op-driver.test.ts. The
 // tests below probe ONLY the Geometry↔OpPath bridge and the memoized
-// CombinedGeometry Model — they assume the kernel works and check
+// CombinedGeometry MuralBase — they assume the kernel works and check
 // that the lift produces sensible figures, that the memo invalidates
 // on input changes, and that the WPF combine modes map to the right
 // Skia ops.
@@ -201,9 +201,9 @@ describe('intersectsExact', () => {
     });
 });
 
-// ── CombinedGeometry Model — memo + invalidation ────────────────
+// ── CombinedGeometry MuralBase — memo + invalidation ────────────────
 
-describe('CombinedGeometry — Model class', () => {
+describe('CombinedGeometry — MuralBase class', () => {
     test('toPathGeometry returns a memoized PathGeometry', () => {
         const a = rect(0, 0, 10, 10);
         const b = rect(5, 5, 10, 10);

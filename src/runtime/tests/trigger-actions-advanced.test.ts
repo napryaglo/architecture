@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -10,7 +10,7 @@ import {
     EventTrigger,
     ManualClock,
     MetaData,
-    Model,
+    MuralBase,
     PropertyTrigger,
     Setter,
     Storyboard,
@@ -29,13 +29,13 @@ function freshClock(): ManualClock
 }
 
 // Lightweight Element subclass with a bool DP so we can flip a trigger
-// without dragging in a control. The base Element / Model machinery is
+// without dragging in a control. The base Element / MuralBase machinery is
 // what we're actually exercising.
 class TriggerTest extends Element
 {
     static {
-        Model.RegisterProperty(TriggerTest, 'Active', false, MetaData.None);
-        Model.RegisterProperty(TriggerTest, 'Width',  0,     MetaData.Arrange);
+        MuralBase.RegisterProperty(TriggerTest, 'Active', false, MetaData.None);
+        MuralBase.RegisterProperty(TriggerTest, 'Width',  0,     MetaData.Arrange);
     }
     public get Active(): boolean { return this.get_property_value(resolveKey(this, undefined, 'Active')); }
     public set Active(v: boolean) { this.set_property_value(resolveKey(this, undefined, 'Active'), v); }

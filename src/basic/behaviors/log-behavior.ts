@@ -1,7 +1,7 @@
-import {
+﻿import {
     Behavior,
     MetaData,
-    Model,
+    MuralBase,
     type PropertyChangeCallback,
     type PropertyKey,
     type Visual,
@@ -33,10 +33,10 @@ import { resolveKey } from '../../runtime/model-internals.js';
 // rather than stacking.
 export class LogBehavior extends Behavior
 {
-    public static readonly PropertyKey = Model.RegisterProperty<string | undefined>(
+    public static readonly PropertyKey = MuralBase.RegisterProperty<string | undefined>(
         LogBehavior, 'Property', undefined, MetaData.None);
 
-    public static readonly TagKey = Model.RegisterProperty<string | undefined>(
+    public static readonly TagKey = MuralBase.RegisterProperty<string | undefined>(
         LogBehavior, 'Tag', undefined, MetaData.None);
 
     public get Property():  string | undefined { return this.get_property_value(LogBehavior.PropertyKey); }

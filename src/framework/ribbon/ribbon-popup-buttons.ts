@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Visual,
@@ -42,20 +42,20 @@ import { RibbonButtonSize, fillRibbonStack } from './ribbon-buttons.js';
 // regions and hooks them up.
 export abstract class RibbonPopupButton extends ItemsControl
 {
-    public static readonly IsOpenKey    = Model.RegisterProperty<boolean>(
+    public static readonly IsOpenKey    = MuralBase.RegisterProperty<boolean>(
         RibbonPopupButton, 'IsOpen', false, MetaData.None);
-    public static readonly LargeIconKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly LargeIconKey = MuralBase.RegisterProperty<Visual | undefined>(
         RibbonPopupButton, 'LargeIcon', undefined, MetaData.Measure);
-    public static readonly SmallIconKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly SmallIconKey = MuralBase.RegisterProperty<Visual | undefined>(
         RibbonPopupButton, 'SmallIcon', undefined, MetaData.Measure);
-    public static readonly TextKey      = Model.RegisterProperty<string | undefined>(
+    public static readonly TextKey      = MuralBase.RegisterProperty<string | undefined>(
         RibbonPopupButton, 'Text', undefined, MetaData.Measure | MetaData.Render);
-    public static readonly SizeKey      = Model.RegisterProperty<RibbonButtonSize>(
+    public static readonly SizeKey      = MuralBase.RegisterProperty<RibbonButtonSize>(
         RibbonPopupButton, 'Size', RibbonButtonSize.Large, MetaData.Measure);
     // Trigger chrome — the visible button. Can't share ItemsControl's
     // primary Template slot (that hosts the popup ItemsPresenter), so it
     // lives in a second template DP the default Style sets.
-    public static readonly TriggerTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(
+    public static readonly TriggerTemplateKey = MuralBase.RegisterProperty<ControlTemplate | undefined>(
         RibbonPopupButton, 'TriggerTemplate', undefined, MetaData.Measure);
 
     public get IsOpen():  boolean { return this.get_property_value(RibbonPopupButton.IsOpenKey); }
@@ -243,7 +243,7 @@ export class RibbonDropDownButton extends RibbonPopupButton
 {
     static
     {
-        Model.OverrideMetadata(RibbonDropDownButton, Element.DefaultStyleKeyKey, { default_value: RibbonDropDownButton });
+        MuralBase.OverrideMetadata(RibbonDropDownButton, Element.DefaultStyleKeyKey, { default_value: RibbonDropDownButton });
     }
 
     public constructor() { super(); }
@@ -264,17 +264,17 @@ export class RibbonDropDownButton extends RibbonPopupButton
 // auto-disable chrome via CommandSourceHelper, same as Button / MenuItem.
 export class RibbonSplitButton extends RibbonPopupButton implements ICommandSource
 {
-    public static readonly CommandKey          = Model.RegisterProperty<ICommand | undefined>(
+    public static readonly CommandKey          = MuralBase.RegisterProperty<ICommand | undefined>(
         RibbonSplitButton, 'Command', undefined, MetaData.None);
-    public static readonly CommandParameterKey = Model.RegisterProperty<unknown>(
+    public static readonly CommandParameterKey = MuralBase.RegisterProperty<unknown>(
         RibbonSplitButton, 'CommandParameter', undefined, MetaData.None);
     // RoutedCommand dispatch target override; unused for plain ICommand.
-    public static readonly CommandTargetKey    = Model.RegisterProperty<Visual | undefined>(
+    public static readonly CommandTargetKey    = MuralBase.RegisterProperty<Visual | undefined>(
         RibbonSplitButton, 'CommandTarget', undefined, MetaData.None);
 
     static
     {
-        Model.OverrideMetadata(RibbonSplitButton, Element.DefaultStyleKeyKey, { default_value: RibbonSplitButton });
+        MuralBase.OverrideMetadata(RibbonSplitButton, Element.DefaultStyleKeyKey, { default_value: RibbonSplitButton });
     }
 
     private readonly _cmdHelper: CommandSourceHelper = new CommandSourceHelper(this);

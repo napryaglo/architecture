@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -45,12 +45,12 @@ export class Chip extends ToggleButton
     // ToggleButton. Same shape semantically; the symbol-table routes
     // PROPERTY_TO_ENUM under `Kind` to ChipVariant so the markup form
     // `Kind=Filter` still resolves the bare ident against the enum.
-    public static readonly KindKey = Model.RegisterProperty<ChipVariant>(
+    public static readonly KindKey = MuralBase.RegisterProperty<ChipVariant>(
         Chip, 'Kind', ChipVariant.Assist, MetaData.None);
 
-    public static readonly LeadingKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly LeadingKey = MuralBase.RegisterProperty<Visual | undefined>(
         Chip, 'Leading', undefined, MetaData.Render);
-    public static readonly TrailingKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly TrailingKey = MuralBase.RegisterProperty<Visual | undefined>(
         Chip, 'Trailing', undefined, MetaData.Render);
 
     // Derived state observed by the ControlTemplate filter trigger.
@@ -59,7 +59,7 @@ export class Chip extends ToggleButton
     // here), so combining "Kind = Filter" AND "IsChecked" into a
     // template trigger requires a precomputed boolean. OnPropertyChanged
     // below keeps it in lock-step with Kind / IsChecked edges.
-    private static readonly _IsFilterSelectedPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsFilterSelectedPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         Chip, 'IsFilterSelected', false, MetaData.None);
     public static readonly IsFilterSelectedKey = Chip._IsFilterSelectedPriv;
 
@@ -75,7 +75,7 @@ export class Chip extends ToggleButton
     public set Trailing(v: Visual | undefined) { this.set_property_value(Chip.TrailingKey, v); }
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             Chip, Element.DefaultStyleKeyKey,
             { default_value: Chip });
     }

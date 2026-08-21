@@ -1,4 +1,4 @@
-import { MetaData, Model } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase } from '../../runtime/index.js';
 import type { Rect } from '../../runtime/index.js';
 import type { Geometry, Point } from '../../visual-engine/index.js';
 import type { ResolvedAnchor } from './routing/router.js';
@@ -68,24 +68,24 @@ export interface PortInit
 // the two addressing schemes (Name + (Side, Index)) and the construction
 // ergonomics.
 //
-// Port is a Model so observers (the PortResolver's outline-mode cache,
+// Port is a MuralBase so observers (the PortResolver's outline-mode cache,
 // downstream Connector subscribers) can react to mutations. The
 // init-object constructor stays a thin sugar over the DP setters —
-// any post-construction edit goes through the same Model.set_property_value
+// any post-construction edit goes through the same MuralBase.set_property_value
 // path.
-export class Port extends Model
+export class Port extends MuralBase
 {
-    public static readonly NameKey       = Model.RegisterProperty<string>(
+    public static readonly NameKey       = MuralBase.RegisterProperty<string>(
         Port, 'Name',       '',                  MetaData.None);
-    public static readonly CoordSpaceKey = Model.RegisterProperty<PortCoordSpace>(
+    public static readonly CoordSpaceKey = MuralBase.RegisterProperty<PortCoordSpace>(
         Port, 'CoordSpace', PortCoordSpace.Bbox, MetaData.None);
-    public static readonly XKey          = Model.RegisterProperty<number>(
+    public static readonly XKey          = MuralBase.RegisterProperty<number>(
         Port, 'X',          0,                   MetaData.None);
-    public static readonly YKey          = Model.RegisterProperty<number>(
+    public static readonly YKey          = MuralBase.RegisterProperty<number>(
         Port, 'Y',          0,                   MetaData.None);
-    public static readonly OutlineTKey   = Model.RegisterProperty<number>(
+    public static readonly OutlineTKey   = MuralBase.RegisterProperty<number>(
         Port, 'OutlineT',   0,                   MetaData.None);
-    public static readonly SideKey       = Model.RegisterProperty<PortSide>(
+    public static readonly SideKey       = MuralBase.RegisterProperty<PortSide>(
         Port, 'Side',       PortSide.Auto,       MetaData.None);
 
     public get Name():       string         { return this.get_property_value(Port.NameKey); }

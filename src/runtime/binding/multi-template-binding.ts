@@ -1,17 +1,17 @@
-import { Binding, BindingMode } from './binding.js';
+﻿import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
-import { Model } from '../model.js';
+import { MuralBase } from '../model.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
-// Internal Model that holds the converter's combined output. Same shape
+// Internal MuralBase that holds the converter's combined output. Same shape
 // as TemplatedParentWatcher in template-binding.ts — a single Value slot
 // the Binding change-notification machinery rides on.
-class MultiTemplatedParentWatcher extends Model
+class MultiTemplatedParentWatcher extends MuralBase
 {
-    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
         MultiTemplatedParentWatcher, 'Value', undefined, MetaData.None);
 
     public get Value(): unknown { return this.get_property_value(MultiTemplatedParentWatcher.ValueKey); }

@@ -1,8 +1,8 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     MetaData,
-    Model,
+    MuralBase,
     NameScope,
     Size,
     Element,
@@ -35,8 +35,8 @@ class CounterAction extends TriggerAction
 class Tile extends Element
 {
     static {
-        Model.RegisterProperty(Tile, 'Tint', 'plain',  MetaData.None);
-        Model.RegisterProperty(Tile, 'Bias', 0,        MetaData.None);
+        MuralBase.RegisterProperty(Tile, 'Tint', 'plain',  MetaData.None);
+        MuralBase.RegisterProperty(Tile, 'Bias', 0,        MetaData.None);
     }
     public get Tint(): string { return this.get_property_value(resolveKey(this, undefined, 'Tint')); }
     public set Tint(v: string) { this.set_property_value(resolveKey(this, undefined, 'Tint'), v); }
@@ -47,9 +47,9 @@ class Tile extends Element
 }
 
 // Backing view-model so DataTriggers have something to bind against.
-class ItemVM extends Model
+class ItemVM extends MuralBase
 {
-    static { Model.RegisterProperty(ItemVM, 'IsSelected', false, MetaData.None); }
+    static { MuralBase.RegisterProperty(ItemVM, 'IsSelected', false, MetaData.None); }
     public get IsSelected(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsSelected')); }
     public set IsSelected(v: boolean) { this.set_property_value(resolveKey(this, undefined, 'IsSelected'), v); }
 }
@@ -251,11 +251,11 @@ describe('DataTemplate.Triggers — TemplateMultiDataTrigger', () => {
             [], [], [],
             [new TemplateMultiDataTrigger(conds, [new TargetedSetter(Tile, 'Bias', 42)])],
         );
-        class MultiVM extends Model
+        class MultiVM extends MuralBase
         {
             static {
-                Model.RegisterProperty(MultiVM, 'IsSelected', false, MetaData.None);
-                Model.RegisterProperty(MultiVM, 'Score',       0,    MetaData.None);
+                MuralBase.RegisterProperty(MultiVM, 'IsSelected', false, MetaData.None);
+                MuralBase.RegisterProperty(MultiVM, 'Score',       0,    MetaData.None);
             }
             public get IsSelected(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsSelected')); }
             public set IsSelected(v: boolean) { this.set_property_value(resolveKey(this, undefined, 'IsSelected'), v); }

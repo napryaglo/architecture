@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Thickness,
     Visual,
     type PropertyDescriptor,
@@ -30,7 +30,7 @@ import { TextBlock, TextWrapping } from '../../basic/text-block.js';
 // logical-only container).
 export class ContentControl extends Control
 {
-    public static readonly ContentKey = Model.RegisterProperty<Visual | Model | undefined>(
+    public static readonly ContentKey = MuralBase.RegisterProperty<Visual | MuralBase | undefined>(
         ContentControl, 'Content', undefined, MetaData.Measure);
 
     // Border chrome (WPF Control parity): the default template wraps its
@@ -41,7 +41,7 @@ export class ContentControl extends Control
     // brush, zero thickness → no visible chrome); a consumer sets Fill / Stroke
     // / BorderThickness to give the content host a background/outline without a
     // bespoke template.
-    public static readonly BorderThicknessKey = Model.RegisterProperty<Thickness>(
+    public static readonly BorderThicknessKey = MuralBase.RegisterProperty<Thickness>(
         ContentControl, 'BorderThickness', Thickness.Zero,
         MetaData.Measure | MetaData.Arrange | MetaData.Render);
 
@@ -56,7 +56,7 @@ export class ContentControl extends Control
     // state (tree expansion, scroll, unsaved textbox edits) AND skips the rebuild
     // of a heavy view (Project Explorer et al. rebuilt on every rail switch).
     // Set false for strict WPF rebuild-on-reset semantics.
-    public static readonly ReuseContentViewsKey = Model.RegisterProperty<boolean>(
+    public static readonly ReuseContentViewsKey = MuralBase.RegisterProperty<boolean>(
         ContentControl, 'ReuseContentViews', true, MetaData.None);
 
     public get ReuseContentViews(): boolean { return this.get_property_value(ContentControl.ReuseContentViewsKey); }
@@ -66,11 +66,11 @@ export class ContentControl extends Control
     public set BorderThickness(v: Thickness) { this.set_property_value(ContentControl.BorderThicknessKey, v); }
 
     // The Visual currently slotted into the presenter. Distinct from
-    // Content because Content may be a non-Visual Model — in that case a
+    // Content because Content may be a non-Visual MuralBase — in that case a
     // DataTemplate is auto-resolved by data type and applied to produce a
     // Visual which is the one actually slotted. Tracked separately so
     // Content-change / Template-change paths detach it cleanly without
-    // touching the data Model.
+    // touching the data MuralBase.
     private _resolvedContent: Visual | undefined;
 
     // Per-content view cache, honoured when ReuseContentViews is on (the
@@ -81,38 +81,38 @@ export class ContentControl extends Control
     // view — same rationale + shape as ContentPresenter._viewCache.
     private readonly _viewCache = new WeakMap<object, Visual>();
 
-    public get Content(): Visual | Model | undefined
+    public get Content(): Visual | MuralBase | undefined
     {
         return this.get_property_value(ContentControl.ContentKey);
     }
 
-    // Setter accepts a Visual OR a plain Model:
+    // Setter accepts a Visual OR a plain MuralBase:
     //
     //   * Visual    — slotted directly into the presenter as the
     //                 ContentPresenter's visualChild. Logical parent =
     //                 this ContentControl.
-    //   * Model     — looked up via resources for a DataTemplate whose
-    //                 DataType matches the Model's constructor. The
+    //   * MuralBase     — looked up via resources for a DataTemplate whose
+    //                 DataType matches the MuralBase's constructor. The
     //                 template is applied, the produced Visual's
-    //                 DataContext is set to the Model, and that Visual is
-    //                 slotted. The Model itself is NOT a logical child
+    //                 DataContext is set to the MuralBase, and that Visual is
+    //                 slotted. The MuralBase itself is NOT a logical child
     //                 (Models aren't Visuals); $-bindings inside the
-    //                 template see the Model via the generated Visual's
+    //                 template see the MuralBase via the generated Visual's
     //                 DataContext.
-    public set Content(value: Visual | Model | undefined)
+    public set Content(value: Visual | MuralBase | undefined)
     {
         // Side-effect dispatched from OnPropertyChanged so binding pushes
         // (which bypass JS setters) behave like direct assignment.
         this.set_property_value(ContentControl.ContentKey, value);
     }
 
-    private applyContent(oldValue: Visual | Model | undefined, newValue: Visual | Model | undefined): void
+    private applyContent(oldValue: Visual | MuralBase | undefined, newValue: Visual | MuralBase | undefined): void
     {
         const presenter = this.templateContentPresenter;
 
         // Unslot the visual that was actually in the presenter — could be
         // the old Content (when Visual) or a template-generated visual
-        // (when Model).
+        // (when MuralBase).
         if (this._resolvedContent !== undefined && presenter !== undefined)
         {
             presenter.SetContent(undefined);
@@ -145,14 +145,14 @@ export class ContentControl extends Control
 
     // Bridges a Content value to the Visual that should sit in the
     // presenter. Returns the Visual directly when Content is already one;
-    // otherwise finds a DataTemplate matching the Model's runtime type,
+    // otherwise finds a DataTemplate matching the MuralBase's runtime type,
     // applies it, and sets the result's DataContext so $-bindings inside
     // the template resolve against the data.
-    private resolveContentVisual(value: Visual | Model | undefined): Visual | undefined
+    private resolveContentVisual(value: Visual | MuralBase | undefined): Visual | undefined
     {
         if (value === undefined || value === null) return undefined;
         if (value instanceof Visual) return value;
-        // Non-Visual Model — auto-resolve a DataTemplate by class identity
+        // Non-Visual MuralBase — auto-resolve a DataTemplate by class identity
         // (DataType === value.constructor).
         const template = findDataTemplateForType(value.constructor, this);
         if (template !== undefined)
@@ -160,7 +160,7 @@ export class ContentControl extends Control
             // Reuse this object's existing view when opted in (the default) —
             // re-presenting the same content (a nav-rail switch back, a tab
             // re-activation) returns its one view with its state intact rather
-            // than rebuilding. value is a non-Visual, non-null Model here, so it
+            // than rebuilding. value is a non-Visual, non-null MuralBase here, so it
             // is always an object we can weak-key.
             if (this.ReuseContentViews)
             {
@@ -193,7 +193,7 @@ export class ContentControl extends Control
             tb.TextWrapping = TextWrapping.Wrap;
             return tb;
         }
-        // An object Model with no matching DataTemplate: don't render
+        // An object MuralBase with no matching DataTemplate: don't render
         // NOTHING — a silently-empty presenter is the most confusing
         // failure mode ("why is my content blank?"). Surface it loudly as a
         // big red diagnostic naming the exact type whose DataTemplate is
@@ -215,9 +215,9 @@ export class ContentControl extends Control
         return tb;
     }
 
-    // Logical child = the Visual Content (when set). A non-Visual Model
+    // Logical child = the Visual Content (when set). A non-Visual MuralBase
     // Content is NOT a logical child — its visual stand-in lives visually
-    // under the presenter via _resolvedContent and sees the Model through
+    // under the presenter via _resolvedContent and sees the MuralBase through
     // DataContext, not via the logical chain.
     public override get logicalChildren(): readonly Visual[]
     {
@@ -263,8 +263,8 @@ export class ContentControl extends Control
         if (descriptor.Name === 'Content')
         {
             this.applyContent(
-                oldValue as Visual | Model | undefined,
-                newValue as Visual | Model | undefined,
+                oldValue as Visual | MuralBase | undefined,
+                newValue as Visual | MuralBase | undefined,
             );
         }
     }

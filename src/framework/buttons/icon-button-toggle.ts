@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, type PointerEventArgs,
 } from '../../runtime/index.js';
 import { IconButton } from './icon-button.js';
@@ -29,7 +29,7 @@ import { IconButton } from './icon-button.js';
 //   Standard  : transparent / OnSurfaceVariant             → transparent / Primary
 export class IconButtonToggle extends IconButton
 {
-    public static readonly IsCheckedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsCheckedKey = MuralBase.RegisterProperty<boolean>(
         IconButtonToggle, 'IsChecked', false, MetaData.Render,
     );
 
@@ -37,7 +37,7 @@ export class IconButtonToggle extends IconButton
     {
         // Resolve `Style[TargetType=IconButtonToggle]` from the active
         // theme, not the parent IconButton style.
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             IconButtonToggle,
             Element.DefaultStyleKeyKey,
             { default_value: IconButtonToggle },

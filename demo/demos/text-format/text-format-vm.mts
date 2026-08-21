@@ -1,4 +1,4 @@
-// VM for the text-format demo. Holds the character-format state as pure
+﻿// VM for the text-format demo. Holds the character-format state as pure
 // runtime primitives — a family name (string), a point size (number),
 // three garniture toggles (bool), and a colour hex (string). No
 // visual-engine types here: the FontWeight / FontStyle / TextDecorations
@@ -6,17 +6,17 @@
 // behaviour maps these primitives onto the sample paragraph. The editors
 // bind two-way to these DPs; the paragraph binds Family / FontSize
 // directly and gets weight / style / underline / colour from the bridge.
-import { MetaData, Model } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
 import type { Visual } from '@pragmatic-lab/mural/runtime';
 
-export class TextFormatVM extends Model {
-    static FamilyKey    = Model.RegisterProperty<string>( TextFormatVM, 'Family',    'Georgia',      MetaData.None);
-    static FontSizeKey  = Model.RegisterProperty<number>( TextFormatVM, 'FontSize',  20,             MetaData.None);
-    static BoldKey      = Model.RegisterProperty<boolean>(TextFormatVM, 'Bold',      false,          MetaData.None);
-    static ItalicKey    = Model.RegisterProperty<boolean>(TextFormatVM, 'Italic',    false,          MetaData.None);
-    static UnderlineKey = Model.RegisterProperty<boolean>(TextFormatVM, 'Underline', false,          MetaData.None);
-    static ColorHexKey  = Model.RegisterProperty<string>( TextFormatVM, 'ColorHex',  '#1d4ed8',      MetaData.None);
-    static SampleKey    = Model.RegisterProperty<string>( TextFormatVM, 'Sample',
+export class TextFormatVM extends MuralBase {
+    static FamilyKey    = MuralBase.RegisterProperty<string>( TextFormatVM, 'Family',    'Georgia',      MetaData.None);
+    static FontSizeKey  = MuralBase.RegisterProperty<number>( TextFormatVM, 'FontSize',  20,             MetaData.None);
+    static BoldKey      = MuralBase.RegisterProperty<boolean>(TextFormatVM, 'Bold',      false,          MetaData.None);
+    static ItalicKey    = MuralBase.RegisterProperty<boolean>(TextFormatVM, 'Italic',    false,          MetaData.None);
+    static UnderlineKey = MuralBase.RegisterProperty<boolean>(TextFormatVM, 'Underline', false,          MetaData.None);
+    static ColorHexKey  = MuralBase.RegisterProperty<string>( TextFormatVM, 'ColorHex',  '#1d4ed8',      MetaData.None);
+    static SampleKey    = MuralBase.RegisterProperty<string>( TextFormatVM, 'Sample',
         'The quick brown fox jumps over the lazy dog.', MetaData.None);
 
     get Family():    string  { return this.get_property_value(TextFormatVM.FamilyKey); }

@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -47,17 +47,17 @@ import { ClickAwayScrim } from '../../basic/click-away-scrim.js';
 // and GetTemplateChild is inherited.
 export class SplitButton extends ContentControl
 {
-    public static readonly CommandKey          = Model.RegisterProperty<ICommand | undefined>(       SplitButton, 'Command',           undefined, MetaData.None);
-    public static readonly CommandParameterKey = Model.RegisterProperty<unknown>(                     SplitButton, 'CommandParameter',  undefined, MetaData.None);
-    public static readonly MenuContentKey      = Model.RegisterProperty<Visual | undefined>(          SplitButton, 'MenuContent',       undefined, MetaData.None);
-    public static readonly IsOpenKey           = Model.RegisterProperty<boolean>(                     SplitButton, 'IsOpen',            false,     MetaData.None);
+    public static readonly CommandKey          = MuralBase.RegisterProperty<ICommand | undefined>(       SplitButton, 'Command',           undefined, MetaData.None);
+    public static readonly CommandParameterKey = MuralBase.RegisterProperty<unknown>(                     SplitButton, 'CommandParameter',  undefined, MetaData.None);
+    public static readonly MenuContentKey      = MuralBase.RegisterProperty<Visual | undefined>(          SplitButton, 'MenuContent',       undefined, MetaData.None);
+    public static readonly IsOpenKey           = MuralBase.RegisterProperty<boolean>(                     SplitButton, 'IsOpen',            false,     MetaData.None);
     // PopupTemplate — the M3 popup chrome (Border with SurfaceContainerHigh
     // fill, OutlineVariant stroke, ShapeExtraSmall corner, Elevation2 shadow)
     // wrapped around a named PART_PopupBody slot. mountPopup instantiates
     // it and slots MenuContent into PART_PopupBody so consumers ship only
     // the items list — no theme tokens in JS. Default set by the Style
     // block in framework.resources.mu to @DefaultSplitButtonPopup.
-    public static readonly PopupTemplateKey    = Model.RegisterProperty<ControlTemplate | undefined>(SplitButton, 'PopupTemplate',     undefined, MetaData.None);
+    public static readonly PopupTemplateKey    = MuralBase.RegisterProperty<ControlTemplate | undefined>(SplitButton, 'PopupTemplate',     undefined, MetaData.None);
 
     public get Command():          ICommand | undefined { return this.get_property_value(SplitButton.CommandKey); }
     public set Command(v:          ICommand | undefined) { this.set_property_value(SplitButton.CommandKey, v); }
@@ -75,7 +75,7 @@ export class SplitButton extends ContentControl
     public set PopupTemplate(v:    ControlTemplate | undefined) { this.set_property_value(SplitButton.PopupTemplateKey, v); }
 
     static {
-        Model.OverrideMetadata(SplitButton, Element.DefaultStyleKeyKey,
+        MuralBase.OverrideMetadata(SplitButton, Element.DefaultStyleKeyKey,
             { default_value: SplitButton });
     }
 

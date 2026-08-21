@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Visibility,
     Element, type PropertyDescriptor,
@@ -44,10 +44,10 @@ const EMPTY_CAP_OPTIONS: readonly CapOption[] = Object.freeze([]) as readonly Ca
 // responsibility on routing values between the consumer and the editors.
 export class ShapeFormatControl extends TemplatedControl
 {
-    public static override readonly FillKey   = Model.RegisterProperty<Brush | undefined>(
+    public static override readonly FillKey   = MuralBase.RegisterProperty<Brush | undefined>(
         ShapeFormatControl, 'Fill',   undefined,
         MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static override readonly StrokeKey = Model.RegisterProperty<Pen | undefined>(
+    public static override readonly StrokeKey = MuralBase.RegisterProperty<Pen | undefined>(
         ShapeFormatControl, 'Stroke', undefined,
         MetaData.None | MetaData.BindsTwoWayByDefault);
 
@@ -59,24 +59,24 @@ export class ShapeFormatControl extends TemplatedControl
     // cap section so it only appears for a connector selection. The
     // formatting layer stays domain-agnostic — the consumer supplies the
     // catalog via CapOptions (see the diagram layer's connectorCapOptions()).
-    public static readonly SourceCapTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly SourceCapTemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         ShapeFormatControl, 'SourceCapTemplate', undefined,
         MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly TargetCapTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly TargetCapTemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         ShapeFormatControl, 'TargetCapTemplate', undefined,
         MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly ShowCapsKey = Model.RegisterProperty<boolean>(
+    public static readonly ShowCapsKey = MuralBase.RegisterProperty<boolean>(
         ShapeFormatControl, 'ShowCaps', false, MetaData.None);
-    public static readonly CapOptionsKey = Model.RegisterProperty<readonly CapOption[]>(
+    public static readonly CapOptionsKey = MuralBase.RegisterProperty<readonly CapOption[]>(
         ShapeFormatControl, 'CapOptions', EMPTY_CAP_OPTIONS, MetaData.None);
 
     // Per-end cap size multipliers (Connector.SourceCapScale / TargetCapScale).
     // Two-way like the cap templates so a consumer mirror DP round-trips the
     // slider edit back onto the selected connector(s). 1 = authored size.
-    public static readonly SourceCapScaleKey = Model.RegisterProperty<number>(
+    public static readonly SourceCapScaleKey = MuralBase.RegisterProperty<number>(
         ShapeFormatControl, 'SourceCapScale', 1,
         MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly TargetCapScaleKey = Model.RegisterProperty<number>(
+    public static readonly TargetCapScaleKey = MuralBase.RegisterProperty<number>(
         ShapeFormatControl, 'TargetCapScale', 1,
         MetaData.None | MetaData.BindsTwoWayByDefault);
 
@@ -98,7 +98,7 @@ export class ShapeFormatControl extends TemplatedControl
     public set TargetCapScale(v: number)             { this.set_property_value(ShapeFormatControl.TargetCapScaleKey, v); }
 
     static {
-        Model.OverrideMetadata(ShapeFormatControl, Element.DefaultStyleKeyKey, { default_value: ShapeFormatControl });
+        MuralBase.OverrideMetadata(ShapeFormatControl, Element.DefaultStyleKeyKey, { default_value: ShapeFormatControl });
     }
 
     private _syncing = false;

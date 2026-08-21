@@ -1,16 +1,16 @@
-// CounterVM — the model the counter demo binds against. The .mu file
+﻿// CounterVM — the model the counter demo binds against. The .mu file
 // (counter.mu) declares a DataTemplate parameterized by this type;
 // ContentControl auto-resolves the template by matching
 // CounterVM.constructor.name against the template's DataType.
-import { MetaData, Model, RelayCommand, type ICommand } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase, RelayCommand, type ICommand } from '@pragmatic-lab/mural/runtime';
 
-export class CounterVM extends Model
+export class CounterVM extends MuralBase
 {
-    static CountKey     = Model.RegisterProperty<number>(CounterVM, 'Count', 0, MetaData.None);
-    static StepKey      = Model.RegisterProperty<number>(CounterVM, 'Step',  1, MetaData.None);
-    static StepsKey     = Model.RegisterProperty<readonly number[] | undefined>(CounterVM, 'Steps', undefined, MetaData.None);
-    static IncrementKey = Model.RegisterProperty<ICommand | undefined>(CounterVM, 'Increment', undefined, MetaData.None);
-    static ResetKey     = Model.RegisterProperty<ICommand | undefined>(CounterVM, 'Reset', undefined, MetaData.None);
+    static CountKey     = MuralBase.RegisterProperty<number>(CounterVM, 'Count', 0, MetaData.None);
+    static StepKey      = MuralBase.RegisterProperty<number>(CounterVM, 'Step',  1, MetaData.None);
+    static StepsKey     = MuralBase.RegisterProperty<readonly number[] | undefined>(CounterVM, 'Steps', undefined, MetaData.None);
+    static IncrementKey = MuralBase.RegisterProperty<ICommand | undefined>(CounterVM, 'Increment', undefined, MetaData.None);
+    static ResetKey     = MuralBase.RegisterProperty<ICommand | undefined>(CounterVM, 'Reset', undefined, MetaData.None);
 
     get Count():     number { return this.get_property_value(CounterVM.CountKey); }
     set Count(v:     number) { this.set_property_value(CounterVM.CountKey, v); }

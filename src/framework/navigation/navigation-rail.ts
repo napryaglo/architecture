@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -68,17 +68,17 @@ function displayString(item: unknown): string
 // IconButton in the footer.
 export class NavigationRail extends Selector
 {
-    public static readonly HeaderKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly HeaderKey = MuralBase.RegisterProperty<Visual | undefined>(
         NavigationRail, 'Header', undefined, MetaData.Measure,
     );
 
-    public static readonly FooterKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly FooterKey = MuralBase.RegisterProperty<Visual | undefined>(
         NavigationRail, 'Footer', undefined, MetaData.Measure,
     );
 
     static
     {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             NavigationRail, Element.DefaultStyleKeyKey,
             { default_value: NavigationRail },
         );
@@ -219,7 +219,7 @@ export class NavigationRail extends Selector
         {
             ni.Content = item;
         }
-        else if (item instanceof Model
+        else if (item instanceof MuralBase
               && findDataTemplateForType(item.constructor, this) !== undefined)
         {
             ni.Content = item;

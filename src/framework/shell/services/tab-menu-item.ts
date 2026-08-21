@@ -1,10 +1,10 @@
-import { MetaData, Model, type ICommand } from '../../../runtime/index.js';
+﻿import { MetaData, MuralBase, type ICommand } from '../../../runtime/index.js';
 import type { IDocument } from './documents-content-host-service.js';
 
 // The heterogeneous rows of the editor tab-strip overflow menu (the ⋯ dropdown).
 // DocumentsContentHostService synthesises one flat list — an action, a separator,
 // then one row per open document — which the ExtendedTabControl's dropdown binds
-// as its ItemsSource. Each kind is a distinct Model TYPE so the flyout resolves
+// as its ItemsSource. Each kind is a distinct MuralBase TYPE so the flyout resolves
 // it by IMPLICIT DataTemplate-by-type (no template selector needed): the host app
 // ships a DataTemplate[TabMenuAction] / [TabMenuSeparator] / [TabMenuDocument].
 //
@@ -14,11 +14,11 @@ import type { IDocument } from './documents-content-host-service.js';
 
 // A one-shot action row (today: "Close All"). Carries its own label + command so
 // the same type can serve future menu actions.
-export class TabMenuAction extends Model
+export class TabMenuAction extends MuralBase
 {
-    public static readonly LabelKey = Model.RegisterProperty<string>(
+    public static readonly LabelKey = MuralBase.RegisterProperty<string>(
         TabMenuAction, 'Label', '', MetaData.None);
-    public static readonly CommandKey = Model.RegisterProperty<ICommand | undefined>(
+    public static readonly CommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
         TabMenuAction, 'Command', undefined, MetaData.None);
 
     constructor(label: string, command: ICommand)
@@ -33,16 +33,16 @@ export class TabMenuAction extends Model
 }
 
 // A horizontal rule between the action block and the document list.
-export class TabMenuSeparator extends Model { }
+export class TabMenuSeparator extends MuralBase { }
 
 // One open-document row: click the title to activate it, ✕ to close it. Title and
 // Id are copied off the document as DPs so a row template can bind them directly
 // ($Title / $Id) — Id is the parameter passed to the activate / close commands.
-export class TabMenuDocument extends Model
+export class TabMenuDocument extends MuralBase
 {
-    public static readonly TitleKey = Model.RegisterProperty<string>(
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(
         TabMenuDocument, 'Title', '', MetaData.None);
-    public static readonly IdKey = Model.RegisterProperty<string>(
+    public static readonly IdKey = MuralBase.RegisterProperty<string>(
         TabMenuDocument, 'Id', '', MetaData.None);
 
     constructor(document: IDocument)

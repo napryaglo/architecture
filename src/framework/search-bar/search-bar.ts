@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, Visual, type PropertyDescriptor } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element, Visual, type PropertyDescriptor } from '../../runtime/index.js';
 import { TextBox } from '../../basic/text-box.js';
 import { Border } from '../../basic/border.js';
 
@@ -21,9 +21,9 @@ import { Border } from '../../basic/border.js';
 // inside the control library.
 export class SearchBar extends TextBox
 {
-    public static readonly LeadingKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly LeadingKey = MuralBase.RegisterProperty<Visual | undefined>(
         SearchBar, 'Leading', undefined, MetaData.Render);
-    public static readonly TrailingKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly TrailingKey = MuralBase.RegisterProperty<Visual | undefined>(
         SearchBar, 'Trailing', undefined, MetaData.Render);
 
     public get Leading(): Visual | undefined { return this.get_property_value(SearchBar.LeadingKey); }
@@ -33,7 +33,7 @@ export class SearchBar extends TextBox
     public set Trailing(v: Visual | undefined) { this.set_property_value(SearchBar.TrailingKey, v); }
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             SearchBar, Element.DefaultStyleKeyKey,
             { default_value: SearchBar });
     }

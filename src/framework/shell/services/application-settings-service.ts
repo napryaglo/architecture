@@ -1,8 +1,8 @@
-import {
+﻿import {
     ApplicationService,
     Color,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     ServiceBase,
     ServiceKey,
@@ -49,7 +49,7 @@ export class ApplicationSettings extends ServiceBase
 {
     public static readonly Key = new ServiceKey<ApplicationSettings>('ApplicationSettings');
 
-    public static readonly SettingsKey = Model.RegisterProperty<ObservableCollection<Setting>>(
+    public static readonly SettingsKey = MuralBase.RegisterProperty<ObservableCollection<Setting>>(
         ApplicationSettings, 'Settings',
         undefined as unknown as ObservableCollection<Setting>, MetaData.None);
 

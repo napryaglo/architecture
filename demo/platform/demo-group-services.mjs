@@ -1,4 +1,4 @@
-// demo-group-services.mts — per-group content services for the demo platform.
+﻿// demo-group-services.mts — per-group content services for the demo platform.
 //
 // The service-backed content model: each demo GROUP is its OWN service, named
 // by its capability's `ServiceKey` in demo-platform.module.mu. When a group's
@@ -19,7 +19,7 @@
 // Supersedes the GroupVM-as-destination model in demo-navigation-service.mts:
 // the content is now a resolved service, not a NavigationDestination subclass,
 // so the base NavigationService (no createDestination override) is enough.
-import { MetaData, Model, ServiceKey, } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase, ServiceKey, } from '@pragmatic-lab/mural/runtime';
 import { DocumentSelectorService } from '@pragmatic-lab/mural/framework/shell/services/document-selector-service.js';
 import { ContentHostService } from '@pragmatic-lab/mural/framework/shell/services/content-host-service.js';
 import { allDemos, instantiateDemo, onDemoRegistered } from './registry.mjs';
@@ -35,11 +35,11 @@ function insertSorted(coll, item, cmp) {
 // One demo row. `Label` is the display string the list template binds. The
 // content host's ListBox renders each of these through the
 // `DataTemplate [DataType = DemoVM]` in platform.mu.
-export class DemoVM extends Model {
-    static IdKey = Model.RegisterProperty(DemoVM, 'Id', '', MetaData.None);
-    static LabelKey = Model.RegisterProperty(DemoVM, 'Label', '', MetaData.None);
-    static TitleKey = Model.RegisterProperty(DemoVM, 'Title', '', MetaData.None);
-    static SubtitleKey = Model.RegisterProperty(DemoVM, 'Subtitle', '', MetaData.None);
+export class DemoVM extends MuralBase {
+    static IdKey = MuralBase.RegisterProperty(DemoVM, 'Id', '', MetaData.None);
+    static LabelKey = MuralBase.RegisterProperty(DemoVM, 'Label', '', MetaData.None);
+    static TitleKey = MuralBase.RegisterProperty(DemoVM, 'Title', '', MetaData.None);
+    static SubtitleKey = MuralBase.RegisterProperty(DemoVM, 'Subtitle', '', MetaData.None);
     // The raw registry definition, carried for instantiateDemo lookup — the
     // Visual is built lazily from this on first activation.
     Definition;
@@ -69,9 +69,9 @@ export class DemoVM extends Model {
 //     ├─ SelectedItem   TwoWay ⇆ the demo ListBox; the active demo
 //     └─ Title / Subtitle / Content   derived from the selection (Content lazy)
 export class DemoGroupService extends DocumentSelectorService {
-    static TitleKey = Model.RegisterProperty(DemoGroupService, 'Title', '', MetaData.None);
-    static SubtitleKey = Model.RegisterProperty(DemoGroupService, 'Subtitle', '', MetaData.None);
-    static ContentKey = Model.RegisterProperty(DemoGroupService, 'Content', undefined, MetaData.None);
+    static TitleKey = MuralBase.RegisterProperty(DemoGroupService, 'Title', '', MetaData.None);
+    static SubtitleKey = MuralBase.RegisterProperty(DemoGroupService, 'Subtitle', '', MetaData.None);
+    static ContentKey = MuralBase.RegisterProperty(DemoGroupService, 'Content', undefined, MetaData.None);
     // The group this service owns — the registry `group` value / capability Name.
     GroupName;
     // Registry subscription, dropped on Dispose.

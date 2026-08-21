@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -31,13 +31,13 @@ import {
 // Cells are filled in row-major order starting at (0, FirstColumn).
 export class UniformGrid extends Panel
 {
-    public static readonly RowsKey = Model.RegisterProperty<number>(
+    public static readonly RowsKey = MuralBase.RegisterProperty<number>(
         UniformGrid, 'Rows', 0, MetaData.Measure | MetaData.Arrange);
 
-    public static readonly ColumnsKey = Model.RegisterProperty<number>(
+    public static readonly ColumnsKey = MuralBase.RegisterProperty<number>(
         UniformGrid, 'Columns', 0, MetaData.Measure | MetaData.Arrange);
 
-    public static readonly FirstColumnKey = Model.RegisterProperty<number>(
+    public static readonly FirstColumnKey = MuralBase.RegisterProperty<number>(
         UniformGrid, 'FirstColumn', 0, MetaData.Arrange);
 
     public get Rows():        number { return this.get_property_value(UniformGrid.RowsKey); }

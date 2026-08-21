@@ -1,4 +1,4 @@
-import { Model, Element, Visual } from '../../runtime/index.js';
+﻿import { MuralBase, Element, Visual } from '../../runtime/index.js';
 import { ToggleButton } from '../buttons/toggle-button.js';
 
 // M3 Checkbox — 18 × 18 dp square toggle.
@@ -16,13 +16,13 @@ import { ToggleButton } from '../buttons/toggle-button.js';
 export class Checkbox extends ToggleButton
 {
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             Checkbox, Element.DefaultStyleKeyKey,
             { default_value: Checkbox });
         // 18 × 18 dp default size — M3 spec for the checkable square.
         // Overrides Visual's NaN default so an in-flow Checkbox ships
         // sized without every consumer having to set Width / Height.
-        Model.OverrideMetadata(Checkbox, Visual.WidthKey,  { default_value: 18 });
-        Model.OverrideMetadata(Checkbox, Visual.HeightKey, { default_value: 18 });
+        MuralBase.OverrideMetadata(Checkbox, Visual.WidthKey,  { default_value: 18 });
+        MuralBase.OverrideMetadata(Checkbox, Visual.HeightKey, { default_value: 18 });
     }
 }

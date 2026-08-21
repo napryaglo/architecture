@@ -1,11 +1,11 @@
-// TreeViewVM — two-pane TreeView showcase: a composed-markup tree on
+﻿// TreeViewVM — two-pane TreeView showcase: a composed-markup tree on
 // the left and a HierarchicalDataTemplate-driven tree on the right.
 //
 // The right pane carries a JS itemsSelector closure that can't be
 // expressed in `.mu` markup yet, so OnViewMounted resolves the bound
 // TreeView via FindName and wires its ItemTemplate / ItemsSource
 // post-build.
-import { Model } from '@pragmatic-lab/mural/runtime';
+import { MuralBase } from '@pragmatic-lab/mural/runtime';
 import { HierarchicalDataTemplate, TextBlock } from '@pragmatic-lab/mural/basic';
 import { TreeView } from '@pragmatic-lab/mural/framework';
 const FS = {
@@ -43,7 +43,7 @@ const FS = {
         { Name: 'package.json' },
     ],
 };
-export class TreeViewVM extends Model {
+export class TreeViewVM extends MuralBase {
     OnViewMounted(view) {
         const tv = view.FindName('bound');
         if (!(tv instanceof TreeView))

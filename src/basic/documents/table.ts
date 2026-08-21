@@ -1,4 +1,4 @@
-import { MetaData, Model, ObservableCollection, Thickness } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, ObservableCollection, Thickness } from '../../runtime/index.js';
 import { Brush } from '../../visual-engine/index.js';
 import { TextElement } from './text-element.js';
 import { Block, type BlockHost, BlockCollection } from './block.js';
@@ -52,7 +52,7 @@ export class TableCell extends TextElement implements BlockHost
 // (bold) is applied by the cell's own inlines, not by this flag.
 export class TableRow extends TextElement implements BlockHost
 {
-    public static readonly IsHeaderKey = Model.RegisterProperty<boolean>(
+    public static readonly IsHeaderKey = MuralBase.RegisterProperty<boolean>(
         TableRow, 'IsHeader', false, MetaData.None);
 
     private readonly _cells: ObservableCollection<TableCell>;
@@ -102,19 +102,19 @@ export class TableRow extends TextElement implements BlockHost
 export class Table extends Block implements BlockHost
 {
     // Gridline brush. Undefined draws no gridlines (content-only table).
-    public static readonly BorderBrushKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly BorderBrushKey = MuralBase.RegisterProperty<Brush | undefined>(
         Table, 'BorderBrush', undefined, MetaData.None);
 
     // Gridline width in DIPs — also the gap reserved between/around cells.
-    public static readonly BorderThicknessKey = Model.RegisterProperty<number>(
+    public static readonly BorderThicknessKey = MuralBase.RegisterProperty<number>(
         Table, 'BorderThickness', 1, MetaData.None);
 
     // Space inside each cell, between the gridline and the cell content.
-    public static readonly CellPaddingKey = Model.RegisterProperty<Thickness>(
+    public static readonly CellPaddingKey = MuralBase.RegisterProperty<Thickness>(
         Table, 'CellPadding', new Thickness(8, 4, 8, 4), MetaData.None);
 
     // Fill painted behind rows whose IsHeader is true. Undefined ⇒ none.
-    public static readonly HeaderBackgroundKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly HeaderBackgroundKey = MuralBase.RegisterProperty<Brush | undefined>(
         Table, 'HeaderBackground', undefined, MetaData.None);
 
     // Column-sizing mode. False (default): every column takes its natural
@@ -123,7 +123,7 @@ export class Table extends Block implements BlockHost
     // column absorbs the remaining width (star) so the table fills its box —
     // the last column shrinks + wraps first when space is tight. Used by the
     // agent chat's markdown tables.
-    public static readonly LastColumnFillsKey = Model.RegisterProperty<boolean>(
+    public static readonly LastColumnFillsKey = MuralBase.RegisterProperty<boolean>(
         Table, 'LastColumnFills', false, MetaData.None);
 
     private readonly _rows: ObservableCollection<TableRow>;

@@ -1,4 +1,4 @@
-import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
+﻿import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
 // Step 12 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins the two-channel selection API per § 7.3 — SelectConnector /
 // DeselectConnector / IsConnectorSelected / SelectedConnectors live
@@ -12,7 +12,7 @@ import {
     Application,
     Key,
     KeyEventArgs,    MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     SetterFactory,
     Setter,
@@ -35,13 +35,13 @@ import '../routing/straight-router.js';
 
 // ── Test scaffolding ─────────────────────────────────────────────────
 
-class LeafVM extends Model
+class LeafVM extends MuralBase
 {
-    public static readonly LeftKey   = Model.RegisterProperty<number>(LeafVM, 'Left',   0, MetaData.None);
-    public static readonly TopKey    = Model.RegisterProperty<number>(LeafVM, 'Top',    0, MetaData.None);
-    public static readonly WidthKey  = Model.RegisterProperty<number>(LeafVM, 'Width',  80, MetaData.None);
-    public static readonly HeightKey = Model.RegisterProperty<number>(LeafVM, 'Height', 80, MetaData.None);
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(LeafVM, 'IsSelected', false, MetaData.None);
+    public static readonly LeftKey   = MuralBase.RegisterProperty<number>(LeafVM, 'Left',   0, MetaData.None);
+    public static readonly TopKey    = MuralBase.RegisterProperty<number>(LeafVM, 'Top',    0, MetaData.None);
+    public static readonly WidthKey  = MuralBase.RegisterProperty<number>(LeafVM, 'Width',  80, MetaData.None);
+    public static readonly HeightKey = MuralBase.RegisterProperty<number>(LeafVM, 'Height', 80, MetaData.None);
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(LeafVM, 'IsSelected', false, MetaData.None);
     constructor()
     {
         super();
@@ -189,7 +189,7 @@ describe('Diagram — connector selection prunes on removal from Connectors', ()
         const { diagram } = setup([]);
         const a = makeConnector();
         const b = makeConnector();
-        const coll = new ObservableCollection<Model>([a, b]);
+        const coll = new ObservableCollection<MuralBase>([a, b]);
         diagram.Connectors = coll;
         diagram.SelectConnector(a);
         diagram.SelectConnector(b);
@@ -208,7 +208,7 @@ describe('Diagram — connector selection prunes on removal from Connectors', ()
     test('clearing the Connectors collection wipes the connector selection', () => {
         const { diagram } = setup([]);
         const a = makeConnector();
-        const coll = new ObservableCollection<Model>([a]);
+        const coll = new ObservableCollection<MuralBase>([a]);
         diagram.Connectors = coll;
         diagram.SelectConnector(a);
         coll.Clear();
@@ -219,7 +219,7 @@ describe('Diagram — connector selection prunes on removal from Connectors', ()
         const { diagram } = setup([]);
         const a = makeConnector();
         const b = makeConnector();
-        const coll = new ObservableCollection<Model>([a, b]);
+        const coll = new ObservableCollection<MuralBase>([a, b]);
         diagram.Connectors = coll;
         diagram.SelectConnector(a);
         let fires = 0;
@@ -232,9 +232,9 @@ describe('Diagram — connector selection prunes on removal from Connectors', ()
     test('swapping the Connectors DP prunes selection absent from the new collection', () => {
         const { diagram } = setup([]);
         const a = makeConnector();
-        diagram.Connectors = new ObservableCollection<Model>([a]);
+        diagram.Connectors = new ObservableCollection<MuralBase>([a]);
         diagram.SelectConnector(a);
-        diagram.Connectors = new ObservableCollection<Model>([]);   // a gone
+        diagram.Connectors = new ObservableCollection<MuralBase>([]);   // a gone
         assert.equal(diagram.IsConnectorSelected(a), false);
     });
 });
@@ -363,7 +363,7 @@ describe('Diagram — connector multi-select', () => {
         let col = diagram.Connectors;
         if (col === undefined)
         {
-            col = new ObservableCollection<Model>([]);
+            col = new ObservableCollection<MuralBase>([]);
             diagram.Connectors = col;
         }
         col.Add(c);

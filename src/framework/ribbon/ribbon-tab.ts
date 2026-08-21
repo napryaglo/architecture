@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -25,17 +25,17 @@ export class RibbonTab extends HeaderedItemsControl
     // Optional accent — a contextual tab paints its strip header with this
     // colour. `undefined` = the stable look. When unset on a contextual
     // tab, the Ribbon falls back to the owning group's Color.
-    public static readonly ColorKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly ColorKey = MuralBase.RegisterProperty<Brush | undefined>(
         RibbonTab, 'Color', undefined, MetaData.Render);
     // Collapses the tab from the strip when false. Default true (stable
     // tabs are always shown); contextual tabs are additionally gated by
     // their group's IsActive.
-    public static readonly IsActiveKey = Model.RegisterProperty<boolean>(
+    public static readonly IsActiveKey = MuralBase.RegisterProperty<boolean>(
         RibbonTab, 'IsActive', true, MetaData.None);
 
     static
     {
-        Model.OverrideMetadata(RibbonTab, Element.DefaultStyleKeyKey, { default_value: RibbonTab });
+        MuralBase.OverrideMetadata(RibbonTab, Element.DefaultStyleKeyKey, { default_value: RibbonTab });
     }
 
     constructor()
@@ -81,11 +81,11 @@ export class RibbonTab extends HeaderedItemsControl
 // inherit transitively when the Ribbon shows them.
 export class RibbonContextualGroup extends Element
 {
-    public static readonly HeaderKey   = Model.RegisterProperty<string | undefined>(
+    public static readonly HeaderKey   = MuralBase.RegisterProperty<string | undefined>(
         RibbonContextualGroup, 'Header', undefined, MetaData.None);
-    public static readonly ColorKey    = Model.RegisterProperty<Brush | undefined>(
+    public static readonly ColorKey    = MuralBase.RegisterProperty<Brush | undefined>(
         RibbonContextualGroup, 'Color', undefined, MetaData.None);
-    public static readonly IsActiveKey = Model.RegisterProperty<boolean>(
+    public static readonly IsActiveKey = MuralBase.RegisterProperty<boolean>(
         RibbonContextualGroup, 'IsActive', false, MetaData.None);
 
     private readonly _tabs = new ObservableCollection<RibbonTab>([]);

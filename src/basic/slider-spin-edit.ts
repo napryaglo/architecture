@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element,
     Visibility,
 } from '../runtime/index.js';
@@ -23,16 +23,16 @@ import { TextBlock } from './text-block.js';
 // the children carry no per-use wiring.
 export class SliderSpinEdit extends TemplatedControl
 {
-    public static readonly ValueKey         = Model.RegisterProperty<number>( SliderSpinEdit, 'Value',         0,   MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly MinimumKey       = Model.RegisterProperty<number>( SliderSpinEdit, 'Minimum',       0,   MetaData.None);
-    public static readonly MaximumKey       = Model.RegisterProperty<number>( SliderSpinEdit, 'Maximum',       100, MetaData.None);
-    public static readonly SmallChangeKey   = Model.RegisterProperty<number>( SliderSpinEdit, 'SmallChange',   1,   MetaData.None);
-    public static readonly LargeChangeKey   = Model.RegisterProperty<number>( SliderSpinEdit, 'LargeChange',   10,  MetaData.None);
-    public static readonly DecimalPlacesKey = Model.RegisterProperty<number>( SliderSpinEdit, 'DecimalPlaces', 0,   MetaData.None);
-    public static readonly UnitKey          = Model.RegisterProperty<string>( SliderSpinEdit, 'Unit',          '',  MetaData.None);
+    public static readonly ValueKey         = MuralBase.RegisterProperty<number>( SliderSpinEdit, 'Value',         0,   MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly MinimumKey       = MuralBase.RegisterProperty<number>( SliderSpinEdit, 'Minimum',       0,   MetaData.None);
+    public static readonly MaximumKey       = MuralBase.RegisterProperty<number>( SliderSpinEdit, 'Maximum',       100, MetaData.None);
+    public static readonly SmallChangeKey   = MuralBase.RegisterProperty<number>( SliderSpinEdit, 'SmallChange',   1,   MetaData.None);
+    public static readonly LargeChangeKey   = MuralBase.RegisterProperty<number>( SliderSpinEdit, 'LargeChange',   10,  MetaData.None);
+    public static readonly DecimalPlacesKey = MuralBase.RegisterProperty<number>( SliderSpinEdit, 'DecimalPlaces', 0,   MetaData.None);
+    public static readonly UnitKey          = MuralBase.RegisterProperty<string>( SliderSpinEdit, 'Unit',          '',  MetaData.None);
 
     static {
-        Model.OverrideMetadata(SliderSpinEdit, Element.DefaultStyleKeyKey, { default_value: SliderSpinEdit });
+        MuralBase.OverrideMetadata(SliderSpinEdit, Element.DefaultStyleKeyKey, { default_value: SliderSpinEdit });
     }
 
     private readonly _slider: Slider;

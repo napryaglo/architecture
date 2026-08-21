@@ -1,11 +1,11 @@
-// NavigationRailVM — backs the navigation-rail demo. Holds a list of
+﻿// NavigationRailVM — backs the navigation-rail demo. Holds a list of
 // destination labels + a SelectedItem that the rail two-way binds. The
 // active demo body switches based on SelectedItem.
-import { Model, MetaData, ObservableCollection } from '@pragmatic-lab/mural/runtime';
-export class NavigationRailVM extends Model {
-    static DestinationsKey = Model.RegisterProperty(NavigationRailVM, 'Destinations', null, MetaData.None);
-    static SelectedItemKey = Model.RegisterProperty(NavigationRailVM, 'SelectedItem', 'Home', MetaData.None);
-    static ActiveLabelKey = Model.RegisterProperty(NavigationRailVM, 'ActiveLabel', 'Home', MetaData.None);
+import { MuralBase, MetaData, ObservableCollection } from '@pragmatic-lab/mural/runtime';
+export class NavigationRailVM extends MuralBase {
+    static DestinationsKey = MuralBase.RegisterProperty(NavigationRailVM, 'Destinations', null, MetaData.None);
+    static SelectedItemKey = MuralBase.RegisterProperty(NavigationRailVM, 'SelectedItem', 'Home', MetaData.None);
+    static ActiveLabelKey = MuralBase.RegisterProperty(NavigationRailVM, 'ActiveLabel', 'Home', MetaData.None);
     get Destinations() { return this.get_property_value(NavigationRailVM.DestinationsKey); }
     get SelectedItem() { return this.get_property_value(NavigationRailVM.SelectedItemKey); }
     set SelectedItem(v) { this.set_property_value(NavigationRailVM.SelectedItemKey, v); }

@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Element, Visual,
@@ -219,7 +219,7 @@ export class CollapsibleStack extends StackPanel
 // Clicks bubble up via findTree() and call HandleContainerClick.
 export class TreeView extends Selector
 {
-    public static readonly IndentKey = Model.RegisterProperty<number>(
+    public static readonly IndentKey = MuralBase.RegisterProperty<number>(
         TreeView, 'Indent', 16, MetaData.Measure | MetaData.Arrange);
     // Opt-in UI virtualization. Default false keeps the classic non-
     // virtualized StackPanel (every expanded row materialized) so existing
@@ -229,7 +229,7 @@ export class TreeView extends Selector
     // factory + TreeViewItem.ItemsPanel). Degrades to full realization when the
     // tree is measured unbounded (no clipping viewport) — correct, just not
     // saving work — so it's safe to leave on.
-    public static readonly IsVirtualizingKey = Model.RegisterProperty<boolean>(
+    public static readonly IsVirtualizingKey = MuralBase.RegisterProperty<boolean>(
         TreeView, 'IsVirtualizing', false, MetaData.None);
     // TwoWay by default — the standard binding pattern is a VM
     // round-trip: user clicks a row → DP updates → push to VM;
@@ -237,12 +237,12 @@ export class TreeView extends Selector
     // container. Cross-syncs with Selector.SelectedItem (the canonical
     // primary-row mirror) — writing either DP updates the other and
     // selects the matching row.
-    public static readonly SelectedDataItemKey = Model.RegisterProperty<unknown>(
+    public static readonly SelectedDataItemKey = MuralBase.RegisterProperty<unknown>(
         TreeView, 'SelectedDataItem', undefined,
         MetaData.None | MetaData.BindsTwoWayByDefault);
 
     static {
-        Model.OverrideMetadata(TreeView, Element.DefaultStyleKeyKey, { default_value: TreeView });
+        MuralBase.OverrideMetadata(TreeView, Element.DefaultStyleKeyKey, { default_value: TreeView });
     }
 
     // Guard for the SelectedDataItem ↔ SelectedItem feedback loop. Set
@@ -614,12 +614,12 @@ export class TreeView extends Selector
 //          └─ child TreeViewItems
 export class TreeViewItem extends HeaderedItemsControl
 {
-    public static readonly IsExpandedKey = Model.RegisterProperty<boolean>(TreeViewItem, 'IsExpanded', false, MetaData.Measure | MetaData.Arrange);
+    public static readonly IsExpandedKey = MuralBase.RegisterProperty<boolean>(TreeViewItem, 'IsExpanded', false, MetaData.Measure | MetaData.Arrange);
     // Instance-level IsSelected mirror — kept for triggers /
     // refreshRowBackground listeners. Source of truth is
     // `Selector.IsSelected` (attached); the OnPropertyChanged mirror
     // (below) keeps the two in lock-step.
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(TreeViewItem, 'IsSelected', false, MetaData.Render);
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(TreeViewItem, 'IsSelected', false, MetaData.Render);
 
     // M3 list-row anatomy slots — same shape as ListBoxItem. Leading
     // hosts the 24dp icon BETWEEN the chevron and the label (the
@@ -627,24 +627,24 @@ export class TreeViewItem extends HeaderedItemsControl
     // affordance can't move). SupportingText flows below the Header
     // string; empty stays 1-line, non-empty flips to 2-line, embedded
     // newline flips to 3-line. Trailing sits at the row's right edge.
-    public static readonly LeadingKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly LeadingKey = MuralBase.RegisterProperty<Visual | undefined>(
         TreeViewItem, 'Leading', undefined, MetaData.Render);
-    public static readonly SupportingTextKey = Model.RegisterProperty<string>(
+    public static readonly SupportingTextKey = MuralBase.RegisterProperty<string>(
         TreeViewItem, 'SupportingText', '', MetaData.Render);
-    public static readonly TrailingKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly TrailingKey = MuralBase.RegisterProperty<Visual | undefined>(
         TreeViewItem, 'Trailing', undefined, MetaData.Render);
 
     // Derived state DPs the template observes — see ListBoxItem for the
     // why-this-shape rationale.
-    private static readonly _HasSupportingTextPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _HasSupportingTextPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         TreeViewItem, 'HasSupportingText', false, MetaData.None);
     public static readonly HasSupportingTextKey = TreeViewItem._HasSupportingTextPriv;
-    private static readonly _IsThreeLinePriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsThreeLinePriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         TreeViewItem, 'IsThreeLine', false, MetaData.None);
     public static readonly IsThreeLineKey = TreeViewItem._IsThreeLinePriv;
 
     static {
-        Model.OverrideMetadata(TreeViewItem, Element.DefaultStyleKeyKey, { default_value: TreeViewItem });
+        MuralBase.OverrideMetadata(TreeViewItem, Element.DefaultStyleKeyKey, { default_value: TreeViewItem });
     }
 
     // Guards the IsSelected attached↔instance mirror against recursion.

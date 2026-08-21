@@ -1,4 +1,4 @@
-import { Rect } from '../visual-engine/primitives.js';
+﻿import { Rect } from '../visual-engine/primitives.js';
 
 // §19.3 — alignment-edges math.
 //
@@ -9,7 +9,7 @@ import { Rect } from '../visual-engine/primitives.js';
 // `edges` set, then compute the snapped rectangle by applying the
 // closest matching delta independently per axis.
 //
-// Pure functions — no Visual / DP / Model dependencies. The diagram
+// Pure functions — no Visual / DP / MuralBase dependencies. The diagram
 // behavior (`attachAlignEdges`) is the consumer.
 
 // Which edge of a rectangle a guide line passes through:

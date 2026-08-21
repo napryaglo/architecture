@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile, instantiate } from '../compile.js';
 import * as runtime from '../../runtime/index.js';
@@ -6,7 +6,7 @@ import * as controls from '../../basic/index.js';
 import * as engine from '../../visual-engine/index.js';
 import {
     Application,
-    Model,
+    MuralBase,
     MetaData,
     MultiTrigger,
     Style,
@@ -415,8 +415,8 @@ describe('instantiate — deferreds end-to-end', () => {
         assert.equal(tb.Text, undefined);
 
         // Set DataContext on an ancestor — inheritance flows down.
-        class Person extends Model {
-            static { Model.RegisterProperty(Person, 'Name', '', MetaData.None); }
+        class Person extends MuralBase {
+            static { MuralBase.RegisterProperty(Person, 'Name', '', MetaData.None); }
             public get Name(): string { return this.get_property_value(resolveKey(this, undefined, 'Name')) as string; }
             public set Name(v: string) { this.set_property_value(resolveKey(this, undefined, 'Name'), v); }
         }

@@ -1,4 +1,4 @@
-// CommandsVM — exercises all three command surfaces (Menu, ToolBar,
+﻿// CommandsVM — exercises all three command surfaces (Menu, ToolBar,
 // ContextMenu) over the framework Diagram. Extends DiagramDocument with:
 //
 //   * Alignment commands (AlignLeft / AlignTop / AlignRight / AlignBottom)
@@ -20,7 +20,7 @@
 // label). The framework's auto-BasedOn machinery splices the Figure
 // theme Style underneath the demo's subclass styles, so Template flows
 // from the framework while the demo's setters / triggers add chrome.
-import { MetaData, Model, Color, RelayCommand, } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase, Color, RelayCommand, } from '@pragmatic-lab/mural/runtime';
 import { SolidColorBrush, Visual } from '@pragmatic-lab/mural/visual-engine';
 import { Figure } from '@pragmatic-lab/mural/framework';
 import { DiagramDocument } from '@pragmatic-lab/mural/framework';
@@ -38,7 +38,7 @@ const BG_NOTE = brush('#fde68a');
 export class RectFigure extends Figure {
     static DemoKind = 'rect';
     static {
-        Model.OverrideMetadata(RectFigure, Visual.FillKey, { default_value: BG_RECT });
+        MuralBase.OverrideMetadata(RectFigure, Visual.FillKey, { default_value: BG_RECT });
     }
     constructor(id, left, top) {
         super();
@@ -54,7 +54,7 @@ export class RectFigure extends Figure {
 export class EllipseFigure extends Figure {
     static DemoKind = 'ellipse';
     static {
-        Model.OverrideMetadata(EllipseFigure, Visual.FillKey, { default_value: BG_ELLIPSE });
+        MuralBase.OverrideMetadata(EllipseFigure, Visual.FillKey, { default_value: BG_ELLIPSE });
     }
     constructor(id, left, top) {
         super();
@@ -70,7 +70,7 @@ export class EllipseFigure extends Figure {
 export class NoteFigure extends Figure {
     static DemoKind = 'note';
     static {
-        Model.OverrideMetadata(NoteFigure, Visual.FillKey, { default_value: BG_NOTE });
+        MuralBase.OverrideMetadata(NoteFigure, Visual.FillKey, { default_value: BG_NOTE });
     }
     constructor(id, left, top) {
         super();
@@ -92,7 +92,7 @@ const CMD_KIND_TO_CLASS = {
 };
 export class CommandsVM extends DiagramDocument {
     // All command surfaces in commands.mu bind via $-syntax
-    // (DataContextBinding), which resolves through Model.HasProperty —
+    // (DataContextBinding), which resolves through MuralBase.HasProperty —
     // unregistered plain fields are invisible. Register every command
     // CommandsVM owns as a DP.
     //
@@ -100,41 +100,41 @@ export class CommandsVM extends DiagramDocument {
     // are populated by the bootstrap from the framework Diagram control's
     // own RelayCommand instances (CommandsVM owns the proxy DPs so the
     // menu / toolbar markup can bind them through `$AlignLeftCommand`).
-    static HasSelectionKey = Model.RegisterProperty(CommandsVM, 'HasSelection', false, MetaData.None);
+    static HasSelectionKey = MuralBase.RegisterProperty(CommandsVM, 'HasSelection', false, MetaData.None);
     // Classic (Menu + ToolBar) vs Ribbon chrome toggle. TwoWay so the
     // header's mode Checkbox round-trips. The demo's DataTemplate triggers
     // swap the two chrome containers off this flag.
-    static IsRibbonModeKey = Model.RegisterProperty(CommandsVM, 'IsRibbonMode', false, MetaData.BindsTwoWayByDefault);
+    static IsRibbonModeKey = MuralBase.RegisterProperty(CommandsVM, 'IsRibbonMode', false, MetaData.BindsTwoWayByDefault);
     // Contextual "Format" tab commands — Z-order stubs (real z-order is
     // out of scope; the demo shows the contextual tab + selection gating).
-    static BringFrontCommandKey = Model.RegisterProperty(CommandsVM, 'BringFrontCommand', undefined, MetaData.None);
-    static SendBackCommandKey = Model.RegisterProperty(CommandsVM, 'SendBackCommand', undefined, MetaData.None);
-    static CutCommandKey = Model.RegisterProperty(CommandsVM, 'CutCommand', undefined, MetaData.None);
-    static CopyCommandKey = Model.RegisterProperty(CommandsVM, 'CopyCommand', undefined, MetaData.None);
-    static PasteCommandKey = Model.RegisterProperty(CommandsVM, 'PasteCommand', undefined, MetaData.None);
-    static DeleteCommandKey = Model.RegisterProperty(CommandsVM, 'DeleteCommand', undefined, MetaData.None);
-    static DuplicateCommandKey = Model.RegisterProperty(CommandsVM, 'DuplicateCommand', undefined, MetaData.None);
-    static SelectAllCommandKey = Model.RegisterProperty(CommandsVM, 'SelectAllCommand', undefined, MetaData.None);
-    static AlignBottomCommandKey = Model.RegisterProperty(CommandsVM, 'AlignBottomCommand', undefined, MetaData.None);
-    static UndoCommandKey = Model.RegisterProperty(CommandsVM, 'UndoCommand', undefined, MetaData.None);
-    static RedoCommandKey = Model.RegisterProperty(CommandsVM, 'RedoCommand', undefined, MetaData.None);
+    static BringFrontCommandKey = MuralBase.RegisterProperty(CommandsVM, 'BringFrontCommand', undefined, MetaData.None);
+    static SendBackCommandKey = MuralBase.RegisterProperty(CommandsVM, 'SendBackCommand', undefined, MetaData.None);
+    static CutCommandKey = MuralBase.RegisterProperty(CommandsVM, 'CutCommand', undefined, MetaData.None);
+    static CopyCommandKey = MuralBase.RegisterProperty(CommandsVM, 'CopyCommand', undefined, MetaData.None);
+    static PasteCommandKey = MuralBase.RegisterProperty(CommandsVM, 'PasteCommand', undefined, MetaData.None);
+    static DeleteCommandKey = MuralBase.RegisterProperty(CommandsVM, 'DeleteCommand', undefined, MetaData.None);
+    static DuplicateCommandKey = MuralBase.RegisterProperty(CommandsVM, 'DuplicateCommand', undefined, MetaData.None);
+    static SelectAllCommandKey = MuralBase.RegisterProperty(CommandsVM, 'SelectAllCommand', undefined, MetaData.None);
+    static AlignBottomCommandKey = MuralBase.RegisterProperty(CommandsVM, 'AlignBottomCommand', undefined, MetaData.None);
+    static UndoCommandKey = MuralBase.RegisterProperty(CommandsVM, 'UndoCommand', undefined, MetaData.None);
+    static RedoCommandKey = MuralBase.RegisterProperty(CommandsVM, 'RedoCommand', undefined, MetaData.None);
     // Proxy DPs for the framework Diagram's command surface — the
     // bootstrap (commands.mjs) copies the Diagram's own RelayCommand
     // instances into these so the menu / toolbar bindings reach them
     // via `$AlignLeftCommand` etc.
-    static AlignLeftCommandKey = Model.RegisterProperty(CommandsVM, 'AlignLeftCommand', undefined, MetaData.None);
-    static AlignRightCommandKey = Model.RegisterProperty(CommandsVM, 'AlignRightCommand', undefined, MetaData.None);
-    static AlignTopCommandKey = Model.RegisterProperty(CommandsVM, 'AlignTopCommand', undefined, MetaData.None);
-    static AlignMiddleCommandKey = Model.RegisterProperty(CommandsVM, 'AlignMiddleCommand', undefined, MetaData.None);
-    static AlignCenterCommandKey = Model.RegisterProperty(CommandsVM, 'AlignCenterCommand', undefined, MetaData.None);
-    static DistributeHorizontalCommandKey = Model.RegisterProperty(CommandsVM, 'DistributeHorizontalCommand', undefined, MetaData.None);
-    static DistributeVerticalCommandKey = Model.RegisterProperty(CommandsVM, 'DistributeVerticalCommand', undefined, MetaData.None);
-    static GroupCommandKey = Model.RegisterProperty(CommandsVM, 'GroupCommand', undefined, MetaData.None);
-    static UngroupCommandKey = Model.RegisterProperty(CommandsVM, 'UngroupCommand', undefined, MetaData.None);
-    static CombineUnionCommandKey = Model.RegisterProperty(CommandsVM, 'CombineUnionCommand', undefined, MetaData.None);
-    static CombineIntersectCommandKey = Model.RegisterProperty(CommandsVM, 'CombineIntersectCommand', undefined, MetaData.None);
-    static CombineSubtractCommandKey = Model.RegisterProperty(CommandsVM, 'CombineSubtractCommand', undefined, MetaData.None);
-    static CombineExcludeCommandKey = Model.RegisterProperty(CommandsVM, 'CombineExcludeCommand', undefined, MetaData.None);
+    static AlignLeftCommandKey = MuralBase.RegisterProperty(CommandsVM, 'AlignLeftCommand', undefined, MetaData.None);
+    static AlignRightCommandKey = MuralBase.RegisterProperty(CommandsVM, 'AlignRightCommand', undefined, MetaData.None);
+    static AlignTopCommandKey = MuralBase.RegisterProperty(CommandsVM, 'AlignTopCommand', undefined, MetaData.None);
+    static AlignMiddleCommandKey = MuralBase.RegisterProperty(CommandsVM, 'AlignMiddleCommand', undefined, MetaData.None);
+    static AlignCenterCommandKey = MuralBase.RegisterProperty(CommandsVM, 'AlignCenterCommand', undefined, MetaData.None);
+    static DistributeHorizontalCommandKey = MuralBase.RegisterProperty(CommandsVM, 'DistributeHorizontalCommand', undefined, MetaData.None);
+    static DistributeVerticalCommandKey = MuralBase.RegisterProperty(CommandsVM, 'DistributeVerticalCommand', undefined, MetaData.None);
+    static GroupCommandKey = MuralBase.RegisterProperty(CommandsVM, 'GroupCommand', undefined, MetaData.None);
+    static UngroupCommandKey = MuralBase.RegisterProperty(CommandsVM, 'UngroupCommand', undefined, MetaData.None);
+    static CombineUnionCommandKey = MuralBase.RegisterProperty(CommandsVM, 'CombineUnionCommand', undefined, MetaData.None);
+    static CombineIntersectCommandKey = MuralBase.RegisterProperty(CommandsVM, 'CombineIntersectCommand', undefined, MetaData.None);
+    static CombineSubtractCommandKey = MuralBase.RegisterProperty(CommandsVM, 'CombineSubtractCommand', undefined, MetaData.None);
+    static CombineExcludeCommandKey = MuralBase.RegisterProperty(CommandsVM, 'CombineExcludeCommand', undefined, MetaData.None);
     // Cut/Copy stash replayed by Paste. Plain field — view-invisible state.
     _clipboard = [];
     constructor(storage) {

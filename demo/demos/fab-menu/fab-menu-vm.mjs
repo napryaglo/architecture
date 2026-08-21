@@ -1,17 +1,17 @@
-// FabMenuVM — backs the fab-menu demo. Tracks per-action click
+﻿// FabMenuVM — backs the fab-menu demo. Tracks per-action click
 // counts so the user can verify each mini-FAB in the popup fires
 // through to a command target, and the FAB-toggle state for the
 // read-out.
-import { Model, MetaData, RelayCommand, } from '@pragmatic-lab/mural/runtime';
-export class FabMenuVM extends Model {
-    static IsOpenKey = Model.RegisterProperty(FabMenuVM, 'IsOpen', false, MetaData.None);
-    static ItemsKey = Model.RegisterProperty(FabMenuVM, 'Items', null, MetaData.None);
-    static CreateClicksKey = Model.RegisterProperty(FabMenuVM, 'CreateClicks', 0, MetaData.None);
-    static UploadClicksKey = Model.RegisterProperty(FabMenuVM, 'UploadClicks', 0, MetaData.None);
-    static ShareClicksKey = Model.RegisterProperty(FabMenuVM, 'ShareClicks', 0, MetaData.None);
-    static CreateCommandKey = Model.RegisterProperty(FabMenuVM, 'CreateCommand', null, MetaData.None);
-    static UploadCommandKey = Model.RegisterProperty(FabMenuVM, 'UploadCommand', null, MetaData.None);
-    static ShareCommandKey = Model.RegisterProperty(FabMenuVM, 'ShareCommand', null, MetaData.None);
+import { MuralBase, MetaData, RelayCommand, } from '@pragmatic-lab/mural/runtime';
+export class FabMenuVM extends MuralBase {
+    static IsOpenKey = MuralBase.RegisterProperty(FabMenuVM, 'IsOpen', false, MetaData.None);
+    static ItemsKey = MuralBase.RegisterProperty(FabMenuVM, 'Items', null, MetaData.None);
+    static CreateClicksKey = MuralBase.RegisterProperty(FabMenuVM, 'CreateClicks', 0, MetaData.None);
+    static UploadClicksKey = MuralBase.RegisterProperty(FabMenuVM, 'UploadClicks', 0, MetaData.None);
+    static ShareClicksKey = MuralBase.RegisterProperty(FabMenuVM, 'ShareClicks', 0, MetaData.None);
+    static CreateCommandKey = MuralBase.RegisterProperty(FabMenuVM, 'CreateCommand', null, MetaData.None);
+    static UploadCommandKey = MuralBase.RegisterProperty(FabMenuVM, 'UploadCommand', null, MetaData.None);
+    static ShareCommandKey = MuralBase.RegisterProperty(FabMenuVM, 'ShareCommand', null, MetaData.None);
     get IsOpen() { return this.get_property_value(FabMenuVM.IsOpenKey); }
     set IsOpen(v) { this.set_property_value(FabMenuVM.IsOpenKey, v); }
     get Items() { return this.get_property_value(FabMenuVM.ItemsKey); }

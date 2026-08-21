@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Thickness,
@@ -28,12 +28,12 @@ import { ItemsControl } from '../base/items-control.js';
 // are deferred — the paging model here is the reusable core.
 export class Carousel extends ItemsControl
 {
-    public static readonly ActiveIndexKey = Model.RegisterProperty<number>(
+    public static readonly ActiveIndexKey = MuralBase.RegisterProperty<number>(
         Carousel, 'ActiveIndex', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly ItemWidthKey   = Model.RegisterProperty<number>(Carousel, 'ItemWidth',   220, MetaData.Measure);
-    public static readonly ItemSpacingKey = Model.RegisterProperty<number>(Carousel, 'ItemSpacing',  12, MetaData.Measure);
-    public static readonly ItemHeightKey  = Model.RegisterProperty<number>(Carousel, 'ItemHeight',  260, MetaData.Measure);
-    public static readonly VisibleCountKey = Model.RegisterProperty<number>(Carousel, 'VisibleCount', 3, MetaData.Measure);
+    public static readonly ItemWidthKey   = MuralBase.RegisterProperty<number>(Carousel, 'ItemWidth',   220, MetaData.Measure);
+    public static readonly ItemSpacingKey = MuralBase.RegisterProperty<number>(Carousel, 'ItemSpacing',  12, MetaData.Measure);
+    public static readonly ItemHeightKey  = MuralBase.RegisterProperty<number>(Carousel, 'ItemHeight',  260, MetaData.Measure);
+    public static readonly VisibleCountKey = MuralBase.RegisterProperty<number>(Carousel, 'VisibleCount', 3, MetaData.Measure);
 
     public get ActiveIndex(): number { return this.get_property_value(Carousel.ActiveIndexKey); }
     public set ActiveIndex(v: number) { this.set_property_value(Carousel.ActiveIndexKey, v); }
@@ -52,7 +52,7 @@ export class Carousel extends ItemsControl
 
     static
     {
-        Model.OverrideMetadata(Carousel, Element.DefaultStyleKeyKey, { default_value: Carousel });
+        MuralBase.OverrideMetadata(Carousel, Element.DefaultStyleKeyKey, { default_value: Carousel });
     }
 
     private _viewport:  Element | undefined;

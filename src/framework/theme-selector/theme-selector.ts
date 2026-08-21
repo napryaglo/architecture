@@ -1,8 +1,8 @@
-import {
+﻿import {
     Application,
     Color,
     MetaData,
-    Model,
+    MuralBase,
     Scheme,
     Theme,
     ThemeManager,
@@ -79,19 +79,19 @@ export class ThemeSelector extends ContentControl
     // doesn't reference them — the inner ComboBoxes are bound
     // imperatively from syncFromThemeManager.
 
-    private static readonly _ActiveThemeNamePriv = Model.RegisterReadOnlyProperty<string | undefined>(
+    private static readonly _ActiveThemeNamePriv = MuralBase.RegisterReadOnlyProperty<string | undefined>(
         ThemeSelector, 'ActiveThemeName', undefined, MetaData.None,
     );
     public  static readonly ActiveThemeNameKey  = ThemeSelector._ActiveThemeNamePriv;
 
-    private static readonly _ActiveSchemeNamePriv = Model.RegisterReadOnlyProperty<string | undefined>(
+    private static readonly _ActiveSchemeNamePriv = MuralBase.RegisterReadOnlyProperty<string | undefined>(
         ThemeSelector, 'ActiveSchemeName', undefined, MetaData.None,
     );
     public  static readonly ActiveSchemeNameKey  = ThemeSelector._ActiveSchemeNamePriv;
 
     static
     {
-        Model.OverrideMetadata(ThemeSelector, Element.DefaultStyleKeyKey, { default_value: ThemeSelector });
+        MuralBase.OverrideMetadata(ThemeSelector, Element.DefaultStyleKeyKey, { default_value: ThemeSelector });
     }
 
     // ── Template parts ────────────────────────────────────────────────

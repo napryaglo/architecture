@@ -1,11 +1,11 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import {
     Application,
     DataContextBinding,
     MetaData,
-    Model,
+    MuralBase,
     NoModifiers,
     Panel,
     PointerButton,
@@ -22,9 +22,9 @@ import { DiagramInspector } from '../diagram/diagram-inspector.js';
 
 // A stand-in for DiagramDocument: carries an `Inspector` DP the menu's
 // CommandParameter binds ($Inspector), like DiagramDocument.Inspector.
-class FakeDoc extends Model
+class FakeDoc extends MuralBase
 {
-    public static readonly InspectorKey = Model.RegisterProperty<DiagramInspector>(
+    public static readonly InspectorKey = MuralBase.RegisterProperty<DiagramInspector>(
         FakeDoc, 'Inspector', undefined as unknown as DiagramInspector, MetaData.None);
     constructor() { super(); this.set_property_value(FakeDoc.InspectorKey, new DiagramInspector()); }
     public get Inspector(): DiagramInspector { return this.get_property_value(FakeDoc.InspectorKey); }

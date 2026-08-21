@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     type ServiceToken,
 } from '../../../runtime/index.js';
 import type { Geometry } from '../../../visual-engine/index.js';
@@ -34,7 +34,7 @@ export enum CommandGroupPresentation
 // here — a command has no Execute of its own; it is dispatched to whatever
 // document is active (see ICommandTarget).
 //
-// A Model so it is DP-backed, bindable, and declarable in markup — the same
+// A MuralBase so it is DP-backed, bindable, and declarable in markup — the same
 // shape as SettingDefinition / DocumentDefinition:
 //
 //     module DiagramModule [ Name = "Diagram" ] {
@@ -57,19 +57,19 @@ export enum CommandGroupPresentation
 // as `activeDocument.Execute(definition)`. Routed commands solve handler-
 // discovery-by-focus-scope — a non-problem here — so this stays a plain
 // declaration and the document interprets it.
-export class CommandDefinition extends Model
+export class CommandDefinition extends MuralBase
 {
     // Stable id ("diagram.align.left"). The token a document's Execute /
     // CanExecute switches on. Namespace by module.
-    public static readonly IdKey = Model.RegisterProperty<string>(
+    public static readonly IdKey = MuralBase.RegisterProperty<string>(
         CommandDefinition, 'Id', '', MetaData.None);
 
     // Display name — a toolbar button's tooltip / a menu item's header.
-    public static readonly TitleKey = Model.RegisterProperty<string>(
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(
         CommandDefinition, 'Title', '', MetaData.None);
 
     // Vector icon painted onto the button (Shape[Geometry=Icon]).
-    public static readonly IconKey = Model.RegisterProperty<Geometry | undefined>(
+    public static readonly IconKey = MuralBase.RegisterProperty<Geometry | undefined>(
         CommandDefinition, 'Icon', undefined, MetaData.None);
 
     // The command context this command belongs to — the join to a document's
@@ -77,16 +77,16 @@ export class CommandDefinition extends Model
     // document activates this context. A ServiceToken used purely as an identity
     // tag (never resolved), so contexts are shareable across document types and
     // authored as real references (`Context = DiagramEditingContext`).
-    public static readonly ContextKey = Model.RegisterProperty<ServiceToken<unknown> | undefined>(
+    public static readonly ContextKey = MuralBase.RegisterProperty<ServiceToken<unknown> | undefined>(
         CommandDefinition, 'Context', undefined, MetaData.None);
 
     // Toolbar group id — commands with the same Group cluster together (a
     // ToolBar / separator boundary is a presentation choice on top of this).
-    public static readonly GroupKey = Model.RegisterProperty<string>(
+    public static readonly GroupKey = MuralBase.RegisterProperty<string>(
         CommandDefinition, 'Group', '', MetaData.None);
 
     // Sort order within the group (ascending). Ties break on declaration order.
-    public static readonly OrderKey = Model.RegisterProperty<number>(
+    public static readonly OrderKey = MuralBase.RegisterProperty<number>(
         CommandDefinition, 'Order', 0, MetaData.None);
 
     // Which shell region hosts this command. Default Toolbar (the command bar).
@@ -94,7 +94,7 @@ export class CommandDefinition extends Model
     // action strip instead — DocumentsContentHostService collects those into its
     // ExtendedCommands. Markup-facing (registered in the compiler's ENUM_MEMBERS
     // + the `Region` → ShellRegion property map, shared with ShellControlDefinition).
-    public static readonly RegionKey = Model.RegisterProperty<ShellRegion>(
+    public static readonly RegionKey = MuralBase.RegisterProperty<ShellRegion>(
         CommandDefinition, 'Region', ShellRegion.Toolbar, MetaData.None);
 
     // ── Group presentation (leader command) ────────────────────────────────
@@ -104,26 +104,26 @@ export class CommandDefinition extends Model
 
     // The group's presentation. Default Flat (inline buttons — today's behaviour,
     // so a module that declares no Presentation is unchanged).
-    public static readonly PresentationKey = Model.RegisterProperty<CommandGroupPresentation>(
+    public static readonly PresentationKey = MuralBase.RegisterProperty<CommandGroupPresentation>(
         CommandDefinition, 'Presentation', CommandGroupPresentation.Flat, MetaData.None);
 
     // The dropdown FACE icon for SplitMenu / SplitGrid groups. Falls back to the
     // leader command's own Icon when unset (e.g. a centre glyph makes a better
     // placement face than the top-left member's icon).
-    public static readonly GroupIconKey = Model.RegisterProperty<Geometry | undefined>(
+    public static readonly GroupIconKey = MuralBase.RegisterProperty<Geometry | undefined>(
         CommandDefinition, 'GroupIcon', undefined, MetaData.None);
 
     // The dropdown FACE tooltip for SplitMenu / SplitGrid. Falls back to Title.
-    public static readonly GroupTitleKey = Model.RegisterProperty<string>(
+    public static readonly GroupTitleKey = MuralBase.RegisterProperty<string>(
         CommandDefinition, 'GroupTitle', '', MetaData.None);
 
     // Column count for a SplitGrid popup. 0 ⇒ the presentation's default (3).
-    public static readonly ColumnsKey = Model.RegisterProperty<number>(
+    public static readonly ColumnsKey = MuralBase.RegisterProperty<number>(
         CommandDefinition, 'Columns', 0, MetaData.None);
 
     // Render a divider before this command inside a SplitMenu dropdown (e.g. the
     // first Distribute item, when Distribute rides in the Align group).
-    public static readonly SeparatorBeforeKey = Model.RegisterProperty<boolean>(
+    public static readonly SeparatorBeforeKey = MuralBase.RegisterProperty<boolean>(
         CommandDefinition, 'SeparatorBefore', false, MetaData.None);
 
     public get Id(): string  { return this.get_property_value(CommandDefinition.IdKey); }

@@ -1,7 +1,7 @@
-import {
+﻿import {
     Behavior,
     MetaData,
-    Model,
+    MuralBase,
     Visibility,
     Visual,
     type PropertyChangeCallback,
@@ -47,7 +47,7 @@ interface ElementAttachSurface
 
 export class FocusOnVisibleBehavior extends Behavior
 {
-    public static readonly SelectAllKey = Model.RegisterProperty<boolean>(
+    public static readonly SelectAllKey = MuralBase.RegisterProperty<boolean>(
         FocusOnVisibleBehavior, 'SelectAll', true, MetaData.None);
 
     public get SelectAll(): boolean { return this.get_property_value(FocusOnVisibleBehavior.SelectAllKey); }

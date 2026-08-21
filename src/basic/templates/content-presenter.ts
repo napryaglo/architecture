@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Visual,
@@ -42,8 +42,8 @@ export class ContentPresenter extends Element
     // content, possibly via a DataTemplate" path. When either changes
     // the presenter re-resolves and re-slots. Untouched in the
     // SetContent-only path used by ContentControl.
-    public static readonly ContentKey         = Model.RegisterProperty<unknown>(              ContentPresenter, 'Content',         undefined, MetaData.Measure);
-    public static readonly ContentTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(ContentPresenter, 'ContentTemplate', undefined, MetaData.Measure);
+    public static readonly ContentKey         = MuralBase.RegisterProperty<unknown>(              ContentPresenter, 'Content',         undefined, MetaData.Measure);
+    public static readonly ContentTemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(ContentPresenter, 'ContentTemplate', undefined, MetaData.Measure);
 
     // Opt-in: reuse one template-built view per content object instead of
     // rebuilding it every time that object is presented. OFF by default — the
@@ -56,7 +56,7 @@ export class ContentPresenter extends Element
     // ARE the document's Figures — a rebuilt Diagram would try to re-parent
     // already-parented Figures and trip the single-parent guard, the classic
     // tab-switch "Visual already has a visual parent" crash).
-    public static readonly ReuseContentViewsKey = Model.RegisterProperty<boolean>(
+    public static readonly ReuseContentViewsKey = MuralBase.RegisterProperty<boolean>(
         ContentPresenter, 'ReuseContentViews', false, MetaData.None);
 
     private _content: Visual | undefined;
@@ -192,9 +192,9 @@ export class ContentPresenter extends Element
     // Precedence:
     //   1. Content is a Visual                       → slot it directly.
     //   2. ContentTemplate + Content                 → Apply explicit template, set DataContext.
-    //   3. Content is a Model with a matching        → Apply the implicit-by-DataType template
+    //   3. Content is a MuralBase with a matching        → Apply the implicit-by-DataType template
     //      DataTemplate in the resource chain          via findDataTemplateForType.
-    //   4. Primitive Content (or unmatched Model)    → stringify into a TextBlock.
+    //   4. Primitive Content (or unmatched MuralBase)    → stringify into a TextBlock.
     //   5. undefined                                  → empty slot.
     private resolveAndSlot(): void
     {

@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -7,7 +7,7 @@ import {
     Easings,
     ManualClock,
     MetaData,
-    Model,
+    MuralBase,
     PropertyTransition,
     Element,
     Visual,
@@ -25,7 +25,7 @@ import '../drawing/solid-color-brush-animation.js';
 class BrushVisualTest extends Element
 {
     static {
-        Model.RegisterProperty(BrushVisualTest, 'Brush',
+        MuralBase.RegisterProperty(BrushVisualTest, 'Brush',
             new SolidColorBrush(Color.Black), MetaData.None);
     }
     public get Brush():  SolidColorBrush { return this.get_property_value(resolveKey(this, undefined, 'Brush')); }

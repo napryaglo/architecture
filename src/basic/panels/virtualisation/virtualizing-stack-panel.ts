@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Visual,
@@ -49,9 +49,9 @@ import { VirtualizingPanel, isNestedViewportHost } from './virtualizing-panel.js
 export class VirtualizingStackPanel extends VirtualizingPanel implements IScrollInfo
 {
     // Viewport DP lives on VirtualizingPanel base — see virtualizing-panel.ts.
-    public static readonly ItemHeightKey  = Model.RegisterProperty<number>(     VirtualizingStackPanel, 'ItemHeight',  20,                   MetaData.Measure);
-    public static readonly ItemWidthKey   = Model.RegisterProperty<number>(     VirtualizingStackPanel, 'ItemWidth',   20,                   MetaData.Measure);
-    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(VirtualizingStackPanel, 'Orientation', Orientation.Vertical, MetaData.Measure);
+    public static readonly ItemHeightKey  = MuralBase.RegisterProperty<number>(     VirtualizingStackPanel, 'ItemHeight',  20,                   MetaData.Measure);
+    public static readonly ItemWidthKey   = MuralBase.RegisterProperty<number>(     VirtualizingStackPanel, 'ItemWidth',   20,                   MetaData.Measure);
+    public static readonly OrientationKey = MuralBase.RegisterProperty<Orientation>(VirtualizingStackPanel, 'Orientation', Orientation.Vertical, MetaData.Measure);
 
     // Sparse map from item index → realized container Visual.
     private realized: Map<number, Visual> = new Map();

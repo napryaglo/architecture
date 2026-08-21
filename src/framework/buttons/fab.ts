@@ -1,4 +1,4 @@
-import { MetaData, Model, Element } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element } from '../../runtime/index.js';
 import { Button } from './button.js';
 
 // Material 3 FloatingActionButton size variants.
@@ -54,7 +54,7 @@ export enum FabSize
 //                StackPanel { Orientation = Horizontal }).
 export class FloatingActionButton extends Button
 {
-    public static readonly SizeKey = Model.RegisterProperty<FabSize>(
+    public static readonly SizeKey = MuralBase.RegisterProperty<FabSize>(
         FloatingActionButton, 'Size', FabSize.Default, MetaData.None,
     );
 
@@ -63,7 +63,7 @@ export class FloatingActionButton extends Button
         // FloatingActionButton instances resolve their own default Style
         // — the theme dictionary holds Style[TargetType=FloatingActionButton]
         // keyed by the FloatingActionButton class function.
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             FloatingActionButton,
             Element.DefaultStyleKeyKey,
             { default_value: FloatingActionButton },

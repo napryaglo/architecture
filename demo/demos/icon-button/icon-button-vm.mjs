@@ -1,21 +1,21 @@
-// IconButtonVM — backs the icon-button demo. Tracks how many times each
+﻿// IconButtonVM — backs the icon-button demo. Tracks how many times each
 // icon variant has been clicked and the checked state of the four
 // IconButtonToggle variants so the UI can show a live tally + reflect
 // the toggle state back into the chrome.
-import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
-export class IconButtonVM extends Model {
-    static FilledClicksKey = Model.RegisterProperty(IconButtonVM, 'FilledClicks', 0, MetaData.None);
-    static TonalClicksKey = Model.RegisterProperty(IconButtonVM, 'TonalClicks', 0, MetaData.None);
-    static OutlinedClicksKey = Model.RegisterProperty(IconButtonVM, 'OutlinedClicks', 0, MetaData.None);
-    static StandardClicksKey = Model.RegisterProperty(IconButtonVM, 'StandardClicks', 0, MetaData.None);
-    static FilledCheckedKey = Model.RegisterProperty(IconButtonVM, 'FilledChecked', false, MetaData.None);
-    static TonalCheckedKey = Model.RegisterProperty(IconButtonVM, 'TonalChecked', false, MetaData.None);
-    static OutlinedCheckedKey = Model.RegisterProperty(IconButtonVM, 'OutlinedChecked', false, MetaData.None);
-    static StandardCheckedKey = Model.RegisterProperty(IconButtonVM, 'StandardChecked', false, MetaData.None);
-    static ClickFilledCommandKey = Model.RegisterProperty(IconButtonVM, 'ClickFilledCommand', null, MetaData.None);
-    static ClickTonalCommandKey = Model.RegisterProperty(IconButtonVM, 'ClickTonalCommand', null, MetaData.None);
-    static ClickOutlinedCommandKey = Model.RegisterProperty(IconButtonVM, 'ClickOutlinedCommand', null, MetaData.None);
-    static ClickStandardCommandKey = Model.RegisterProperty(IconButtonVM, 'ClickStandardCommand', null, MetaData.None);
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+export class IconButtonVM extends MuralBase {
+    static FilledClicksKey = MuralBase.RegisterProperty(IconButtonVM, 'FilledClicks', 0, MetaData.None);
+    static TonalClicksKey = MuralBase.RegisterProperty(IconButtonVM, 'TonalClicks', 0, MetaData.None);
+    static OutlinedClicksKey = MuralBase.RegisterProperty(IconButtonVM, 'OutlinedClicks', 0, MetaData.None);
+    static StandardClicksKey = MuralBase.RegisterProperty(IconButtonVM, 'StandardClicks', 0, MetaData.None);
+    static FilledCheckedKey = MuralBase.RegisterProperty(IconButtonVM, 'FilledChecked', false, MetaData.None);
+    static TonalCheckedKey = MuralBase.RegisterProperty(IconButtonVM, 'TonalChecked', false, MetaData.None);
+    static OutlinedCheckedKey = MuralBase.RegisterProperty(IconButtonVM, 'OutlinedChecked', false, MetaData.None);
+    static StandardCheckedKey = MuralBase.RegisterProperty(IconButtonVM, 'StandardChecked', false, MetaData.None);
+    static ClickFilledCommandKey = MuralBase.RegisterProperty(IconButtonVM, 'ClickFilledCommand', null, MetaData.None);
+    static ClickTonalCommandKey = MuralBase.RegisterProperty(IconButtonVM, 'ClickTonalCommand', null, MetaData.None);
+    static ClickOutlinedCommandKey = MuralBase.RegisterProperty(IconButtonVM, 'ClickOutlinedCommand', null, MetaData.None);
+    static ClickStandardCommandKey = MuralBase.RegisterProperty(IconButtonVM, 'ClickStandardCommand', null, MetaData.None);
     get FilledClicks() { return this.get_property_value(IconButtonVM.FilledClicksKey); }
     set FilledClicks(v) { this.set_property_value(IconButtonVM.FilledClicksKey, v); }
     get TonalClicks() { return this.get_property_value(IconButtonVM.TonalClicksKey); }

@@ -1,11 +1,11 @@
-import { ModifierKeys } from '../../runtime/index.js';
+﻿import { ModifierKeys } from '../../runtime/index.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     RelayCommand,
     SetterFactory,
@@ -29,11 +29,11 @@ import {
 // IFigure-shaped FigureVM with a Geometry property. Geometry's value
 // is opaque to the framework (combine() is called consumer-side); a
 // non-undefined value is enough for isGeometricItem to return true.
-class FigureWithGeometryVM extends Model {
-    public static readonly LeftKey      = Model.RegisterProperty<number>(FigureWithGeometryVM, 'Left',     0,  MetaData.None);
-    public static readonly TopKey       = Model.RegisterProperty<number>(FigureWithGeometryVM, 'Top',      0,  MetaData.None);
-    public static readonly WidthKey     = Model.RegisterProperty<number>(FigureWithGeometryVM, 'Width',   10, MetaData.None);
-    public static readonly HeightKey    = Model.RegisterProperty<number>(FigureWithGeometryVM, 'Height',  10, MetaData.None);
+class FigureWithGeometryVM extends MuralBase {
+    public static readonly LeftKey      = MuralBase.RegisterProperty<number>(FigureWithGeometryVM, 'Left',     0,  MetaData.None);
+    public static readonly TopKey       = MuralBase.RegisterProperty<number>(FigureWithGeometryVM, 'Top',      0,  MetaData.None);
+    public static readonly WidthKey     = MuralBase.RegisterProperty<number>(FigureWithGeometryVM, 'Width',   10, MetaData.None);
+    public static readonly HeightKey    = MuralBase.RegisterProperty<number>(FigureWithGeometryVM, 'Height',  10, MetaData.None);
     // Use a non-DP plain field for Geometry — the duck-type check looks
     // at the property, not the descriptor table. Real consumers can
     // use a DP if they want notifications; not required by the contract.
@@ -46,11 +46,11 @@ class FigureWithGeometryVM extends Model {
     }
 }
 
-class FigureWithoutGeometryVM extends Model {
-    public static readonly LeftKey   = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'Left',   0,  MetaData.None);
-    public static readonly TopKey    = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'Top',    0,  MetaData.None);
-    public static readonly WidthKey  = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'Width',  10, MetaData.None);
-    public static readonly HeightKey = Model.RegisterProperty<number>(FigureWithoutGeometryVM, 'Height', 10, MetaData.None);
+class FigureWithoutGeometryVM extends MuralBase {
+    public static readonly LeftKey   = MuralBase.RegisterProperty<number>(FigureWithoutGeometryVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = MuralBase.RegisterProperty<number>(FigureWithoutGeometryVM, 'Top',    0,  MetaData.None);
+    public static readonly WidthKey  = MuralBase.RegisterProperty<number>(FigureWithoutGeometryVM, 'Width',  10, MetaData.None);
+    public static readonly HeightKey = MuralBase.RegisterProperty<number>(FigureWithoutGeometryVM, 'Height', 10, MetaData.None);
 }
 
 class FakeTarget implements MountableTarget {
@@ -59,10 +59,10 @@ class FakeTarget implements MountableTarget {
     public GetFocusedVisual(): Visual | undefined { return undefined; }
 }
 
-function setup(items: Model[]): { diagram: Diagram } {
+function setup(items: MuralBase[]): { diagram: Diagram } {
     Application.current = null;
     new Application();
-    const coll = new ObservableCollection<Model>();
+    const coll = new ObservableCollection<MuralBase>();
     for (const i of items) coll.Add(i);
     const diagram = new Diagram();
     diagram.SelectionMode = SelectionMode.Extended;
@@ -101,21 +101,21 @@ function selectMany(diagram: Diagram, items: unknown[]): void {
 
 describe('commands/combine.ts — isGeometricItem', () => {
 
-    test('returns true for Model with non-undefined Geometry', () => {
+    test('returns true for MuralBase with non-undefined Geometry', () => {
         const v = new FigureWithGeometryVM(0, 0, { /* opaque geometry */ });
         assert.equal(isGeometricItem(v), true);
     });
 
-    test('returns false for Model without Geometry', () => {
+    test('returns false for MuralBase without Geometry', () => {
         const v = new FigureWithoutGeometryVM();
         assert.equal(isGeometricItem(v), false);
     });
 
-    test('returns false for non-Model values', () => {
+    test('returns false for non-MuralBase values', () => {
         assert.equal(isGeometricItem(undefined), false);
         assert.equal(isGeometricItem(null),      false);
         assert.equal(isGeometricItem('string'),  false);
-        assert.equal(isGeometricItem({ Geometry: {} }), false, 'plain object is not a Model');
+        assert.equal(isGeometricItem({ Geometry: {} }), false, 'plain object is not a MuralBase');
     });
 });
 

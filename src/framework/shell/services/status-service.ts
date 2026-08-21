@@ -1,7 +1,7 @@
-import {
+﻿import {
     type IServiceProvider,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     ServiceBase,
     ServiceKey,
@@ -15,15 +15,15 @@ import {
 export class StatusService extends ServiceBase {
     public static readonly Key = new ServiceKey<StatusService>('StatusService');
 
-    public static readonly TextKey = Model.RegisterProperty<string>(
+    public static readonly TextKey = MuralBase.RegisterProperty<string>(
         StatusService, 'Text', '', MetaData.None);
 
-    public static readonly IsBusyKey = Model.RegisterProperty<boolean>(
+    public static readonly IsBusyKey = MuralBase.RegisterProperty<boolean>(
         StatusService, 'IsBusy', false, MetaData.None);
 
     // Status cells the shell's StatusBar binds to (ItemsSource = $Items).
     // Arbitrary app models — the StatusBar wraps each in a StatusBarItem.
-    public static readonly ItemsKey = Model.RegisterProperty<ObservableCollection<unknown>>(
+    public static readonly ItemsKey = MuralBase.RegisterProperty<ObservableCollection<unknown>>(
         StatusService, 'Items',
         undefined as unknown as ObservableCollection<unknown>, MetaData.None);
 

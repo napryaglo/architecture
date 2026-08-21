@@ -1,4 +1,4 @@
-import { Color } from '../primitives.js';
+﻿import { Color } from '../primitives.js';
 import { Effect } from './effect.js';
 
 // Single-shadow drop shadow. Mirrors WPF's
@@ -18,7 +18,7 @@ import { Effect } from './effect.js';
 // registered DPs. Effects are typically value-types: install once,
 // don't mutate. To swap colour or depth, replace the Effect on the
 // Visual.Effect DP and let the render pipeline pick up the new
-// instance. This keeps the class light and avoids hooking the Model
+// instance. This keeps the class light and avoids hooking the MuralBase
 // machinery for value types.
 export class DropShadowEffect extends Effect
 {
@@ -80,7 +80,7 @@ export class MaterialElevationEffect extends Effect
     // write the effect in `.mu` value position via the element-node
     // value form:
     //   @Elevation1 = MaterialElevationEffect [Level = 1]
-    // Effect is a lightweight non-Model base class (it doesn't
+    // Effect is a lightweight non-MuralBase base class (it doesn't
     // participate in the property/binding pipeline), so a real DP
     // can't be registered here — the element-node-value emit just
     // does `_e.Level = 1` which goes through the setter.

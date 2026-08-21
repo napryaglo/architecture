@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     ServiceBase,
     ServiceKey,
 } from '../../../runtime/index.js';
@@ -23,9 +23,9 @@ export class ContentHostService extends ServiceBase
 
     // The object currently presented. Read-only to the view (a region binds
     // `$Content`); mutated only through View(). `unknown` because the content
-    // is arbitrary — a Visual slotted directly, or a Model rendered via its
+    // is arbitrary — a Visual slotted directly, or a MuralBase rendered via its
     // DataTemplate.
-    public static readonly ContentKey = Model.RegisterProperty<unknown>(
+    public static readonly ContentKey = MuralBase.RegisterProperty<unknown>(
         ContentHostService, 'Content', undefined, MetaData.None);
 
     public get Content(): unknown { return this.get_property_value(ContentHostService.ContentKey); }

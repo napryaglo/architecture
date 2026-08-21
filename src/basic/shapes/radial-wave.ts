@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -36,11 +36,11 @@ import { Shape } from './shape.js';
 // Stroke insets by half-thickness.
 export class RadialWave extends Shape
 {
-    public static readonly LobesKey           = Model.RegisterProperty<number>(           RadialWave, 'Lobes',           8,         MetaData.Render);
-    public static readonly AmplitudeKey       = Model.RegisterProperty<number>(           RadialWave, 'Amplitude',       0.20,      MetaData.Render);
-    public static readonly SharpnessKey       = Model.RegisterProperty<number>(           RadialWave, 'Sharpness',       0,         MetaData.Render);
-    public static readonly RotationKey        = Model.RegisterProperty<number>(           RadialWave, 'Rotation',        -90,       MetaData.Render);
-    public static readonly SamplesKey         = Model.RegisterProperty<number>(           RadialWave, 'Samples',         24,        MetaData.Render);
+    public static readonly LobesKey           = MuralBase.RegisterProperty<number>(           RadialWave, 'Lobes',           8,         MetaData.Render);
+    public static readonly AmplitudeKey       = MuralBase.RegisterProperty<number>(           RadialWave, 'Amplitude',       0.20,      MetaData.Render);
+    public static readonly SharpnessKey       = MuralBase.RegisterProperty<number>(           RadialWave, 'Sharpness',       0,         MetaData.Render);
+    public static readonly RotationKey        = MuralBase.RegisterProperty<number>(           RadialWave, 'Rotation',        -90,       MetaData.Render);
+    public static readonly SamplesKey         = MuralBase.RegisterProperty<number>(           RadialWave, 'Samples',         24,        MetaData.Render);
 
     public get Lobes(): number { return this.get_property_value(RadialWave.LobesKey); }
     public set Lobes(v: number) { this.set_property_value(RadialWave.LobesKey, v); }
@@ -137,9 +137,9 @@ export class RadialWave extends Shape
 export class Sunny extends RadialWave
 {
     static {
-        Model.OverrideMetadata(Sunny, RadialWave.LobesKey,     { default_value: 8    });
-        Model.OverrideMetadata(Sunny, RadialWave.AmplitudeKey, { default_value: 0.15 });
-        Model.OverrideMetadata(Sunny, RadialWave.SharpnessKey, { default_value: 0    });
+        MuralBase.OverrideMetadata(Sunny, RadialWave.LobesKey,     { default_value: 8    });
+        MuralBase.OverrideMetadata(Sunny, RadialWave.AmplitudeKey, { default_value: 0.15 });
+        MuralBase.OverrideMetadata(Sunny, RadialWave.SharpnessKey, { default_value: 0    });
     }
 }
 
@@ -147,9 +147,9 @@ export class Sunny extends RadialWave
 export class VerySunny extends RadialWave
 {
     static {
-        Model.OverrideMetadata(VerySunny, RadialWave.LobesKey,     { default_value: 8    });
-        Model.OverrideMetadata(VerySunny, RadialWave.AmplitudeKey, { default_value: 0.30 });
-        Model.OverrideMetadata(VerySunny, RadialWave.SharpnessKey, { default_value: 0    });
+        MuralBase.OverrideMetadata(VerySunny, RadialWave.LobesKey,     { default_value: 8    });
+        MuralBase.OverrideMetadata(VerySunny, RadialWave.AmplitudeKey, { default_value: 0.30 });
+        MuralBase.OverrideMetadata(VerySunny, RadialWave.SharpnessKey, { default_value: 0    });
     }
 }
 
@@ -157,9 +157,9 @@ export class VerySunny extends RadialWave
 export class Burst extends RadialWave
 {
     static {
-        Model.OverrideMetadata(Burst, RadialWave.LobesKey,     { default_value: 12   });
-        Model.OverrideMetadata(Burst, RadialWave.AmplitudeKey, { default_value: 0.20 });
-        Model.OverrideMetadata(Burst, RadialWave.SharpnessKey, { default_value: 0.6  });
+        MuralBase.OverrideMetadata(Burst, RadialWave.LobesKey,     { default_value: 12   });
+        MuralBase.OverrideMetadata(Burst, RadialWave.AmplitudeKey, { default_value: 0.20 });
+        MuralBase.OverrideMetadata(Burst, RadialWave.SharpnessKey, { default_value: 0.6  });
     }
 }
 
@@ -167,9 +167,9 @@ export class Burst extends RadialWave
 export class SoftBurst extends RadialWave
 {
     static {
-        Model.OverrideMetadata(SoftBurst, RadialWave.LobesKey,     { default_value: 12   });
-        Model.OverrideMetadata(SoftBurst, RadialWave.AmplitudeKey, { default_value: 0.20 });
-        Model.OverrideMetadata(SoftBurst, RadialWave.SharpnessKey, { default_value: 0    });
+        MuralBase.OverrideMetadata(SoftBurst, RadialWave.LobesKey,     { default_value: 12   });
+        MuralBase.OverrideMetadata(SoftBurst, RadialWave.AmplitudeKey, { default_value: 0.20 });
+        MuralBase.OverrideMetadata(SoftBurst, RadialWave.SharpnessKey, { default_value: 0    });
     }
 }
 
@@ -177,9 +177,9 @@ export class SoftBurst extends RadialWave
 export class Boom extends RadialWave
 {
     static {
-        Model.OverrideMetadata(Boom, RadialWave.LobesKey,     { default_value: 14   });
-        Model.OverrideMetadata(Boom, RadialWave.AmplitudeKey, { default_value: 0.30 });
-        Model.OverrideMetadata(Boom, RadialWave.SharpnessKey, { default_value: 0.6  });
+        MuralBase.OverrideMetadata(Boom, RadialWave.LobesKey,     { default_value: 14   });
+        MuralBase.OverrideMetadata(Boom, RadialWave.AmplitudeKey, { default_value: 0.30 });
+        MuralBase.OverrideMetadata(Boom, RadialWave.SharpnessKey, { default_value: 0.6  });
     }
 }
 
@@ -187,9 +187,9 @@ export class Boom extends RadialWave
 export class SoftBoom extends RadialWave
 {
     static {
-        Model.OverrideMetadata(SoftBoom, RadialWave.LobesKey,     { default_value: 14   });
-        Model.OverrideMetadata(SoftBoom, RadialWave.AmplitudeKey, { default_value: 0.30 });
-        Model.OverrideMetadata(SoftBoom, RadialWave.SharpnessKey, { default_value: 0    });
+        MuralBase.OverrideMetadata(SoftBoom, RadialWave.LobesKey,     { default_value: 14   });
+        MuralBase.OverrideMetadata(SoftBoom, RadialWave.AmplitudeKey, { default_value: 0.30 });
+        MuralBase.OverrideMetadata(SoftBoom, RadialWave.SharpnessKey, { default_value: 0    });
     }
 }
 
@@ -197,8 +197,8 @@ export class SoftBoom extends RadialWave
 export class Flower extends RadialWave
 {
     static {
-        Model.OverrideMetadata(Flower, RadialWave.LobesKey,     { default_value: 10   });
-        Model.OverrideMetadata(Flower, RadialWave.AmplitudeKey, { default_value: 0.20 });
-        Model.OverrideMetadata(Flower, RadialWave.SharpnessKey, { default_value: 0    });
+        MuralBase.OverrideMetadata(Flower, RadialWave.LobesKey,     { default_value: 10   });
+        MuralBase.OverrideMetadata(Flower, RadialWave.AmplitudeKey, { default_value: 0.20 });
+        MuralBase.OverrideMetadata(Flower, RadialWave.SharpnessKey, { default_value: 0    });
     }
 }

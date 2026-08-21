@@ -1,11 +1,11 @@
-// AnimationVM — drives the imperative animation showcase. Each row's
+﻿// AnimationVM — drives the imperative animation showcase. Each row's
 // click handler is wired in OnViewMounted via FindName; the VM keeps
 // per-row Storyboard references so a fresh click stops the prior
 // animation before starting the next one.
 //
 // Pure markup-trigger forms live in the sibling demos
 // (animation-declarative, animation-named, animation-triggers).
-import { Model } from '@pragmatic-lab/mural/runtime';
+import { MuralBase } from '@pragmatic-lab/mural/runtime';
 import {
     Color,
     DoubleAnimation,
@@ -39,7 +39,7 @@ interface BrushTarget {
     Fill: unknown;
 }
 
-export class AnimationVM extends Model
+export class AnimationVM extends MuralBase
 {
     OnViewMounted(view: Visual): void {
         // ── Row 1: slide ─────────────────────────────────────────────

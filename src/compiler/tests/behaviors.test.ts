@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile, instantiate } from '../compile.js';
 import * as runtime from '../../runtime/index.js';
@@ -7,7 +7,7 @@ import * as engine from '../../visual-engine/index.js';
 import {
     Application,
     Behavior,
-    Model,
+    MuralBase,
     MetaData,
     type Visual,
 } from '../../runtime/index.js';
@@ -19,7 +19,7 @@ import { Border } from '../../basic/index.js';
 // behavior actually does.
 class StubBehavior extends Behavior
 {
-    public static readonly LabelKey = Model.RegisterProperty<string>(
+    public static readonly LabelKey = MuralBase.RegisterProperty<string>(
         StubBehavior, 'Label', '', MetaData.None);
 
     public attachedTo: Visual | undefined;

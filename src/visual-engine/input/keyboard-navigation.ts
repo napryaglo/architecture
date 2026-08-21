@@ -1,4 +1,4 @@
-// WPF-parity keyboard navigation (System.Windows.Input.KeyboardNavigation
+﻿// WPF-parity keyboard navigation (System.Windows.Input.KeyboardNavigation
 // + TraversalRequest). Computes Tab order and directional focus moves
 // over the Element tree and drives focus through the element's Focus()
 // bridge.
@@ -15,7 +15,7 @@
 //     Slider, TreeView, … — already own arrow keys); use the MoveFocus
 //     API to drive directional moves from a control or behavior.
 
-import { Model } from '../../runtime/model.js';
+import { MuralBase } from '../../runtime/model.js';
 import { MetaData } from '../../runtime/metadata.js';
 import type { Element } from '../element.js';
 import { FocusNavigationDirection, KeyboardNavigationMode } from './input-enums.js';
@@ -43,7 +43,7 @@ export class KeyboardNavigation
     //   Cycle     — Tab wraps within the container (never leaves via Tab).
     //   Contained — Tab is clamped to the container (stops at the ends).
     //   Local     — TabIndex is scoped per container (local ordering).
-    public static readonly TabNavigationKey = Model.RegisterAttachedProperty<KeyboardNavigationMode>(
+    public static readonly TabNavigationKey = MuralBase.RegisterAttachedProperty<KeyboardNavigationMode>(
         KeyboardNavigation, 'TabNavigation', KeyboardNavigationMode.Continue, MetaData.None);
 
     public static GetTabNavigation(el: Element): KeyboardNavigationMode

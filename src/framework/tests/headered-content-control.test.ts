@@ -1,14 +1,14 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Application, MetaData, Model } from '../../runtime/index.js';
+import { Application, MetaData, MuralBase } from '../../runtime/index.js';
 import { HeaderedContentControl } from '../base/headered-content-control.js';
 import { DataTemplate } from '../../basic/index.js';
 import { TabItem } from '../tabs/tabs.js';
 
 class Probe extends HeaderedContentControl
 {
-    public static readonly NoiseKey = Model.RegisterProperty<number>(
+    public static readonly NoiseKey = MuralBase.RegisterProperty<number>(
         Probe, 'Noise', 0, MetaData.None);
 }
 

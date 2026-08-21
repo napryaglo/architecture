@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     type ServiceToken,
 } from '../../../runtime/index.js';
 import type { DataTemplate } from '../../../basic/templates/data-template.js';
@@ -60,37 +60,37 @@ export enum ShellControlAlignment
 // status-bar theme picker whose DataContext is ThemeServiceKey is the canonical
 // case. Leave DataContext unset for the classic document-bound, Context-gated
 // behaviour.
-export class ShellControlDefinition extends Model
+export class ShellControlDefinition extends MuralBase
 {
     // The editor UI. A keyed DataTemplate the shell applies with the active
     // document as Content/DataContext.
-    public static readonly TemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly TemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         ShellControlDefinition, 'Template', undefined, MetaData.None);
 
     // The command context that gates visibility — the control shows iff the active
     // document activates this context (same join as CommandDefinition.Context).
-    public static readonly ContextKey = Model.RegisterProperty<ServiceToken<unknown> | undefined>(
+    public static readonly ContextKey = MuralBase.RegisterProperty<ServiceToken<unknown> | undefined>(
         ShellControlDefinition, 'Context', undefined, MetaData.None);
 
     // Placement in the shared Order space with command groups (Toolbar region).
-    public static readonly OrderKey = Model.RegisterProperty<number>(
+    public static readonly OrderKey = MuralBase.RegisterProperty<number>(
         ShellControlDefinition, 'Order', 0, MetaData.None);
 
     // Which shell region hosts this control — the command bar (default) or the
     // status bar.
-    public static readonly RegionKey = Model.RegisterProperty<ShellRegion>(
+    public static readonly RegionKey = MuralBase.RegisterProperty<ShellRegion>(
         ShellControlDefinition, 'Region', ShellRegion.Toolbar, MetaData.None);
 
     // Which edge of the region the control pins to (StatusBar: Start = left,
     // End = right). Default Start.
-    public static readonly AlignmentKey = Model.RegisterProperty<ShellControlAlignment>(
+    public static readonly AlignmentKey = MuralBase.RegisterProperty<ShellControlAlignment>(
         ShellControlDefinition, 'Alignment', ShellControlAlignment.Start, MetaData.None);
 
     // Service token the control binds to as its DataContext. When set, the control
     // is SERVICE-bound (and app-global) — the shell resolves this token and hands
     // the instance to the template as its DataContext, rather than the active
     // document. Leave unset for the classic document-bound control.
-    public static readonly DataContextKey = Model.RegisterProperty<ServiceToken<unknown> | undefined>(
+    public static readonly DataContextKey = MuralBase.RegisterProperty<ServiceToken<unknown> | undefined>(
         ShellControlDefinition, 'DataContext', undefined, MetaData.None);
 
     public get Template(): DataTemplate | undefined  { return this.get_property_value(ShellControlDefinition.TemplateKey); }

@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Visual,
@@ -52,7 +52,7 @@ import type { InputBinding } from '../framework/commands/input-binding.js';
 //   }
 export class Control extends Element
 {
-    public static readonly TemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(
+    public static readonly TemplateKey = MuralBase.RegisterProperty<ControlTemplate | undefined>(
         Control, 'Template', undefined, MetaData.Measure);
 
     // The single applied template instance (root + content presenter).

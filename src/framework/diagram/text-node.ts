@@ -1,4 +1,4 @@
-import { Model, Element } from '../../runtime/index.js';
+﻿import { MuralBase, Element } from '../../runtime/index.js';
 import { Pen } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { TextAutoFit } from './shape-text.js';
@@ -18,7 +18,7 @@ const TEXT_NODE_DEFAULT_H = 44;
 // requires a source) leaves it to the 'text' serializer.
 export class TextNode extends Figure
 {
-    static { Model.OverrideMetadata(TextNode, Element.DefaultStyleKeyKey, { default_value: TextNode }); }
+    static { MuralBase.OverrideMetadata(TextNode, Element.DefaultStyleKeyKey, { default_value: TextNode }); }
 
     constructor()
     {

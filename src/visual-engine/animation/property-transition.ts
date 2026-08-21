@@ -1,4 +1,4 @@
-import { Model } from '../../runtime/model.js';
+﻿import { MuralBase } from '../../runtime/model.js';
 import { MetaData } from '../../runtime/metadata.js';
 import { Easings, type EasingFunction } from './easing.js';
 
@@ -40,15 +40,15 @@ import { Easings, type EasingFunction } from './easing.js';
 //
 // Property is required — a PropertyTransition without a Property name
 // is inert (no DP will ever match).
-export class PropertyTransition extends Model
+export class PropertyTransition extends MuralBase
 {
-    public static readonly PropertyKey = Model.RegisterProperty<string>(
+    public static readonly PropertyKey = MuralBase.RegisterProperty<string>(
         PropertyTransition, 'Property', '', MetaData.None);
 
-    public static readonly DurationKey = Model.RegisterProperty<number>(
+    public static readonly DurationKey = MuralBase.RegisterProperty<number>(
         PropertyTransition, 'Duration', 300, MetaData.None);
 
-    public static readonly EasingKey = Model.RegisterProperty<EasingFunction>(
+    public static readonly EasingKey = MuralBase.RegisterProperty<EasingFunction>(
         PropertyTransition, 'Easing', Easings.Standard, MetaData.None);
 
     public get Property(): string  { return this.get_property_value(PropertyTransition.PropertyKey); }

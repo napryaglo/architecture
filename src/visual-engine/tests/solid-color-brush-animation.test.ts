@@ -1,4 +1,4 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -8,7 +8,7 @@ import {
     DynamicResource,
     ManualClock,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Size,
     ThemeManager,
@@ -105,7 +105,7 @@ describe('SolidColorBrushAnimation — DynamicResource scheme-transition integra
     class BrushHost extends Element
     {
         static {
-            Model.RegisterProperty(BrushHost, 'Background', undefined, MetaData.None);
+            MuralBase.RegisterProperty(BrushHost, 'Background', undefined, MetaData.None);
         }
         public get Background(): unknown { return this.get_property_value(resolveKey(this, undefined, 'Background')); }
         public set Background(v: unknown) { this.set_property_value(resolveKey(this, undefined, 'Background'), v); }

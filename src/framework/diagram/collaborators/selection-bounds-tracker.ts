@@ -1,4 +1,4 @@
-import { Model } from '../../../runtime/index.js';
+﻿import { MuralBase } from '../../../runtime/index.js';
 import { findDescriptor, resolveKey } from '../../../runtime/model-internals.js';
 import type { Diagram } from '../diagram.js';
 
@@ -22,7 +22,7 @@ import type { Diagram } from '../diagram.js';
 // selection-exit. Listener keys resolved via the `resolveKey + typed-key
 // API` pattern (model-internals.ts) — no by-name accessor surface.
 //
-// IFigure-shape duck-type check: item must be a `Model` instance with
+// IFigure-shape duck-type check: item must be a `MuralBase` instance with
 // Left / Top / Width / Height DPs registered somewhere in its class
 // hierarchy. `findDescriptor` returns `undefined` on missing, so the
 // check is non-throwing. Non-IFigure items (raw strings, opaque tokens)
@@ -31,7 +31,7 @@ import type { Diagram } from '../diagram.js';
 export class SelectionBoundsTracker
 {
     private readonly _diagram: Diagram;
-    private readonly _itemListeners: Map<Model, () => void> = new Map();
+    private readonly _itemListeners: Map<MuralBase, () => void> = new Map();
 
     constructor(diagram: Diagram)
     {
@@ -72,14 +72,14 @@ export class SelectionBoundsTracker
     // the item itself when it carries geometry DPs, otherwise its container
     // Figure. Returns undefined when neither is figure-shaped (e.g. a plain
     // data row selected in a non-diagram Selector).
-    private _geometryHost(item: unknown): Model | undefined
+    private _geometryHost(item: unknown): MuralBase | undefined
     {
         if (this._isFigureShape(item)) return item;
         const container = this._diagram.Generator.ContainerFromItem(item);
         return this._isFigureShape(container) ? container : undefined;
     }
 
-    private _listenItem(item: Model): () => void
+    private _listenItem(item: MuralBase): () => void
     {
         // resolveKey throws if any of Left / Top / Width / Height is
         // missing, but `_isFigureShape` already guarded — by the time
@@ -143,9 +143,9 @@ export class SelectionBoundsTracker
         this._diagram.set_property_value_with_key(Diagram.SelectionCountKey,  items.length);
     }
 
-    private _isFigureShape(item: unknown): item is Model
+    private _isFigureShape(item: unknown): item is MuralBase
     {
-        if (!(item instanceof Model)) return false;
+        if (!(item instanceof MuralBase)) return false;
         const klass = item.constructor as Function;
         return findDescriptor(klass, 'Left')   !== undefined
             && findDescriptor(klass, 'Top')    !== undefined

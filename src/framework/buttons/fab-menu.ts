@@ -1,7 +1,7 @@
-import {
+﻿import {
     DoubleAnimation,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     Panel,
     Point,
@@ -56,18 +56,18 @@ import { FloatingActionButton } from './fab.js';
 // completion).
 export class FabMenu extends FloatingActionButton
 {
-    public static readonly ItemsKey       = Model.RegisterProperty<ObservableCollection<Visual> | undefined>(
+    public static readonly ItemsKey       = MuralBase.RegisterProperty<ObservableCollection<Visual> | undefined>(
         FabMenu, 'Items', undefined, MetaData.None);
-    public static readonly IsOpenKey      = Model.RegisterProperty<boolean>(FabMenu, 'IsOpen',      false, MetaData.None);
-    public static readonly StaggerMsKey   = Model.RegisterProperty<number>( FabMenu, 'StaggerMs',   50,    MetaData.None);
-    public static readonly DurationMsKey  = Model.RegisterProperty<number>( FabMenu, 'DurationMs',  200,   MetaData.None);
-    public static readonly HiddenOffsetKey= Model.RegisterProperty<number>( FabMenu, 'HiddenOffset', 12,   MetaData.None);
-    public static readonly ClosedIconKey  = Model.RegisterProperty<string>( FabMenu, 'ClosedIcon',  '+',   MetaData.None);
-    public static readonly OpenIconKey    = Model.RegisterProperty<string>( FabMenu, 'OpenIcon',    '×',   MetaData.None);
+    public static readonly IsOpenKey      = MuralBase.RegisterProperty<boolean>(FabMenu, 'IsOpen',      false, MetaData.None);
+    public static readonly StaggerMsKey   = MuralBase.RegisterProperty<number>( FabMenu, 'StaggerMs',   50,    MetaData.None);
+    public static readonly DurationMsKey  = MuralBase.RegisterProperty<number>( FabMenu, 'DurationMs',  200,   MetaData.None);
+    public static readonly HiddenOffsetKey= MuralBase.RegisterProperty<number>( FabMenu, 'HiddenOffset', 12,   MetaData.None);
+    public static readonly ClosedIconKey  = MuralBase.RegisterProperty<string>( FabMenu, 'ClosedIcon',  '+',   MetaData.None);
+    public static readonly OpenIconKey    = MuralBase.RegisterProperty<string>( FabMenu, 'OpenIcon',    '×',   MetaData.None);
     // Duration of the icon rotation tween (0 → 45° on open, back on
     // close). 150 ms matches M3 motion-emphasized-short — short enough
     // to feel snappy, long enough to read as a deliberate flip.
-    public static readonly RotationDurationMsKey = Model.RegisterProperty<number>(
+    public static readonly RotationDurationMsKey = MuralBase.RegisterProperty<number>(
         FabMenu, 'RotationDurationMs', 150, MetaData.None);
 
     public get Items():       ObservableCollection<Visual> | undefined { return this.get_property_value(FabMenu.ItemsKey); }
@@ -119,7 +119,7 @@ export class FabMenu extends FloatingActionButton
     private _rotationStoryboard: Storyboard | undefined;
 
     static {
-        Model.OverrideMetadata(FabMenu, Element.DefaultStyleKeyKey,
+        MuralBase.OverrideMetadata(FabMenu, Element.DefaultStyleKeyKey,
             { default_value: FabMenu });
     }
 

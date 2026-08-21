@@ -1,15 +1,15 @@
-// MenuVM — command catalogue + status mirror for the menu demo. The
+﻿// MenuVM — command catalogue + status mirror for the menu demo. The
 // MenuButton hosts a vertical column of MenuItems; click an item to
 // run its command. Status reflects the latest invocation.
 //
 // Two checkable items (ShowGrid / SnapToGrid) demonstrate IsCheckable
 // + IsChecked. Their Command callbacks read IsChecked through the
 // MenuItem's CommandParameter (the markup passes `$self.IsChecked`).
-import { MetaData, Model, RelayCommand, } from '@pragmatic-lab/mural/runtime';
-export class MenuVM extends Model {
-    static StatusKey = Model.RegisterProperty(MenuVM, 'Status', 'Ready.', MetaData.None);
-    static ShowGridKey = Model.RegisterProperty(MenuVM, 'ShowGrid', true, MetaData.None);
-    static SnapToGridKey = Model.RegisterProperty(MenuVM, 'SnapToGrid', false, MetaData.None);
+import { MetaData, MuralBase, RelayCommand, } from '@pragmatic-lab/mural/runtime';
+export class MenuVM extends MuralBase {
+    static StatusKey = MuralBase.RegisterProperty(MenuVM, 'Status', 'Ready.', MetaData.None);
+    static ShowGridKey = MuralBase.RegisterProperty(MenuVM, 'ShowGrid', true, MetaData.None);
+    static SnapToGridKey = MuralBase.RegisterProperty(MenuVM, 'SnapToGrid', false, MetaData.None);
     // Command catalogue exposed as plain fields the menu markup binds to.
     NewCommand;
     OpenCommand;

@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     Visual,
     type PropertyDescriptor,
@@ -25,14 +25,14 @@ import { RibbonTab, RibbonContextualGroup } from './ribbon-tab.js';
 // its click to select the tab.
 export class RibbonTabHeader extends Button
 {
-    public static readonly IsCurrentKey   = Model.RegisterProperty<boolean>(
+    public static readonly IsCurrentKey   = MuralBase.RegisterProperty<boolean>(
         RibbonTabHeader, 'IsCurrent', false, MetaData.Render);
-    public static readonly AccentBrushKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly AccentBrushKey = MuralBase.RegisterProperty<Brush | undefined>(
         RibbonTabHeader, 'AccentBrush', undefined, MetaData.Render);
 
     static
     {
-        Model.OverrideMetadata(RibbonTabHeader, Element.DefaultStyleKeyKey, { default_value: RibbonTabHeader });
+        MuralBase.OverrideMetadata(RibbonTabHeader, Element.DefaultStyleKeyKey, { default_value: RibbonTabHeader });
     }
 
     public get IsCurrent(): boolean  { return this.get_property_value(RibbonTabHeader.IsCurrentKey); }
@@ -70,14 +70,14 @@ interface VisibleTab { tab: RibbonTab; accent: Brush | undefined; }
 // click re-expands it.
 export class Ribbon extends Control
 {
-    public static readonly SelectedTabKey = Model.RegisterProperty<RibbonTab | undefined>(
+    public static readonly SelectedTabKey = MuralBase.RegisterProperty<RibbonTab | undefined>(
         Ribbon, 'SelectedTab', undefined, MetaData.Measure | MetaData.Render);
-    public static readonly IsMinimizedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsMinimizedKey = MuralBase.RegisterProperty<boolean>(
         Ribbon, 'IsMinimized', false, MetaData.None);
 
     static
     {
-        Model.OverrideMetadata(Ribbon, Element.DefaultStyleKeyKey, { default_value: Ribbon });
+        MuralBase.OverrideMetadata(Ribbon, Element.DefaultStyleKeyKey, { default_value: Ribbon });
     }
 
     private readonly _tabs             = new ObservableCollection<RibbonTab>([]);

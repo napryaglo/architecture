@@ -1,7 +1,7 @@
-import {
+﻿import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Thickness,
     Element, Visual, Visibility, VerticalAlignment,
@@ -185,33 +185,33 @@ function wireSwatchHover(
 // clicks in the dropdown commit a colour directly (and record a recent).
 export class ColorPicker extends TemplatedControl
 {
-    public static readonly ColorKey      = Model.RegisterProperty<Color>(  ColorPicker, 'Color',      Color.Black,            MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly ColorHexKey   = Model.RegisterProperty<string>( ColorPicker, 'ColorHex',   '#000000',              MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly HueKey        = Model.RegisterProperty<number>( ColorPicker, 'Hue',        0,                      MetaData.None);
-    public static readonly SaturationKey = Model.RegisterProperty<number>( ColorPicker, 'Saturation', 0,                      MetaData.None);
-    public static readonly BrightnessKey = Model.RegisterProperty<number>( ColorPicker, 'Brightness', 0,                      MetaData.None);
-    public static readonly RedKey        = Model.RegisterProperty<number>( ColorPicker, 'Red',        0,                      MetaData.None);
-    public static readonly GreenKey      = Model.RegisterProperty<number>( ColorPicker, 'Green',      0,                      MetaData.None);
-    public static readonly BlueKey       = Model.RegisterProperty<number>( ColorPicker, 'Blue',       0,                      MetaData.None);
-    public static readonly AlphaKey      = Model.RegisterProperty<number>( ColorPicker, 'Alpha',      255,                    MetaData.None);
-    public static readonly VariantKey    = Model.RegisterProperty<ColorPickerVariant>(ColorPicker, 'Variant', ColorPickerVariant.HSV, MetaData.None);
-    public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(ColorPicker, 'IsDropDownOpen', false,          MetaData.None);
-    public static readonly IsMoreColorsOpenKey = Model.RegisterProperty<boolean>(ColorPicker, 'IsMoreColorsOpen', false,      MetaData.None);
-    public static readonly PopupTemplateKey  = Model.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'PopupTemplate', undefined, MetaData.None);
-    public static readonly MoreColorsTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'MoreColorsTemplate', undefined, MetaData.None);
+    public static readonly ColorKey      = MuralBase.RegisterProperty<Color>(  ColorPicker, 'Color',      Color.Black,            MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly ColorHexKey   = MuralBase.RegisterProperty<string>( ColorPicker, 'ColorHex',   '#000000',              MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly HueKey        = MuralBase.RegisterProperty<number>( ColorPicker, 'Hue',        0,                      MetaData.None);
+    public static readonly SaturationKey = MuralBase.RegisterProperty<number>( ColorPicker, 'Saturation', 0,                      MetaData.None);
+    public static readonly BrightnessKey = MuralBase.RegisterProperty<number>( ColorPicker, 'Brightness', 0,                      MetaData.None);
+    public static readonly RedKey        = MuralBase.RegisterProperty<number>( ColorPicker, 'Red',        0,                      MetaData.None);
+    public static readonly GreenKey      = MuralBase.RegisterProperty<number>( ColorPicker, 'Green',      0,                      MetaData.None);
+    public static readonly BlueKey       = MuralBase.RegisterProperty<number>( ColorPicker, 'Blue',       0,                      MetaData.None);
+    public static readonly AlphaKey      = MuralBase.RegisterProperty<number>( ColorPicker, 'Alpha',      255,                    MetaData.None);
+    public static readonly VariantKey    = MuralBase.RegisterProperty<ColorPickerVariant>(ColorPicker, 'Variant', ColorPickerVariant.HSV, MetaData.None);
+    public static readonly IsDropDownOpenKey = MuralBase.RegisterProperty<boolean>(ColorPicker, 'IsDropDownOpen', false,          MetaData.None);
+    public static readonly IsMoreColorsOpenKey = MuralBase.RegisterProperty<boolean>(ColorPicker, 'IsMoreColorsOpen', false,      MetaData.None);
+    public static readonly PopupTemplateKey  = MuralBase.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'PopupTemplate', undefined, MetaData.None);
+    public static readonly MoreColorsTemplateKey = MuralBase.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'MoreColorsTemplate', undefined, MetaData.None);
     // The predefined base-colour set the Theme-Colors grid is built from
     // (one column per base colour, plus its tint/shade rows). Defaults to
     // ColorScheme.Default (the Office palette); set per-picker or share one
     // via a keyed resource (`[ColorScheme=@AppColors]`).
-    public static readonly ColorSchemeKey = Model.RegisterProperty<ColorScheme>(ColorPicker, 'ColorScheme', ColorScheme.Default, MetaData.None);
-    public static readonly IsSchemeGalleryOpenKey = Model.RegisterProperty<boolean>(ColorPicker, 'IsSchemeGalleryOpen', false, MetaData.None);
-    public static readonly SchemeGalleryTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'SchemeGalleryTemplate', undefined, MetaData.None);
+    public static readonly ColorSchemeKey = MuralBase.RegisterProperty<ColorScheme>(ColorPicker, 'ColorScheme', ColorScheme.Default, MetaData.None);
+    public static readonly IsSchemeGalleryOpenKey = MuralBase.RegisterProperty<boolean>(ColorPicker, 'IsSchemeGalleryOpen', false, MetaData.None);
+    public static readonly SchemeGalleryTemplateKey = MuralBase.RegisterProperty<ControlTemplate | undefined>(ColorPicker, 'SchemeGalleryTemplate', undefined, MetaData.None);
     // Per-instance default — the DP system shares its `default_value`
     // across every registered control, so we slot a fresh
     // SolidColorBrush in the ctor BEFORE applyDefaultStyle so the
     // template's `$SwatchBrush` binding lands on a brush nobody else
     // touches. Mutating the brush's Color in sync is then safe.
-    public static readonly SwatchBrushKey = Model.RegisterProperty<SolidColorBrush | undefined>(ColorPicker, 'SwatchBrush', undefined, MetaData.None);
+    public static readonly SwatchBrushKey = MuralBase.RegisterProperty<SolidColorBrush | undefined>(ColorPicker, 'SwatchBrush', undefined, MetaData.None);
 
     public get Color():      Color  { return this.get_property_value(ColorPicker.ColorKey); }
     public set Color(v:      Color) { this.set_property_value(ColorPicker.ColorKey, v); }
@@ -250,7 +250,7 @@ export class ColorPicker extends TemplatedControl
     public get SwatchBrush():    SolidColorBrush | undefined { return this.get_property_value(ColorPicker.SwatchBrushKey); }
 
     static {
-        Model.OverrideMetadata(ColorPicker, Element.DefaultStyleKeyKey, { default_value: ColorPicker });
+        MuralBase.OverrideMetadata(ColorPicker, Element.DefaultStyleKeyKey, { default_value: ColorPicker });
     }
 
     private _trigger:    Border | undefined;

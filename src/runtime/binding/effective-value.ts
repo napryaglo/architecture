@@ -1,6 +1,6 @@
-import { Binding, BindingMode } from './binding.js';
+﻿import { Binding, BindingMode } from './binding.js';
 import { isAnimationProhibited, isNotDataBindable } from '../metadata.js';
-import type { Model } from '../model.js';
+import type { MuralBase } from '../model.js';
 import type { PropertyDescriptor } from '../property-descriptor.js';
 import { Validation } from './validation.js';
 
@@ -8,24 +8,24 @@ import { Validation } from './validation.js';
 // whose property changed and the old/new effective values. Users get the
 // property *name* (simple, not composite) for ergonomic context.
 export type PropertyChangeCallback = (
-    model: Model,
+    model: MuralBase,
     property: string,
     old_value: any,
     new_value: any,
 ) => void;
 
-// Internal callback used by Model to route invalidation / inheritance.
-// Carries the PropertyDescriptor directly so Model.OnPropertyChanged
+// Internal callback used by MuralBase to route invalidation / inheritance.
+// Carries the PropertyDescriptor directly so MuralBase.OnPropertyChanged
 // doesn't need to re-look it up — important for cross-class properties
 // where the descriptor doesn't live on the target's class hierarchy.
 export type InternalPropertyChangeCallback = (
-    model: Model,
+    model: MuralBase,
     descriptor: PropertyDescriptor,
     old_value: any,
     new_value: any,
 ) => void;
 
-// Where the effective value came from. Read via Model.GetValueSource(key).
+// Where the effective value came from. Read via MuralBase.GetValueSource(key).
 //
 // Priority order (highest to lowest):
 //   Coerced > Animated > Trigger > Binding > Local > Style > Inherited > Default
@@ -61,7 +61,7 @@ export enum PropertyValueSource
 // Per-instance state for one registered property. Holds the base-value
 // slots (animated / binding / local / trigger / style / inherited), the
 // current base source, and the per-instance change listeners. Created
-// lazily by Model on first set or first listener attach.
+// lazily by MuralBase on first set or first listener attach.
 //
 // Coercion is NOT a base slot — it's a pure transform applied on every
 // `value` read (and on binding push notifications). The descriptor's
@@ -107,17 +107,17 @@ export class EffectiveValueDescriptor
 
     private property_descriptor: PropertyDescriptor;
     private changeListeners: Array<PropertyChangeCallback> = [];
-    // Reserved for the owning Model to route every effective-value change
+    // Reserved for the owning MuralBase to route every effective-value change
     // through its virtual OnPropertyChanged hook. Stored separately from
     // changeListeners so user-facing listener counts stay clean. Carries
     // the descriptor (not just a name) so cross-class property changes
     // can be dispatched without re-lookup.
     private internal_callback: InternalPropertyChangeCallback | undefined;
 
-    private owner: Model;
+    private owner: MuralBase;
     private source: PropertyValueSource = PropertyValueSource.Default;
 
-    constructor(propertyDescriptor: PropertyDescriptor, owner: Model)
+    constructor(propertyDescriptor: PropertyDescriptor, owner: MuralBase)
     {
         this.property_descriptor = propertyDescriptor;
         this.owner = owner;
@@ -466,7 +466,7 @@ export class EffectiveValueDescriptor
         }
 
         // When replacing a previous binding, dispose it so its path listeners
-        // are removed from every chain Model. Without this the old chain
+        // are removed from every chain MuralBase. Without this the old chain
         // would keep holding (now-silent) listener references — a leak.
         if (this.binding_value !== undefined && this.binding_value !== val)
         {

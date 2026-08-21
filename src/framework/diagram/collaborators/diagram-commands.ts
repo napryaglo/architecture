@@ -1,5 +1,5 @@
-import {
-    Model,
+﻿import {
+    MuralBase,
     RelayCommand,
     type CommandBase,
 } from '../../../runtime/index.js';
@@ -227,15 +227,15 @@ export class DiagramCommands
 
     // Selected leaves that carry a label (duck-typed on `.Text`). Groups
     // flatten to their leaf shapes; connectors / label-less items are skipped.
-    private _collectTextLeaves(): Model[]
+    private _collectTextLeaves(): MuralBase[]
     {
         return flattenToLeaves(this._diagram.SelectedItems)
             .filter((leaf) => (leaf as { Text?: unknown }).Text !== undefined);
     }
 
-    private _collectCombinable(): (import('../../../runtime/index.js').Model & IGeometricItem)[]
+    private _collectCombinable(): (import('../../../runtime/index.js').MuralBase & IGeometricItem)[]
     {
-        const out: (import('../../../runtime/index.js').Model & IGeometricItem)[] = [];
+        const out: (import('../../../runtime/index.js').MuralBase & IGeometricItem)[] = [];
         for (const item of this._diagram.SelectedItems)
         {
             if (isGeometricItem(item)) out.push(item);
@@ -280,17 +280,17 @@ export class DiagramCommands
         // Dedupe via a Set: two selected members of the same group
         // resolve to the same top-level Group, but we only align it
         // once.
-        const seen = new Set<Model>();
+        const seen = new Set<MuralBase>();
         const out: AlignTarget[] = [];
         for (const item of this._diagram.SelectedItems)
         {
-            if (!(item instanceof Model)) continue;
-            let top: Model = item;
+            if (!(item instanceof MuralBase)) continue;
+            let top: MuralBase = item;
             for (;;)
             {
                 const parent = (top as unknown as { Parent?: unknown }).Parent;
-                if (!(parent instanceof Model)) break;
-                top = parent as Model;
+                if (!(parent instanceof MuralBase)) break;
+                top = parent as MuralBase;
             }
             // A content-node item (NodeViewModel) carries no geometry — its
             // container Figure does (container-owned-geometry). Resolve to the
@@ -302,7 +302,7 @@ export class DiagramCommands
             if (!this._isFigureShape(top))
             {
                 const container = this._diagram.Generator.ContainerFromItem(top);
-                if (container instanceof Model) top = container;
+                if (container instanceof MuralBase) top = container;
             }
             if (seen.has(top)) continue;
             seen.add(top);
@@ -314,9 +314,9 @@ export class DiagramCommands
         return out;
     }
 
-    private _isFigureShape(item: unknown): item is Model
+    private _isFigureShape(item: unknown): item is MuralBase
     {
-        if (!(item instanceof Model)) return false;
+        if (!(item instanceof MuralBase)) return false;
         const klass = item.constructor as Function;
         return findDescriptor(klass, 'Left')   !== undefined
             && findDescriptor(klass, 'Top')    !== undefined

@@ -1,6 +1,6 @@
-// SliderVM — empty marker model. The slider demo has no state of its
+﻿// SliderVM — empty marker model. The slider demo has no state of its
 // own; the .mu file declares a DataTemplate keyed on this type so the
 // platform's ContentControl can auto-resolve the template by data type.
-import { Model } from '@pragmatic-lab/mural/runtime';
+import { MuralBase } from '@pragmatic-lab/mural/runtime';
 
-export class SliderVM extends Model { }
+export class SliderVM extends MuralBase { }

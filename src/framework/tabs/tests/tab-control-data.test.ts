@@ -1,16 +1,16 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
-import { Model } from '../../../runtime/index.js';
+import { MuralBase } from '../../../runtime/index.js';
 import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { TabControl, TabItem } from '../tabs.js';
 import { DataTemplate } from '../../../basic/templates/data-template.js';
 import { TextBlock } from '../../../basic/text-block.js';
 
 // A minimal document-like data row.
-class Doc extends Model
+class Doc extends MuralBase
 {
-    public static readonly TitleKey = Model.RegisterProperty<string>(Doc, 'Title', '', undefined);
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(Doc, 'Title', '', undefined);
     public get Title(): string { return this.get_property_value(Doc.TitleKey); }
     public set Title(v: string) { this.set_property_value(Doc.TitleKey, v); }
 }

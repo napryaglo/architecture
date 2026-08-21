@@ -1,8 +1,8 @@
-import {
+﻿import {
     APPROXIMATE_TEXT_MEASURER,
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Size,
     Visual,
     type DrawingContext,
@@ -59,24 +59,24 @@ export class RichTextBlock extends Element implements BlockHost
         // Type-keyed default Style — `Style [TargetType=RichTextBlock]` in
         // basic.resources.mu binds Foreground / FontFamily to the theme so
         // a theme switch re-tints untemplated instances (same as TextBlock).
-        Model.OverrideMetadata(RichTextBlock, Element.DefaultStyleKeyKey, { default_value: RichTextBlock });
+        MuralBase.OverrideMetadata(RichTextBlock, Element.DefaultStyleKeyKey, { default_value: RichTextBlock });
     }
 
     // The document to display. The default slot for markup
     // (`RichTextBlock { FlowDocument {…} }`). Measure | Render so a swap
     // re-lays-out and repaints.
-    public static readonly DocumentKey = Model.RegisterProperty<FlowDocument | undefined>(
+    public static readonly DocumentKey = MuralBase.RegisterProperty<FlowDocument | undefined>(
         RichTextBlock, 'Document', undefined, MetaData.Measure | MetaData.Render);
 
     // Root character format — inherited so an ancestor sets it once and
     // every RichTextBlock in the subtree picks it up (WPF TextElement.*).
-    public static readonly FontFamilyKey   = Model.RegisterProperty<FontFamily>(RichTextBlock, 'FontFamily', new FontFamily(DEFAULT_FONT_FAMILY), MetaData.Measure | MetaData.Render | MetaData.Inherits);
-    public static readonly FontSizeKey     = Model.RegisterProperty<number>(    RichTextBlock, 'FontSize',   14,                MetaData.Measure | MetaData.Render | MetaData.Inherits);
-    public static readonly FontWeightKey   = Model.RegisterProperty<FontWeight>(RichTextBlock, 'FontWeight', FontWeight.Normal, MetaData.Measure | MetaData.Render | MetaData.Inherits);
-    public static readonly FontStyleKey    = Model.RegisterProperty<FontStyle>( RichTextBlock, 'FontStyle',  FontStyle.Normal,  MetaData.Measure | MetaData.Render | MetaData.Inherits);
-    public static readonly TextDecorationsKey = Model.RegisterProperty<TextDecorations>(RichTextBlock, 'TextDecorations', TextDecorations.None, MetaData.Render | MetaData.Inherits);
-    public static readonly ForegroundKey   = Model.RegisterProperty<Brush | undefined>(RichTextBlock, 'Foreground', undefined, MetaData.Render | MetaData.Inherits);
-    public static readonly LetterSpacingKey = Model.RegisterProperty<number>(   RichTextBlock, 'LetterSpacing', 0,              MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontFamilyKey   = MuralBase.RegisterProperty<FontFamily>(RichTextBlock, 'FontFamily', new FontFamily(DEFAULT_FONT_FAMILY), MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontSizeKey     = MuralBase.RegisterProperty<number>(    RichTextBlock, 'FontSize',   14,                MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontWeightKey   = MuralBase.RegisterProperty<FontWeight>(RichTextBlock, 'FontWeight', FontWeight.Normal, MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly FontStyleKey    = MuralBase.RegisterProperty<FontStyle>( RichTextBlock, 'FontStyle',  FontStyle.Normal,  MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    public static readonly TextDecorationsKey = MuralBase.RegisterProperty<TextDecorations>(RichTextBlock, 'TextDecorations', TextDecorations.None, MetaData.Render | MetaData.Inherits);
+    public static readonly ForegroundKey   = MuralBase.RegisterProperty<Brush | undefined>(RichTextBlock, 'Foreground', undefined, MetaData.Render | MetaData.Inherits);
+    public static readonly LetterSpacingKey = MuralBase.RegisterProperty<number>(   RichTextBlock, 'LetterSpacing', 0,              MetaData.Measure | MetaData.Render | MetaData.Inherits);
 
     // Last block layout — kept for Arrange / Render / hit-test.
     protected _layout: BlockLayoutResult | undefined;

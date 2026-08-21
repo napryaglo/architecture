@@ -1,4 +1,4 @@
-import type { Visual } from '../../visual-engine/visual.js';
+﻿import type { Visual } from '../../visual-engine/visual.js';
 import type { ICommand } from '../../runtime/command.js';
 import { RoutedCommand } from './routed-command.js';
 import { CommandManager } from './command-manager.js';
@@ -13,7 +13,7 @@ import { CommandManager } from './command-manager.js';
 //
 // Implementing controls (Button v1; MenuItem, ToggleButton, Hyperlink in
 // follow-up work) hold their own DPs for the three fields — each
-// control re-uses the Model.RegisterProperty machinery so a Button's
+// control re-uses the MuralBase.RegisterProperty machinery so a Button's
 // Command is structurally distinct from a MenuItem's Command but they
 // share the contract shape.
 //

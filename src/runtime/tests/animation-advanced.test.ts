@@ -1,4 +1,4 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -13,7 +13,7 @@ import {
     LinearThicknessKeyFrame,
     ManualClock,
     MetaData,
-    Model,
+    MuralBase,
     Storyboard,
     StoryboardState,
     Thickness,
@@ -26,9 +26,9 @@ import { resolveKey } from '../model-internals.js';
 class AnimTest extends Element
 {
     static {
-        Model.RegisterProperty(AnimTest, 'Number',    0,                MetaData.None);
-        Model.RegisterProperty(AnimTest, 'Color',     Color.Black,      MetaData.None);
-        Model.RegisterProperty(AnimTest, 'Thickness', new Thickness(0), MetaData.None);
+        MuralBase.RegisterProperty(AnimTest, 'Number',    0,                MetaData.None);
+        MuralBase.RegisterProperty(AnimTest, 'Color',     Color.Black,      MetaData.None);
+        MuralBase.RegisterProperty(AnimTest, 'Thickness', new Thickness(0), MetaData.None);
     }
     public get Number(): number { return this.get_property_value(resolveKey(this, undefined, 'Number')); }
     public set Number(v: number) { this.set_property_value(resolveKey(this, undefined, 'Number'), v); }

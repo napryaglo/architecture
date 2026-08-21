@@ -1,4 +1,4 @@
-import { MetaData, Model, Element } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element } from '../../runtime/index.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { Orientation } from '../../basic/panels/orientation.js';
 
@@ -19,7 +19,7 @@ import { Orientation } from '../../basic/panels/orientation.js';
 // rule that stretches across the parent's height.
 export class Divider extends TemplatedControl
 {
-    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
+    public static readonly OrientationKey = MuralBase.RegisterProperty<Orientation>(
         Divider, 'Orientation', Orientation.Horizontal,
         MetaData.Measure | MetaData.Render);
 
@@ -35,7 +35,7 @@ export class Divider extends TemplatedControl
     }
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             Divider, Element.DefaultStyleKeyKey,
             { default_value: Divider });
     }

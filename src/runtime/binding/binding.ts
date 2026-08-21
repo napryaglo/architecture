@@ -1,6 +1,6 @@
-import type { PropertyChangeCallback } from './effective-value.js';
+﻿import type { PropertyChangeCallback } from './effective-value.js';
 import { bindsTwoWayByDefault } from '../metadata.js';
-import { Model } from '../model.js';
+import { MuralBase } from '../model.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import { ObservableCollection } from '../observable-collection.js';
@@ -8,24 +8,24 @@ import { observe_array, subscribe_array } from '../observable-array.js';
 import type { PropertyDescriptor } from '../property-descriptor.js';
 import type { ValidationError, ValidationRule } from './validation.js';
 
-// Internal: one parsed segment of a property path. Tracks the Model the
+// Internal: one parsed segment of a property path. Tracks the MuralBase the
 // segment is currently bound to so listeners can be detached on rebind.
 // For attached-property syntax — `(Owner.Property)` — `ownerName` holds
-// the owner-class name (resolved to a class via Model.find_class at
+// the owner-class name (resolved to a class via MuralBase.find_class at
 // traversal time) and `propertyName` holds the property name. For
 // regular dotted segments, `ownerName` is undefined.
 //
 // When a segment is stepped into an ObservableCollection or a plain
 // Array (observable-array-wrapped), the collection subscription's
-// unsubscribe thunk lives on `collectionUnsub`. `Model` and
+// unsubscribe thunk lives on `collectionUnsub`. `MuralBase` and
 // `collectionUnsub` are mutually exclusive at any given time — each
-// segment is either attached to a Model property or to a collection
+// segment is either attached to a MuralBase property or to a collection
 // mutation channel.
 class PropertyPathSegment
 {
     private propertyName: string;
     private ownerName: string | undefined;
-    private object: Model | undefined;
+    private object: MuralBase | undefined;
     private collectionUnsub: (() => void) | undefined;
     // Cached at attach_and_step time so detach can RemovePropertyChangedListener
     // against the same key the listener was registered with — without
@@ -35,7 +35,7 @@ class PropertyPathSegment
     constructor(
         propertyName: string,
         ownerName: string | undefined,
-        object: Model | undefined,
+        object: MuralBase | undefined,
     )
     {
         this.propertyName = propertyName;
@@ -43,12 +43,12 @@ class PropertyPathSegment
         this.object = object;
     }
 
-    set Model(value: Model | undefined)
+    set MuralBase(value: MuralBase | undefined)
     {
         this.object = value;
     }
 
-    get Model(): Model | undefined
+    get MuralBase(): MuralBase | undefined
     {
         return this.object;
     }
@@ -85,8 +85,8 @@ class PropertyPathSegment
 }
 
 // Internal to the binding subsystem. Parses a WPF-style property path,
-// traverses a Model graph at construction (registering per-instance
-// listeners on each Model along the way), and propagates terminal-value
+// traverses a MuralBase graph at construction (registering per-instance
+// listeners on each MuralBase along the way), and propagates terminal-value
 // changes to a subscriber when a chain mutation alters what the path
 // resolves to.
 class PropertyPath
@@ -104,9 +104,9 @@ class PropertyPath
     // mutated" pulse. Consumers fetch the current resolved value
     // via the regular `get_value` path if they need it.
     private onCollectionPulseCallback: (() => void) | undefined;
-    model: Model | undefined;
+    model: MuralBase | undefined;
 
-    constructor(source: Model, path: string)
+    constructor(source: MuralBase, path: string)
     {
         this.path = path;
         this.segments = PropertyPath.parse(path);
@@ -142,10 +142,10 @@ class PropertyPath
     {
         for (const segment of this.segments)
         {
-            if (segment.Model !== undefined || segment.CollectionUnsub !== undefined)
+            if (segment.MuralBase !== undefined || segment.CollectionUnsub !== undefined)
             {
                 this.detach_segment(segment);
-                segment.Model = undefined;
+                segment.MuralBase = undefined;
             }
         }
         if (this.leafCollectionUnsub !== undefined)
@@ -203,28 +203,28 @@ class PropertyPath
     // Resolve `segment` against `model` to a typed `PropertyKey`. Handles
     // both implicit-owner segments (regular dotted path) and explicit-owner
     // `(Owner.Property)` attached-property syntax. Returns undefined when
-    // the explicit owner class is unknown to `Model.find_class` — silently
+    // the explicit owner class is unknown to `MuralBase.find_class` — silently
     // bails the binding rather than throwing.
     private static resolve_segment_key(
-        model: Model,
+        model: MuralBase,
         segment: PropertyPathSegment,
     ): PropertyKey<unknown> | undefined
     {
         const ownerName = segment.OwnerName;
         if (ownerName === undefined) return resolveKey(model, undefined, segment.PropertyName);
-        const owner = Model.find_class(ownerName);
+        const owner = MuralBase.find_class(ownerName);
         if (owner === undefined) return undefined;
         return resolveKey(model, owner, segment.PropertyName);
     }
 
     // Reads `segment` from `current` via the typed-key API when `current`
-    // is a Model. For ObservableCollection parents the segment name is
+    // is a MuralBase. For ObservableCollection parents the segment name is
     // parsed as a numeric index and routed through `.Get(idx)`. For
     // plain arrays + every other shape, falls back to bracket access.
     private static read_segment(current: any, segment: PropertyPathSegment): any
     {
         if (current === undefined || current === null) return undefined;
-        if (current instanceof Model)
+        if (current instanceof MuralBase)
         {
             const key = PropertyPath.resolve_segment_key(current, segment);
             if (key === undefined) return undefined;
@@ -240,10 +240,10 @@ class PropertyPath
     }
 
     // Writes value into `segment` on `parent`. Same dispatch rules as
-    // read_segment. Plain (non-Model) parents use bracket assignment.
+    // read_segment. Plain (non-MuralBase) parents use bracket assignment.
     private static write_segment(parent: any, segment: PropertyPathSegment, value: any): void
     {
-        if (parent instanceof Model)
+        if (parent instanceof MuralBase)
         {
             const key = PropertyPath.resolve_segment_key(parent, segment);
             if (key === undefined) return;
@@ -256,7 +256,7 @@ class PropertyPath
     }
 
     // Attaches the path's onChanged listener to `current` for `segment`,
-    // using the right Model overload. Sets segment.Model for later
+    // using the right MuralBase overload. Sets segment.MuralBase for later
     // detachment. Returns the next value along the chain.
     //
     // Collection branches:
@@ -273,22 +273,22 @@ class PropertyPath
     {
         if (current === undefined || current === null)
         {
-            segment.Model = undefined;
+            segment.MuralBase = undefined;
             segment.ResolvedKey = undefined;
             return undefined;
         }
-        if (current instanceof Model)
+        if (current instanceof MuralBase)
         {
             const key = PropertyPath.resolve_segment_key(current, segment);
             if (key === undefined) return undefined;
-            segment.Model = current;
+            segment.MuralBase = current;
             segment.ResolvedKey = key;
             current.AddPropertyChangedListener(key, this.onChangedBound);
             return current.get_property_value(key);
         }
         if (current instanceof ObservableCollection)
         {
-            segment.Model = undefined;
+            segment.MuralBase = undefined;
             const idx = Number(segment.PropertyName);
             if (!Number.isFinite(idx)) return undefined;
             segment.CollectionUnsub = current.Subscribe(() => this.OnCollectionChanged(segment));
@@ -296,19 +296,19 @@ class PropertyPath
         }
         if (Array.isArray(current))
         {
-            segment.Model = undefined;
+            segment.MuralBase = undefined;
             const idx = Number(segment.PropertyName);
             if (!Number.isFinite(idx)) return (current as any)[segment.PropertyName];
             const wrapped = observe_array(current);
             segment.CollectionUnsub = subscribe_array(wrapped, () => this.OnCollectionChanged(segment));
             return wrapped[idx];
         }
-        segment.Model = undefined;
+        segment.MuralBase = undefined;
         return current[segment.PropertyName];
     }
 
     // Detaches the path's onChanged listener for a previously-attached
-    // segment. Mirrors attach_and_step — handles Model property
+    // segment. Mirrors attach_and_step — handles MuralBase property
     // listeners and collection-mutation subscriptions.
     private detach_segment(segment: PropertyPathSegment): void
     {
@@ -318,8 +318,8 @@ class PropertyPath
             segment.CollectionUnsub = undefined;
             return;
         }
-        if (segment.Model === undefined || segment.ResolvedKey === undefined) return;
-        segment.Model.RemovePropertyChangedListener(segment.ResolvedKey, this.onChangedBound);
+        if (segment.MuralBase === undefined || segment.ResolvedKey === undefined) return;
+        segment.MuralBase.RemovePropertyChangedListener(segment.ResolvedKey, this.onChangedBound);
         segment.ResolvedKey = undefined;
     }
 
@@ -334,7 +334,7 @@ class PropertyPath
         if (segmentIdx === -1) return;
 
         // Walk to the collection (segments before the index) — these
-        // are still valid; their Model subscriptions haven't fired.
+        // are still valid; their MuralBase subscriptions haven't fired.
         let current: any = this.model;
         for (let j = 0; j < segmentIdx; j++)
         {
@@ -404,12 +404,12 @@ class PropertyPath
         }
     }
 
-    OnChanged(model: Model, property: string, _old_value: any, new_value: any): void
+    OnChanged(model: MuralBase, property: string, _old_value: any, new_value: any): void
     {
         for (let i = 0; i < this.segments.length; i++)
         {
             const seg_i = this.segments[i];
-            if (seg_i?.Model === model && seg_i?.PropertyName === property)
+            if (seg_i?.MuralBase === model && seg_i?.PropertyName === property)
             {
                 let current: any = new_value;
                 for (let j = i + 1; j < this.segments.length; j++)
@@ -455,7 +455,7 @@ class PropertyPath
     }
 
     // Assigns value to the final segment of the path, after resolving the
-    // parent object. For Model parents, the final write goes through
+    // parent object. For MuralBase parents, the final write goes through
     // set_property_value so it participates in EffectiveValue priority and
     // PropertyChanged notifications; everything else is a plain assignment.
     // Returns false when the path is empty or the parent cannot be reached.
@@ -486,7 +486,7 @@ class PropertyPath
         // read_segment's behavior). For plain Models / objects, write
         // through.
         const leaf = this.segments[this.segments.length - 1]!;
-        if (leaf.OwnerName !== undefined && Model.find_class(leaf.OwnerName) === undefined)
+        if (leaf.OwnerName !== undefined && MuralBase.find_class(leaf.OwnerName) === undefined)
         {
             return false;
         }
@@ -586,7 +586,7 @@ function compose_converters(inner: ValueConverter, outer: ValueConverter): Value
 // set_value (TwoWay / OneWayToSource only) writes back to the leaf via
 // the path, running the value through convertBack first if a converter
 // supplies one. Lifecycle is owned by whoever installs the Binding
-// (typically a Model property's EVD, which disposes the previous Binding
+// (typically a MuralBase property's EVD, which disposes the previous Binding
 // on replacement).
 export class Binding
 {
@@ -606,7 +606,7 @@ export class Binding
     private readonly validationRules: readonly ValidationRule[];
 
     constructor(
-        source: Model,
+        source: MuralBase,
         path: string,
         mode?: BindingMode,
         opts?: BindingOptions,

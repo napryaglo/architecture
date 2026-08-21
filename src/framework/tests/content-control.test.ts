@@ -1,6 +1,6 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Color, MetaData, Model, Rect, Size, Thickness, Element, Visual, type DrawingContext } from '../../runtime/index.js';
+import { Color, MetaData, MuralBase, Rect, Size, Thickness, Element, Visual, type DrawingContext } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { SolidColorBrush, FontWeight } from '../../visual-engine/index.js';
 import { Border, ContentPresenter, ControlTemplate, TemplateBinding, DataTemplate, TextBlock } from '../../basic/index.js';
@@ -27,7 +27,7 @@ class Leaf extends Element
 {
     static {
         // Inheritable property — proves walk_inherited rides logical, not visual.
-        Model.RegisterProperty(Leaf, 'Tint', 'default', MetaData.Inherits);
+        MuralBase.RegisterProperty(Leaf, 'Tint', 'default', MetaData.Inherits);
     }
 
     constructor(private box: Size = new Size(10, 10)) { super(); }
@@ -96,7 +96,7 @@ describe('ContentControl + ControlTemplate', () => {
         // logical parent — even though visually the Leaf is two levels
         // deep inside the template.
         const cc = new ContentControl();
-        Model.RegisterProperty(ContentControl, 'Tint', 'default', MetaData.Inherits);
+        MuralBase.RegisterProperty(ContentControl, 'Tint', 'default', MetaData.Inherits);
         cc.Template = borderTemplate();
 
         const leaf = new Leaf();
@@ -348,7 +348,7 @@ describe('ContentControl + ControlTemplate', () => {
     test('TemplateBinding wires a template-internal property to the templated control', () => {
         // A template whose Border.Background is bound to the templated
         // control's own (Background) — defined on ContentControl below.
-        Model.RegisterProperty(ContentControl, 'Background', undefined, MetaData.Render);
+        MuralBase.RegisterProperty(ContentControl, 'Background', undefined, MetaData.Render);
 
         const template = new ControlTemplate(tp => {
             const b = new Border();
@@ -457,7 +457,7 @@ describe('ContentControl + ControlTemplate', () => {
 // onto Element.FindInResourceChain.)
 // ----------------------------------------------------------------
 describe('implicit DataTemplate resolution walks the resource-scope chain', () => {
-    class FooVM extends Model {}
+    class FooVM extends MuralBase {}
     class DerivedFooVM extends FooVM {}
 
     const templateFor = (dataType: Function): DataTemplate =>
@@ -515,12 +515,12 @@ describe('implicit DataTemplate resolution walks the resource-scope chain', () =
 });
 
 // ----------------------------------------------------------------
-// When Content is a non-Visual Model and NO DataTemplate resolves for
+// When Content is a non-Visual MuralBase and NO DataTemplate resolves for
 // its type, ContentControl surfaces a loud red diagnostic instead of
 // rendering nothing (the silent-empty-presenter trap).
 // ----------------------------------------------------------------
 describe('unresolved DataTemplate surfaces a red diagnostic', () => {
-    class OrphanVM extends Model {}
+    class OrphanVM extends MuralBase {}
 
     test('renders a big red bold TextBlock naming the unresolved type', () => {
         const cc = new ContentControl();

@@ -1,7 +1,7 @@
-import {
+﻿import {
     ApplicationService,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     ServiceBase,
     ServiceKey,
@@ -16,18 +16,18 @@ import type { Geometry } from '../../../visual-engine/index.js';
 // One entry in the shell's root navigation layer, built from a module's
 // Capability. `Label` / `Icon` are DPs a rail-item template binds; `Capability`
 // is a stable back-reference (set once, never changes) — the source capability
-// this destination WRAPS. A Model so the item is bindable.
+// this destination WRAPS. A MuralBase so the item is bindable.
 //
 // The content shown while a destination is active is NOT held here: the
 // NavigationService resolves it from the selected item's `Capability.ServiceKey`
 // and exposes it as `ActiveService` (a shell's content host binds that). So a
 // destination is purely the rail item + a back-reference to its capability.
-export class NavigationDestination extends Model
+export class NavigationDestination extends MuralBase
 {
-    public static readonly LabelKey = Model.RegisterProperty<string>(
+    public static readonly LabelKey = MuralBase.RegisterProperty<string>(
         NavigationDestination, 'Label', '', MetaData.None);
 
-    public static readonly IconKey = Model.RegisterProperty<Geometry | undefined>(
+    public static readonly IconKey = MuralBase.RegisterProperty<Geometry | undefined>(
         NavigationDestination, 'Icon', undefined, MetaData.None);
 
     // The source capability. A plain readonly field (not a DP): identity that
@@ -59,11 +59,11 @@ export class NavigationService extends ServiceBase
 {
     public static readonly Key = new ServiceKey<NavigationService>('NavigationService');
 
-    public static readonly ItemsKey = Model.RegisterProperty<ObservableCollection<unknown>>(
+    public static readonly ItemsKey = MuralBase.RegisterProperty<ObservableCollection<unknown>>(
         NavigationService, 'Items',
         undefined as unknown as ObservableCollection<unknown>, MetaData.None);
         
-    public static readonly SelectedItemKey = Model.RegisterProperty<unknown>(
+    public static readonly SelectedItemKey = MuralBase.RegisterProperty<unknown>(
         NavigationService, 'SelectedItem', undefined, MetaData.None);
 
     // The active capability's content service — what a content host presents
@@ -73,7 +73,7 @@ export class NavigationService extends ServiceBase
     // [DataType=Service]`. `unknown` because the concrete service type varies
     // per capability. Derived (recomputed from SelectedItem via
     // syncActiveService), so a view binds it read-only.
-    public static readonly ActiveServiceKey = Model.RegisterProperty<unknown>(
+    public static readonly ActiveServiceKey = MuralBase.RegisterProperty<unknown>(
         NavigationService, 'ActiveService', undefined, MetaData.None);
 
     // Command actions pinned to the rail's Header (top) and Footer (bottom)
@@ -82,10 +82,10 @@ export class NavigationService extends ServiceBase
     // the framework rail template renders each as an IconButton. Apps add to
     // these to populate the rail's chrome slots WITHOUT overriding the rail
     // template. Empty by default — a shell shows only what's contributed.
-    public static readonly HeaderActionsKey = Model.RegisterProperty<ObservableCollection<RailAction>>(
+    public static readonly HeaderActionsKey = MuralBase.RegisterProperty<ObservableCollection<RailAction>>(
         NavigationService, 'HeaderActions',
         undefined as unknown as ObservableCollection<RailAction>, MetaData.None);
-    public static readonly FooterActionsKey = Model.RegisterProperty<ObservableCollection<RailAction>>(
+    public static readonly FooterActionsKey = MuralBase.RegisterProperty<ObservableCollection<RailAction>>(
         NavigationService, 'FooterActions',
         undefined as unknown as ObservableCollection<RailAction>, MetaData.None);
 

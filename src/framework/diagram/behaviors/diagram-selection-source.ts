@@ -1,5 +1,5 @@
-import {
-    Model,
+﻿import {
+    MuralBase,
     Rect,
     type PropertyKey,
 } from '../../../runtime/index.js';
@@ -29,7 +29,7 @@ import { DiagramSettings } from '../diagram-settings.js';
 // requires a `Members`-walk contract beyond plain IFigure.
 
 interface FigureSnapshot {
-    item:    Model;
+    item:    MuralBase;
     leftKey: PropertyKey<unknown>;
     topKey:  PropertyKey<unknown>;
     wKey:    PropertyKey<unknown>;
@@ -158,20 +158,20 @@ export class DiagramSelectionSource implements SelectionSource
         this._snapshot = undefined;
     }
 
-    // The Model whose Left/Top/Width/Height describe this item on the canvas:
+    // The MuralBase whose Left/Top/Width/Height describe this item on the canvas:
     // the item itself when it carries geometry DPs (geometric-shape Figures /
     // legacy item-authoritative rows), else its container Figure (content VMs
     // under container-owned-geometry). Undefined when neither is geometry-shaped.
-    private _geometryHost(item: unknown): Model | undefined
+    private _geometryHost(item: unknown): MuralBase | undefined
     {
-        if (this._isFigureShape(item)) return item as Model;
+        if (this._isFigureShape(item)) return item as MuralBase;
         const container = this._diagram.Generator.ContainerFromItem(item);
-        return this._isFigureShape(container) ? (container as unknown as Model) : undefined;
+        return this._isFigureShape(container) ? (container as unknown as MuralBase) : undefined;
     }
 
     private _isFigureShape(item: unknown): boolean
     {
-        if (!(item instanceof Model)) return false;
+        if (!(item instanceof MuralBase)) return false;
         const klass = item.constructor as Function;
         return findDescriptor(klass, 'Left')   !== undefined
             && findDescriptor(klass, 'Top')    !== undefined

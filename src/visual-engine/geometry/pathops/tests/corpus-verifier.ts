@@ -1,4 +1,4 @@
-// §19.8 regression corpus verifier.
+﻿// §19.8 regression corpus verifier.
 //
 // Skia's PathOpsOpTest / PathOpsSimplifyTest catalogue ~900 small
 // constructed tests, most adversarial: bug-derived (fuzz-extracted),
@@ -31,7 +31,7 @@
 // number ray cast over OpPath commands. It deliberately doesn't
 // reach into the Geometry layer — that import chain (PathGeometry
 // → geometry.ts → drawing/transform.ts → runtime/index.ts) trips a
-// TDZ cycle through `Validation extends Model`. The corpus tests
+// TDZ cycle through `Validation extends MuralBase`. The corpus tests
 // only care about Op() output correctness, not Geometry semantics,
 // so the standalone reader is the right boundary.
 //

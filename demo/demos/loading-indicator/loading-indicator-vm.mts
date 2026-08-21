@@ -1,14 +1,14 @@
-// LoadingIndicatorVM — backs the loading-indicator demo. Drives the
+﻿// LoadingIndicatorVM — backs the loading-indicator demo. Drives the
 // shared IsActive flag both indicators bind to, plus a Toggle command
 // (with a label that flips Pause ↔ Resume) so the viewer can watch the
 // M3 spinner start and stop on the shared animation clock.
-import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 
-export class LoadingIndicatorVM extends Model
+export class LoadingIndicatorVM extends MuralBase
 {
-    static IsActiveKey    = Model.RegisterProperty<boolean>(LoadingIndicatorVM, 'IsActive', true, MetaData.None);
-    static ToggleLabelKey = Model.RegisterProperty<string>(LoadingIndicatorVM, 'ToggleLabel', 'Pause', MetaData.None);
-    static ToggleKey      = Model.RegisterProperty<RelayCommand | null>(LoadingIndicatorVM, 'Toggle', null, MetaData.None);
+    static IsActiveKey    = MuralBase.RegisterProperty<boolean>(LoadingIndicatorVM, 'IsActive', true, MetaData.None);
+    static ToggleLabelKey = MuralBase.RegisterProperty<string>(LoadingIndicatorVM, 'ToggleLabel', 'Pause', MetaData.None);
+    static ToggleKey      = MuralBase.RegisterProperty<RelayCommand | null>(LoadingIndicatorVM, 'Toggle', null, MetaData.None);
 
     get IsActive():    boolean { return this.get_property_value(LoadingIndicatorVM.IsActiveKey); }
     set IsActive(v:    boolean) { this.set_property_value(LoadingIndicatorVM.IsActiveKey, v); }

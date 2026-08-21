@@ -1,4 +1,4 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     MetaData,
@@ -11,7 +11,7 @@ import {
     type ValueConverter,
     APPROXIMATE_TEXT_MEASURER,
     PropertyValueSource,
-    Model,
+    MuralBase,
     PropertyKey,
     Element,
     Visual,
@@ -40,7 +40,7 @@ import {
 import { resolveKey } from '../model-internals.js';
 
 // Thin convenience wrapper that forwards a class object to
-// Model.RegisterProperty. PropertyPath traverses Models via their property
+// MuralBase.RegisterProperty. PropertyPath traverses Models via their property
 // bags, so no prototype accessor is required.
 function register(
     klass: Function,
@@ -49,16 +49,16 @@ function register(
     meta: MetaData,
 ): void
 {
-    Model.RegisterProperty(klass, property, default_value, meta);
+    MuralBase.RegisterProperty(klass, property, default_value, meta);
 }
 
-// Builds a fresh scene with six Model classes (five for the chain plus a
-// ViewModel) and registers every property via Model.RegisterProperty. Each
+// Builds a fresh scene with six MuralBase classes (five for the chain plus a
+// ViewModel) and registers every property via MuralBase.RegisterProperty. Each
 // invocation declares brand-new class objects, so the WeakMap-backed
 // registry stays naturally isolated between tests.
 function buildScene()
 {
-    class Company extends Model
+    class Company extends MuralBase
     {
         static {
             this.RegisterProperty(this, 'name', '', MetaData.Render);
@@ -66,11 +66,11 @@ function buildScene()
         }
     }
 
-    class Department extends Model {}
-    class Manager extends Model {}
-    class Office extends Model {}
-    class Desk extends Model {}
-    class ViewModel extends Model {}
+    class Department extends MuralBase {}
+    class Manager extends MuralBase {}
+    class Office extends MuralBase {}
+    class Desk extends MuralBase {}
+    class ViewModel extends MuralBase {}
 
     register(Department, 'code',       '',   MetaData.Render);
     register(Department, 'manager',    null, MetaData.Render);
@@ -111,7 +111,7 @@ function buildScene()
 }
 
 describe('Binding — transitive paths across a graph of Models', () => {
-    test('ViewModel.label bound through a 5-Model chain resolves transitively', () => {
+    test('ViewModel.label bound through a 5-MuralBase chain resolves transitively', () => {
         const { company, ViewModel } = buildScene();
         const view = new ViewModel();
         view.set_property_value(
@@ -121,7 +121,7 @@ describe('Binding — transitive paths across a graph of Models', () => {
         assert.equal(view.get_property_value(resolveKey(view, undefined, 'label')), 'desk-1');
     });
 
-    test('severing an intermediate Model returns undefined on the next read', () => {
+    test('severing an intermediate MuralBase returns undefined on the next read', () => {
         const { company, manager, ViewModel } = buildScene();
         const view = new ViewModel();
         view.set_property_value(
@@ -132,7 +132,7 @@ describe('Binding — transitive paths across a graph of Models', () => {
         assert.equal(view.get_property_value(resolveKey(view, undefined, 'label')), undefined);
     });
 
-    test('mutating the leaf Model is observable via the ViewModel on the next read', () => {
+    test('mutating the leaf MuralBase is observable via the ViewModel on the next read', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
         view.set_property_value(
@@ -144,7 +144,7 @@ describe('Binding — transitive paths across a graph of Models', () => {
         assert.equal(view.get_property_value(resolveKey(view, undefined, 'label')), 'changed');
     });
 
-    test('replacing a mid-chain Model subtree retargets resolution through the new branch', () => {
+    test('replacing a mid-chain MuralBase subtree retargets resolution through the new branch', () => {
         const { company, department, Manager, Office, Desk, ViewModel } = buildScene();
         const view = new ViewModel();
         view.set_property_value(
@@ -164,7 +164,7 @@ describe('Binding — transitive paths across a graph of Models', () => {
         assert.equal(view.get_property_value(resolveKey(view, undefined, 'label')), 'desk-replaced');
     });
 
-    test('Binding.set_value (TwoWay) writes the leaf Model property through the chain', () => {
+    test('Binding.set_value (TwoWay) writes the leaf MuralBase property through the chain', () => {
         const { company, desk, ViewModel } = buildScene();
         const view = new ViewModel();
         const binding = new Binding(
@@ -333,7 +333,7 @@ describe('TwoWay Bindings across a graph of Models', () => {
         assert.equal(binding.get_value(), 'corner-renamed');
     });
 
-    test('writeback fires PropertyChanged on the leaf Model with old/new values', () => {
+    test('writeback fires PropertyChanged on the leaf MuralBase with old/new values', () => {
         const { company, desk } = buildScene();
         const binding = new Binding(
             company,
@@ -342,7 +342,7 @@ describe('TwoWay Bindings across a graph of Models', () => {
         );
 
         let fired = 0;
-        let captured: [Model, string, unknown, unknown] | null = null;
+        let captured: [MuralBase, string, unknown, unknown] | null = null;
         const cb: PropertyChangeCallback = (m, p, o, n) => {
             fired++;
             captured = [m, p, o, n];
@@ -419,7 +419,7 @@ describe('TwoWay Bindings across a graph of Models', () => {
         assert.equal(reader.get_value(), 'shared-renamed');
     });
 
-    test('writeback returns false when an intermediate Model is null and the leaf is untouched', () => {
+    test('writeback returns false when an intermediate MuralBase is null and the leaf is untouched', () => {
         const { company, desk, manager } = buildScene();
         const binding = new Binding(
             company,
@@ -432,7 +432,7 @@ describe('TwoWay Bindings across a graph of Models', () => {
         assert.equal(desk.get_property_value(resolveKey(desk, undefined, 'label')), 'desk-1');
     });
 
-    test('writeback to a mid-chain Model property replaces the subtree at that node', () => {
+    test('writeback to a mid-chain MuralBase property replaces the subtree at that node', () => {
         const { Manager, Office, Desk, company, ViewModel } = buildScene();
         const swap = new Binding(company, 'department.manager', BindingMode.TwoWay);
 
@@ -454,14 +454,14 @@ describe('TwoWay Bindings across a graph of Models', () => {
         assert.equal(view.get_property_value(resolveKey(view, undefined, 'label')), 'new-leaf');
     });
 
-    test('writeback through a 7-Model chain with array branching at two levels', () => {
-        class Org extends Model {}
-        class Region extends Model {}
-        class Branch extends Model {}
-        class Department extends Model {}
-        class Manager extends Model {}
-        class Office extends Model {}
-        class Desk extends Model {}
+    test('writeback through a 7-MuralBase chain with array branching at two levels', () => {
+        class Org extends MuralBase {}
+        class Region extends MuralBase {}
+        class Branch extends MuralBase {}
+        class Department extends MuralBase {}
+        class Manager extends MuralBase {}
+        class Office extends MuralBase {}
+        class Desk extends MuralBase {}
 
         register(Org,        'regions',    null, MetaData.Render);
         register(Region,     'branches',   null, MetaData.Render);
@@ -553,7 +553,7 @@ describe('Per-instance PropertyChanged listeners', () => {
         const { Desk } = buildScene();
         const desk = new Desk();
 
-        let captured: [Model, string, unknown, unknown] | null = null;
+        let captured: [MuralBase, string, unknown, unknown] | null = null;
         desk.AddPropertyChangedListener(resolveKey(desk, undefined, 'label'), (m, p, o, n) => { captured = [m, p, o, n]; });
 
         desk.set_property_value(resolveKey(desk, undefined, 'label'), 'first-set');
@@ -616,7 +616,7 @@ describe('Push-style binding notification on bound consumers', () => {
         assert.equal(captures[1]![1], 'swapped-leaf');
     });
 
-    test('severing an intermediate Model pushes undefined to the consumer', () => {
+    test('severing an intermediate MuralBase pushes undefined to the consumer', () => {
         const { company, manager, ViewModel } = buildScene();
         const view = new ViewModel();
         const captures: Array<[unknown, unknown]> = [];
@@ -735,13 +735,13 @@ describe('Push-style binding notification on bound consumers', () => {
 });
 
 // Peeks at per-instance listener count for diagnostic assertions. Lives
-// here as a test-side helper rather than a public Model API so production
+// here as a test-side helper rather than a public MuralBase API so production
 // code doesn't grow a "count my listeners" method just for tests.
-function listener_count(model: Model, property: string): number
+function listener_count(model: MuralBase, property: string): number
 {
     // Walks the model's class hierarchy to find the registering owner so
-    // we can compose the composite storage key the way Model itself does.
-    const bags = (Model as unknown as {
+    // we can compose the composite storage key the way MuralBase itself does.
+    const bags = (MuralBase as unknown as {
         property_bags: WeakMap<Function, Map<string, { RootOwner: Function }>>;
     }).property_bags;
     let cls: Function | null = model.constructor;
@@ -785,7 +785,7 @@ describe('Binding / PropertyPath disposal', () => {
             new Binding(company, 'department.manager.office.desk.label'),
         );
 
-        // Every Model in the chain has exactly one path listener installed.
+        // Every MuralBase in the chain has exactly one path listener installed.
         assert.equal(listener_count(company, 'department'), 1);
         assert.equal(listener_count(department, 'manager'), 1);
         assert.equal(listener_count(manager, 'office'), 1);
@@ -883,7 +883,7 @@ describe('Binding / PropertyPath disposal', () => {
         // replacement fires (oldResolved → local)
         assert.equal(fires, 2);
 
-        // Mutating any chain Model must not fire view's listener.
+        // Mutating any chain MuralBase must not fire view's listener.
         desk.set_property_value(resolveKey(desk, undefined, 'label'), 'after-dispose');
         assert.equal(fires, 2);
     });
@@ -1048,18 +1048,18 @@ describe('ClearValue and GetValueSource', () => {
 // fields while inheriting the rest (WPF-style merge).
 describe('Property inheritance and metadata override', () => {
     test('a subclass instance reads its base class default for an inherited property', () => {
-        class Furniture extends Model {}
+        class Furniture extends MuralBase {}
         class Desk extends Furniture {}
-        Model.RegisterProperty(Furniture, 'label', 'base-default', MetaData.Render);
+        MuralBase.RegisterProperty(Furniture, 'label', 'base-default', MetaData.Render);
 
         const desk = new Desk();
         assert.equal(desk.get_property_value(resolveKey(desk, undefined, 'label')), 'base-default');
     });
 
     test('a subclass instance can set an inherited property and read it back', () => {
-        class Furniture extends Model {}
+        class Furniture extends MuralBase {}
         class Desk extends Furniture {}
-        Model.RegisterProperty(Furniture, 'label', '', MetaData.Render);
+        MuralBase.RegisterProperty(Furniture, 'label', '', MetaData.Render);
 
         const desk = new Desk();
         desk.set_property_value(resolveKey(desk, undefined, 'label'), 'on-desk');
@@ -1068,9 +1068,9 @@ describe('Property inheritance and metadata override', () => {
     });
 
     test('a subclass listener fires only for the subclass instance, not for base instances', () => {
-        class Furniture extends Model {}
+        class Furniture extends MuralBase {}
         class Desk extends Furniture {}
-        Model.RegisterProperty(Furniture, 'label', '', MetaData.Render);
+        MuralBase.RegisterProperty(Furniture, 'label', '', MetaData.Render);
 
         const furniture = new Furniture();
         const desk = new Desk();
@@ -1085,23 +1085,23 @@ describe('Property inheritance and metadata override', () => {
     });
 
     test('OverrideMetadata changes the default for the subclass while leaving the base class alone', () => {
-        class Furniture extends Model {}
+        class Furniture extends MuralBase {}
         class Desk extends Furniture {}
-        const LabelKey = Model.RegisterProperty(Furniture, 'label', 'furniture-default', MetaData.Render);
-        Model.OverrideMetadata(Desk, LabelKey, { default_value: 'desk-default' });
+        const LabelKey = MuralBase.RegisterProperty(Furniture, 'label', 'furniture-default', MetaData.Render);
+        MuralBase.OverrideMetadata(Desk, LabelKey, { default_value: 'desk-default' });
 
         assert.equal(new Furniture().get_property_value(resolveKey(new Furniture(), undefined, 'label')), 'furniture-default');
         assert.equal(new Desk().get_property_value(resolveKey(new Desk(), undefined, 'label')), 'desk-default');
     });
 
     test('OverrideMetadata inherits unspecified fields from the parent descriptor', () => {
-        class Furniture extends Model {}
+        class Furniture extends MuralBase {}
         class Desk extends Furniture {}
         const clamp_to_10: CoerceValue = (_m, v) => Math.min(v as number, 10);
-        const HeightKey = Model.RegisterProperty(Furniture, 'height', 1, MetaData.Render, clamp_to_10);
+        const HeightKey = MuralBase.RegisterProperty(Furniture, 'height', 1, MetaData.Render, clamp_to_10);
 
         // Override only the default; coerce + meta_data must still apply.
-        Model.OverrideMetadata(Desk, HeightKey, { default_value: 5 });
+        MuralBase.OverrideMetadata(Desk, HeightKey, { default_value: 5 });
 
         const desk = new Desk();
         assert.equal(desk.get_property_value(resolveKey(desk, undefined, 'height')), 5);
@@ -1112,12 +1112,12 @@ describe('Property inheritance and metadata override', () => {
     });
 
     test('OverrideMetadata can replace just the coerce callback', () => {
-        class Furniture extends Model {}
+        class Furniture extends MuralBase {}
         class Desk extends Furniture {}
-        const HeightKey = Model.RegisterProperty(Furniture, 'height', 1, MetaData.Render);
+        const HeightKey = MuralBase.RegisterProperty(Furniture, 'height', 1, MetaData.Render);
 
         const clamp_to_5: CoerceValue = (_m, v) => Math.min(v as number, 5);
-        Model.OverrideMetadata(Desk, HeightKey, { coerce_value: clamp_to_5 });
+        MuralBase.OverrideMetadata(Desk, HeightKey, { coerce_value: clamp_to_5 });
 
         // Desk's height uses the inherited default (1) but the override's coerce.
         assert.equal(new Desk().get_property_value(resolveKey(new Desk(), undefined, 'height')), 1);
@@ -1132,27 +1132,27 @@ describe('Property inheritance and metadata override', () => {
     });
 
     test('OverrideMetadata throws when no ancestor has registered the property', () => {
-        class Furniture extends Model {}
+        class Furniture extends MuralBase {}
         class Desk extends Furniture {}
         // Register on a sibling class to obtain a typed key whose
         // descriptor name doesn't appear in Desk's ancestor chain.
-        class Stranger extends Model {}
-        const StrangerKey = Model.RegisterProperty(Stranger, 'unknown', 0, MetaData.None);
+        class Stranger extends MuralBase {}
+        const StrangerKey = MuralBase.RegisterProperty(Stranger, 'unknown', 0, MetaData.None);
         assert.throws(
-            () => Model.OverrideMetadata(Desk, StrangerKey, { default_value: 0 }),
+            () => MuralBase.OverrideMetadata(Desk, StrangerKey, { default_value: 0 }),
             /Cannot override metadata for property 'unknown'/,
         );
     });
 
     test('OverrideMetadata can be called repeatedly, chaining through previous overrides', () => {
-        class A extends Model {}
+        class A extends MuralBase {}
         class B extends A {}
         class C extends B {}
-        const XKey = Model.RegisterProperty(A, 'x', 1, MetaData.Render);
+        const XKey = MuralBase.RegisterProperty(A, 'x', 1, MetaData.Render);
         // B overrides default only.
-        Model.OverrideMetadata(B, XKey, { default_value: 2 });
+        MuralBase.OverrideMetadata(B, XKey, { default_value: 2 });
         // C overrides default only too; should NOT fall back to A because B is the nearer ancestor.
-        Model.OverrideMetadata(C, XKey, { default_value: 3 });
+        MuralBase.OverrideMetadata(C, XKey, { default_value: 3 });
 
         assert.equal(new A().get_property_value(resolveKey(new A(), undefined, 'x')), 1);
         assert.equal(new B().get_property_value(resolveKey(new B(), undefined, 'x')), 2);
@@ -1160,11 +1160,11 @@ describe('Property inheritance and metadata override', () => {
     });
 
     test('subclass binding works for an inherited property without re-registration', () => {
-        class Furniture extends Model {}
+        class Furniture extends MuralBase {}
         class Desk extends Furniture {}
-        class View extends Model {}
-        Model.RegisterProperty(Furniture, 'label', '', MetaData.Render);
-        Model.RegisterProperty(View, 'label', '', MetaData.Render);
+        class View extends MuralBase {}
+        MuralBase.RegisterProperty(Furniture, 'label', '', MetaData.Render);
+        MuralBase.RegisterProperty(View, 'label', '', MetaData.Render);
 
         const desk = new Desk();
         desk.set_property_value(resolveKey(desk, undefined, 'label'), 'on-desk');
@@ -1178,10 +1178,10 @@ describe('Property inheritance and metadata override', () => {
     });
 
     test('OverrideMetadata that adds a default fires the subclass default through subsequent get_property_value', () => {
-        class Furniture extends Model {}
+        class Furniture extends MuralBase {}
         class Desk extends Furniture {}
-        const LabelKey = Model.RegisterProperty(Furniture, 'label', 'furniture', MetaData.Render);
-        Model.OverrideMetadata(Desk, LabelKey, { default_value: 'desk' });
+        const LabelKey = MuralBase.RegisterProperty(Furniture, 'label', 'furniture', MetaData.Render);
+        MuralBase.OverrideMetadata(Desk, LabelKey, { default_value: 'desk' });
 
         const desk = new Desk();
         // No set — descriptor walk finds Desk's overridden default.
@@ -1231,17 +1231,17 @@ describe('MetaData flag enum', () => {
     });
 
     test('a property registered with combined flags preserves them on the descriptor', () => {
-        class Box extends Model {}
-        Model.RegisterProperty(
+        class Box extends MuralBase {}
+        MuralBase.RegisterProperty(
             Box,
             'width',
             0,
             MetaData.Measure | MetaData.Arrange,
         );
 
-        // Walk the registry the same way Model does internally to read the
+        // Walk the registry the same way MuralBase does internally to read the
         // descriptor's MetaData back; ensure both flags survived storage.
-        const proto = (Model as unknown as {
+        const proto = (MuralBase as unknown as {
             property_bags: WeakMap<Function, Map<string, { MetaData: MetaData }>>;
         }).property_bags;
         const descriptor = proto.get(Box)?.get('width');
@@ -1267,7 +1267,7 @@ describe('Visual invalidation routing', () => {
     }
 
     test('property with MetaData.Measure fires only InvalidateMeasure', () => {
-        Model.RegisterProperty(TestVisual, 'measure_only', 0, MetaData.Measure);
+        MuralBase.RegisterProperty(TestVisual, 'measure_only', 0, MetaData.Measure);
         const v = new TestVisual();
         v.set_property_value(resolveKey(v, undefined, 'measure_only'), 5);
         assert.equal(v.measure_fires, 1);
@@ -1276,7 +1276,7 @@ describe('Visual invalidation routing', () => {
     });
 
     test('property with MetaData.Render fires only InvalidateVisual', () => {
-        Model.RegisterProperty(TestVisual, 'render_only', 0, MetaData.Render);
+        MuralBase.RegisterProperty(TestVisual, 'render_only', 0, MetaData.Render);
         const v = new TestVisual();
         v.set_property_value(resolveKey(v, undefined, 'render_only'), 5);
         assert.equal(v.measure_fires, 0);
@@ -1285,7 +1285,7 @@ describe('Visual invalidation routing', () => {
     });
 
     test('property with combined Measure | Arrange | Render fires all three Invalidate methods', () => {
-        Model.RegisterProperty(
+        MuralBase.RegisterProperty(
             TestVisual,
             'all_flags',
             0,
@@ -1299,7 +1299,7 @@ describe('Visual invalidation routing', () => {
     });
 
     test('property with MetaData.None fires no Invalidate methods', () => {
-        Model.RegisterProperty(TestVisual, 'no_flags', 0, MetaData.None);
+        MuralBase.RegisterProperty(TestVisual, 'no_flags', 0, MetaData.None);
         const v = new TestVisual();
         v.set_property_value(resolveKey(v, undefined, 'no_flags'), 5);
         assert.equal(v.measure_fires, 0);
@@ -1315,8 +1315,8 @@ describe('Visual invalidation routing', () => {
         assert.equal(v.render_fires, 0);
     });
 
-    test('Visual still behaves as a Model: get/set roundtrip and listener fan-out work', () => {
-        Model.RegisterProperty(TestVisual, 'count', 7, MetaData.Render);
+    test('Visual still behaves as a MuralBase: get/set roundtrip and listener fan-out work', () => {
+        MuralBase.RegisterProperty(TestVisual, 'count', 7, MetaData.Render);
         const v = new TestVisual();
         let listener_fires = 0;
         v.AddPropertyChangedListener(resolveKey(v, undefined, 'count'), () => { listener_fires++; });
@@ -1330,7 +1330,7 @@ describe('Visual invalidation routing', () => {
     test('inherited properties are invalidated correctly via the metadata walk', () => {
         class BaseVisual extends TestVisual {}
         class DerivedVisual extends BaseVisual {}
-        Model.RegisterProperty(BaseVisual, 'thickness', 0, MetaData.Arrange);
+        MuralBase.RegisterProperty(BaseVisual, 'thickness', 0, MetaData.Arrange);
 
         const derived = new DerivedVisual();
         derived.set_property_value(resolveKey(derived, undefined, 'thickness'), 3);
@@ -1340,14 +1340,14 @@ describe('Visual invalidation routing', () => {
     });
 
     test('binding-driven update invalidates the consumer Visual', () => {
-        // The consumer Visual is bound to a source Model's leaf property.
+        // The consumer Visual is bound to a source MuralBase's leaf property.
         // Mutating the source pushes the new resolved value through the
         // Binding, which fires the consumer's EVD.OnPropertyChange — the
         // invalidation must fire even though set_property_value was never
         // called on the Visual.
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'label', '', MetaData.None);
-        Model.RegisterProperty(TestVisual, 'bound_label', '', MetaData.Render);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'label', '', MetaData.None);
+        MuralBase.RegisterProperty(TestVisual, 'bound_label', '', MetaData.Render);
 
         const source = new Source();
         source.set_property_value(resolveKey(source, undefined, 'label'), 'initial');
@@ -1362,7 +1362,7 @@ describe('Visual invalidation routing', () => {
     });
 
     test('ClearValue invalidates when the effective value differs from the default', () => {
-        Model.RegisterProperty(TestVisual, 'cleared_prop', 'default', MetaData.Render);
+        MuralBase.RegisterProperty(TestVisual, 'cleared_prop', 'default', MetaData.Render);
         const v = new TestVisual();
         v.set_property_value(resolveKey(v, undefined, 'cleared_prop'), 'set');
         assert.equal(v.render_fires, 1);
@@ -1374,7 +1374,7 @@ describe('Visual invalidation routing', () => {
     });
 
     test('ClearValue does NOT invalidate when the property was never set', () => {
-        Model.RegisterProperty(TestVisual, 'never_set', 0, MetaData.Render);
+        MuralBase.RegisterProperty(TestVisual, 'never_set', 0, MetaData.Render);
         const v = new TestVisual();
         // EVD created lazily when ClearValue is called, but value never
         // changed (default → default), so EVD.OnPropertyChange does not fire.
@@ -1383,13 +1383,13 @@ describe('Visual invalidation routing', () => {
     });
 
     test('per-instance listeners and Visual invalidation co-exist without polluting listener_count', () => {
-        Model.RegisterProperty(TestVisual, 'count', 0, MetaData.Render);
+        MuralBase.RegisterProperty(TestVisual, 'count', 0, MetaData.Render);
         const v = new TestVisual();
         let user_fires = 0;
         v.AddPropertyChangedListener(resolveKey(v, undefined, 'count'), () => { user_fires++; });
 
         // listener_count counts only user-facing listeners, not the
-        // internal callback the Model uses to route onPropertyChanged.
+        // internal callback the MuralBase uses to route onPropertyChanged.
         assert.equal(listener_count(v, 'count'), 1);
 
         v.set_property_value(resolveKey(v, undefined, 'count'), 5);
@@ -1644,7 +1644,7 @@ describe('Property value inheritance', () => {
 
     test('a child reads its parent local value through inheritance after Attach', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const parent = new Surface();
         parent.set_property_value(resolveKey(parent, undefined, 'fontSize'), 20);
@@ -1655,9 +1655,9 @@ describe('Property value inheritance', () => {
         assert.equal(child.GetValueSource(resolveKey(child, undefined, 'fontSize')), PropertyValueSource.InheritedValue);
     });
 
-    test('a detached Model with no parent falls back to descriptor default', () => {
+    test('a detached MuralBase with no parent falls back to descriptor default', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
         const orphan = new Surface();
         assert.equal(orphan.get_property_value(resolveKey(orphan, undefined, 'fontSize')), 10);
         assert.equal(orphan.GetValueSource(resolveKey(orphan, undefined, 'fontSize')), PropertyValueSource.Default);
@@ -1665,7 +1665,7 @@ describe('Property value inheritance', () => {
 
     test('a local override on the child shadows the inherited value', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const parent = new Surface();
         parent.set_property_value(resolveKey(parent, undefined, 'fontSize'), 20);
@@ -1683,7 +1683,7 @@ describe('Property value inheritance', () => {
 
     test('Detach clears the inherited cache; reattach picks up the new parent value', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const a = new Surface();
         a.set_property_value(resolveKey(a, undefined, 'fontSize'), 20);
@@ -1704,7 +1704,7 @@ describe('Property value inheritance', () => {
 
     test('ancestor mutation cascades down through a multi-level tree', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
         const mid = new Surface();
@@ -1720,7 +1720,7 @@ describe('Property value inheritance', () => {
 
     test('a local override boundary stops the cascade for the subtree beyond it', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
         const mid = new Surface();
@@ -1740,7 +1740,7 @@ describe('Property value inheritance', () => {
 
     test('a listener on the child fires when an ancestor changes the inherited value', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
         const child = new Surface();
@@ -1756,11 +1756,11 @@ describe('Property value inheritance', () => {
     });
 
     test('a binding on the ancestor exposes the resolved value, not the Binding instance, to descendants', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'value', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'value', 0, MetaData.None);
 
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const source = new Source();
         source.set_property_value(resolveKey(source, undefined, 'value'), 42);
@@ -1781,7 +1781,7 @@ describe('Property value inheritance', () => {
 
     test('ClearValue on an ancestor cascades descendants back to the default', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
         const child = new Surface();
@@ -1797,7 +1797,7 @@ describe('Property value inheritance', () => {
 
     test('a non-inheritable property does not propagate at all', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'plain', 'default', MetaData.None);
+        MuralBase.RegisterProperty(Surface, 'plain', 'default', MetaData.None);
 
         const root = new Surface();
         const child = new Surface();
@@ -1817,7 +1817,7 @@ describe('Property value inheritance', () => {
     // the higher source was installed.
     test('inherited cache stays fresh while a local override shadows it', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
         const child = new Surface();
@@ -1850,7 +1850,7 @@ describe('Property value inheritance', () => {
     // that was inherited before the ancestor cleared.
     test('inherited cache clears under shadow when ancestor stops providing a value', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
         const child = new Surface();
@@ -1878,7 +1878,7 @@ describe('Property value inheritance', () => {
     // the normal change-notification path.
     test('inherited cache refresh under shadow propagates correctly across multiple levels', () => {
         class Surface extends Panel {}
-        Model.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
+        MuralBase.RegisterProperty(Surface, 'fontSize', 10, MetaData.Inherits);
 
         const root = new Surface();
         const mid  = new Surface();
@@ -1905,7 +1905,7 @@ describe('Property value inheritance', () => {
 });
 
 // Pins backlog item 5.1: attached / cross-class property usage. Any
-// property registered on any class can be set on any Model instance
+// property registered on any class can be set on any MuralBase instance
 // via the explicit-owner overload — storage uses a composite key so
 // values from different owners don't collide. WPF-style attached
 // properties (Grid.Row="2") and WPF-style cross-class inheritance
@@ -1913,8 +1913,8 @@ describe('Property value inheritance', () => {
 // mechanism.
 describe('Cross-class / attached properties', () => {
     test('explicit-owner set/get works for a property not in target class hierarchy', () => {
-        class TextBlock extends Model {}
-        Model.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
+        class TextBlock extends MuralBase {}
+        MuralBase.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
 
         class Border extends Single {}
 
@@ -1924,8 +1924,8 @@ describe('Cross-class / attached properties', () => {
     });
 
     test('implicit-owner accessor throws for a property the target class does not know', () => {
-        class TextBlock extends Model {}
-        Model.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
+        class TextBlock extends MuralBase {}
+        MuralBase.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
         class Border extends Single {}
 
         const b = new Border();
@@ -1936,9 +1936,9 @@ describe('Cross-class / attached properties', () => {
     });
 
     test('explicit-owner accessor throws when the owner does not have the property', () => {
-        class TextBlock extends Model {}
+        class TextBlock extends MuralBase {}
         // fontSize not registered.
-        const b = new Model();
+        const b = new MuralBase();
         assert.throws(
             () => b.set_property_value(resolveKey(b, TextBlock, 'fontSize'), 14),
             /not found in owner 'TextBlock'/,
@@ -1946,8 +1946,8 @@ describe('Cross-class / attached properties', () => {
     });
 
     test('default value comes from the owner descriptor', () => {
-        class TextBlock extends Model {}
-        Model.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
+        class TextBlock extends MuralBase {}
+        MuralBase.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
         class Border extends Single {}
 
         const b = new Border();
@@ -1956,12 +1956,12 @@ describe('Cross-class / attached properties', () => {
     });
 
     test('two different owners can register a same-named property without collision', () => {
-        class Foo extends Model {}
-        class Bar extends Model {}
-        Model.RegisterProperty(Foo, 'value', 'foo-default', MetaData.None);
-        Model.RegisterProperty(Bar, 'value', 'bar-default', MetaData.None);
+        class Foo extends MuralBase {}
+        class Bar extends MuralBase {}
+        MuralBase.RegisterProperty(Foo, 'value', 'foo-default', MetaData.None);
+        MuralBase.RegisterProperty(Bar, 'value', 'bar-default', MetaData.None);
 
-        const target = new Model();
+        const target = new MuralBase();
         target.set_property_value(resolveKey(target, Foo, 'value'), 'set-via-foo');
         target.set_property_value(resolveKey(target, Bar, 'value'), 'set-via-bar');
 
@@ -1970,12 +1970,12 @@ describe('Cross-class / attached properties', () => {
     });
 
     test('listener registered with explicit-owner overload fires for that (owner, name) pair only', () => {
-        class Foo extends Model {}
-        class Bar extends Model {}
-        Model.RegisterProperty(Foo, 'value', 0, MetaData.None);
-        Model.RegisterProperty(Bar, 'value', 0, MetaData.None);
+        class Foo extends MuralBase {}
+        class Bar extends MuralBase {}
+        MuralBase.RegisterProperty(Foo, 'value', 0, MetaData.None);
+        MuralBase.RegisterProperty(Bar, 'value', 0, MetaData.None);
 
-        const target = new Model();
+        const target = new MuralBase();
         let fooFires = 0;
         let barFires = 0;
         target.AddPropertyChangedListener(resolveKey(target, Foo, 'value'), () => { fooFires++; });
@@ -1991,9 +1991,9 @@ describe('Cross-class / attached properties', () => {
     });
 
     test('ClearValue on an explicitly-owned property resets it to the owner default', () => {
-        class TextBlock extends Model {}
-        Model.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
-        const b = new Model();
+        class TextBlock extends MuralBase {}
+        MuralBase.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
+        const b = new MuralBase();
         b.set_property_value(resolveKey(b, TextBlock, 'fontSize'), 99);
         assert.equal(b.get_property_value(resolveKey(b, TextBlock, 'fontSize')), 99);
 
@@ -2009,8 +2009,8 @@ describe('Cross-class / attached properties', () => {
         // Both ancestor and descendant must be Elements — inheritance
         // machinery lives on Element (§ Phase B / B4.4); plain Visuals
         // own no _refresh_inherited override.
-        class TextBlock extends Model {}
-        Model.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.Inherits);
+        class TextBlock extends MuralBase {}
+        MuralBase.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.Inherits);
 
         class Border extends Panel {}
 
@@ -2024,16 +2024,16 @@ describe('Cross-class / attached properties', () => {
     });
 
     test('Binding on a cross-class property pushes the resolved value to the consumer', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'value', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'value', 0, MetaData.None);
 
-        class TextBlock extends Model {}
-        Model.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
+        class TextBlock extends MuralBase {}
+        MuralBase.RegisterProperty(TextBlock, 'fontSize', 12, MetaData.None);
 
         const source = new Source();
         source.set_property_value(resolveKey(source, undefined, 'value'), 18);
 
-        const consumer = new Model();
+        const consumer = new MuralBase();
         const captures: Array<[unknown, unknown]> = [];
         consumer.AddPropertyChangedListener(resolveKey(consumer, TextBlock, 'fontSize'), (_m, _p, o, n) => { captures.push([o, n]); }, );
 
@@ -2049,17 +2049,17 @@ describe('Cross-class / attached properties', () => {
 
     test('RegisterAttachedProperty is a synonym for RegisterProperty', () => {
         class Grid extends Panel {}
-        Model.RegisterAttachedProperty(Grid, 'Row', 0, MetaData.Arrange);
+        MuralBase.RegisterAttachedProperty(Grid, 'Row', 0, MetaData.Arrange);
 
-        const button = new Model();
+        const button = new MuralBase();
         button.set_property_value(resolveKey(button, Grid, 'Row'), 3);
         assert.equal(button.get_property_value(resolveKey(button, Grid, 'Row')), 3);
     });
 
     test('registering a property whose name contains "." is rejected', () => {
-        class Bad extends Model {}
+        class Bad extends MuralBase {}
         assert.throws(
-            () => Model.RegisterProperty(Bad, 'has.dot', 0, MetaData.None),
+            () => MuralBase.RegisterProperty(Bad, 'has.dot', 0, MetaData.None),
             /may not contain '\.'/,
         );
     });
@@ -2215,14 +2215,14 @@ describe('Target-side writeback through TwoWay / OneWayToSource bindings', () =>
 // Paths can now address attached / cross-class properties via the
 // WPF syntax `(OwnerType.Property)`. Mixes freely with regular dotted
 // segments and indexed accessors. Owner classes are resolved by name
-// through Model's class registry (populated automatically by
+// through MuralBase's class registry (populated automatically by
 // RegisterProperty).
 describe('PropertyPath attached-property syntax', () => {
-    test('a single-segment attached path resolves through Model.find_class', () => {
-        class Grid extends Model {}
-        Model.RegisterProperty(Grid, 'Row', 0, MetaData.None);
+    test('a single-segment attached path resolves through MuralBase.find_class', () => {
+        class Grid extends MuralBase {}
+        MuralBase.RegisterProperty(Grid, 'Row', 0, MetaData.None);
 
-        const button = new Model();
+        const button = new MuralBase();
         button.set_property_value(resolveKey(button, Grid, 'Row'), 5);
 
         const binding = new Binding(button, '(Grid.Row)');
@@ -2230,14 +2230,14 @@ describe('PropertyPath attached-property syntax', () => {
     });
 
     test('an attached segment mixes with regular dotted segments', () => {
-        class Grid extends Model {}
-        Model.RegisterProperty(Grid, 'Row', 0, MetaData.None);
+        class Grid extends MuralBase {}
+        MuralBase.RegisterProperty(Grid, 'Row', 0, MetaData.None);
 
         // Build a tiny graph: root.child has Grid.Row = 7 set on it.
-        class Box extends Model {}
-        Model.RegisterProperty(Box, 'child', null, MetaData.None);
+        class Box extends MuralBase {}
+        MuralBase.RegisterProperty(Box, 'child', null, MetaData.None);
 
-        const child = new Model();
+        const child = new MuralBase();
         child.set_property_value(resolveKey(child, Grid, 'Row'), 7);
         const root = new Box();
         root.set_property_value(resolveKey(root, undefined, 'child'), child);
@@ -2247,15 +2247,15 @@ describe('PropertyPath attached-property syntax', () => {
     });
 
     test('a regular segment mixes after an attached segment', () => {
-        class Holder extends Model {}
-        class Inner extends Model {}
-        Model.RegisterProperty(Holder, 'Bag', null, MetaData.None);
-        Model.RegisterProperty(Inner, 'value', 0, MetaData.None);
+        class Holder extends MuralBase {}
+        class Inner extends MuralBase {}
+        MuralBase.RegisterProperty(Holder, 'Bag', null, MetaData.None);
+        MuralBase.RegisterProperty(Inner, 'value', 0, MetaData.None);
 
         const inner = new Inner();
         inner.set_property_value(resolveKey(inner, undefined, 'value'), 99);
 
-        const target = new Model();
+        const target = new MuralBase();
         target.set_property_value(resolveKey(target, Holder, 'Bag'), inner);
 
         const binding = new Binding(target, '(Holder.Bag).value');
@@ -2263,13 +2263,13 @@ describe('PropertyPath attached-property syntax', () => {
     });
 
     test('push notification fires when the attached value changes on the source', () => {
-        class Grid extends Model {}
-        Model.RegisterProperty(Grid, 'Row', 0, MetaData.None);
+        class Grid extends MuralBase {}
+        MuralBase.RegisterProperty(Grid, 'Row', 0, MetaData.None);
 
-        class ViewModel extends Model {}
-        Model.RegisterProperty(ViewModel, 'echoed', 0, MetaData.None);
+        class ViewModel extends MuralBase {}
+        MuralBase.RegisterProperty(ViewModel, 'echoed', 0, MetaData.None);
 
-        const button = new Model();
+        const button = new MuralBase();
         button.set_property_value(resolveKey(button, Grid, 'Row'), 1);
 
         const view = new ViewModel();
@@ -2287,13 +2287,13 @@ describe('PropertyPath attached-property syntax', () => {
     });
 
     test('TwoWay writeback through an attached-segment path reaches the leaf', () => {
-        class Grid extends Model {}
-        Model.RegisterProperty(Grid, 'Row', 0, MetaData.None);
+        class Grid extends MuralBase {}
+        MuralBase.RegisterProperty(Grid, 'Row', 0, MetaData.None);
 
-        class ViewModel extends Model {}
-        Model.RegisterProperty(ViewModel, 'editable', 0, MetaData.None);
+        class ViewModel extends MuralBase {}
+        MuralBase.RegisterProperty(ViewModel, 'editable', 0, MetaData.None);
 
-        const button = new Model();
+        const button = new MuralBase();
 
         const view = new ViewModel();
         view.set_property_value(
@@ -2306,8 +2306,8 @@ describe('PropertyPath attached-property syntax', () => {
     });
 
     test('unknown owner class in the path resolves to undefined', () => {
-        class Anchor extends Model {}
-        Model.RegisterProperty(Anchor, 'value', 'anchored', MetaData.None);
+        class Anchor extends MuralBase {}
+        MuralBase.RegisterProperty(Anchor, 'value', 'anchored', MetaData.None);
         // Note: nothing named 'NotRegistered' has been registered.
 
         const target = new Anchor();
@@ -2317,16 +2317,16 @@ describe('PropertyPath attached-property syntax', () => {
 
     test('malformed attached segment (no dot inside parens) throws at parse time', () => {
         assert.throws(
-            () => new Binding(new Model(), '(NoDotHere)'),
+            () => new Binding(new MuralBase(), '(NoDotHere)'),
             /Invalid attached-property segment/,
         );
     });
 
     test('parse handles indexed access after an attached segment', () => {
-        class Holder extends Model {}
-        Model.RegisterProperty(Holder, 'List', null, MetaData.None);
+        class Holder extends MuralBase {}
+        MuralBase.RegisterProperty(Holder, 'List', null, MetaData.None);
 
-        const target = new Model();
+        const target = new MuralBase();
         target.set_property_value(resolveKey(target, Holder, 'List'), ['first', 'second', 'third']);
 
         const binding = new Binding(target, '(Holder.List)[1]');
@@ -2341,23 +2341,23 @@ describe('PropertyPath attached-property syntax', () => {
 // properties like ActualWidth / IsMouseOver.
 describe('Read-only properties', () => {
     test('RegisterReadOnlyProperty returns a key whose descriptor matches', () => {
-        class Widget extends Model {}
-        const key = Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const key = MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
         assert.ok(key instanceof PropertyKey);
         assert.equal(key.descriptor.Name, 'actualWidth');
         assert.equal(key.descriptor.IsReadOnly, true);
     });
 
     test('get_property_value works without the key', () => {
-        class Widget extends Model {}
-        Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 42, MetaData.None);
+        class Widget extends MuralBase {}
+        MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 42, MetaData.None);
         const w = new Widget();
         assert.equal(w.get_property_value(resolveKey(w, undefined, 'actualWidth')), 42);
     });
 
     test('public set_property_value (implicit owner) throws on a read-only property', () => {
-        class Widget extends Model {}
-        Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
         const w = new Widget();
         assert.throws(
             () => w.set_property_value(resolveKey(w, undefined, 'actualWidth'), 100),
@@ -2366,9 +2366,9 @@ describe('Read-only properties', () => {
     });
 
     test('public set_property_value (explicit owner) throws on a read-only property', () => {
-        class Widget extends Model {}
-        Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
-        const w = new Model();
+        class Widget extends MuralBase {}
+        MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
+        const w = new MuralBase();
         assert.throws(
             () => w.set_property_value(resolveKey(w, Widget, 'actualWidth'), 100),
             /is read-only/,
@@ -2376,8 +2376,8 @@ describe('Read-only properties', () => {
     });
 
     test('set_property_value_with_key bypasses the gate and writes the value', () => {
-        class Widget extends Model {}
-        const key = Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const key = MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
         const w = new Widget();
 
         w.set_property_value_with_key(key, 250);
@@ -2386,8 +2386,8 @@ describe('Read-only properties', () => {
     });
 
     test('public ClearValue throws on a read-only property; ClearValueWithKey works', () => {
-        class Widget extends Model {}
-        const key = Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const key = MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
         const w = new Widget();
         w.set_property_value_with_key(key, 250);
 
@@ -2398,8 +2398,8 @@ describe('Read-only properties', () => {
     });
 
     test('listeners fire when the property is written via the key', () => {
-        class Widget extends Model {}
-        const key = Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const key = MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
         const w = new Widget();
         const captures: Array<[unknown, unknown]> = [];
         w.AddPropertyChangedListener(resolveKey(w, undefined, 'actualWidth'), (_m, _p, o, n) => { captures.push([o, n]); }, );
@@ -2411,13 +2411,13 @@ describe('Read-only properties', () => {
     });
 
     test('a OneWay binding can READ a read-only property as its source', () => {
-        class Widget extends Model {}
-        const key = Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const key = MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
         const widget = new Widget();
         widget.set_property_value_with_key(key, 320);
 
-        class Consumer extends Model {}
-        Model.RegisterProperty(Consumer, 'echoed', 0, MetaData.None);
+        class Consumer extends MuralBase {}
+        MuralBase.RegisterProperty(Consumer, 'echoed', 0, MetaData.None);
         const consumer = new Consumer();
         consumer.set_property_value(resolveKey(consumer, undefined, 'echoed'), new Binding(widget, 'actualWidth'));
 
@@ -2429,11 +2429,11 @@ describe('Read-only properties', () => {
     });
 
     test('installing a Binding on a read-only consumer property is blocked via public API', () => {
-        class Widget extends Model {}
-        Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
 
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'value', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'value', 0, MetaData.None);
         const src = new Source();
 
         const w = new Widget();
@@ -2444,11 +2444,11 @@ describe('Read-only properties', () => {
     });
 
     test('the owner can install a Binding on a read-only property via the key', () => {
-        class Widget extends Model {}
-        const key = Model.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const key = MuralBase.RegisterReadOnlyProperty(Widget, 'actualWidth', 0, MetaData.None);
 
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'value', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'value', 0, MetaData.None);
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'value'), 555);
 
@@ -2459,10 +2459,10 @@ describe('Read-only properties', () => {
     });
 
     test('OverrideMetadata on a read-only property preserves the read-only flag', () => {
-        class Base extends Model {}
-        const ComputedKey = Model.RegisterReadOnlyProperty(Base, 'computed', 0, MetaData.None);
+        class Base extends MuralBase {}
+        const ComputedKey = MuralBase.RegisterReadOnlyProperty(Base, 'computed', 0, MetaData.None);
         class Derived extends Base {}
-        Model.OverrideMetadata(Derived, ComputedKey, { default_value: 99 });
+        MuralBase.OverrideMetadata(Derived, ComputedKey, { default_value: 99 });
 
         const d = new Derived();
         assert.equal(d.get_property_value(resolveKey(d, undefined, 'computed')), 99);  // override default applies
@@ -2473,10 +2473,10 @@ describe('Read-only properties', () => {
     });
 
     test('re-registering a property (read-only or not) under an existing name throws for read-only', () => {
-        class Widget extends Model {}
-        Model.RegisterReadOnlyProperty(Widget, 'computed', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        MuralBase.RegisterReadOnlyProperty(Widget, 'computed', 0, MetaData.None);
         assert.throws(
-            () => Model.RegisterReadOnlyProperty(Widget, 'computed', 0, MetaData.None),
+            () => MuralBase.RegisterReadOnlyProperty(Widget, 'computed', 0, MetaData.None),
             /already registered/,
         );
     });
@@ -2489,16 +2489,16 @@ describe('Read-only properties', () => {
 // (the binding layer is inherently string-keyed and stays that way).
 describe('Typed PropertyKey<T>', () => {
     test('RegisterProperty returns a PropertyKey whose descriptor matches', () => {
-        class Widget extends Model {}
-        const key = Model.RegisterProperty<number>(Widget, 'width', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const key = MuralBase.RegisterProperty<number>(Widget, 'width', 0, MetaData.None);
         assert.ok(key instanceof PropertyKey);
         assert.equal(key.descriptor.Name, 'width');
         assert.equal(key.descriptor.IsReadOnly, false);
     });
 
     test('get_property_value(key) and set_property_value(key, v) round-trip', () => {
-        class Widget extends Model {}
-        const widthKey = Model.RegisterProperty<number>(Widget, 'width', 10, MetaData.None);
+        class Widget extends MuralBase {}
+        const widthKey = MuralBase.RegisterProperty<number>(Widget, 'width', 10, MetaData.None);
         const w = new Widget();
 
         // Default read via key.
@@ -2513,9 +2513,9 @@ describe('Typed PropertyKey<T>', () => {
     });
 
     test('RegisterProperty is idempotent — re-registering returns a key for the existing descriptor', () => {
-        class Widget extends Model {}
-        const a = Model.RegisterProperty<number>(Widget, 'width', 10, MetaData.None);
-        const b = Model.RegisterProperty<number>(Widget, 'width', 999, MetaData.None);
+        class Widget extends MuralBase {}
+        const a = MuralBase.RegisterProperty<number>(Widget, 'width', 10, MetaData.None);
+        const b = MuralBase.RegisterProperty<number>(Widget, 'width', 999, MetaData.None);
         // Same underlying descriptor; default value of the first wins.
         assert.equal(a.descriptor, b.descriptor);
         const w = new Widget();
@@ -2523,8 +2523,8 @@ describe('Typed PropertyKey<T>', () => {
     });
 
     test('set_property_value(key, …) refuses to write a read-only DP', () => {
-        class Widget extends Model {}
-        const key = Model.RegisterReadOnlyProperty<number>(Widget, 'actualWidth', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const key = MuralBase.RegisterReadOnlyProperty<number>(Widget, 'actualWidth', 0, MetaData.None);
         const w = new Widget();
         assert.throws(
             () => w.set_property_value(key, 100),
@@ -2536,8 +2536,8 @@ describe('Typed PropertyKey<T>', () => {
     });
 
     test('listeners attached by key fire on writes that go through any surface', () => {
-        class Widget extends Model {}
-        const widthKey = Model.RegisterProperty<number>(Widget, 'width', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const widthKey = MuralBase.RegisterProperty<number>(Widget, 'width', 0, MetaData.None);
         const w = new Widget();
         const captures: Array<[unknown, unknown]> = [];
         w.AddPropertyChangedListener(widthKey, (_m, _p, o, n) => { captures.push([o, n]); });
@@ -2550,8 +2550,8 @@ describe('Typed PropertyKey<T>', () => {
     });
 
     test('RemovePropertyChangedListener(key, cb) removes the listener', () => {
-        class Widget extends Model {}
-        const widthKey = Model.RegisterProperty<number>(Widget, 'width', 0, MetaData.None);
+        class Widget extends MuralBase {}
+        const widthKey = MuralBase.RegisterProperty<number>(Widget, 'width', 0, MetaData.None);
         const w = new Widget();
         const captures: Array<[unknown, unknown]> = [];
         const cb: PropertyChangeCallback = (_m, _p, o, n) => { captures.push([o, n]); };
@@ -2569,8 +2569,8 @@ describe('Typed PropertyKey<T>', () => {
 // Pins backlog item 3.2: FallbackValue / TargetNullValue on Binding.
 describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
     test('fallbackValue substitutes when the path resolves to undefined', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'user', null, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'user', null, MetaData.None);
         const src = new Source();
 
         const b = new Binding(src, 'user.name', BindingMode.OneWay, {
@@ -2580,8 +2580,8 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
     });
 
     test('targetNullValue substitutes when the path resolves to null', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'middleName', null, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'middleName', null, MetaData.None);
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'middleName'), null);
 
@@ -2592,8 +2592,8 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
     });
 
     test('no fallback/targetNull configured: raw undefined/null passes through', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'user', null, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'user', null, MetaData.None);
         const src = new Source();
 
         const b = new Binding(src, 'user.name');
@@ -2601,8 +2601,8 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
     });
 
     test('both options coexist and route by raw value type', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'value', undefined, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'value', undefined, MetaData.None);
         const src = new Source();
 
         const b = new Binding(src, 'value', BindingMode.OneWay, {
@@ -2618,18 +2618,18 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
     });
 
     test('push notification: source goes undefined → consumer sees fallbackValue', () => {
-        class Holder extends Model {}
-        Model.RegisterProperty(Holder, 'inner', null, MetaData.None);
-        class Inner extends Model {}
-        Model.RegisterProperty(Inner, 'value', '', MetaData.None);
+        class Holder extends MuralBase {}
+        MuralBase.RegisterProperty(Holder, 'inner', null, MetaData.None);
+        class Inner extends MuralBase {}
+        MuralBase.RegisterProperty(Inner, 'value', '', MetaData.None);
 
         const inner = new Inner();
         inner.set_property_value(resolveKey(inner, undefined, 'value'), 'present');
         const holder = new Holder();
         holder.set_property_value(resolveKey(holder, undefined, 'inner'), inner);
 
-        class View extends Model {}
-        Model.RegisterProperty(View, 'echoed', '', MetaData.None);
+        class View extends MuralBase {}
+        MuralBase.RegisterProperty(View, 'echoed', '', MetaData.None);
         const view = new View();
         const captures: Array<[unknown, unknown]> = [];
         view.AddPropertyChangedListener(resolveKey(view, undefined, 'echoed'), (_m, _p, o, n) => { captures.push([o, n]); }, );
@@ -2650,8 +2650,8 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
     });
 
     test("explicit { fallbackValue: undefined } is honored as a fallback (uses 'in' check)", () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'user', null, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'user', null, MetaData.None);
         const src = new Source();
 
         const b = new Binding(src, 'user.name', BindingMode.OneWay, {
@@ -2667,8 +2667,8 @@ describe('Binding pipeline — FallbackValue / TargetNullValue', () => {
 // Pins backlog item 3.1: IValueConverter on Binding.
 describe('Binding pipeline — ValueConverter', () => {
     test('converter.convert transforms the resolved value before delivery', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'celsius', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'celsius', 0, MetaData.None);
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'celsius'), 100);
 
@@ -2680,8 +2680,8 @@ describe('Binding pipeline — ValueConverter', () => {
     });
 
     test('convertBack reverses on TwoWay writeback', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'celsius', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'celsius', 0, MetaData.None);
         const src = new Source();
 
         const c2f: ValueConverter = {
@@ -2695,8 +2695,8 @@ describe('Binding pipeline — ValueConverter', () => {
     });
 
     test('TwoWay writeback with no convertBack passes value through unchanged', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'value', '', MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'value', '', MetaData.None);
         const src = new Source();
 
         const oneWayConverter: ValueConverter = {
@@ -2710,8 +2710,8 @@ describe('Binding pipeline — ValueConverter', () => {
     });
 
     test('converter runs before fallback in the pipeline', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'value', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'value', 0, MetaData.None);
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'value'), 5);
 
@@ -2731,8 +2731,8 @@ describe('Binding pipeline — ValueConverter', () => {
     });
 
     test('push notification fires only when the post-pipeline value differs', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'value', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'value', 0, MetaData.None);
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'value'), 1);
 
@@ -2740,8 +2740,8 @@ describe('Binding pipeline — ValueConverter', () => {
         const conv: ValueConverter = {
             convert(v: any): any { return (v as number) > 0 ? 1 : 0; },
         };
-        class View extends Model {}
-        Model.RegisterProperty(View, 'echoed', 0, MetaData.None);
+        class View extends MuralBase {}
+        MuralBase.RegisterProperty(View, 'echoed', 0, MetaData.None);
         const view = new View();
         let fires = 0;
         view.AddPropertyChangedListener(resolveKey(view, undefined, 'echoed'), () => { fires++; });
@@ -2766,8 +2766,8 @@ describe('Binding pipeline — ValueConverter', () => {
 // Pins backlog item 3.3: StringFormat on Binding.
 describe('Binding pipeline — StringFormat', () => {
     test("simple '{0}' substitution", () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'count', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'count', 0, MetaData.None);
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'count'), 42);
 
@@ -2778,8 +2778,8 @@ describe('Binding pipeline — StringFormat', () => {
     });
 
     test('stringFormat composes after a user-supplied converter', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'name', '', MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'name', '', MetaData.None);
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'name'), 'world');
 
@@ -2794,8 +2794,8 @@ describe('Binding pipeline — StringFormat', () => {
     });
 
     test('format string without {0} placeholder yields itself literally', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'count', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'count', 0, MetaData.None);
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'count'), 42);
 
@@ -2806,8 +2806,8 @@ describe('Binding pipeline — StringFormat', () => {
     });
 
     test('stringFormat with fallback: fallback applies when raw is undefined', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'user', null, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'user', null, MetaData.None);
         const src = new Source();
         // user is null → user.name resolves to undefined.
 
@@ -2826,8 +2826,8 @@ describe('Binding pipeline — StringFormat', () => {
     });
 
     test('stringFormat one-way: TwoWay writeback bypasses format and goes raw to source', () => {
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'count', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'count', 0, MetaData.None);
         const src = new Source();
 
         const b = new Binding(src, 'count', BindingMode.TwoWay, {
@@ -2849,10 +2849,10 @@ describe('Binding pipeline — StringFormat', () => {
 // are preserved.
 describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
     test('an unset mode flips to TwoWay when the target declares BindsTwoWayByDefault', () => {
-        class Source extends Model {}
-        class Target extends Model {}
-        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
-        Model.RegisterProperty(Target, 'x', 0, MetaData.BindsTwoWayByDefault);
+        class Source extends MuralBase {}
+        class Target extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'v', 0, MetaData.None);
+        MuralBase.RegisterProperty(Target, 'x', 0, MetaData.BindsTwoWayByDefault);
 
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'v'), 7);
@@ -2872,10 +2872,10 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
     });
 
     test('an unset mode stays OneWay when the target does NOT declare BindsTwoWayByDefault', () => {
-        class Source extends Model {}
-        class Target extends Model {}
-        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
-        Model.RegisterProperty(Target, 'x', 0, MetaData.None);
+        class Source extends MuralBase {}
+        class Target extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'v', 0, MetaData.None);
+        MuralBase.RegisterProperty(Target, 'x', 0, MetaData.None);
 
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'v'), 7);
@@ -2893,10 +2893,10 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
     });
 
     test('an explicit OneWay overrides BindsTwoWayByDefault — explicit mode always wins', () => {
-        class Source extends Model {}
-        class Target extends Model {}
-        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
-        Model.RegisterProperty(Target, 'x', 0, MetaData.BindsTwoWayByDefault);
+        class Source extends MuralBase {}
+        class Target extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'v', 0, MetaData.None);
+        MuralBase.RegisterProperty(Target, 'x', 0, MetaData.BindsTwoWayByDefault);
 
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'v'), 7);
@@ -2911,10 +2911,10 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
     });
 
     test('an explicit TwoWay is preserved when the target does NOT declare BindsTwoWayByDefault', () => {
-        class Source extends Model {}
-        class Target extends Model {}
-        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
-        Model.RegisterProperty(Target, 'x', 0, MetaData.None);
+        class Source extends MuralBase {}
+        class Target extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'v', 0, MetaData.None);
+        MuralBase.RegisterProperty(Target, 'x', 0, MetaData.None);
 
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'v'), 7);
@@ -2932,8 +2932,8 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
         // The Binding constructor doesn't know its eventual target, so
         // the inferred-default cannot apply at construction time. It
         // must remain the constructor's fallback (OneWay) until install.
-        class Source extends Model {}
-        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
+        class Source extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'v', 0, MetaData.None);
         const src = new Source();
 
         const b = new Binding(src, 'v');
@@ -2943,10 +2943,10 @@ describe('Binding default-mode inference (BindsTwoWayByDefault)', () => {
     test('BindsTwoWayByDefault composes with other MetaData flags', () => {
         // Pin that the new flag occupies its own bit and doesn't collide
         // with the existing Measure / Render / Inherits / Arrange ones.
-        class Source extends Model {}
-        class Target extends Model {}
-        Model.RegisterProperty(Source, 'v', 0, MetaData.None);
-        Model.RegisterProperty(
+        class Source extends MuralBase {}
+        class Target extends MuralBase {}
+        MuralBase.RegisterProperty(Source, 'v', 0, MetaData.None);
+        MuralBase.RegisterProperty(
             Target,
             'x',
             0,
@@ -3112,7 +3112,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
         class Renderer extends Element
         {
             static {
-                Model.RegisterProperty(Renderer, 'flag', false, MetaData.Render);
+                MuralBase.RegisterProperty(Renderer, 'flag', false, MetaData.Render);
             }
         }
         const host = new TestHost();
@@ -3129,7 +3129,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
         class Renderer extends Element
         {
             static {
-                Model.RegisterProperty(Renderer, 'flag', false, MetaData.Render);
+                MuralBase.RegisterProperty(Renderer, 'flag', false, MetaData.Render);
             }
         }
         const v = new Renderer();
@@ -3141,7 +3141,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
         class Leaf extends Element
         {
             static {
-                Model.RegisterProperty(Leaf, 'flag', false, MetaData.Render);
+                MuralBase.RegisterProperty(Leaf, 'flag', false, MetaData.Render);
             }
         }
 
@@ -3161,7 +3161,7 @@ describe('VisualHost back-pointer (target) on Visual', () => {
         class Box extends Element
         {
             static {
-                Model.RegisterProperty(Box, 'size', 0, MetaData.Measure | MetaData.Arrange);
+                MuralBase.RegisterProperty(Box, 'size', 0, MetaData.Measure | MetaData.Arrange);
             }
         }
         const host = new TestHost();
@@ -3385,7 +3385,7 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
         class Sized extends LaidOutVisual
         {
             static {
-                Model.RegisterProperty(Sized, 'shape', 0, MetaData.Measure);
+                MuralBase.RegisterProperty(Sized, 'shape', 0, MetaData.Measure);
             }
         }
         const v = new Sized();
@@ -3403,7 +3403,7 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
         class Painted extends LaidOutVisual
         {
             static {
-                Model.RegisterProperty(Painted, 'color', 'red', MetaData.Render);
+                MuralBase.RegisterProperty(Painted, 'color', 'red', MetaData.Render);
             }
         }
         const v = new Painted();
@@ -3826,28 +3826,28 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
     });
 });
 
-describe('Model.EnumerateProperties — DP surface introspection', () => {
+describe('MuralBase.EnumerateProperties — DP surface introspection', () => {
     test('returns descriptors registered on the class itself', () => {
-        class Base extends Model {
+        class Base extends MuralBase {
             static {
-                Model.RegisterProperty(Base, 'Alpha', 0, MetaData.None);
-                Model.RegisterProperty(Base, 'Beta',  '',  MetaData.None);
+                MuralBase.RegisterProperty(Base, 'Alpha', 0, MetaData.None);
+                MuralBase.RegisterProperty(Base, 'Beta',  '',  MetaData.None);
             }
         }
-        const props = Model.EnumerateProperties(Base);
+        const props = MuralBase.EnumerateProperties(Base);
         const names = props.map(p => p.Name).sort();
         assert.deepEqual(names, ['Alpha', 'Beta']);
         for (const p of props) assert.equal(p.RootOwner, Base);
     });
 
     test('walks the prototype chain and surfaces ancestor DPs', () => {
-        class Parent extends Model {
-            static { Model.RegisterProperty(Parent, 'ParentProp', 0, MetaData.None); }
+        class Parent extends MuralBase {
+            static { MuralBase.RegisterProperty(Parent, 'ParentProp', 0, MetaData.None); }
         }
         class Child extends Parent {
-            static { Model.RegisterProperty(Child, 'ChildProp', 0, MetaData.None); }
+            static { MuralBase.RegisterProperty(Child, 'ChildProp', 0, MetaData.None); }
         }
-        const props = Model.EnumerateProperties(Child);
+        const props = MuralBase.EnumerateProperties(Child);
         const names = props.map(p => p.Name).sort();
         assert.deepEqual(names, ['ChildProp', 'ParentProp']);
         // RootOwner reflects each property's registering class so a
@@ -3860,22 +3860,22 @@ describe('Model.EnumerateProperties — DP surface introspection', () => {
     });
 
     test('classes with no registered DPs return an empty list', () => {
-        class Empty extends Model {}
-        assert.deepEqual(Model.EnumerateProperties(Empty), []);
+        class Empty extends MuralBase {}
+        assert.deepEqual(MuralBase.EnumerateProperties(Empty), []);
     });
 
-    test('integrates with Model.find_class for name-keyed enumeration', () => {
+    test('integrates with MuralBase.find_class for name-keyed enumeration', () => {
         // The intended LSP flow: user types `[TargetType=Foo]`, the
         // analyzer captures 'Foo', and the completion provider hands
         // the string to `find_class` + `EnumerateProperties`. This
         // test pins the round-trip on a locally-declared class so it
         // doesn't depend on Controls being loaded.
-        class Foo extends Model {
-            static { Model.RegisterProperty(Foo, 'Gamma', 0, MetaData.None); }
+        class Foo extends MuralBase {
+            static { MuralBase.RegisterProperty(Foo, 'Gamma', 0, MetaData.None); }
         }
-        const resolved = Model.find_class('Foo');
+        const resolved = MuralBase.find_class('Foo');
         assert.equal(resolved, Foo);
-        const props = Model.EnumerateProperties(resolved!);
+        const props = MuralBase.EnumerateProperties(resolved!);
         assert.equal(props.length, 1);
         assert.equal(props[0]!.Name, 'Gamma');
     });
@@ -3889,8 +3889,8 @@ describe('Coerce on every effective-value recomputation', () => {
     const clamp_to_10: CoerceValue = (_m, v) => Math.min(v as number, 10);
 
     test('subsequent sets are coerced (not just the first)', () => {
-        class Slider extends Model {
-            static { Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
+        class Slider extends MuralBase {
+            static { MuralBase.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
         }
         const s = new Slider();
         s.set_property_value(resolveKey(s, undefined, 'Value'), 100);
@@ -3910,10 +3910,10 @@ describe('Coerce on every effective-value recomputation', () => {
         // though the user never re-set Value.
         const clamp_to_ceiling: CoerceValue = (model, v) =>
             Math.min(v as number, model.get_property_value(resolveKey(model, undefined, 'Ceiling')) as number);
-        class Range extends Model {
+        class Range extends MuralBase {
             static {
-                Model.RegisterProperty(Range, 'Ceiling', 100, MetaData.None);
-                Model.RegisterProperty(Range, 'Value',   0,   MetaData.None, clamp_to_ceiling);
+                MuralBase.RegisterProperty(Range, 'Ceiling', 100, MetaData.None);
+                MuralBase.RegisterProperty(Range, 'Value',   0,   MetaData.None, clamp_to_ceiling);
             }
         }
         const r = new Range();
@@ -3930,8 +3930,8 @@ describe('Coerce on every effective-value recomputation', () => {
     });
 
     test('GetValueSource returns CoercedValue when coerce changed the base value', () => {
-        class Slider extends Model {
-            static { Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
+        class Slider extends MuralBase {
+            static { MuralBase.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
         }
         const s = new Slider();
         s.set_property_value(resolveKey(s, undefined, 'Value'), 100);  // clamped to 10
@@ -3939,8 +3939,8 @@ describe('Coerce on every effective-value recomputation', () => {
     });
 
     test('GetValueSource returns the base source when coerce left the value unchanged', () => {
-        class Slider extends Model {
-            static { Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
+        class Slider extends MuralBase {
+            static { MuralBase.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
         }
         const s = new Slider();
         s.set_property_value(resolveKey(s, undefined, 'Value'), 5);  // within range, no clamp
@@ -3951,16 +3951,16 @@ describe('Coerce on every effective-value recomputation', () => {
         // Default 100 with a clamp-to-10 callback: get returns 10, not 100.
         // EVD is never created for an unset property — the default-fallback
         // path still has to honor coerce.
-        class Capped extends Model {
-            static { Model.RegisterProperty(Capped, 'Value', 100, MetaData.None, clamp_to_10); }
+        class Capped extends MuralBase {
+            static { MuralBase.RegisterProperty(Capped, 'Value', 100, MetaData.None, clamp_to_10); }
         }
         const c = new Capped();
         assert.equal(c.get_property_value(resolveKey(c, undefined, 'Value')), 10);
     });
 
     test('PropertyChanged listeners see post-coerce new values', () => {
-        class Slider extends Model {
-            static { Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
+        class Slider extends MuralBase {
+            static { MuralBase.RegisterProperty(Slider, 'Value', 0, MetaData.None, clamp_to_10); }
         }
         const s = new Slider();
         const captures: Array<[unknown, unknown]> = [];
@@ -3973,11 +3973,11 @@ describe('Coerce on every effective-value recomputation', () => {
     });
 
     test('binding push notifications carry post-coerce values', () => {
-        class Source extends Model {
-            static { Model.RegisterProperty(Source, 'Raw', 0, MetaData.None); }
+        class Source extends MuralBase {
+            static { MuralBase.RegisterProperty(Source, 'Raw', 0, MetaData.None); }
         }
-        class Sink extends Model {
-            static { Model.RegisterProperty(Sink, 'Value', 0, MetaData.None, clamp_to_10); }
+        class Sink extends MuralBase {
+            static { MuralBase.RegisterProperty(Sink, 'Value', 0, MetaData.None, clamp_to_10); }
         }
         const src = new Source();
         src.set_property_value(resolveKey(src, undefined, 'Raw'), 5);
@@ -4001,8 +4001,8 @@ describe('Coerce on every effective-value recomputation', () => {
     });
 
     test('ClearValue with a coerce callback falls back to the coerced default', () => {
-        class Capped extends Model {
-            static { Model.RegisterProperty(Capped, 'Value', 100, MetaData.None, clamp_to_10); }
+        class Capped extends MuralBase {
+            static { MuralBase.RegisterProperty(Capped, 'Value', 100, MetaData.None, clamp_to_10); }
         }
         const c = new Capped();
         c.set_property_value(resolveKey(c, undefined, 'Value'), 5);
@@ -4028,19 +4028,19 @@ describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
     // isolated from the existing plain-array path tests.
     function ocScene()
     {
-        class Department extends Model {}
-        class Manager extends Model {}
-        class Office extends Model {}
-        class Desk extends Model {}
-        class ViewModel extends Model {}
-        Model.RegisterProperty(Department, 'managers', null, MetaData.None);
-        Model.RegisterProperty(Manager,    'office',   null, MetaData.None);
-        Model.RegisterProperty(Office,     'desk',     null, MetaData.None);
-        Model.RegisterProperty(Desk,       'label',    '',   MetaData.None);
-        Model.RegisterProperty(ViewModel,  'label',    '',   MetaData.None);
-        Model.RegisterProperty(ViewModel,  'managers', null, MetaData.None);
+        class Department extends MuralBase {}
+        class Manager extends MuralBase {}
+        class Office extends MuralBase {}
+        class Desk extends MuralBase {}
+        class ViewModel extends MuralBase {}
+        MuralBase.RegisterProperty(Department, 'managers', null, MetaData.None);
+        MuralBase.RegisterProperty(Manager,    'office',   null, MetaData.None);
+        MuralBase.RegisterProperty(Office,     'desk',     null, MetaData.None);
+        MuralBase.RegisterProperty(Desk,       'label',    '',   MetaData.None);
+        MuralBase.RegisterProperty(ViewModel,  'label',    '',   MetaData.None);
+        MuralBase.RegisterProperty(ViewModel,  'managers', null, MetaData.None);
 
-        function makeManager(label: string): Model
+        function makeManager(label: string): MuralBase
         {
             const desk = new Desk();
             desk.set_property_value(resolveKey(desk, undefined, 'label'), label);
@@ -4055,7 +4055,7 @@ describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
 
     test('ObservableCollection: SetAt at the bound index pushes the new leaf value', () => {
         const { Department, ViewModel, makeManager } = ocScene();
-        const collection = new ObservableCollection<Model>([
+        const collection = new ObservableCollection<MuralBase>([
             makeManager('mgr-0'), makeManager('mgr-1'), makeManager('mgr-2'),
         ]);
         const dept = new Department();
@@ -4071,7 +4071,7 @@ describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
 
     test('ObservableCollection: Insert before the bound index shifts the resolved value', () => {
         const { Department, ViewModel, makeManager } = ocScene();
-        const collection = new ObservableCollection<Model>([
+        const collection = new ObservableCollection<MuralBase>([
             makeManager('mgr-0'), makeManager('mgr-1'), makeManager('mgr-2'),
         ]);
         const dept = new Department();
@@ -4089,7 +4089,7 @@ describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
 
     test('ObservableCollection: Insert after the bound index does not change the resolved value', () => {
         const { Department, ViewModel, makeManager } = ocScene();
-        const collection = new ObservableCollection<Model>([
+        const collection = new ObservableCollection<MuralBase>([
             makeManager('mgr-0'), makeManager('mgr-1'), makeManager('mgr-2'),
         ]);
         const dept = new Department();
@@ -4107,7 +4107,7 @@ describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
 
     test('ObservableCollection: RemoveAt before the bound index shifts the resolved value', () => {
         const { Department, ViewModel, makeManager } = ocScene();
-        const collection = new ObservableCollection<Model>([
+        const collection = new ObservableCollection<MuralBase>([
             makeManager('mgr-0'), makeManager('mgr-1'), makeManager('mgr-2'),
         ]);
         const dept = new Department();
@@ -4124,7 +4124,7 @@ describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
 
     test('ObservableCollection: Clear resolves the binding to undefined', () => {
         const { Department, ViewModel, makeManager } = ocScene();
-        const collection = new ObservableCollection<Model>([
+        const collection = new ObservableCollection<MuralBase>([
             makeManager('mgr-0'), makeManager('mgr-1'),
         ]);
         const dept = new Department();
@@ -4197,8 +4197,8 @@ describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
 
     test('Replacing the source collection drops the old subscription and subscribes to the new one', () => {
         const { Department, ViewModel, makeManager } = ocScene();
-        const collA = new ObservableCollection<Model>([makeManager('a-0'), makeManager('a-1')]);
-        const collB = new ObservableCollection<Model>([makeManager('b-0'), makeManager('b-1'), makeManager('b-2')]);
+        const collA = new ObservableCollection<MuralBase>([makeManager('a-0'), makeManager('a-1')]);
+        const collB = new ObservableCollection<MuralBase>([makeManager('b-0'), makeManager('b-1'), makeManager('b-2')]);
         const dept = new Department();
         dept.set_property_value(resolveKey(dept, undefined, 'managers'), collA);
 
@@ -4223,7 +4223,7 @@ describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
 
     test('Binding.dispose tears down collection subscriptions', () => {
         const { Department, makeManager } = ocScene();
-        const collection = new ObservableCollection<Model>([makeManager('mgr-0'), makeManager('mgr-1')]);
+        const collection = new ObservableCollection<MuralBase>([makeManager('mgr-0'), makeManager('mgr-1')]);
         const dept = new Department();
         dept.set_property_value(resolveKey(dept, undefined, 'managers'), collection);
 
@@ -4243,7 +4243,7 @@ describe('Binding — INotifyCollectionChanged through PropertyPath', () => {
 
 // Pins backlog 3.5: Binding.validationRules run on every read and on
 // TwoWay writeback. Failures surface via Validation.HasError / Errors
-// attached properties on the target Model; writeback is blocked when
+// attached properties on the target MuralBase; writeback is blocked when
 // any rule fails.
 describe('Binding — ValidationRules', () => {
     const notEmpty: ValidationRule = {
@@ -4263,11 +4263,11 @@ describe('Binding — ValidationRules', () => {
 
     function vrScene()
     {
-        class Source extends Model {
-            static { Model.RegisterProperty(Source, 'value', '', MetaData.None); }
+        class Source extends MuralBase {
+            static { MuralBase.RegisterProperty(Source, 'value', '', MetaData.None); }
         }
-        class Target extends Model {
-            static { Model.RegisterProperty(Target, 'label', '', MetaData.None); }
+        class Target extends MuralBase {
+            static { MuralBase.RegisterProperty(Target, 'label', '', MetaData.None); }
         }
         return { Source, Target };
     }
@@ -4324,11 +4324,11 @@ describe('Binding — ValidationRules', () => {
     });
 
     test('Multiple rules — every failure shows in Errors', () => {
-        class Source extends Model {
-            static { Model.RegisterProperty(Source, 'n', 0, MetaData.None); }
+        class Source extends MuralBase {
+            static { MuralBase.RegisterProperty(Source, 'n', 0, MetaData.None); }
         }
-        class Target extends Model {
-            static { Model.RegisterProperty(Target, 'n', 0, MetaData.None); }
+        class Target extends MuralBase {
+            static { MuralBase.RegisterProperty(Target, 'n', 0, MetaData.None); }
         }
         const lessThan10: ValidationRule = {
             validate(v): { isValid: boolean; errorContent?: string } {
@@ -4408,16 +4408,16 @@ describe('Binding — ValidationRules', () => {
     });
 
     test('Multiple bindings on the same target aggregate their errors', () => {
-        class Source extends Model {
+        class Source extends MuralBase {
             static {
-                Model.RegisterProperty(Source, 'a', '', MetaData.None);
-                Model.RegisterProperty(Source, 'b', '', MetaData.None);
+                MuralBase.RegisterProperty(Source, 'a', '', MetaData.None);
+                MuralBase.RegisterProperty(Source, 'b', '', MetaData.None);
             }
         }
-        class Target extends Model {
+        class Target extends MuralBase {
             static {
-                Model.RegisterProperty(Target, 'a', '', MetaData.None);
-                Model.RegisterProperty(Target, 'b', '', MetaData.None);
+                MuralBase.RegisterProperty(Target, 'a', '', MetaData.None);
+                MuralBase.RegisterProperty(Target, 'b', '', MetaData.None);
             }
         }
         const src = new Source();
@@ -4461,14 +4461,14 @@ describe('Binding — ValidationRules', () => {
 describe('MultiBinding / PriorityBinding — child Binding form', () => {
     function mbScene()
     {
-        class A extends Model {
-            static { Model.RegisterProperty(A, 'x', 0, MetaData.None); }
+        class A extends MuralBase {
+            static { MuralBase.RegisterProperty(A, 'x', 0, MetaData.None); }
         }
-        class B extends Model {
-            static { Model.RegisterProperty(B, 'y', 0, MetaData.None); }
+        class B extends MuralBase {
+            static { MuralBase.RegisterProperty(B, 'y', 0, MetaData.None); }
         }
-        class Target extends Model {
-            static { Model.RegisterProperty(Target, 'sum', 0, MetaData.None); }
+        class Target extends MuralBase {
+            static { MuralBase.RegisterProperty(Target, 'sum', 0, MetaData.None); }
         }
         return { A, B, Target };
     }
@@ -4525,7 +4525,7 @@ describe('MultiBinding / PriorityBinding — child Binding form', () => {
         // We use the simplest possible case — a fixed Visual subclass
         // with a DataContext — to verify the dispatch path.
         class Host extends Element {
-            static { Model.RegisterProperty(Host, 'sum', 0, MetaData.None); }
+            static { MuralBase.RegisterProperty(Host, 'sum', 0, MetaData.None); }
         }
         const host = new Host();
         host.DataContext = { a: 7, b: 8 };
@@ -4538,14 +4538,14 @@ describe('MultiBinding / PriorityBinding — child Binding form', () => {
     });
 
     test('PriorityBinding picks the first child whose resolved value is not undefined', () => {
-        class A extends Model {
-            static { Model.RegisterProperty(A, 'preferred', undefined, MetaData.None); }
+        class A extends MuralBase {
+            static { MuralBase.RegisterProperty(A, 'preferred', undefined, MetaData.None); }
         }
-        class B extends Model {
-            static { Model.RegisterProperty(B, 'fallback', 'default', MetaData.None); }
+        class B extends MuralBase {
+            static { MuralBase.RegisterProperty(B, 'fallback', 'default', MetaData.None); }
         }
-        class Target extends Model {
-            static { Model.RegisterProperty(Target, 'title', '', MetaData.None); }
+        class Target extends MuralBase {
+            static { MuralBase.RegisterProperty(Target, 'title', '', MetaData.None); }
         }
         const a = new A();
         const b = new B();
@@ -4567,11 +4567,11 @@ describe('MultiBinding / PriorityBinding — child Binding form', () => {
     });
 
     test('PriorityBinding returns undefined when every child is undefined', () => {
-        class A extends Model {
-            static { Model.RegisterProperty(A, 'x', undefined, MetaData.None); }
+        class A extends MuralBase {
+            static { MuralBase.RegisterProperty(A, 'x', undefined, MetaData.None); }
         }
-        class Target extends Model {
-            static { Model.RegisterProperty(Target, 'title', 'INITIAL', MetaData.None); }
+        class Target extends MuralBase {
+            static { MuralBase.RegisterProperty(Target, 'title', 'INITIAL', MetaData.None); }
         }
         const a1 = new A();
         const a2 = new A();
@@ -4616,10 +4616,10 @@ describe('MultiBinding / PriorityBinding — child Binding form', () => {
 describe('AncestorBinding — FindAncestor RelativeSource', () => {
     test('Binds to the nearest ancestor of the named type', () => {
         class Outer extends Panel {
-            static { Model.RegisterProperty(Outer, 'Title', 'outer-title', MetaData.None); }
+            static { MuralBase.RegisterProperty(Outer, 'Title', 'outer-title', MetaData.None); }
         }
         class Inner extends Element {
-            static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
+            static { MuralBase.RegisterProperty(Inner, 'echo', '', MetaData.None); }
         }
         const outer = new Outer();
         const inner = new Inner();
@@ -4637,11 +4637,11 @@ describe('AncestorBinding — FindAncestor RelativeSource', () => {
 
     test('Walks past intermediate non-matching ancestors', () => {
         class Outer extends Panel {
-            static { Model.RegisterProperty(Outer, 'Tag', 'A', MetaData.None); }
+            static { MuralBase.RegisterProperty(Outer, 'Tag', 'A', MetaData.None); }
         }
         class Middle extends Panel {}
         class Inner extends Element {
-            static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
+            static { MuralBase.RegisterProperty(Inner, 'echo', '', MetaData.None); }
         }
         const outer = new Outer();
         const middle = new Middle();
@@ -4655,11 +4655,11 @@ describe('AncestorBinding — FindAncestor RelativeSource', () => {
 
     test('level=2 finds the 2nd-nearest matching ancestor', () => {
         class Grand extends Panel {
-            static { Model.RegisterProperty(Grand, 'Tag', 'GRAND', MetaData.None); }
+            static { MuralBase.RegisterProperty(Grand, 'Tag', 'GRAND', MetaData.None); }
         }
         class Parent extends Grand {}  // also matches Grand
         class Inner extends Element {
-            static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
+            static { MuralBase.RegisterProperty(Inner, 'echo', '', MetaData.None); }
         }
         const grand = new Grand();
         const parent = new Parent();
@@ -4679,7 +4679,7 @@ describe('AncestorBinding — FindAncestor RelativeSource', () => {
         class NotAnAncestor extends Panel {}
         class Outer extends Panel {}
         class Inner extends Element {
-            static { Model.RegisterProperty(Inner, 'echo', 'INITIAL', MetaData.None); }
+            static { MuralBase.RegisterProperty(Inner, 'echo', 'INITIAL', MetaData.None); }
         }
         const outer = new Outer();
         const inner = new Inner();
@@ -4694,10 +4694,10 @@ describe('AncestorBinding — FindAncestor RelativeSource', () => {
 
     test('dispose unsubscribes from the resolved ancestor', () => {
         class Outer extends Panel {
-            static { Model.RegisterProperty(Outer, 'Title', 'first', MetaData.None); }
+            static { MuralBase.RegisterProperty(Outer, 'Title', 'first', MetaData.None); }
         }
         class Inner extends Element {
-            static { Model.RegisterProperty(Inner, 'echo', '', MetaData.None); }
+            static { MuralBase.RegisterProperty(Inner, 'echo', '', MetaData.None); }
         }
         const outer = new Outer();
         const inner = new Inner();
@@ -4723,9 +4723,9 @@ describe('ValidateValue callback', () => {
         typeof v === 'number' && Number.isInteger(v) && v >= 0;
 
     test('A valid write succeeds; an invalid write throws and does not mutate state', () => {
-        class Item extends Model {
+        class Item extends MuralBase {
             static {
-                Model.RegisterProperty(Item, 'count', 0, MetaData.None, undefined, positiveInt);
+                MuralBase.RegisterProperty(Item, 'count', 0, MetaData.None, undefined, positiveInt);
             }
         }
         const item = new Item();
@@ -4747,9 +4747,9 @@ describe('ValidateValue callback', () => {
     });
 
     test('Default value that fails the rule throws at registration time', () => {
-        class Bad extends Model {}
+        class Bad extends MuralBase {}
         assert.throws(
-            () => Model.RegisterProperty(Bad, 'count', -1, MetaData.None, undefined, positiveInt),
+            () => MuralBase.RegisterProperty(Bad, 'count', -1, MetaData.None, undefined, positiveInt),
             /Default value for property 'Bad\.count' fails its validate_value callback/,
         );
     });
@@ -4761,9 +4761,9 @@ describe('ValidateValue callback', () => {
             coerceCalls++;
             return v;
         };
-        class Slider extends Model {
+        class Slider extends MuralBase {
             static {
-                Model.RegisterProperty(Slider, 'Value', 0, MetaData.None, coerce, positiveInt);
+                MuralBase.RegisterProperty(Slider, 'Value', 0, MetaData.None, coerce, positiveInt);
             }
         }
         const s = new Slider();
@@ -4779,12 +4779,12 @@ describe('ValidateValue callback', () => {
         // The user installs a Binding object; what matters for validation
         // is the resolved value the binding produces, not the Binding
         // instance itself. validate_value applies to direct value sets.
-        class Source extends Model {
-            static { Model.RegisterProperty(Source, 'n', 0, MetaData.None); }
+        class Source extends MuralBase {
+            static { MuralBase.RegisterProperty(Source, 'n', 0, MetaData.None); }
         }
-        class Target extends Model {
+        class Target extends MuralBase {
             static {
-                Model.RegisterProperty(Target, 'n', 0, MetaData.None, undefined, positiveInt);
+                MuralBase.RegisterProperty(Target, 'n', 0, MetaData.None, undefined, positiveInt);
             }
         }
         const src = new Source();
@@ -4798,16 +4798,16 @@ describe('ValidateValue callback', () => {
     });
 
     test('OverrideMetadata can replace just the validate_value callback', () => {
-        class Furniture extends Model {
+        class Furniture extends MuralBase {
             static {
-                Model.RegisterProperty(Furniture, 'height', 1, MetaData.None);
+                MuralBase.RegisterProperty(Furniture, 'height', 1, MetaData.None);
             }
         }
         class Desk extends Furniture {}
-        const HeightKey = Model.RegisterProperty(Furniture, 'height', 1, MetaData.None);
+        const HeightKey = MuralBase.RegisterProperty(Furniture, 'height', 1, MetaData.None);
 
         // Override to add validate_value on Desk.
-        Model.OverrideMetadata(Desk, HeightKey, { validate_value: positiveInt });
+        MuralBase.OverrideMetadata(Desk, HeightKey, { validate_value: positiveInt });
 
         const desk = new Desk();
         desk.set_property_value(resolveKey(desk, undefined, 'height'), 3);
@@ -4839,12 +4839,12 @@ describe('IsNotDataBindable / IsAnimationProhibited gates', () => {
     });
 
     test('IsNotDataBindable rejects Binding installs; direct writes succeed', () => {
-        class Source extends Model {
-            static { Model.RegisterProperty(Source, 'val', 0, MetaData.None); }
+        class Source extends MuralBase {
+            static { MuralBase.RegisterProperty(Source, 'val', 0, MetaData.None); }
         }
-        class Target extends Model {
+        class Target extends MuralBase {
             static {
-                Model.RegisterProperty(Target, 'kind', 'A', MetaData.IsNotDataBindable);
+                MuralBase.RegisterProperty(Target, 'kind', 'A', MetaData.IsNotDataBindable);
             }
         }
         const src = new Source();
@@ -4864,9 +4864,9 @@ describe('IsNotDataBindable / IsAnimationProhibited gates', () => {
     });
 
     test('IsAnimationProhibited rejects SetAnimatedValue; direct + binding writes succeed', () => {
-        class Target extends Model {
+        class Target extends MuralBase {
             static {
-                Model.RegisterProperty(Target, 'collection', undefined, MetaData.IsAnimationProhibited);
+                MuralBase.RegisterProperty(Target, 'collection', undefined, MetaData.IsAnimationProhibited);
             }
         }
         const target = new Target();
@@ -4900,16 +4900,16 @@ describe('IsNotDataBindable / IsAnimationProhibited gates', () => {
     });
 
     test('OverrideMetadata can install IsNotDataBindable on a subclass', () => {
-        class Base extends Model {
-            static { Model.RegisterProperty(Base, 'kind', 'A', MetaData.None); }
+        class Base extends MuralBase {
+            static { MuralBase.RegisterProperty(Base, 'kind', 'A', MetaData.None); }
         }
         class Sub extends Base {}
-        const KindKey = Model.RegisterProperty(Base, 'kind', 'A', MetaData.None);
-        Model.OverrideMetadata(Sub, KindKey, { meta_data: MetaData.IsNotDataBindable });
+        const KindKey = MuralBase.RegisterProperty(Base, 'kind', 'A', MetaData.None);
+        MuralBase.OverrideMetadata(Sub, KindKey, { meta_data: MetaData.IsNotDataBindable });
 
         const sub = new Sub();
-        class Src extends Model {
-            static { Model.RegisterProperty(Src, 'v', 'X', MetaData.None); }
+        class Src extends MuralBase {
+            static { MuralBase.RegisterProperty(Src, 'v', 'X', MetaData.None); }
         }
         const src = new Src();
         assert.throws(

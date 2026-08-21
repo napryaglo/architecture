@@ -1,11 +1,11 @@
-import { ModifierKeys } from '../../runtime/index.js';
+﻿import { ModifierKeys } from '../../runtime/index.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     SetterFactory,
     Setter,
@@ -20,15 +20,15 @@ import { Diagram } from '../diagram/diagram.js';
 import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
-// IFigure-shaped synthetic data class — Model with Left/Top/Width/Height
+// IFigure-shaped synthetic data class — MuralBase with Left/Top/Width/Height
 // DPs. SelectionBoundsTracker duck-types on these via findDescriptor; any
-// Model with these four DPs registered satisfies the contract.
-class FigureVM extends Model
+// MuralBase with these four DPs registered satisfies the contract.
+class FigureVM extends MuralBase
 {
-    public static readonly LeftKey   = Model.RegisterProperty<number>(FigureVM, 'Left',   0,  MetaData.None);
-    public static readonly TopKey    = Model.RegisterProperty<number>(FigureVM, 'Top',    0,  MetaData.None);
-    public static readonly WidthKey  = Model.RegisterProperty<number>(FigureVM, 'Width',  10, MetaData.None);
-    public static readonly HeightKey = Model.RegisterProperty<number>(FigureVM, 'Height', 10, MetaData.None);
+    public static readonly LeftKey   = MuralBase.RegisterProperty<number>(FigureVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = MuralBase.RegisterProperty<number>(FigureVM, 'Top',    0,  MetaData.None);
+    public static readonly WidthKey  = MuralBase.RegisterProperty<number>(FigureVM, 'Width',  10, MetaData.None);
+    public static readonly HeightKey = MuralBase.RegisterProperty<number>(FigureVM, 'Height', 10, MetaData.None);
 
     constructor(left: number, top: number, w: number = 10, h: number = 10)
     {

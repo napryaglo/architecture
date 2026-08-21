@@ -1,4 +1,4 @@
-import { MetaData, Model, ObservableCollection, Thickness } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, ObservableCollection, Thickness } from '../../runtime/index.js';
 import { TextAlignment } from '../../visual-engine/index.js';
 import { TextElement, type ContentHost } from './text-element.js';
 
@@ -25,17 +25,17 @@ export abstract class Block extends TextElement
 {
     // Space reserved around the block, between it and its siblings /
     // container. Vertical margins stack (no WPF-style collapsing for now).
-    public static readonly MarginKey = Model.RegisterProperty<Thickness>(
+    public static readonly MarginKey = MuralBase.RegisterProperty<Thickness>(
         Block, 'Margin', Thickness.Zero, MetaData.None);
 
     // Per-block horizontal alignment of its lines. Inherited default sense
     // is Left; a block may override for itself.
-    public static readonly TextAlignmentKey = Model.RegisterProperty<TextAlignment>(
+    public static readonly TextAlignmentKey = MuralBase.RegisterProperty<TextAlignment>(
         Block, 'TextAlignment', TextAlignment.Left, MetaData.None);
 
     // Explicit line box height for the block's lines; NaN / <= 0 → natural
     // (ascent + descent). Matches the LayoutOptions.lineHeight contract.
-    public static readonly LineHeightKey = Model.RegisterProperty<number>(
+    public static readonly LineHeightKey = MuralBase.RegisterProperty<number>(
         Block, 'LineHeight', Number.NaN, MetaData.None);
 
     public get Margin(): Thickness  { return this.get_property_value(Block.MarginKey); }

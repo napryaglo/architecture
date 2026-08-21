@@ -1,8 +1,8 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     Panel,
     Size,
@@ -34,7 +34,7 @@ function logicalParentOf(v: Visual | undefined): Visual | undefined
 class ItemLeaf extends Element
 {
     static {
-        Model.RegisterProperty(ItemLeaf, 'Tint', 'default', MetaData.Inherits);
+        MuralBase.RegisterProperty(ItemLeaf, 'Tint', 'default', MetaData.Inherits);
     }
     constructor(public readonly source: unknown) { super(); }
 
@@ -318,7 +318,7 @@ describe('ItemsControl', () => {
         // (ItemsControl) → ... The items panel is bypassed since it's
         // template-internal (visual only). Set Tint on the ItemsControl
         // and confirm every container sees it.
-        Model.RegisterProperty(ItemsControl, 'Tint', 'default', MetaData.Inherits);
+        MuralBase.RegisterProperty(ItemsControl, 'Tint', 'default', MetaData.Inherits);
 
         const ic = new TestIC();
         ic.ItemsPanel   = () => new TestPanel();

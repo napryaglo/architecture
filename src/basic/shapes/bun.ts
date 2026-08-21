@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -24,7 +24,7 @@ import { Shape } from './shape.js';
 export class Bun extends Shape
 {
     // 0…1. 1.0 = no pinch (pure ellipse). 0.4 = pronounced waist.
-    public static readonly WaistKey           = Model.RegisterProperty<number>(           Bun, 'Waist',           0.85,      MetaData.Render);
+    public static readonly WaistKey           = MuralBase.RegisterProperty<number>(           Bun, 'Waist',           0.85,      MetaData.Render);
 
     public get Waist(): number { return this.get_property_value(Bun.WaistKey); }
     public set Waist(v: number) { this.set_property_value(Bun.WaistKey, v); }

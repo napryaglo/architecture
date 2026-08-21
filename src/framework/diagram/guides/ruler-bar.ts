@@ -1,5 +1,5 @@
-import {
-    Element, Model, MetaData, Point, Rect, Size, PropertyDescriptor,
+﻿import {
+    Element, MuralBase, MetaData, Point, Rect, Size, PropertyDescriptor,
     AlignmentAxis, chooseTickInterval, ticksInRange, guideCursorFor,
 } from '../../../runtime/index.js';
 import { Orientation } from '../../../basic/index.js';
@@ -21,13 +21,13 @@ const LABEL_SIZE = 9;
 
 export class RulerBar extends Element
 {
-    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
+    public static readonly OrientationKey = MuralBase.RegisterProperty<Orientation>(
         RulerBar, 'Orientation', Orientation.Horizontal, MetaData.Render);
-    public static readonly ZoomKey = Model.RegisterProperty<number>(
+    public static readonly ZoomKey = MuralBase.RegisterProperty<number>(
         RulerBar, 'Zoom', 1, MetaData.Render);
-    public static readonly OffsetKey = Model.RegisterProperty<number>(
+    public static readonly OffsetKey = MuralBase.RegisterProperty<number>(
         RulerBar, 'Offset', 0, MetaData.Render);
-    public static readonly ExtentKey = Model.RegisterProperty<number>(
+    public static readonly ExtentKey = MuralBase.RegisterProperty<number>(
         RulerBar, 'Extent', 0, MetaData.Render);
 
     public get Orientation(): Orientation { return this.get_property_value(RulerBar.OrientationKey); }

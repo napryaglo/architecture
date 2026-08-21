@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import { Application } from '../index.js';
@@ -48,7 +48,7 @@ describe('Freezable — owner / Changed notification', () => {
 
     test('multiple owners are ALL notified (the shared-instance fix)', () => {
         // The bug this replaces: a single-consumer invalidator clobbered the
-        // first owner when a value-Model was shared. Now every owner fires.
+        // first owner when a value-MuralBase was shared. Now every owner fires.
         const t = new RotateTransform();
         let a = 0, b = 0;
         t.RegisterOwner(() => { a++; });

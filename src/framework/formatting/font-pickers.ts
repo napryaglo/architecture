@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
 import { ComboBox } from '../list/combo-box.js';
@@ -55,7 +55,7 @@ export class FontFamilyPicker extends ComboBox
 // forwards for its OWN display font.
 export class FontSizePicker extends ComboBox
 {
-    public static readonly ValueKey = Model.RegisterProperty<number>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<number>(
         FontSizePicker, 'Value', 14, MetaData.Measure | MetaData.BindsTwoWayByDefault);
 
     /** Guards the Value ↔ Text mirror against re-entrancy. */

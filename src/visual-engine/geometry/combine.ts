@@ -1,4 +1,4 @@
-// §19.7 — declarative boolean ops over Geometry.
+﻿// §19.7 — declarative boolean ops over Geometry.
 //
 // Bridges the model-layer Geometry tree (RectangleGeometry, EllipseGeometry,
 // PathGeometry, GeometryGroup, …) to the Skia-derived pathops kernel and
@@ -6,7 +6,7 @@
 //
 //   * `combine(a, b, mode)` — imperative helper. One call, returns a fresh
 //     PathGeometry. Suitable for behaviors / one-shot diagram operations.
-//   * `CombinedGeometry` — Model class. Carries Geometry1 / Geometry2 /
+//   * `CombinedGeometry` — MuralBase class. Carries Geometry1 / Geometry2 /
 //     GeometryCombineMode DPs and memoizes the flattened result; the
 //     memo invalidates when any input's Render-flagged DP changes. The
 //     declarative form lives in [geometry.ts](./geometry.ts) to stay
@@ -15,7 +15,7 @@
 
 import { Matrix, Point, Rect } from '../primitives.js';
 import { MetaData } from '../../runtime/metadata.js';
-import { Model } from '../../runtime/model.js';
+import { MuralBase } from '../../runtime/model.js';
 import {
     Geometry,
     RectangleGeometry,
@@ -339,7 +339,7 @@ export function combine(a: Geometry, b: Geometry, mode: GeometryCombineMode): Pa
     return opPathToPathGeometry(refitOpPath(result));
 }
 
-// ── CombinedGeometry Model class ─────────────────────────────────
+// ── CombinedGeometry MuralBase class ─────────────────────────────────
 
 // Declarative form. Carries Geometry1 / Geometry2 / GeometryCombineMode
 // DPs and memoizes the flattened PathGeometry. The memo invalidates
@@ -362,9 +362,9 @@ export function combine(a: Geometry, b: Geometry, mode: GeometryCombineMode): Pa
 
 export class CombinedGeometry extends Geometry
 {
-    public static readonly Geometry1Key          = Model.RegisterProperty<Geometry | undefined>(CombinedGeometry, 'Geometry1',          undefined,                 MetaData.Render);
-    public static readonly Geometry2Key          = Model.RegisterProperty<Geometry | undefined>(CombinedGeometry, 'Geometry2',          undefined,                 MetaData.Render);
-    public static readonly GeometryCombineModeKey = Model.RegisterProperty<GeometryCombineMode>(CombinedGeometry, 'GeometryCombineMode', GeometryCombineMode.Union, MetaData.Render);
+    public static readonly Geometry1Key          = MuralBase.RegisterProperty<Geometry | undefined>(CombinedGeometry, 'Geometry1',          undefined,                 MetaData.Render);
+    public static readonly Geometry2Key          = MuralBase.RegisterProperty<Geometry | undefined>(CombinedGeometry, 'Geometry2',          undefined,                 MetaData.Render);
+    public static readonly GeometryCombineModeKey = MuralBase.RegisterProperty<GeometryCombineMode>(CombinedGeometry, 'GeometryCombineMode', GeometryCombineMode.Union, MetaData.Render);
 
     constructor(geometry1?: Geometry, geometry2?: Geometry, mode?: GeometryCombineMode)
     {

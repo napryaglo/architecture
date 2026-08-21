@@ -1,17 +1,17 @@
-import { Binding, BindingMode } from './binding.js';
+﻿import { Binding, BindingMode } from './binding.js';
 import { MetaData } from '../metadata.js';
-import { Model } from '../model.js';
+import { MuralBase } from '../model.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
-// Internal Model that mirrors the templated parent's watched property.
+// Internal MuralBase that mirrors the templated parent's watched property.
 // Same shape as DataContextWatcher / ResourceWatcher — a single Value
 // slot that Binding's change-notification machinery rides on.
-class TemplatedParentWatcher extends Model
+class TemplatedParentWatcher extends MuralBase
 {
-    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
         TemplatedParentWatcher, 'Value', undefined, MetaData.None);
 
     public get Value(): unknown { return this.get_property_value(TemplatedParentWatcher.ValueKey); }

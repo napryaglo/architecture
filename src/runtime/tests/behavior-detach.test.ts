@@ -1,11 +1,11 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     AttachBehaviorAction,
     Behavior,
     DetachBehaviorAction,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     PropertyTrigger,
     Style,
@@ -296,11 +296,11 @@ describe('AttachBehaviorAction / DetachBehaviorAction', () => {
         // A target Visual with a Boolean DP the trigger watches.
         class Widget extends Panel {
             static {
-                Model.RegisterProperty(Widget, 'IsBusy', false, MetaData.None);
+                MuralBase.RegisterProperty(Widget, 'IsBusy', false, MetaData.None);
             }
             public get IsBusy(): boolean { return this.get_property_value(Widget.IsBusyKey); }
             public set IsBusy(v: boolean) { this.set_property_value(Widget.IsBusyKey, v); }
-            public static IsBusyKey = Model.RegisterProperty(Widget, 'IsBusy', false, MetaData.None);
+            public static IsBusyKey = MuralBase.RegisterProperty(Widget, 'IsBusy', false, MetaData.None);
         }
 
         const attach = new AttachBehaviorAction(() => new TraceBehavior());

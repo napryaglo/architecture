@@ -1,4 +1,4 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile, instantiate, EmitError } from '../compile.js';
 import { Parser, ParseError } from '../parser.js';
@@ -12,7 +12,7 @@ import * as controls from '../../basic/index.js';
 import * as engine from '../../visual-engine/index.js';
 import {
     Application,
-    Model,
+    MuralBase,
     MetaData,
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
@@ -201,10 +201,10 @@ describe('inline expressions — end-to-end', () => {
     beforeEach(() => { (Application as any).current = null; });
 
     test('reactive `{{ $a + $b }}` watches both paths and recomputes', () => {
-        class M extends Model {
+        class M extends MuralBase {
             static {
-                Model.RegisterProperty(M, 'A', 0, MetaData.None);
-                Model.RegisterProperty(M, 'B', 0, MetaData.None);
+                MuralBase.RegisterProperty(M, 'A', 0, MetaData.None);
+                MuralBase.RegisterProperty(M, 'B', 0, MetaData.None);
             }
             public get A(): number { return this.get_property_value(resolveKey(this, undefined, 'A')) as number; }
             public set A(v: number) { this.set_property_value(resolveKey(this, undefined, 'A'), v); }
@@ -236,10 +236,10 @@ describe('inline expressions — end-to-end', () => {
     });
 
     test('reactive text body interpolation refreshes on data change', () => {
-        class M extends Model {
+        class M extends MuralBase {
             static {
-                Model.RegisterProperty(M, 'Name',  '', MetaData.None);
-                Model.RegisterProperty(M, 'Count', 0,  MetaData.None);
+                MuralBase.RegisterProperty(M, 'Name',  '', MetaData.None);
+                MuralBase.RegisterProperty(M, 'Count', 0,  MetaData.None);
             }
             public get Name():  string { return this.get_property_value(resolveKey(this, undefined, 'Name'))  as string; }
             public set Name(v:  string){ this.set_property_value(resolveKey(this, undefined, 'Name'),  v); }

@@ -1,4 +1,4 @@
-import { Brush, FontFamily, FontStyle, FontWeight, TextDecorations } from '../../visual-engine/index.js';
+﻿import { Brush, FontFamily, FontStyle, FontWeight, TextDecorations } from '../../visual-engine/index.js';
 import { type Inline } from './text-element.js';
 import { Run, Span } from './inlines.js';
 import { Paragraph } from './paragraph.js';
@@ -10,7 +10,7 @@ import { OrderPointers, ComparePointers, DocumentParagraphs, NextParagraph, Prev
 
 // ─────────────────────────────────────────────────────────────────────
 // Editing operations — pure mutations on a FlowDocument at TextPointers.
-// Model changes bubble through the element Parent chain to re-measure the
+// MuralBase changes bubble through the element Parent chain to re-measure the
 // host. Every operation returns the caret's new TextPointer.
 //
 // Internal representation: the editor NORMALISES each edited paragraph to a

@@ -1,7 +1,7 @@
-import {
+﻿import {
     CommandBase,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Visibility,
     Visual,
@@ -227,7 +227,7 @@ const BETWEEN_SHOW_WINDOW       = 1500;
 // declarative `[ToolTipService.ToolTip="..."]` markup and runtime binding
 // updates. The value is returned unchanged — this is purely a "give the
 // service a chance to wire/unwire listeners" path.
-function coerceToolTip(model: Model, value: unknown): unknown
+function coerceToolTip(model: MuralBase, value: unknown): unknown
 {
     if (model instanceof Visual)
     {
@@ -252,27 +252,27 @@ export class ToolTipService
 {
     // The tooltip content. `unknown` because consumers pass:
     //   * string  → ContentPresenter wraps it in a TextBlock.
-    //   * Model VM → ContentPresenter resolves a matching DataTemplate.
+    //   * MuralBase VM → ContentPresenter resolves a matching DataTemplate.
     //   * Visual  → slotted directly.
     // undefined means "no tooltip on this anchor". Default undefined.
-    public static readonly ToolTipKey = Model.RegisterAttachedProperty<unknown>(
+    public static readonly ToolTipKey = MuralBase.RegisterAttachedProperty<unknown>(
         ToolTipService, 'ToolTip', undefined, MetaData.None, coerceToolTip);
 
     // Where the tooltip sits relative to the anchor. Default Bottom
     // (M3 / WPF default).
-    public static readonly ToolTipPlacementKey = Model.RegisterAttachedProperty<PlacementMode>(
+    public static readonly ToolTipPlacementKey = MuralBase.RegisterAttachedProperty<PlacementMode>(
         ToolTipService, 'ToolTipPlacement', PlacementMode.Bottom, MetaData.None);
 
     // Per-anchor override of the 500ms initial show delay. Useful for
     // touch-style "instant" tooltips (set to 0) or for inline help that
     // should appear less aggressively (1000+).
-    public static readonly InitialShowDelayKey = Model.RegisterAttachedProperty<number>(
+    public static readonly InitialShowDelayKey = MuralBase.RegisterAttachedProperty<number>(
         ToolTipService, 'InitialShowDelay', DEFAULT_INITIAL_DELAY, MetaData.None);
 
     // Per-anchor override of the 5s auto-hide duration. Set to a large
     // number (or Infinity) to keep the tooltip visible until the user
     // moves away.
-    public static readonly ShowDurationKey = Model.RegisterAttachedProperty<number>(
+    public static readonly ShowDurationKey = MuralBase.RegisterAttachedProperty<number>(
         ToolTipService, 'ShowDuration', DEFAULT_SHOW_DURATION, MetaData.None);
 
     public static GetToolTip         (v: Visual): unknown        { return v.get_property_value(ToolTipService.ToolTipKey); }

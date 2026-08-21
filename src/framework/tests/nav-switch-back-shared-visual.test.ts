@@ -1,6 +1,6 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, Model, MetaData, ServiceProvider, type Visual } from '../../runtime/index.js';
+import { Application, MuralBase, MetaData, ServiceProvider, type Visual } from '../../runtime/index.js';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { Border } from '../../basic/border.js';
@@ -14,13 +14,13 @@ import { ModifierKeys } from '../../runtime/index.js';
 
 // A capability service that exposes a SHARED Visual (like the shared toolbox preview Visual
 // — a Figure held on the model and bound into a tile's ContentControl.Content).
-class SharedVisualSvc extends Model {
-    public static readonly PreviewKey = Model.RegisterProperty<Visual | undefined>(
+class SharedVisualSvc extends MuralBase {
+    public static readonly PreviewKey = MuralBase.RegisterProperty<Visual | undefined>(
         SharedVisualSvc, 'Preview', undefined, MetaData.None);
     constructor() { super(); this.set_property_value(SharedVisualSvc.PreviewKey, new Border()); }
     public get Preview(): Visual | undefined { return this.get_property_value(SharedVisualSvc.PreviewKey); }
 }
-class OtherSvc extends Model {}
+class OtherSvc extends MuralBase {}
 
 function collect<T>(root: Visual, ctor: new (...a: never[]) => T, out: T[] = []): T[] {
     if (root instanceof ctor) out.push(root);

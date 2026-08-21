@@ -1,7 +1,7 @@
-// Framework-internal accessor surface for `Model`.
+﻿// Framework-internal accessor surface for `MuralBase`.
 //
 // Reaches in via the friend-interface cast pattern documented in
-// CLAUDE.md § Cross-class internals: local interfaces describe `Model`'s
+// CLAUDE.md § Cross-class internals: local interfaces describe `MuralBase`'s
 // protected surface; casting through them is the visible audit gate.
 // The casts here are intentional — every name-based resolution and
 // every direct EVD-map read in the framework flows through this module.
@@ -18,17 +18,17 @@
 // § Cross-class internals). Each consuming file imports directly from
 // `'./model-internals.js'` (or the relative equivalent).
 
-import { Model, PropertyKey } from './model.js';
+import { MuralBase, PropertyKey } from './model.js';
 import type { PropertyDescriptor } from './property-descriptor.js';
 import type { EffectiveValueDescriptor } from './binding/effective-value.js';
 
 // ── Friend interfaces ────────────────────────────────────────────────
 //
-// Local-only shapes describing `Model`'s protected surface. Each maps to
-// a single protected member that already exists on `Model`. Stay inside
+// Local-only shapes describing `MuralBase`'s protected surface. Each maps to
+// a single protected member that already exists on `MuralBase`. Stay inside
 // this file — never exported. Per CLAUDE.md, the friend-interface
 // pattern is the documented escape hatch; bracket access on the same
-// targets (`Model['find_descriptor']`, `model['property_values']`) was
+// targets (`MuralBase['find_descriptor']`, `model['property_values']`) was
 // the unstructured workaround we're replacing.
 
 interface ModelStaticInternal
@@ -42,14 +42,14 @@ interface ModelInternal
     property_values: Map<string, EffectiveValueDescriptor>;
 }
 
-// Cast applied per call rather than once at module top — `Model` is
+// Cast applied per call rather than once at module top — `MuralBase` is
 // not yet initialized when this module is evaluated through the cycle
 // `model.ts → binding/binding.ts → model-internals.ts → model.ts`.
 // The cast is type-only; at runtime `ModelStatic()` simply returns the
-// fully-initialized `Model` class function.
+// fully-initialized `MuralBase` class function.
 function ModelStatic(): ModelStaticInternal
 {
-    return Model as unknown as ModelStaticInternal;
+    return MuralBase as unknown as ModelStaticInternal;
 }
 
 // ── Name → PropertyKey resolution ────────────────────────────────────
@@ -61,16 +61,16 @@ function ModelStatic(): ModelStaticInternal
 // Single source of name → key translation for the framework. Triggers,
 // the animation engine, binding path walks, and InputManager funnel
 // through here so the underscore-prefixed `_xxx_by_name` family is gone
-// from `Model`'s public surface. After resolution, callers use the
+// from `MuralBase`'s public surface. After resolution, callers use the
 // typed-key API (`get_property_value`, `AddPropertyChangedListener`,
-// `SetAnimatedValue`, …) on `Model` directly.
+// `SetAnimatedValue`, …) on `MuralBase` directly.
 //
 // Hot-loop callers should cache the returned key rather than
 // re-resolving on every invocation — the resolution walks the class
 // hierarchy through the property bag. Trigger installs do this already
 // (resolve once at install, listen against the resolved key).
 export function resolveKey(
-    model: Model,
+    model: MuralBase,
     owner: Function | undefined,
     property: string,
 ): PropertyKey<unknown>
@@ -87,7 +87,7 @@ export function resolveKey(
     return new PropertyKey(descriptor);
 }
 
-// ── Direct accessors for the Model-private surface ───────────────────
+// ── Direct accessors for the MuralBase-private surface ───────────────────
 
 // Look up the descriptor for `property` registered on `klass` (or any
 // ancestor of `klass`). Returns `undefined` when nothing matches — for
@@ -95,7 +95,7 @@ export function resolveKey(
 //
 // Same lookup `resolveKey` performs internally, exposed as a separate
 // function for the rare site that needs the descriptor itself rather
-// than a `PropertyKey`. Replaces the `Model['find_descriptor']` bracket
+// than a `PropertyKey`. Replaces the `MuralBase['find_descriptor']` bracket
 // access pattern that existed before this module.
 export function findDescriptor(
     klass: Function,
@@ -111,7 +111,7 @@ export function findDescriptor(
 // classes that only inherit DPs from their parents.
 //
 // Consumed by `Visual.collect_inheritable_descriptors` to walk the
-// prototype chain manually. Replaces the `Model['peek_property_bag']`
+// prototype chain manually. Replaces the `MuralBase['peek_property_bag']`
 // bracket access pattern.
 export function peekPropertyBag(
     klass: Function,
@@ -125,7 +125,7 @@ export function peekPropertyBag(
 // walks, and the binding system to read EVD slots directly. Replaces
 // the `model['property_values']` bracket access pattern.
 export function propertyValues(
-    model: Model,
+    model: MuralBase,
 ): Map<string, EffectiveValueDescriptor>
 {
     return (model as unknown as ModelInternal).property_values;

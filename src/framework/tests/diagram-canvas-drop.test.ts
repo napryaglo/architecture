@@ -1,4 +1,4 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
@@ -6,7 +6,7 @@ import {
     DataObject,
     DragDropEffects,
     MetaData,
-    Model,
+    MuralBase,
     NoModifiers,
     ObservableCollection,
     Visual,
@@ -24,11 +24,11 @@ import {
 } from '../diagram/behaviors/canvas-drop-behavior.js';
 import { SelectionMode } from '../list/list-box.js';
 
-class ItemVM extends Model {
-    public static readonly LeftKey   = Model.RegisterProperty<number>(ItemVM, 'Left',   0,  MetaData.None);
-    public static readonly TopKey    = Model.RegisterProperty<number>(ItemVM, 'Top',    0,  MetaData.None);
-    public static readonly WidthKey  = Model.RegisterProperty<number>(ItemVM, 'Width',  10, MetaData.None);
-    public static readonly HeightKey = Model.RegisterProperty<number>(ItemVM, 'Height', 10, MetaData.None);
+class ItemVM extends MuralBase {
+    public static readonly LeftKey   = MuralBase.RegisterProperty<number>(ItemVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = MuralBase.RegisterProperty<number>(ItemVM, 'Top',    0,  MetaData.None);
+    public static readonly WidthKey  = MuralBase.RegisterProperty<number>(ItemVM, 'Width',  10, MetaData.None);
+    public static readonly HeightKey = MuralBase.RegisterProperty<number>(ItemVM, 'Height', 10, MetaData.None);
 }
 
 class FakeTarget implements MountableTarget {

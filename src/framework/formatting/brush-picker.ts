@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Element, Visual,
     type PropertyDescriptor,
@@ -56,47 +56,47 @@ export enum BrushPickerVariant
 export class BrushPicker extends TemplatedControl
 {
     // ── Output ─────────────────────────────────────────────────────────
-    public static readonly BrushKey   = Model.RegisterProperty<Brush | undefined>(BrushPicker, 'Brush',  undefined, MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly VariantKey = Model.RegisterProperty<BrushPickerVariant>(BrushPicker, 'Variant', BrushPickerVariant.Solid, MetaData.None);
+    public static readonly BrushKey   = MuralBase.RegisterProperty<Brush | undefined>(BrushPicker, 'Brush',  undefined, MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly VariantKey = MuralBase.RegisterProperty<BrushPickerVariant>(BrushPicker, 'Variant', BrushPickerVariant.Solid, MetaData.None);
 
     // ── Closed-chrome / popup plumbing ─────────────────────────────────
-    public static readonly IsDropDownOpenKey = Model.RegisterProperty<boolean>(BrushPicker, 'IsDropDownOpen', false, MetaData.None);
-    public static readonly PopupTemplateKey  = Model.RegisterProperty<ControlTemplate | undefined>(BrushPicker, 'PopupTemplate', undefined, MetaData.None);
+    public static readonly IsDropDownOpenKey = MuralBase.RegisterProperty<boolean>(BrushPicker, 'IsDropDownOpen', false, MetaData.None);
+    public static readonly PopupTemplateKey  = MuralBase.RegisterProperty<ControlTemplate | undefined>(BrushPicker, 'PopupTemplate', undefined, MetaData.None);
     // Closed-chrome swatch: a Border whose Fill mirrors the
     // current Brush. Per-instance default so the template's
     // `$$PreviewBrush` binding lands on something the picker can mutate
     // in sync (every BrushPicker gets its own preview instance).
-    public static readonly PreviewBrushKey = Model.RegisterProperty<Brush | undefined>(BrushPicker, 'PreviewBrush', undefined, MetaData.None);
+    public static readonly PreviewBrushKey = MuralBase.RegisterProperty<Brush | undefined>(BrushPicker, 'PreviewBrush', undefined, MetaData.None);
 
     // ── Solid mirror ───────────────────────────────────────────────────
-    public static readonly SolidColorKey = Model.RegisterProperty<Color>(BrushPicker, 'SolidColor', Color.Black, MetaData.None);
+    public static readonly SolidColorKey = MuralBase.RegisterProperty<Color>(BrushPicker, 'SolidColor', Color.Black, MetaData.None);
 
     // ── Linear mirror ──────────────────────────────────────────────────
     // Reduced to a 2-stop editor (start + end) plus an angle in degrees.
     // The popup paints the gradient at the chosen angle into [0,1]×[0,1]
     // bounding-box coordinates; consumers wanting > 2 stops can mutate
     // the emitted brush externally or swap it for a hand-built one.
-    public static readonly LinearStartColorKey = Model.RegisterProperty<Color>( BrushPicker, 'LinearStartColor', Color.Black, MetaData.None);
-    public static readonly LinearEndColorKey   = Model.RegisterProperty<Color>( BrushPicker, 'LinearEndColor',   Color.White, MetaData.None);
-    public static readonly LinearAngleKey      = Model.RegisterProperty<number>(BrushPicker, 'LinearAngle',      0,           MetaData.None);
+    public static readonly LinearStartColorKey = MuralBase.RegisterProperty<Color>( BrushPicker, 'LinearStartColor', Color.Black, MetaData.None);
+    public static readonly LinearEndColorKey   = MuralBase.RegisterProperty<Color>( BrushPicker, 'LinearEndColor',   Color.White, MetaData.None);
+    public static readonly LinearAngleKey      = MuralBase.RegisterProperty<number>(BrushPicker, 'LinearAngle',      0,           MetaData.None);
 
     // ── Radial mirror ──────────────────────────────────────────────────
     // 2-stop inner→outer + a single Radius (RadiusX = RadiusY) and
     // center XY in [0,1] BB coords. Same compromise as Linear — full
     // editor for power users can come later behind a Variant=… branch.
-    public static readonly RadialInnerColorKey = Model.RegisterProperty<Color>( BrushPicker, 'RadialInnerColor', Color.White, MetaData.None);
-    public static readonly RadialOuterColorKey = Model.RegisterProperty<Color>( BrushPicker, 'RadialOuterColor', Color.Black, MetaData.None);
-    public static readonly RadialCenterXKey    = Model.RegisterProperty<number>(BrushPicker, 'RadialCenterX',    50,          MetaData.None);
-    public static readonly RadialCenterYKey    = Model.RegisterProperty<number>(BrushPicker, 'RadialCenterY',    50,          MetaData.None);
-    public static readonly RadialRadiusKey     = Model.RegisterProperty<number>(BrushPicker, 'RadialRadius',     50,          MetaData.None);
+    public static readonly RadialInnerColorKey = MuralBase.RegisterProperty<Color>( BrushPicker, 'RadialInnerColor', Color.White, MetaData.None);
+    public static readonly RadialOuterColorKey = MuralBase.RegisterProperty<Color>( BrushPicker, 'RadialOuterColor', Color.Black, MetaData.None);
+    public static readonly RadialCenterXKey    = MuralBase.RegisterProperty<number>(BrushPicker, 'RadialCenterX',    50,          MetaData.None);
+    public static readonly RadialCenterYKey    = MuralBase.RegisterProperty<number>(BrushPicker, 'RadialCenterY',    50,          MetaData.None);
+    public static readonly RadialRadiusKey     = MuralBase.RegisterProperty<number>(BrushPicker, 'RadialRadius',     50,          MetaData.None);
 
     // ── Pattern mirror ─────────────────────────────────────────────────
-    public static readonly PatternKindKey       = Model.RegisterProperty<PatternKind>(BrushPicker, 'PatternKind',       PatternKind.Stripes, MetaData.None);
-    public static readonly PatternForegroundKey = Model.RegisterProperty<Color>(      BrushPicker, 'PatternForeground', Color.Black,         MetaData.None);
-    public static readonly PatternBackgroundKey = Model.RegisterProperty<Color>(      BrushPicker, 'PatternBackground', Color.Transparent,   MetaData.None);
-    public static readonly PatternSizeKey       = Model.RegisterProperty<number>(     BrushPicker, 'PatternSize',       8,                   MetaData.None);
-    public static readonly PatternAngleKey      = Model.RegisterProperty<number>(     BrushPicker, 'PatternAngle',      0,                   MetaData.None);
-    public static readonly PatternStrokeKey     = Model.RegisterProperty<number>(     BrushPicker, 'PatternStroke',     1,                   MetaData.None);
+    public static readonly PatternKindKey       = MuralBase.RegisterProperty<PatternKind>(BrushPicker, 'PatternKind',       PatternKind.Stripes, MetaData.None);
+    public static readonly PatternForegroundKey = MuralBase.RegisterProperty<Color>(      BrushPicker, 'PatternForeground', Color.Black,         MetaData.None);
+    public static readonly PatternBackgroundKey = MuralBase.RegisterProperty<Color>(      BrushPicker, 'PatternBackground', Color.Transparent,   MetaData.None);
+    public static readonly PatternSizeKey       = MuralBase.RegisterProperty<number>(     BrushPicker, 'PatternSize',       8,                   MetaData.None);
+    public static readonly PatternAngleKey      = MuralBase.RegisterProperty<number>(     BrushPicker, 'PatternAngle',      0,                   MetaData.None);
+    public static readonly PatternStrokeKey     = MuralBase.RegisterProperty<number>(     BrushPicker, 'PatternStroke',     1,                   MetaData.None);
 
     public get Brush():   Brush | undefined { return this.get_property_value(BrushPicker.BrushKey); }
     public set Brush(v:   Brush | undefined){ this.set_property_value(BrushPicker.BrushKey, v); }
@@ -143,7 +143,7 @@ export class BrushPicker extends TemplatedControl
     public set PatternStroke(v:     number){ this.set_property_value(BrushPicker.PatternStrokeKey, v); }
 
     static {
-        Model.OverrideMetadata(BrushPicker, Element.DefaultStyleKeyKey, { default_value: BrushPicker });
+        MuralBase.OverrideMetadata(BrushPicker, Element.DefaultStyleKeyKey, { default_value: BrushPicker });
     }
 
     private _trigger:    Border | undefined;

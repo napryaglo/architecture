@@ -1,7 +1,7 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
-import { Application, Model } from '../../runtime/index.js';
+import { Application, MuralBase } from '../../runtime/index.js';
 import type { Visual } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { ContentPresenter } from '../templates/content-presenter.js';
@@ -13,7 +13,7 @@ import { TextBlock } from '../text-block.js';
 // rebuilding it. Critical for a body that owns shared Visuals — a Diagram whose
 // items are its document's Figures: a rebuilt Diagram would re-parent already-
 // parented Figures and crash ("Visual already has a visual parent").
-class Doc extends Model
+class Doc extends MuralBase
 {
     public mounted = 0;
     public OnViewMounted(_v: Visual): void { this.mounted++; }

@@ -1,8 +1,8 @@
-import {
+﻿import {
     Color,
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Size,
     type DrawingContext,
 } from '../runtime/index.js';
@@ -53,7 +53,7 @@ export interface IconShape
 // produced by the parser (any `<g transform>` was folded into each shape's
 // geometry's own Transform during parse).
 //
-// Not a Model — pure value object. Instances are typically built by
+// Not a MuralBase — pure value object. Instances are typically built by
 // `parseSvgIcon(svgText)` at build time and stored in a ResourceDictionary
 // that the user merges into Application.Resources.
 export class IconDefinition
@@ -122,11 +122,11 @@ function brushForColor(color: Color): SolidColorBrush
 // resolved fill / stroke Brushes.
 export class Icon extends Element
 {
-    public static readonly SourceKey     = Model.RegisterProperty<IconDefinition | undefined>(
+    public static readonly SourceKey     = MuralBase.RegisterProperty<IconDefinition | undefined>(
         Icon, 'Source',     undefined, MetaData.Measure | MetaData.Render);
-    public static readonly ForegroundKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly ForegroundKey = MuralBase.RegisterProperty<Brush | undefined>(
         Icon, 'Foreground', undefined, MetaData.Render);
-    public static readonly RecolorKey    = Model.RegisterProperty<boolean>(
+    public static readonly RecolorKey    = MuralBase.RegisterProperty<boolean>(
         Icon, 'Recolor',    true,      MetaData.Render);
 
     public get Source(): IconDefinition | undefined           { return this.get_property_value(Icon.SourceKey); }

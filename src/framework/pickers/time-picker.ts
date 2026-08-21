@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Color,
     HorizontalAlignment,
     VerticalAlignment,
@@ -43,9 +43,9 @@ function angleFor(fractionOfTurn: number): number
 
 export class TimePicker extends TemplatedControl
 {
-    public static readonly HourKey = Model.RegisterProperty<number>(
+    public static readonly HourKey = MuralBase.RegisterProperty<number>(
         TimePicker, 'Hour', 9, MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly MinuteKey = Model.RegisterProperty<number>(
+    public static readonly MinuteKey = MuralBase.RegisterProperty<number>(
         TimePicker, 'Minute', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
 
     public get Hour(): number { return this.get_property_value(TimePicker.HourKey); }
@@ -56,7 +56,7 @@ export class TimePicker extends TemplatedControl
 
     static
     {
-        Model.OverrideMetadata(TimePicker, Element.DefaultStyleKeyKey, { default_value: TimePicker });
+        MuralBase.OverrideMetadata(TimePicker, Element.DefaultStyleKeyKey, { default_value: TimePicker });
     }
 
     private _mode = TimePickerMode.Hour;

@@ -1,7 +1,7 @@
-import {
+﻿import {
     type ICommand,
     MetaData,
-    Model,
+    MuralBase,
 } from '../../../runtime/index.js';
 import { CommandDefinition } from './command-definition.js';
 
@@ -15,13 +15,13 @@ import { CommandDefinition } from './command-definition.js';
 // Both are DPs so a `DataTemplate[DataType=CommandViewModel]` can bind them
 // (`Command = $Command`, `Content = Shape[Geometry=$Definition.Icon]`) — a
 // `$path` binding's first segment must be a DP.
-export class CommandViewModel extends Model
+export class CommandViewModel extends MuralBase
 {
-    public static readonly DefinitionKey = Model.RegisterProperty<CommandDefinition>(
+    public static readonly DefinitionKey = MuralBase.RegisterProperty<CommandDefinition>(
         CommandViewModel, 'Definition',
         undefined as unknown as CommandDefinition, MetaData.None);
 
-    public static readonly CommandKey = Model.RegisterProperty<ICommand>(
+    public static readonly CommandKey = MuralBase.RegisterProperty<ICommand>(
         CommandViewModel, 'Command',
         undefined as unknown as ICommand, MetaData.None);
 
@@ -29,7 +29,7 @@ export class CommandViewModel extends Model
     // `IsChecked = $IsActive`. Kept in sync by the ToolbarService, which reads the
     // active document's IsActive(definition) on every requery pulse. A plain DP
     // (default false) so it's bindable; irrelevant for non-toggle presentations.
-    public static readonly IsActiveKey = Model.RegisterProperty<boolean>(
+    public static readonly IsActiveKey = MuralBase.RegisterProperty<boolean>(
         CommandViewModel, 'IsActive', false, MetaData.None);
 
     constructor(definition: CommandDefinition, command: ICommand)

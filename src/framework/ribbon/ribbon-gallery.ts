@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -29,19 +29,19 @@ import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 export class RibbonGallery extends ItemsControl
 {
     // TwoWay by default so `SelectedItem=$VmField` round-trips a click.
-    public static readonly SelectedItemKey = Model.RegisterProperty<unknown>(
+    public static readonly SelectedItemKey = MuralBase.RegisterProperty<unknown>(
         RibbonGallery, 'SelectedItem', undefined, MetaData.BindsTwoWayByDefault);
-    public static readonly IsOpenKey = Model.RegisterProperty<boolean>(
+    public static readonly IsOpenKey = MuralBase.RegisterProperty<boolean>(
         RibbonGallery, 'IsOpen', false, MetaData.None);
     // Overlay dropdown chrome (MenuPopupHost + scrim + a mirror
     // ItemsControl). Set by the default Style; adopted like ToolBar's
     // PopupTemplate.
-    public static readonly PopupTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(
+    public static readonly PopupTemplateKey = MuralBase.RegisterProperty<ControlTemplate | undefined>(
         RibbonGallery, 'PopupTemplate', undefined, MetaData.None);
 
     static
     {
-        Model.OverrideMetadata(RibbonGallery, Element.DefaultStyleKeyKey, { default_value: RibbonGallery });
+        MuralBase.OverrideMetadata(RibbonGallery, Element.DefaultStyleKeyKey, { default_value: RibbonGallery });
     }
 
     private _moreButton:  Button           | undefined;

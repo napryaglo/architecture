@@ -1,13 +1,13 @@
-import { FillBehavior, Storyboard } from '../../visual-engine/animation/index.js';
+﻿import { FillBehavior, Storyboard } from '../../visual-engine/animation/index.js';
 import { Application } from '../application.js';
 import { Binding, BindingMode } from './binding.js';
 import type { ValueConverter } from './binding.js';
 import { MetaData } from '../metadata.js';
-import { Model } from '../model.js';
+import { MuralBase } from '../model.js';
 import { getSchemeTransitionAnimator, SchemeTransitionTokens, ThemeManager } from '../../visual-engine/theme/index.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
-// Internal Model that holds the most-recent resolved value of a
+// Internal MuralBase that holds the most-recent resolved value of a
 // resource lookup. Used as the source of the Binding handed back by
 // DynamicResource — when the watcher's Value changes (because some
 // dictionary along the resolution path was mutated), the Binding's
@@ -15,12 +15,12 @@ import type { Visual } from '../../visual-engine/visual.js';
 // EVD that owns the binding.
 //
 // Not exported — DynamicResource owns the lifecycle.
-class ResourceWatcher extends Model
+class ResourceWatcher extends MuralBase
 {
-    // MetaData.None — this Model isn't a Visual, so the
+    // MetaData.None — this MuralBase isn't a Visual, so the
     // Measure / Arrange / Render flags are inert; Value purely
     // serves as the binding source's signal channel.
-    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
         ResourceWatcher, 'Value', undefined, MetaData.None);
 
     public get Value(): unknown { return this.get_property_value(ResourceWatcher.ValueKey); }
@@ -63,7 +63,7 @@ class DynamicResourceBinding extends Binding
 {
     private readonly watcher: ResourceWatcher;
     private readonly subscriptions: Array<() => void>;
-    private readonly host: Visual | Model;
+    private readonly host: Visual | MuralBase;
     private readonly key: string;
     private readonly unsubscribeRewire: (() => void) | undefined;
     // One-shot: set only when this binding was created before any Application
@@ -75,7 +75,7 @@ class DynamicResourceBinding extends Binding
     // the animated slot.
     private activeStoryboard: Storyboard | undefined;
 
-    constructor(host: Visual | Model, key: string, converter?: ValueConverter)
+    constructor(host: Visual | MuralBase, key: string, converter?: ValueConverter)
     {
         const watcher = new ResourceWatcher();
         super(watcher, 'Value', BindingMode.OneWay,
@@ -298,7 +298,7 @@ class DynamicResourceBinding extends Binding
 // transform that re-applies on every re-resolve (theme swap, dictionary
 // mutation) — this is what backs `@PrimaryColor << Darken(0.2)` in `.mu`:
 // the modifier stays reactive rather than folding to a constant.
-export function DynamicResource(host: Visual | Model, key: string, converter?: ValueConverter): Binding
+export function DynamicResource(host: Visual | MuralBase, key: string, converter?: ValueConverter): Binding
 {
     return new DynamicResourceBinding(host, key, converter);
 }

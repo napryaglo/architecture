@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -35,19 +35,19 @@ export class RadioButton extends ToggleButton
     // the radio behaves as an independent toggle. Non-empty string =
     // any sibling RadioButton anywhere in the visual subtree with a
     // matching GroupName mutually excludes when this one is checked.
-    public static readonly GroupNameKey = Model.RegisterProperty<string>(
+    public static readonly GroupNameKey = MuralBase.RegisterProperty<string>(
         RadioButton, 'GroupName', '', MetaData.None);
 
     public get GroupName(): string { return this.get_property_value(RadioButton.GroupNameKey); }
     public set GroupName(v: string) { this.set_property_value(RadioButton.GroupNameKey, v); }
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             RadioButton, Element.DefaultStyleKeyKey,
             { default_value: RadioButton });
         // 20 × 20 dp default — M3 spec for the radio target.
-        Model.OverrideMetadata(RadioButton, Visual.WidthKey,  { default_value: 20 });
-        Model.OverrideMetadata(RadioButton, Visual.HeightKey, { default_value: 20 });
+        MuralBase.OverrideMetadata(RadioButton, Visual.WidthKey,  { default_value: 20 });
+        MuralBase.OverrideMetadata(RadioButton, Visual.HeightKey, { default_value: 20 });
     }
 
     // Re-entry guard — the broadcast loop sets siblings' IsChecked to

@@ -1,4 +1,4 @@
-// ListBoxVM — three-pane ListBox showcase: declarative items on the
+﻿// ListBoxVM — three-pane ListBox showcase: declarative items on the
 // left (markup-only), Items=[...] convenience in the middle, and an
 // ItemsSource + CollectionView pane on the right whose Sort / Filter
 // state is exercised through host-side click handlers.
@@ -8,7 +8,7 @@
 // x:name attributes from the freshly-rendered view inside
 // OnViewMounted. CollectionView subscription + toggle state live on
 // the VM so the demo data and behavior travel with the model.
-import { type Visual, Model } from '@pragmatic-lab/mural/runtime';
+import { type Visual, MuralBase } from '@pragmatic-lab/mural/runtime';
 import { SortDescription, SortDirection, TextBlock } from '@pragmatic-lab/mural/basic';
 import { Button } from '@pragmatic-lab/mural/framework';
 import {
@@ -37,7 +37,7 @@ function labelled(p: Person): LabelledPerson {
     return { Label: `${p.name} — ${p.role}`, name: p.name, role: p.role };
 }
 
-export class ListBoxVM extends Model
+export class ListBoxVM extends MuralBase
 {
     OnViewMounted(view: Visual): void {
         const bound      = view.FindName('bound');

@@ -1,7 +1,7 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Model, MetaData, Panel, Element, SelfBinding, type DrawingContext } from '../index.js';
+import { MuralBase, MetaData, Panel, Element, SelfBinding, type DrawingContext } from '../index.js';
 import { TextBlock } from '../../basic/index.js';
 import { Brush, SolidColorBrush } from '../../visual-engine/drawing/brush.js';
 import { Color } from '../../visual-engine/primitives.js';
@@ -16,7 +16,7 @@ class TestPanel extends Panel { }
 // Leaf with a Brush DP we point at SelfBinding and then read back.
 class Probe extends Element
 {
-    public static readonly TintKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly TintKey = MuralBase.RegisterProperty<Brush | undefined>(
         Probe, 'Tint', undefined, MetaData.None);
     public get Tint(): Brush | undefined { return this.get_property_value(Probe.TintKey); }
     public set Tint(v: Brush | undefined) { this.set_property_value(Probe.TintKey, v); }

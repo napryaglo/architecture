@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -35,7 +35,7 @@ export enum FanPivot
 
 export class Fan extends Shape
 {
-    public static readonly PivotKey           = Model.RegisterProperty<FanPivot>(         Fan, 'Pivot',           FanPivot.BottomLeft, MetaData.Render);
+    public static readonly PivotKey           = MuralBase.RegisterProperty<FanPivot>(         Fan, 'Pivot',           FanPivot.BottomLeft, MetaData.Render);
 
     public get Pivot(): FanPivot { return this.get_property_value(Fan.PivotKey); }
     public set Pivot(v: FanPivot) { this.set_property_value(Fan.PivotKey, v); }

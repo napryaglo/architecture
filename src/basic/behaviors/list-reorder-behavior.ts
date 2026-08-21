@@ -1,9 +1,9 @@
-import {
+﻿import {
     Adorner,
     AdornerLayer,
     Behavior,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     Rect,
     Size,
@@ -65,7 +65,7 @@ import { WrapPanel } from '../panels/wrap-panel.js';
 //     Drop silently no-ops.
 export class ListReorderBehavior extends Behavior
 {
-    public static readonly FromIndexFormatKey = Model.RegisterProperty<string>(
+    public static readonly FromIndexFormatKey = MuralBase.RegisterProperty<string>(
         ListReorderBehavior, 'FromIndexFormat', '@pragmatic-lab/mural/reorder/from-index', MetaData.None);
 
     // DataTemplate that renders the insertion indicator. When set,
@@ -77,7 +77,7 @@ export class ListReorderBehavior extends Behavior
     // on the produced visual to size it (a horizontal bar in vertical
     // mode, a vertical bar in wrap mode) — the template only paints,
     // it doesn't constrain.
-    public static readonly InsertionAdornerTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly InsertionAdornerTemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         ListReorderBehavior, 'InsertionAdornerTemplate', undefined, MetaData.None);
 
     public get FromIndexFormat(): string  { return this.get_property_value(ListReorderBehavior.FromIndexFormatKey); }

@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -89,19 +89,19 @@ export class SideSheetOverlayHost extends Panel
 
 export class SideSheet extends ContentControl
 {
-    public static readonly VariantKey   = Model.RegisterProperty<SideSheetVariant>(   SideSheet, 'Variant',   SideSheetVariant.Standard, MetaData.None);
-    public static readonly AnchorKey     = Model.RegisterProperty<Dock>(               SideSheet, 'Anchor',     Dock.Right,               MetaData.Measure | MetaData.Arrange);
+    public static readonly VariantKey   = MuralBase.RegisterProperty<SideSheetVariant>(   SideSheet, 'Variant',   SideSheetVariant.Standard, MetaData.None);
+    public static readonly AnchorKey     = MuralBase.RegisterProperty<Dock>(               SideSheet, 'Anchor',     Dock.Right,               MetaData.Measure | MetaData.Arrange);
     // BindsTwoWayByDefault (like ToggleButton.IsChecked): a scrim / close-
     // button dismissal writes IsOpen=false on the control, and a `$IsOpen`
     // binding carries that back to a bound VM without an explicit mode.
-    public static readonly IsOpenKey     = Model.RegisterProperty<boolean>(            SideSheet, 'IsOpen',     false,                    MetaData.Measure | MetaData.Arrange | MetaData.BindsTwoWayByDefault);
-    public static readonly SheetSizeKey  = Model.RegisterProperty<number>(             SideSheet, 'SheetSize',  320,                      MetaData.Measure | MetaData.Arrange);
-    public static readonly TitleKey      = Model.RegisterProperty<string>(             SideSheet, 'Title',      '',                       MetaData.Render);
-    public static readonly ScrimBrushKey = Model.RegisterProperty<Brush | undefined>( SideSheet, 'ScrimBrush', undefined,                MetaData.Render);
+    public static readonly IsOpenKey     = MuralBase.RegisterProperty<boolean>(            SideSheet, 'IsOpen',     false,                    MetaData.Measure | MetaData.Arrange | MetaData.BindsTwoWayByDefault);
+    public static readonly SheetSizeKey  = MuralBase.RegisterProperty<number>(             SideSheet, 'SheetSize',  320,                      MetaData.Measure | MetaData.Arrange);
+    public static readonly TitleKey      = MuralBase.RegisterProperty<string>(             SideSheet, 'Title',      '',                       MetaData.Render);
+    public static readonly ScrimBrushKey = MuralBase.RegisterProperty<Brush | undefined>( SideSheet, 'ScrimBrush', undefined,                MetaData.Render);
 
     static
     {
-        Model.OverrideMetadata(SideSheet, Element.DefaultStyleKeyKey, { default_value: SideSheet });
+        MuralBase.OverrideMetadata(SideSheet, Element.DefaultStyleKeyKey, { default_value: SideSheet });
     }
 
     // Locked at first ensureStructure() (target-attach) — subsequent Variant

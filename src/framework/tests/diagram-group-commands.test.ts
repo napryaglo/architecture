@@ -1,11 +1,11 @@
-import { ModifierKeys } from '../../runtime/index.js';
+﻿import { ModifierKeys } from '../../runtime/index.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     RelayCommand,
     SetterFactory,
@@ -28,21 +28,21 @@ import {
 
 // ── Pure-helper tests ───────────────────────────────────────────────
 
-class LeafVM extends Model {
-    public static readonly LeftKey   = Model.RegisterProperty<number>(LeafVM, 'Left',   0,  MetaData.None);
-    public static readonly TopKey    = Model.RegisterProperty<number>(LeafVM, 'Top',    0,  MetaData.None);
-    public static readonly WidthKey  = Model.RegisterProperty<number>(LeafVM, 'Width',  10, MetaData.None);
-    public static readonly HeightKey = Model.RegisterProperty<number>(LeafVM, 'Height', 10, MetaData.None);
+class LeafVM extends MuralBase {
+    public static readonly LeftKey   = MuralBase.RegisterProperty<number>(LeafVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = MuralBase.RegisterProperty<number>(LeafVM, 'Top',    0,  MetaData.None);
+    public static readonly WidthKey  = MuralBase.RegisterProperty<number>(LeafVM, 'Width',  10, MetaData.None);
+    public static readonly HeightKey = MuralBase.RegisterProperty<number>(LeafVM, 'Height', 10, MetaData.None);
     public Parent: GroupMockVM | undefined;
 }
 
 // Mock group VM: has Members + Parent. Treated as group-shaped by
 // isGroupShape because it exposes `Members`.
-class GroupMockVM extends Model {
-    public static readonly LeftKey   = Model.RegisterProperty<number>(GroupMockVM, 'Left',   0,  MetaData.None);
-    public static readonly TopKey    = Model.RegisterProperty<number>(GroupMockVM, 'Top',    0,  MetaData.None);
-    public static readonly WidthKey  = Model.RegisterProperty<number>(GroupMockVM, 'Width',  10, MetaData.None);
-    public static readonly HeightKey = Model.RegisterProperty<number>(GroupMockVM, 'Height', 10, MetaData.None);
+class GroupMockVM extends MuralBase {
+    public static readonly LeftKey   = MuralBase.RegisterProperty<number>(GroupMockVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = MuralBase.RegisterProperty<number>(GroupMockVM, 'Top',    0,  MetaData.None);
+    public static readonly WidthKey  = MuralBase.RegisterProperty<number>(GroupMockVM, 'Width',  10, MetaData.None);
+    public static readonly HeightKey = MuralBase.RegisterProperty<number>(GroupMockVM, 'Height', 10, MetaData.None);
     public Members: LeafVM[];
     public Parent:  GroupMockVM | undefined;
     constructor(members: LeafVM[]) {
@@ -89,7 +89,7 @@ describe('commands/group-ops.ts — pure helpers', () => {
     test('isGroupShape returns true iff Members property is present', () => {
         assert.equal(isGroupShape(new LeafVM()),               false);
         assert.equal(isGroupShape(new GroupMockVM([])),        true);
-        assert.equal(isGroupShape({ Members: [] }),            false, 'plain object is not a Model');
+        assert.equal(isGroupShape({ Members: [] }),            false, 'plain object is not a MuralBase');
         assert.equal(isGroupShape(undefined),                  false);
         assert.equal(isGroupShape(null),                       false);
         assert.equal(isGroupShape('not a model'),              false);
@@ -104,10 +104,10 @@ class FakeTarget implements MountableTarget {
     public GetFocusedVisual(): Visual | undefined { return undefined; }
 }
 
-function setup(items: Model[]): { diagram: Diagram } {
+function setup(items: MuralBase[]): { diagram: Diagram } {
     Application.current = null;
     new Application();
-    const coll = new ObservableCollection<Model>();
+    const coll = new ObservableCollection<MuralBase>();
     for (const i of items) coll.Add(i);
     const diagram = new Diagram();
     diagram.SelectionMode = SelectionMode.Extended;
@@ -181,7 +181,7 @@ describe('Diagram — DiagramCommands.Group / Ungroup', () => {
         const c = new LeafVM();
         const { diagram } = setup([a, b, c]);
 
-        const requests: Array<readonly Model[]> = [];
+        const requests: Array<readonly MuralBase[]> = [];
         diagram.AddGroupRequestedListener(args => requests.push(args.Items));
 
         selectMany(diagram, [a, b, c]);
@@ -201,7 +201,7 @@ describe('Diagram — DiagramCommands.Group / Ungroup', () => {
         const c = new LeafVM();
         const { diagram } = setup([g, c]);
 
-        const requests: Array<readonly Model[]> = [];
+        const requests: Array<readonly MuralBase[]> = [];
         diagram.AddUngroupRequestedListener(args => requests.push(args.Groups));
 
         selectMany(diagram, [g]);

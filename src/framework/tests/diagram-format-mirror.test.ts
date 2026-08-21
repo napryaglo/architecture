@@ -1,4 +1,4 @@
-import { ModifierKeys } from '../../runtime/index.js';
+﻿import { ModifierKeys } from '../../runtime/index.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -6,7 +6,7 @@ import {
     Application,
     Color,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     SetterFactory,
     Setter,
@@ -27,13 +27,13 @@ import { flattenToLeaves } from '../diagram/commands/group-ops.js';
 // Fill is a Brush DP; Stroke is a Pen DP. Each instance gets its
 // own Pen so FormatMirror can verify per-shape Pen identity is preserved
 // during broadcast.
-class FormattableVM extends Model {
-    public static readonly LeftKey      = Model.RegisterProperty<number>(FormattableVM, 'Left',      0,  MetaData.None);
-    public static readonly TopKey       = Model.RegisterProperty<number>(FormattableVM, 'Top',       0,  MetaData.None);
-    public static readonly WidthKey     = Model.RegisterProperty<number>(FormattableVM, 'Width',    10, MetaData.None);
-    public static readonly HeightKey    = Model.RegisterProperty<number>(FormattableVM, 'Height',   10, MetaData.None);
-    public static readonly FillKey = Model.RegisterProperty<SolidColorBrush | undefined>(FormattableVM, 'Fill', undefined, MetaData.None);
-    public static readonly StrokeKey    = Model.RegisterProperty<Pen | undefined>(FormattableVM, 'Stroke',    undefined, MetaData.None);
+class FormattableVM extends MuralBase {
+    public static readonly LeftKey      = MuralBase.RegisterProperty<number>(FormattableVM, 'Left',      0,  MetaData.None);
+    public static readonly TopKey       = MuralBase.RegisterProperty<number>(FormattableVM, 'Top',       0,  MetaData.None);
+    public static readonly WidthKey     = MuralBase.RegisterProperty<number>(FormattableVM, 'Width',    10, MetaData.None);
+    public static readonly HeightKey    = MuralBase.RegisterProperty<number>(FormattableVM, 'Height',   10, MetaData.None);
+    public static readonly FillKey = MuralBase.RegisterProperty<SolidColorBrush | undefined>(FormattableVM, 'Fill', undefined, MetaData.None);
+    public static readonly StrokeKey    = MuralBase.RegisterProperty<Pen | undefined>(FormattableVM, 'Stroke',    undefined, MetaData.None);
     constructor(fill: SolidColorBrush, stroke: Pen) {
         super();
         this.set_property_value(FormattableVM.WidthKey,  10);
@@ -49,11 +49,11 @@ class FormattableVM extends Model {
 
 // IGroup-shaped VM containing FormattableVM members. Used to verify
 // flattenToLeaves walks Members.
-class GroupOfFormattablesVM extends Model {
-    public static readonly LeftKey   = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'Left',   0,  MetaData.None);
-    public static readonly TopKey    = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'Top',    0,  MetaData.None);
-    public static readonly WidthKey  = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'Width',  10, MetaData.None);
-    public static readonly HeightKey = Model.RegisterProperty<number>(GroupOfFormattablesVM, 'Height', 10, MetaData.None);
+class GroupOfFormattablesVM extends MuralBase {
+    public static readonly LeftKey   = MuralBase.RegisterProperty<number>(GroupOfFormattablesVM, 'Left',   0,  MetaData.None);
+    public static readonly TopKey    = MuralBase.RegisterProperty<number>(GroupOfFormattablesVM, 'Top',    0,  MetaData.None);
+    public static readonly WidthKey  = MuralBase.RegisterProperty<number>(GroupOfFormattablesVM, 'Width',  10, MetaData.None);
+    public static readonly HeightKey = MuralBase.RegisterProperty<number>(GroupOfFormattablesVM, 'Height', 10, MetaData.None);
     public Members: FormattableVM[];
     constructor(members: FormattableVM[]) {
         super();
@@ -78,10 +78,10 @@ function freshPen(brushColor: SolidColorBrush, thickness: number = 1): Pen {
     return p;
 }
 
-function setup(items: Model[]): { diagram: Diagram } {
+function setup(items: MuralBase[]): { diagram: Diagram } {
     Application.current = null;
     new Application();
-    const coll = new ObservableCollection<Model>();
+    const coll = new ObservableCollection<MuralBase>();
     for (const i of items) coll.Add(i);
     const diagram = new Diagram();
     diagram.SelectionMode = SelectionMode.Extended;

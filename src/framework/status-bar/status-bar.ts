@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Visual,
@@ -28,7 +28,7 @@ export class StatusBar extends ItemsControl
         // Theme lookup uses StatusBar as the key — the default Style
         // `Style [TargetType=StatusBar]` in framework.resources.mu wires
         // the chrome Template plus the DockPanel ItemsPanel.
-        Model.OverrideMetadata(StatusBar, Element.DefaultStyleKeyKey, { default_value: StatusBar });
+        MuralBase.OverrideMetadata(StatusBar, Element.DefaultStyleKeyKey, { default_value: StatusBar });
     }
 
     // Accept StatusBarItem + StatusBarSeparator directly as
@@ -56,7 +56,7 @@ export class StatusBar extends ItemsControl
     }
 
     // Data-driven path: wrap each non-container item in a StatusBarItem.
-    // A Visual goes in directly via Content; a Model goes through
+    // A Visual goes in directly via Content; a MuralBase goes through
     // ContentControl's DataTemplate resolution; anything else falls
     // back to the ContentPresenter's stringify path.
     public override GetContainerForItemOverride(item: unknown): Visual
@@ -92,7 +92,7 @@ export class StatusBarItem extends ContentControl
     {
         // Type-keyed default Style lookup — registered in
         // framework.resources.mu under `Style [TargetType=StatusBarItem]`.
-        Model.OverrideMetadata(StatusBarItem, Element.DefaultStyleKeyKey, { default_value: StatusBarItem });
+        MuralBase.OverrideMetadata(StatusBarItem, Element.DefaultStyleKeyKey, { default_value: StatusBarItem });
     }
 }
 
@@ -102,7 +102,7 @@ export class StatusBarItem extends ContentControl
 // container-wrap pass.
 export class StatusBarSeparator extends Element
 {
-    public static readonly LineBrushKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly LineBrushKey = MuralBase.RegisterProperty<Brush | undefined>(
         StatusBarSeparator, 'LineBrush', undefined, MetaData.Render,
     );
 
@@ -111,7 +111,7 @@ export class StatusBarSeparator extends Element
         // Type-keyed default Style — supplies Width / MinHeight /
         // LineBrush via DynamicResource so the line tints follow the
         // active theme palette.
-        Model.OverrideMetadata(StatusBarSeparator, Element.DefaultStyleKeyKey, { default_value: StatusBarSeparator });
+        MuralBase.OverrideMetadata(StatusBarSeparator, Element.DefaultStyleKeyKey, { default_value: StatusBarSeparator });
     }
 
     constructor()

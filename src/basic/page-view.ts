@@ -1,7 +1,7 @@
-import {
+﻿import {
     DynamicResource,
     MetaData,
-    Model,
+    MuralBase,
     Thickness,
     Element, Visual,
     type PropertyDescriptor,
@@ -33,12 +33,12 @@ import { TextBlock } from './text-block.js';
 // Content to fill whatever rectangle its host arranged it into.
 export class PageView extends TemplatedControl
 {
-    public static readonly TitleKey    = Model.RegisterProperty<string>(                 PageView, 'Title',    '',        MetaData.Render);
-    public static readonly SubtitleKey = Model.RegisterProperty<string>(                 PageView, 'Subtitle', '',        MetaData.Measure | MetaData.Render);
-    public static readonly ContentKey  = Model.RegisterProperty<Visual | Model | undefined>(PageView, 'Content',  undefined, MetaData.Measure);
+    public static readonly TitleKey    = MuralBase.RegisterProperty<string>(                 PageView, 'Title',    '',        MetaData.Render);
+    public static readonly SubtitleKey = MuralBase.RegisterProperty<string>(                 PageView, 'Subtitle', '',        MetaData.Measure | MetaData.Render);
+    public static readonly ContentKey  = MuralBase.RegisterProperty<Visual | MuralBase | undefined>(PageView, 'Content',  undefined, MetaData.Measure);
 
     static {
-        Model.OverrideMetadata(PageView, Element.DefaultStyleKeyKey, { default_value: PageView });
+        MuralBase.OverrideMetadata(PageView, Element.DefaultStyleKeyKey, { default_value: PageView });
     }
 
     // Template parts — resolved from the compiled `page-view.template.mu`
@@ -94,25 +94,25 @@ export class PageView extends TemplatedControl
 
     // Tracks the Visual actually inside the ContentPresenter. When
     // Content is itself a Visual, _resolvedContent === Content. When
-    // Content is a non-Visual Model, _resolvedContent is the visual
+    // Content is a non-Visual MuralBase, _resolvedContent is the visual
     // produced by applying the matching DataTemplate.
     private _resolvedContent: Visual | undefined;
 
-    // Memoised DataTemplate output, keyed by Model identity. Navigating
-    // away from a Model-content demo only unslots its view (DetachVisual)
-    // — it does NOT logically detach the persistent Visuals the Model may
+    // Memoised DataTemplate output, keyed by MuralBase identity. Navigating
+    // away from a MuralBase-content demo only unslots its view (DetachVisual)
+    // — it does NOT logically detach the persistent Visuals the MuralBase may
     // own (the diagram's fused Figures, toolbox PreviewNodes). Re-running
     // tpl.Apply on nav-back would build a fresh tree that re-attaches
     // those still-parented Visuals → "Element already has a logical
-    // parent". Caching the resolved view by Model identity makes nav-back
+    // parent". Caching the resolved view by MuralBase identity makes nav-back
     // reuse the SAME intact tree (nothing inside is rebuilt or
     // re-attached), realising the platform's "nav-back resurfaces the
     // same state" contract. WeakMap so the view is collectible with its
-    // Model.
+    // MuralBase.
     private readonly _resolvedByModel = new WeakMap<object, Visual>();
 
-    public get Content(): Visual | Model | undefined { return this.get_property_value(PageView.ContentKey); }
-    public set Content(value: Visual | Model | undefined)
+    public get Content(): Visual | MuralBase | undefined { return this.get_property_value(PageView.ContentKey); }
+    public set Content(value: Visual | MuralBase | undefined)
     {
         // Side-effect (presenter swap + DataTemplate resolution) is
         // dispatched from OnPropertyChanged so that binding pushes
@@ -121,10 +121,10 @@ export class PageView extends TemplatedControl
         this.set_property_value(PageView.ContentKey, value);
     }
 
-    private applyContent(oldValue: Visual | Model | undefined, newValue: Visual | Model | undefined): void
+    private applyContent(oldValue: Visual | MuralBase | undefined, newValue: Visual | MuralBase | undefined): void
     {
         // Unslot the currently-presented visual (the template-resolved
-        // one when prior Content was a Model) before detaching the OLD
+        // one when prior Content was a MuralBase) before detaching the OLD
         // logical Content.
         if (this._resolvedContent !== undefined)
         {
@@ -142,7 +142,7 @@ export class PageView extends TemplatedControl
             this.AttachLogical(newValue);
             this._resolvedContent = newValue;
         }
-        else if (newValue instanceof Model)
+        else if (newValue instanceof MuralBase)
         {
             this._resolvedContent = this.resolveModelView(newValue);
         }
@@ -153,15 +153,15 @@ export class PageView extends TemplatedControl
         }
     }
 
-    // Resolve the Visual for a Model Content — auto-pick a DataTemplate
+    // Resolve the Visual for a MuralBase Content — auto-pick a DataTemplate
     // by class identity, host the data through DataContext so $-bindings
-    // resolve naturally, then memoise by Model identity. A cache hit
+    // resolve naturally, then memoise by MuralBase identity. A cache hit
     // (nav-back to the same demo) returns the SAME tree built last time
     // rather than re-applying the template; that re-application is what
-    // re-attaches the Model's persistent Visuals and throws. The
+    // re-attaches the MuralBase's persistent Visuals and throws. The
     // OnViewMounted hook fires only on the first (building) resolution,
     // matching its "once per resolution" contract.
-    private resolveModelView(model: Model): Visual | undefined
+    private resolveModelView(model: MuralBase): Visual | undefined
     {
         const cached = this._resolvedByModel.get(model);
         if (cached !== undefined) return cached;
@@ -213,8 +213,8 @@ export class PageView extends TemplatedControl
                 break;
             case 'Content':
                 this.applyContent(
-                    oldValue as Visual | Model | undefined,
-                    newValue as Visual | Model | undefined,
+                    oldValue as Visual | MuralBase | undefined,
+                    newValue as Visual | MuralBase | undefined,
                 );
                 break;
         }

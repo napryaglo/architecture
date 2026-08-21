@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
 } from '../../runtime/index.js';
 import { Inspector } from '../shell/services/inspector.js';
@@ -25,11 +25,11 @@ import { InspectorPage, ShapeStylePage, SizePositionPage } from './inspector-pag
 // its DataContext to $View.
 export class DiagramInspector extends Inspector
 {
-    public static readonly ViewKey = Model.RegisterProperty<Diagram | undefined>(
+    public static readonly ViewKey = MuralBase.RegisterProperty<Diagram | undefined>(
         DiagramInspector, 'View', undefined, MetaData.None);
-    public static readonly PagesKey = Model.RegisterProperty<ObservableCollection<InspectorPage>>(
+    public static readonly PagesKey = MuralBase.RegisterProperty<ObservableCollection<InspectorPage>>(
         DiagramInspector, 'Pages', undefined as unknown as ObservableCollection<InspectorPage>, MetaData.None);
-    public static readonly SelectedPageKey = Model.RegisterProperty<InspectorPage | undefined>(
+    public static readonly SelectedPageKey = MuralBase.RegisterProperty<InspectorPage | undefined>(
         DiagramInspector, 'SelectedPage', undefined, MetaData.None | MetaData.BindsTwoWayByDefault);
 
     constructor()

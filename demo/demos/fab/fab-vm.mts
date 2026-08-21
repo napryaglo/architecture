@@ -1,22 +1,22 @@
-// FabVM — backs the FAB demo. One click counter per Size variant + per
+﻿// FabVM — backs the FAB demo. One click counter per Size variant + per
 // Extended slot so the dynamic-binding chain is visible end-to-end. No
 // IsChecked story because FAB is monomorphic on container colour and
 // doesn't ship a toggle variant.
-import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 
-export class FabVM extends Model
+export class FabVM extends MuralBase
 {
-    static SmallClicksKey    = Model.RegisterProperty<number>(FabVM, 'SmallClicks',    0, MetaData.None);
-    static DefaultClicksKey  = Model.RegisterProperty<number>(FabVM, 'DefaultClicks',  0, MetaData.None);
-    static LargeClicksKey    = Model.RegisterProperty<number>(FabVM, 'LargeClicks',    0, MetaData.None);
-    static ExtendedClicksKey = Model.RegisterProperty<number>(FabVM, 'ExtendedClicks', 0, MetaData.None);
-    static ComposeClicksKey  = Model.RegisterProperty<number>(FabVM, 'ComposeClicks',  0, MetaData.None);
+    static SmallClicksKey    = MuralBase.RegisterProperty<number>(FabVM, 'SmallClicks',    0, MetaData.None);
+    static DefaultClicksKey  = MuralBase.RegisterProperty<number>(FabVM, 'DefaultClicks',  0, MetaData.None);
+    static LargeClicksKey    = MuralBase.RegisterProperty<number>(FabVM, 'LargeClicks',    0, MetaData.None);
+    static ExtendedClicksKey = MuralBase.RegisterProperty<number>(FabVM, 'ExtendedClicks', 0, MetaData.None);
+    static ComposeClicksKey  = MuralBase.RegisterProperty<number>(FabVM, 'ComposeClicks',  0, MetaData.None);
 
-    static ClickSmallCommandKey    = Model.RegisterProperty<RelayCommand | null>(FabVM, 'ClickSmallCommand',    null, MetaData.None);
-    static ClickDefaultCommandKey  = Model.RegisterProperty<RelayCommand | null>(FabVM, 'ClickDefaultCommand',  null, MetaData.None);
-    static ClickLargeCommandKey    = Model.RegisterProperty<RelayCommand | null>(FabVM, 'ClickLargeCommand',    null, MetaData.None);
-    static ClickExtendedCommandKey = Model.RegisterProperty<RelayCommand | null>(FabVM, 'ClickExtendedCommand', null, MetaData.None);
-    static ClickComposeCommandKey  = Model.RegisterProperty<RelayCommand | null>(FabVM, 'ClickComposeCommand',  null, MetaData.None);
+    static ClickSmallCommandKey    = MuralBase.RegisterProperty<RelayCommand | null>(FabVM, 'ClickSmallCommand',    null, MetaData.None);
+    static ClickDefaultCommandKey  = MuralBase.RegisterProperty<RelayCommand | null>(FabVM, 'ClickDefaultCommand',  null, MetaData.None);
+    static ClickLargeCommandKey    = MuralBase.RegisterProperty<RelayCommand | null>(FabVM, 'ClickLargeCommand',    null, MetaData.None);
+    static ClickExtendedCommandKey = MuralBase.RegisterProperty<RelayCommand | null>(FabVM, 'ClickExtendedCommand', null, MetaData.None);
+    static ClickComposeCommandKey  = MuralBase.RegisterProperty<RelayCommand | null>(FabVM, 'ClickComposeCommand',  null, MetaData.None);
 
     get SmallClicks():    number { return this.get_property_value(FabVM.SmallClicksKey); }
     set SmallClicks(v:    number) { this.set_property_value(FabVM.SmallClicksKey, v); }

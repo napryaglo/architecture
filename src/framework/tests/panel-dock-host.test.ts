@@ -1,9 +1,9 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import { PanelDockService } from '../shell/services/panel-dock-service.js';
 import type { IDockPanel } from '../shell/services/dock-panel.js';
-import { Application, MetaData, Model, Rect, Size, type Visual } from '../../runtime/index.js';
+import { Application, MetaData, MuralBase, Rect, Size, type Visual } from '../../runtime/index.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { Border } from '../../basic/border.js';
 import { EditorShell } from '../shell/editor-shell.js';
@@ -85,9 +85,9 @@ function collect<T>(root: Visual, ctor: new (...a: never[]) => T, out: T[] = [])
 const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 
 // A concrete dock panel rendered by a marker DataTemplate.
-class ViewPanel extends Model implements IDockPanel {
-    public static readonly IdKey = Model.RegisterProperty<string>(ViewPanel, 'Id', '', MetaData.None);
-    public static readonly TitleKey = Model.RegisterProperty<string>(ViewPanel, 'Title', '', MetaData.None);
+class ViewPanel extends MuralBase implements IDockPanel {
+    public static readonly IdKey = MuralBase.RegisterProperty<string>(ViewPanel, 'Id', '', MetaData.None);
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(ViewPanel, 'Title', '', MetaData.None);
     public readonly marker = new Border();
     constructor(id: string, title: string) {
         super();

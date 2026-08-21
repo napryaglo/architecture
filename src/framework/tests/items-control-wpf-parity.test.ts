@@ -1,9 +1,9 @@
-import { describe, test } from 'node:test';
+﻿import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     MetaData,
-    Model,
+    MuralBase,
     Setter,
     Size,
     Style,
@@ -20,7 +20,7 @@ import { ItemsControl } from '@pragmatic-lab/mural/framework';
 class Leaf extends Element
 {
     static {
-        Model.RegisterProperty(Leaf, 'Tag', 'plain', MetaData.None);
+        MuralBase.RegisterProperty(Leaf, 'Tag', 'plain', MetaData.None);
     }
     constructor(public readonly source: unknown) { super(); }
     public get Tag(): string { return this.get_property_value(resolveKey(this, undefined, 'Tag')); }

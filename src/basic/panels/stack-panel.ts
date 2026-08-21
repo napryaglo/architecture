@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -21,7 +21,7 @@ import { Orientation } from './orientation.js';
 // than the layout slot.
 export class StackPanel extends Panel
 {
-    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
+    public static readonly OrientationKey = MuralBase.RegisterProperty<Orientation>(
         StackPanel, 'Orientation', Orientation.Vertical,
         MetaData.Measure | MetaData.Arrange);
 

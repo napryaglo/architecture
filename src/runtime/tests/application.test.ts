@@ -1,9 +1,9 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     ResourceDictionary,
     Scheme,
@@ -24,7 +24,7 @@ import { resolveKey } from '../model-internals.js';
 class TestLeaf extends Element
 {
     static {
-        Model.RegisterProperty(TestLeaf, 'Brush', undefined, MetaData.None);
+        MuralBase.RegisterProperty(TestLeaf, 'Brush', undefined, MetaData.None);
     }
     public get Brush(): unknown { return this.get_property_value(resolveKey(this, undefined, 'Brush')); }
     public set Brush(v: unknown) { this.set_property_value(resolveKey(this, undefined, 'Brush'), v); }

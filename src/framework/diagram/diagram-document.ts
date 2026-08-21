@@ -1,8 +1,8 @@
-import {
+﻿import {
     type CollectionChange,
     type ICommand,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     type PropertyDescriptor,
     RelayCommand,
@@ -197,15 +197,15 @@ let _diagramDocSeq = 0;
 // Customise by subclassing (override CreateNode for custom Figure
 // shapes, etc.) or by composing — the Document doesn't lock methods
 // down.
-export class DiagramDocument extends Model implements DiagramMutator, IDocument, ICommandTarget, IFontFormatSink
+export class DiagramDocument extends MuralBase implements DiagramMutator, IDocument, ICommandTarget, IFontFormatSink
 {
     // ── IDocument surface — lets a DocumentsContentHostService host this
     // document (open-set dedupe, tab title, dirty indicator, Save). ──
-    public static readonly IdKey            = Model.RegisterProperty<string>(
+    public static readonly IdKey            = MuralBase.RegisterProperty<string>(
         DiagramDocument, 'Id',            '', MetaData.None);
-    public static readonly TitleKey         = Model.RegisterProperty<string>(
+    public static readonly TitleKey         = MuralBase.RegisterProperty<string>(
         DiagramDocument, 'Title',         'Diagram', MetaData.None);
-    public static readonly IsDirtyKey       = Model.RegisterProperty<boolean>(
+    public static readonly IsDirtyKey       = MuralBase.RegisterProperty<boolean>(
         DiagramDocument, 'IsDirty',       false, MetaData.None);
     // The Diagram control currently presenting this document. Published by the
     // control itself when this document becomes its DataContext (see
@@ -213,7 +213,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     // pane) bind the active document's editing commands + selection-format
     // state THROUGH this: `$service(ContentHostService).ActiveDocument.ActiveView.<X>`.
     // undefined when no view is materialized (e.g. the document isn't active).
-    public static readonly ActiveViewKey    = Model.RegisterProperty<Diagram | undefined>(
+    public static readonly ActiveViewKey    = MuralBase.RegisterProperty<Diagram | undefined>(
         DiagramDocument, 'ActiveView',    undefined, MetaData.None);
 
     // The inspector VM the shell's inspector region presents for this document
@@ -221,43 +221,43 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
     // A stable per-document instance whose `View` this document keeps synced with
     // ActiveView — so the inspector reaches the live control's selection-format
     // state. A DP so `ActiveDocument.Inspector` resolves as a bindable path.
-    public static readonly InspectorKey     = Model.RegisterProperty<DiagramInspector>(
+    public static readonly InspectorKey     = MuralBase.RegisterProperty<DiagramInspector>(
         DiagramDocument, 'Inspector',     undefined as unknown as DiagramInspector, MetaData.None);
 
-    public static readonly NodesKey         = Model.RegisterProperty<ObservableCollection<Figure | Group | NodeViewModel>>(
+    public static readonly NodesKey         = MuralBase.RegisterProperty<ObservableCollection<Figure | Group | NodeViewModel>>(
         DiagramDocument, 'Nodes',         undefined as unknown as ObservableCollection<Figure | Group | NodeViewModel>, MetaData.None);
-    public static readonly ConnectorsKey    = Model.RegisterProperty<ObservableCollection<Connector>>(
+    public static readonly ConnectorsKey    = MuralBase.RegisterProperty<ObservableCollection<Connector>>(
         DiagramDocument, 'Connectors',    undefined as unknown as ObservableCollection<Connector>, MetaData.None);
-    public static readonly StatusKey        = Model.RegisterProperty<string>(
+    public static readonly StatusKey        = MuralBase.RegisterProperty<string>(
         DiagramDocument, 'Status',        '', MetaData.None);
-    public static readonly StorageKey       = Model.RegisterProperty<DiagramStorage | undefined>(
+    public static readonly StorageKey       = MuralBase.RegisterProperty<DiagramStorage | undefined>(
         DiagramDocument, 'Storage',       undefined, MetaData.None);
-    public static readonly SaveCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SaveCommandKey   = MuralBase.RegisterProperty<RelayCommand | undefined>(
         DiagramDocument, 'SaveCommand',   undefined, MetaData.None);
-    public static readonly LoadCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly LoadCommandKey   = MuralBase.RegisterProperty<RelayCommand | undefined>(
         DiagramDocument, 'LoadCommand',   undefined, MetaData.None);
 
     // ── IFontFormatSink surface — the font-format editor the shell toolbar hosts
     // binds these two-way. They MIRROR the published ActiveView's Selection* DPs:
     // a picker write flows out to the control (→ FormatMirror → selection), and a
     // selection change flows back here. Defaults match the Diagram control's.
-    public static readonly FontFamilyKey   = Model.RegisterProperty<string>(
+    public static readonly FontFamilyKey   = MuralBase.RegisterProperty<string>(
         DiagramDocument, 'FontFamily',   '', MetaData.None);
-    public static readonly FontSizeKey     = Model.RegisterProperty<number>(
+    public static readonly FontSizeKey     = MuralBase.RegisterProperty<number>(
         DiagramDocument, 'FontSize',     12, MetaData.None);
-    public static readonly FontColorHexKey = Model.RegisterProperty<string>(
+    public static readonly FontColorHexKey = MuralBase.RegisterProperty<string>(
         DiagramDocument, 'FontColorHex', '#000000', MetaData.None);
     // The size steppers bind these; sourced from the live view (undefined with no
     // view). Read-only to the world — set only from the mirrored ActiveView.
-    public static readonly IncreaseFontSizeCommandKey = Model.RegisterProperty<ICommand | undefined>(
+    public static readonly IncreaseFontSizeCommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
         DiagramDocument, 'IncreaseFontSizeCommand', undefined, MetaData.None);
-    public static readonly DecreaseFontSizeCommandKey = Model.RegisterProperty<ICommand | undefined>(
+    public static readonly DecreaseFontSizeCommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
         DiagramDocument, 'DecreaseFontSizeCommand', undefined, MetaData.None);
 
     // Connectors-mode pin — mirrors the live view's ConnectorsModePinned two-way.
     // The shell status bar's connector indicator binds this: writing it toggles
     // the mode on the control, and the control's changes flow back here.
-    public static readonly ConnectorsModePinnedKey = Model.RegisterProperty<boolean>(
+    public static readonly ConnectorsModePinnedKey = MuralBase.RegisterProperty<boolean>(
         DiagramDocument, 'ConnectorsModePinned', false, MetaData.None);
 
     private _nextId = 1;
@@ -462,7 +462,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         const ctor = node.constructor;
         const onEdited = (): void => this._markDirty();
         const names = (['Left', 'Top', 'Width', 'Height', 'Fill', 'Stroke'] as const)
-            .filter(n => Model.HasProperty(ctor, n));
+            .filter(n => MuralBase.HasProperty(ctor, n));
         const keys = names.map(n => resolveKey(node, undefined, n));
         for (const k of keys) node.AddPropertyChangedListener(k, onEdited);
 
@@ -470,7 +470,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         const strokeHost = node as { Stroke?: Pen };
         let offPen = this._wirePenDirty(strokeHost.Stroke, onEdited);
         const rewirePen = (): void => { offPen(); offPen = this._wirePenDirty(strokeHost.Stroke, onEdited); };
-        const hasStroke = Model.HasProperty(ctor, 'Stroke');
+        const hasStroke = MuralBase.HasProperty(ctor, 'Stroke');
         const strokeKey = hasStroke ? resolveKey(node, undefined, 'Stroke') : undefined;
         if (strokeKey !== undefined) node.AddPropertyChangedListener(strokeKey, rewirePen);
 
@@ -1083,7 +1083,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
         // Round-trip nodes first so connectors can resolve their endpoint
         // nodeIds against the freshly-rehydrated Nodes set. byId holds Figure
         // shapes (incl. TextNode/Callout, which extend Figure) AND content VMs;
-        // ConnectorEndpoint.Node is typed Model so all are accepted. Endpoints
+        // ConnectorEndpoint.Node is typed MuralBase so all are accepted. Endpoints
         // to a Figure bind directly; endpoints to a VM defer to the VM's
         // container (see rehydrateEndpoint).
         const byId = new Map<string, Figure | NodeViewModel>();
@@ -1192,7 +1192,7 @@ export class DiagramDocument extends Model implements DiagramMutator, IDocument,
 }
 
 // A node's stable Id for cascade matching. Figure and NodeViewModel both carry
-// an Id; other Model kinds (e.g. a Group container) have none → undefined, so
+// an Id; other MuralBase kinds (e.g. a Group container) have none → undefined, so
 // they match by object identity only. Kept in sync with serializeEndpoint's
 // node-kind test.
 function nodeIdOf(n: unknown): string | undefined

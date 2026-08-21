@@ -1,6 +1,6 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, MetaData, Model, type IServiceProvider } from '../../../runtime/index.js';
+import { Application, MetaData, MuralBase, type IServiceProvider } from '../../../runtime/index.js';
 import { resolveKey } from '../../../runtime/model-internals.js';
 import { ContentHostService } from '../services/content-host-service.js';
 import {
@@ -22,11 +22,11 @@ class FakeDoc implements IDocument
 }
 function id2title(id: string): string { return id.toUpperCase(); }
 
-// A Model document whose IsDirty is a reactive DP (so the host's aggregation
+// A MuralBase document whose IsDirty is a reactive DP (so the host's aggregation
 // sees changes), recording Save() calls.
-class DirtyDoc extends Model implements IDocument
+class DirtyDoc extends MuralBase implements IDocument
 {
-    static { Model.RegisterProperty(DirtyDoc, 'IsDirty', false, MetaData.None); }
+    static { MuralBase.RegisterProperty(DirtyDoc, 'IsDirty', false, MetaData.None); }
     public saveCount = 0;
     constructor(public readonly Id: string, public readonly Title: string = Id) { super(); }
     public get IsDirty(): boolean { return this.get_property_value(resolveKey(this, undefined, 'IsDirty')); }
@@ -34,10 +34,10 @@ class DirtyDoc extends Model implements IDocument
     public Save(): void { this.saveCount++; this.set_property_value(resolveKey(this, undefined, 'IsDirty'), false); }
 }
 
-// A Model document that exposes IsDirty as a PLAIN FIELD (no registered DP) —
+// A MuralBase document that exposes IsDirty as a PLAIN FIELD (no registered DP) —
 // the host must tolerate it (contribute its static IsDirty, no live
 // subscription) rather than throw when resolving a non-existent DP.
-class PlainFieldDoc extends Model implements IDocument
+class PlainFieldDoc extends MuralBase implements IDocument
 {
     public IsDirty = false;
     public saveCount = 0;
@@ -327,10 +327,10 @@ describe('DocumentsContentHostService — dirty tracking + save commands', () =>
         assert.equal(host.SaveActiveCommand.CanExecute(undefined), false, 'saved → disabled');
     });
 
-    test('a Model document without an IsDirty DP is tolerated (static, no throw)', () => {
+    test('a MuralBase document without an IsDirty DP is tolerated (static, no throw)', () => {
         const host = new DocumentsContentHostService(provider());
         const a = new PlainFieldDoc('a');
-        assert.doesNotThrow(() => host.Open(a), 'opening a plain-field Model doc must not throw');
+        assert.doesNotThrow(() => host.Open(a), 'opening a plain-field MuralBase doc must not throw');
         assert.equal(host.AnyDirty, false, 'clean static field → not dirty');
         a.IsDirty = true;                       // plain field flip — no notification
         // No DP, so no reactive update; but any open-set change re-reads the

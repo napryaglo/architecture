@@ -1,4 +1,4 @@
-import { Color, MetaData, Model, Rect, Size, type DrawingContext } from '../../runtime/index.js';
+﻿import { Color, MetaData, MuralBase, Rect, Size, type DrawingContext } from '../../runtime/index.js';
 import { Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import type { Brush } from '../../visual-engine/index.js';
 import { Canvas } from './canvas.js';
@@ -36,11 +36,11 @@ const DEFAULT_PAGE_BORDER_BRUSH  = new SolidColorBrush(Color.FromHex('#d0d0d0'))
 
 export class PaginatedCanvas extends Canvas
 {
-    public static readonly PageWidthKey            = Model.RegisterProperty<number>(           PaginatedCanvas, 'PageWidth',            800, MetaData.Measure | MetaData.Render);
-    public static readonly PageHeightKey           = Model.RegisterProperty<number>(           PaginatedCanvas, 'PageHeight',           600, MetaData.Measure | MetaData.Render);
-    public static readonly PaperBrushKey           = Model.RegisterProperty<Brush | undefined>(PaginatedCanvas, 'PaperBrush',           undefined, MetaData.Render);
-    public static readonly PageBorderBrushKey      = Model.RegisterProperty<Brush | undefined>(PaginatedCanvas, 'PageBorderBrush',      undefined, MetaData.Render);
-    public static readonly PageBorderThicknessKey  = Model.RegisterProperty<number>(           PaginatedCanvas, 'PageBorderThickness',  1,         MetaData.Render);
+    public static readonly PageWidthKey            = MuralBase.RegisterProperty<number>(           PaginatedCanvas, 'PageWidth',            800, MetaData.Measure | MetaData.Render);
+    public static readonly PageHeightKey           = MuralBase.RegisterProperty<number>(           PaginatedCanvas, 'PageHeight',           600, MetaData.Measure | MetaData.Render);
+    public static readonly PaperBrushKey           = MuralBase.RegisterProperty<Brush | undefined>(PaginatedCanvas, 'PaperBrush',           undefined, MetaData.Render);
+    public static readonly PageBorderBrushKey      = MuralBase.RegisterProperty<Brush | undefined>(PaginatedCanvas, 'PageBorderBrush',      undefined, MetaData.Render);
+    public static readonly PageBorderThicknessKey  = MuralBase.RegisterProperty<number>(           PaginatedCanvas, 'PageBorderThickness',  1,         MetaData.Render);
 
     public get PageWidth(): number              { return this.get_property_value(PaginatedCanvas.PageWidthKey); }
     public set PageWidth(value: number)         { this.set_property_value(PaginatedCanvas.PageWidthKey, value); }

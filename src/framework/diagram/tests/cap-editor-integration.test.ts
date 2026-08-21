@@ -1,4 +1,4 @@
-// Integration: with the real Material theme active (so the cap catalog
+﻿// Integration: with the real Material theme active (so the cap catalog
 // resolves), verify connectorCapOptions() yields working templates and a
 // materialized ShapeFormatControl's cap combobox actually drives the
 // connector through the Diagram cap channel.
@@ -6,7 +6,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { ObservableCollection, Model, Size, ElementNameBinding, type Visual } from '../../../runtime/index.js';
+import { ObservableCollection, MuralBase, Size, ElementNameBinding, type Visual } from '../../../runtime/index.js';
 import { Border, PaginatedCanvas, ItemsPanelTemplate } from '../../../basic/index.js';
 import { Point } from '../../../visual-engine/index.js';
 import { ComboBox } from '../../list/combo-box.js';
@@ -79,7 +79,7 @@ describe('ShapeFormatControl cap combobox — drives the connector end to end', 
         initTestApp();
         const d = mountedDiagram();
         const c = connector();
-        d.Connectors = new ObservableCollection<Model>([c]);
+        d.Connectors = new ObservableCollection<MuralBase>([c]);
         d.SelectConnector(c);
 
         // The ShapeFormatControl as the demo wires it: a real template
@@ -128,7 +128,7 @@ describe('ShapeFormatControl cap combobox — drives the connector end to end', 
         initTestApp();
         const d = mountedDiagram();
         const c = connector();
-        d.Connectors = new ObservableCollection<Model>([c]);
+        d.Connectors = new ObservableCollection<MuralBase>([c]);
         d.SelectConnector(c);
 
         const sfc = new ShapeFormatControl();
@@ -166,7 +166,7 @@ describe('ShapeFormatControl cap combobox — drives the connector end to end', 
         const d = mountedDiagram();
         const c = connector();
         c.SourceCapTemplate = connectorCapOptions().find(o => o.Label === 'Filled Arrow')!.Template;
-        d.Connectors = new ObservableCollection<Model>([c]);
+        d.Connectors = new ObservableCollection<MuralBase>([c]);
         d.SelectConnector(c);
 
         const sfc = new ShapeFormatControl();

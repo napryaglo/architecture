@@ -1,4 +1,4 @@
-import { MetaData, Model } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase } from '../../runtime/index.js';
 import { Freezable } from '../../runtime/freezable.js';
 import { Color, Point } from '../primitives.js';
 import { Transform } from './transform.js';
@@ -72,8 +72,8 @@ import { ImageSource } from './image-source.js';
 // skew a gradient without changing the brush's logical stops.
 export abstract class Brush extends Freezable
 {
-    public static readonly OpacityKey   = Model.RegisterProperty<number>(   Brush, 'Opacity',   1,                  MetaData.Render);
-    public static readonly TransformKey = Model.RegisterProperty<Transform>(Brush, 'Transform', Transform.Identity, MetaData.Render);
+    public static readonly OpacityKey   = MuralBase.RegisterProperty<number>(   Brush, 'Opacity',   1,                  MetaData.Render);
+    public static readonly TransformKey = MuralBase.RegisterProperty<Transform>(Brush, 'Transform', Transform.Identity, MetaData.Render);
 
     public get Opacity(): number { return this.get_property_value(Brush.OpacityKey); }
     public set Opacity(value: number) { this.set_property_value(Brush.OpacityKey, value); }
@@ -88,7 +88,7 @@ export abstract class Brush extends Freezable
 // normal usage).
 export class SolidColorBrush extends Brush
 {
-    public static readonly ColorKey = Model.RegisterProperty<Color>(
+    public static readonly ColorKey = MuralBase.RegisterProperty<Color>(
         SolidColorBrush, 'Color', Color.Transparent, MetaData.Render);
 
     constructor(color?: Color)
@@ -107,13 +107,13 @@ export class SolidColorBrush extends Brush
 // (Absolute / MappingMode='Absolute' is not yet supported.)
 export class LinearGradientBrush extends Brush
 {
-    public static readonly GradientStopsKey = Model.RegisterProperty<readonly GradientStop[]>(
+    public static readonly GradientStopsKey = MuralBase.RegisterProperty<readonly GradientStop[]>(
         LinearGradientBrush, 'GradientStops', [], MetaData.Render);
-    public static readonly StartPointKey = Model.RegisterProperty<Point>(
+    public static readonly StartPointKey = MuralBase.RegisterProperty<Point>(
         LinearGradientBrush, 'StartPoint', new Point(0, 0), MetaData.Render);
-    public static readonly EndPointKey = Model.RegisterProperty<Point>(
+    public static readonly EndPointKey = MuralBase.RegisterProperty<Point>(
         LinearGradientBrush, 'EndPoint', new Point(1, 1), MetaData.Render);
-    public static readonly SpreadMethodKey = Model.RegisterProperty<GradientSpreadMethod>(
+    public static readonly SpreadMethodKey = MuralBase.RegisterProperty<GradientSpreadMethod>(
         LinearGradientBrush, 'SpreadMethod', GradientSpreadMethod.Pad, MetaData.Render);
 
     constructor(stops?: readonly GradientStop[])
@@ -141,15 +141,15 @@ export class LinearGradientBrush extends Brush
 // renderers can default it to Center.
 export class RadialGradientBrush extends Brush
 {
-    public static readonly GradientStopsKey = Model.RegisterProperty<readonly GradientStop[]>(
+    public static readonly GradientStopsKey = MuralBase.RegisterProperty<readonly GradientStop[]>(
         RadialGradientBrush, 'GradientStops', [], MetaData.Render);
-    public static readonly CenterKey = Model.RegisterProperty<Point>(
+    public static readonly CenterKey = MuralBase.RegisterProperty<Point>(
         RadialGradientBrush, 'Center', new Point(0.5, 0.5), MetaData.Render);
-    public static readonly RadiusXKey = Model.RegisterProperty<number>(
+    public static readonly RadiusXKey = MuralBase.RegisterProperty<number>(
         RadialGradientBrush, 'RadiusX', 0.5, MetaData.Render);
-    public static readonly RadiusYKey = Model.RegisterProperty<number>(
+    public static readonly RadiusYKey = MuralBase.RegisterProperty<number>(
         RadialGradientBrush, 'RadiusY', 0.5, MetaData.Render);
-    public static readonly SpreadMethodKey = Model.RegisterProperty<GradientSpreadMethod>(
+    public static readonly SpreadMethodKey = MuralBase.RegisterProperty<GradientSpreadMethod>(
         RadialGradientBrush, 'SpreadMethod', GradientSpreadMethod.Pad, MetaData.Render);
 
     constructor(stops?: readonly GradientStop[])
@@ -180,13 +180,13 @@ export class RadialGradientBrush extends Brush
 // the target rectangle — see WPF Stretch / AlignmentX docs, same semantics.
 export class ImageBrush extends Brush
 {
-    public static readonly ImageSourceKey = Model.RegisterProperty<ImageSource | undefined>(
+    public static readonly ImageSourceKey = MuralBase.RegisterProperty<ImageSource | undefined>(
         ImageBrush, 'ImageSource', undefined, MetaData.Render);
-    public static readonly StretchKey = Model.RegisterProperty<Stretch>(
+    public static readonly StretchKey = MuralBase.RegisterProperty<Stretch>(
         ImageBrush, 'Stretch', Stretch.Uniform, MetaData.Render);
-    public static readonly AlignmentXKey = Model.RegisterProperty<AlignmentX>(
+    public static readonly AlignmentXKey = MuralBase.RegisterProperty<AlignmentX>(
         ImageBrush, 'AlignmentX', AlignmentX.Center, MetaData.Render);
-    public static readonly AlignmentYKey = Model.RegisterProperty<AlignmentY>(
+    public static readonly AlignmentYKey = MuralBase.RegisterProperty<AlignmentY>(
         ImageBrush, 'AlignmentY', AlignmentY.Center, MetaData.Render);
 
     constructor(source?: ImageSource)
@@ -240,17 +240,17 @@ export enum PatternKind
 
 export class PatternBrush extends Brush
 {
-    public static readonly KindKey            = Model.RegisterProperty<PatternKind>(
+    public static readonly KindKey            = MuralBase.RegisterProperty<PatternKind>(
         PatternBrush, 'Kind', PatternKind.Stripes, MetaData.Render);
-    public static readonly ForegroundKey      = Model.RegisterProperty<Color>(
+    public static readonly ForegroundKey      = MuralBase.RegisterProperty<Color>(
         PatternBrush, 'Foreground', Color.Black, MetaData.Render);
-    public static readonly BackgroundKey      = Model.RegisterProperty<Color>(
+    public static readonly BackgroundKey      = MuralBase.RegisterProperty<Color>(
         PatternBrush, 'Background', Color.Transparent, MetaData.Render);
-    public static readonly SizeKey            = Model.RegisterProperty<number>(
+    public static readonly SizeKey            = MuralBase.RegisterProperty<number>(
         PatternBrush, 'Size', 8, MetaData.Render);
-    public static readonly AngleKey           = Model.RegisterProperty<number>(
+    public static readonly AngleKey           = MuralBase.RegisterProperty<number>(
         PatternBrush, 'Angle', 0, MetaData.Render);
-    public static readonly StrokeThicknessKey = Model.RegisterProperty<number>(
+    public static readonly StrokeThicknessKey = MuralBase.RegisterProperty<number>(
         PatternBrush, 'StrokeThickness', 1, MetaData.Render);
 
     constructor(kind?: PatternKind, foreground?: Color)

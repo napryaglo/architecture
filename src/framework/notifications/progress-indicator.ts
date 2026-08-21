@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, type PropertyDescriptor } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element, type PropertyDescriptor } from '../../runtime/index.js';
 import { Arc } from '../../basic/shapes/arc.js';
 import { Border } from '../../basic/border.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
@@ -25,14 +25,14 @@ export enum ProgressIndicatorVariant
 
 export class ProgressIndicator extends TemplatedControl
 {
-    public static readonly VariantKey = Model.RegisterProperty<ProgressIndicatorVariant>(
+    public static readonly VariantKey = MuralBase.RegisterProperty<ProgressIndicatorVariant>(
         ProgressIndicator, 'Variant', ProgressIndicatorVariant.Linear,
         MetaData.Render);
 
     // Value in [0, 1]. The template clamps for display; an out-of-
     // range Value stays on the DP (same convention Slider uses) so a
     // binding-source's raw signal isn't lost.
-    public static readonly ValueKey = Model.RegisterProperty<number>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<number>(
         ProgressIndicator, 'Value', 0, MetaData.Render);
 
     // When true, ignore Value and show the indeterminate animation.
@@ -43,7 +43,7 @@ export class ProgressIndicator extends TemplatedControl
     // PART_Fill.Margin (or similar). v0 ships the static-fill chrome
     // only; the indeterminate animation is template-author territory
     // until a dedicated Phase 9 extension lands.
-    public static readonly IsIndeterminateKey = Model.RegisterProperty<boolean>(
+    public static readonly IsIndeterminateKey = MuralBase.RegisterProperty<boolean>(
         ProgressIndicator, 'IsIndeterminate', false, MetaData.Render);
 
     public get Variant(): ProgressIndicatorVariant { return this.get_property_value(ProgressIndicator.VariantKey); }
@@ -56,7 +56,7 @@ export class ProgressIndicator extends TemplatedControl
     public set IsIndeterminate(v: boolean) { this.set_property_value(ProgressIndicator.IsIndeterminateKey, v); }
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             ProgressIndicator, Element.DefaultStyleKeyKey,
             { default_value: ProgressIndicator });
     }

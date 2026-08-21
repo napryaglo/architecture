@@ -1,4 +1,4 @@
-// Cap format channel on FormatMirror (§ shape-editor connector caps):
+﻿// Cap format channel on FormatMirror (§ shape-editor connector caps):
 // SelectionFormatSourceCap/TargetCap seed from the first selected
 // connector, SelectionIsConnector gates the editor's cap section, and
 // edits to the cap DPs broadcast onto every selected connector.
@@ -6,7 +6,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Application, ObservableCollection, Model, Size, ElementNameBinding, type Visual } from '../../../runtime/index.js';
+import { Application, ObservableCollection, MuralBase, Size, ElementNameBinding, type Visual } from '../../../runtime/index.js';
 import { Border, PaginatedCanvas, ItemsPanelTemplate } from '../../../basic/index.js';
 import { ShapeFormatControl } from '../../formatting/shape-format-control.js';
 import { DataTemplate } from '../../../basic/templates/data-template.js';
@@ -149,7 +149,7 @@ describe('FormatMirror — cap edit re-mounts the connector cap visual (Paginate
     test('setting SelectionFormatTargetCap swaps the cap mounted in the panel', () => {
         const d = mountedDiagram();
         const c = connector(undefined, capTemplate());
-        d.Connectors = new ObservableCollection<Model>([c]);
+        d.Connectors = new ObservableCollection<MuralBase>([c]);
         d.SelectConnector(c);
 
         const panel = d.ItemsPanelInstance as PaginatedCanvas;
@@ -242,7 +242,7 @@ describe('FormatMirror — cap-size channel seeds + broadcasts', () => {
 describe('FormatMirror — non-connector selection leaves caps off', () => {
     test('SelectionIsConnector stays false with no connector selected', () => {
         const d = newDiagram();
-        d.Connectors = new ObservableCollection<Model>([]);
+        d.Connectors = new ObservableCollection<MuralBase>([]);
         assert.equal(d.SelectionIsConnector, false);
         assert.equal(d.SelectionFormatSourceCap, undefined);
     });

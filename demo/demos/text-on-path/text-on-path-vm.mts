@@ -1,4 +1,4 @@
-// VM for the text-on-path demo.
+﻿// VM for the text-on-path demo.
 //
 // State the view binds to:
 //   * Text         — the text run laid along the path.
@@ -12,7 +12,7 @@
 
 import {
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     RelayCommand,
     type ICommand,
@@ -22,9 +22,9 @@ import { PATHS } from './paths.mjs';
 
 // Each picker row exposes Key + Label as DPs so the binding pipeline
 // can read them through the standard property path syntax in the .mu.
-class PathOption extends Model {
-    static KeyKey   = Model.RegisterProperty(PathOption, 'Key',   '', MetaData.None);
-    static LabelKey = Model.RegisterProperty(PathOption, 'Label', '', MetaData.None);
+class PathOption extends MuralBase {
+    static KeyKey   = MuralBase.RegisterProperty(PathOption, 'Key',   '', MetaData.None);
+    static LabelKey = MuralBase.RegisterProperty(PathOption, 'Label', '', MetaData.None);
 
     constructor(key: string, label: string) {
         super();
@@ -35,21 +35,21 @@ class PathOption extends Model {
     get Label():  string { return this.get_property_value(PathOption.LabelKey); }
 }
 
-export class TextOnPathVM extends Model {
-    static TextKey               = Model.RegisterProperty(TextOnPathVM, 'Text',               'Text running along a curve — try a different path', MetaData.None);
-    static PathKeyKey            = Model.RegisterProperty(TextOnPathVM, 'PathKey',            'wave',          MetaData.None);
-    static FontSizeKey           = Model.RegisterProperty(TextOnPathVM, 'FontSize',           28,              MetaData.None);
-    static SideOffsetKey         = Model.RegisterProperty(TextOnPathVM, 'SideOffset',         0,               MetaData.None);
-    static IsFontLoadedKey       = Model.RegisterProperty(TextOnPathVM, 'IsFontLoaded',       false,           MetaData.None);
-    static StatusKey             = Model.RegisterProperty(TextOnPathVM, 'Status',             'Loading font…', MetaData.None);
-    static PathsKey              = Model.RegisterProperty<ObservableCollection<PathOption> | undefined>(TextOnPathVM, 'Paths',              undefined,       MetaData.None);
-    static SelectedPathOptionKey = Model.RegisterProperty<PathOption | undefined>(TextOnPathVM, 'SelectedPathOption', undefined,       MetaData.None);
-    static ShowPathKey           = Model.RegisterProperty(TextOnPathVM, 'ShowPath',           true,            MetaData.None);
-    static ShowGlyphsKey         = Model.RegisterProperty(TextOnPathVM, 'ShowGlyphs',         true,            MetaData.None);
-    static TogglePathCommandKey  = Model.RegisterProperty<ICommand | undefined>(TextOnPathVM, 'TogglePathCommand',  undefined,       MetaData.None);
-    static ToggleGlyphsCommandKey= Model.RegisterProperty<ICommand | undefined>(TextOnPathVM, 'ToggleGlyphsCommand',undefined,       MetaData.None);
-    static PathColorHexKey       = Model.RegisterProperty(TextOnPathVM, 'PathColorHex',       '#94a3b8',       MetaData.None);
-    static GlyphColorHexKey      = Model.RegisterProperty(TextOnPathVM, 'GlyphColorHex',      '#0f172a',       MetaData.None);
+export class TextOnPathVM extends MuralBase {
+    static TextKey               = MuralBase.RegisterProperty(TextOnPathVM, 'Text',               'Text running along a curve — try a different path', MetaData.None);
+    static PathKeyKey            = MuralBase.RegisterProperty(TextOnPathVM, 'PathKey',            'wave',          MetaData.None);
+    static FontSizeKey           = MuralBase.RegisterProperty(TextOnPathVM, 'FontSize',           28,              MetaData.None);
+    static SideOffsetKey         = MuralBase.RegisterProperty(TextOnPathVM, 'SideOffset',         0,               MetaData.None);
+    static IsFontLoadedKey       = MuralBase.RegisterProperty(TextOnPathVM, 'IsFontLoaded',       false,           MetaData.None);
+    static StatusKey             = MuralBase.RegisterProperty(TextOnPathVM, 'Status',             'Loading font…', MetaData.None);
+    static PathsKey              = MuralBase.RegisterProperty<ObservableCollection<PathOption> | undefined>(TextOnPathVM, 'Paths',              undefined,       MetaData.None);
+    static SelectedPathOptionKey = MuralBase.RegisterProperty<PathOption | undefined>(TextOnPathVM, 'SelectedPathOption', undefined,       MetaData.None);
+    static ShowPathKey           = MuralBase.RegisterProperty(TextOnPathVM, 'ShowPath',           true,            MetaData.None);
+    static ShowGlyphsKey         = MuralBase.RegisterProperty(TextOnPathVM, 'ShowGlyphs',         true,            MetaData.None);
+    static TogglePathCommandKey  = MuralBase.RegisterProperty<ICommand | undefined>(TextOnPathVM, 'TogglePathCommand',  undefined,       MetaData.None);
+    static ToggleGlyphsCommandKey= MuralBase.RegisterProperty<ICommand | undefined>(TextOnPathVM, 'ToggleGlyphsCommand',undefined,       MetaData.None);
+    static PathColorHexKey       = MuralBase.RegisterProperty(TextOnPathVM, 'PathColorHex',       '#94a3b8',       MetaData.None);
+    static GlyphColorHexKey      = MuralBase.RegisterProperty(TextOnPathVM, 'GlyphColorHex',      '#0f172a',       MetaData.None);
 
     constructor() {
         super();
@@ -74,7 +74,7 @@ export class TextOnPathVM extends Model {
         // through the ICommand pipeline rather than two-way TextBox
         // binding gymnastics for the boolean DPs. They must live on DPs
         // — DataContextBinding only reads registered properties on a
-        // Model context.
+        // MuralBase context.
         this.set_property_value(TextOnPathVM.TogglePathCommandKey, new RelayCommand(
             () => { this.ShowPath = !this.ShowPath; },
             () => true,

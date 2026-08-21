@@ -1,4 +1,4 @@
-// drag-drop demo VM — two lists, items move between them via drag.
+﻿// drag-drop demo VM — two lists, items move between them via drag.
 //
 // Follows the MVVM rules in CLAUDE.md strictly:
 //   * Data + commands only; no view reaches, no Visual mutation, no
@@ -7,21 +7,21 @@
 //     framework's IsDraggable latch reads via OnDragStart=$BeginDragData.
 //   * Domain operations (MoveToLeft / MoveToRight) are plain methods —
 //     called by the drop behavior, not via routed events directly.
-import { DataObject, DragDropEffects, MetaData, Model, ObservableCollection, } from '@pragmatic-lab/mural/runtime';
+import { DataObject, DragDropEffects, MetaData, MuralBase, ObservableCollection, } from '@pragmatic-lab/mural/runtime';
 // Format key the drag-data payload uses. Receivers query
 // `args.Data.Has(FMT_ITEM)` and `args.Data.Get(FMT_ITEM)` to read
 // the item id back out. Exported so the drop behavior reads the
 // same constant.
 export const FMT_ITEM = '@pragmatic-lab/mural/list-item';
 let _nextId = 1;
-export class ItemVM extends Model {
-    static IdKey = Model.RegisterProperty(ItemVM, 'Id', '', MetaData.None);
-    static LabelKey = Model.RegisterProperty(ItemVM, 'Label', '', MetaData.None);
+export class ItemVM extends MuralBase {
+    static IdKey = MuralBase.RegisterProperty(ItemVM, 'Id', '', MetaData.None);
+    static LabelKey = MuralBase.RegisterProperty(ItemVM, 'Label', '', MetaData.None);
     // Bound from .mu via OnDragStart=$BeginDragData on the
     // ListBoxItem container. Returns the drag payload at trip
     // time. Stored as a DP so the binding pipeline pushes the
     // value to the framework's OnDragStart slot.
-    static BeginDragDataKey = Model.RegisterProperty(ItemVM, 'BeginDragData', undefined, MetaData.None);
+    static BeginDragDataKey = MuralBase.RegisterProperty(ItemVM, 'BeginDragData', undefined, MetaData.None);
     constructor(label) {
         super();
         const id = 'i' + (_nextId++);
@@ -38,10 +38,10 @@ export class ItemVM extends Model {
     get Label() { return this.get_property_value(ItemVM.LabelKey); }
     get BeginDragData() { return this.get_property_value(ItemVM.BeginDragDataKey); }
 }
-export class DragDropVM extends Model {
-    static LeftItemsKey = Model.RegisterProperty(DragDropVM, 'LeftItems', undefined, MetaData.None);
-    static RightItemsKey = Model.RegisterProperty(DragDropVM, 'RightItems', undefined, MetaData.None);
-    static StatusKey = Model.RegisterProperty(DragDropVM, 'Status', 'Drag items between the lists.', MetaData.None);
+export class DragDropVM extends MuralBase {
+    static LeftItemsKey = MuralBase.RegisterProperty(DragDropVM, 'LeftItems', undefined, MetaData.None);
+    static RightItemsKey = MuralBase.RegisterProperty(DragDropVM, 'RightItems', undefined, MetaData.None);
+    static StatusKey = MuralBase.RegisterProperty(DragDropVM, 'Status', 'Drag items between the lists.', MetaData.None);
     constructor() {
         super();
         const left = new ObservableCollection();

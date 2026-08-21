@@ -1,4 +1,4 @@
-import { MetaData, Model, type PropertyDescriptor } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, type PropertyDescriptor } from '../../runtime/index.js';
 import { Brush, FontFamily, FontStyle, FontWeight, TextDecorations } from '../../visual-engine/index.js';
 
 // ─────────────────────────────────────────────────────────────────────
@@ -61,19 +61,19 @@ export interface RunProps
     link:        LinkTarget | undefined;
 }
 
-export abstract class TextElement extends Model
+export abstract class TextElement extends MuralBase
 {
     // Inheritable character-format DPs. `undefined` = inherit. FontFamily
     // tolerates a raw string (theme token / CSS stack) like TextBlock does.
-    public static readonly FontFamilyKey = Model.RegisterProperty<FontFamily | string | undefined>(
+    public static readonly FontFamilyKey = MuralBase.RegisterProperty<FontFamily | string | undefined>(
         TextElement, 'FontFamily', undefined, MetaData.None);
-    public static readonly FontSizeKey   = Model.RegisterProperty<number | undefined>(
+    public static readonly FontSizeKey   = MuralBase.RegisterProperty<number | undefined>(
         TextElement, 'FontSize', undefined, MetaData.None);
-    public static readonly FontWeightKey = Model.RegisterProperty<FontWeight | undefined>(
+    public static readonly FontWeightKey = MuralBase.RegisterProperty<FontWeight | undefined>(
         TextElement, 'FontWeight', undefined, MetaData.None);
-    public static readonly FontStyleKey  = Model.RegisterProperty<FontStyle | undefined>(
+    public static readonly FontStyleKey  = MuralBase.RegisterProperty<FontStyle | undefined>(
         TextElement, 'FontStyle', undefined, MetaData.None);
-    public static readonly ForegroundKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly ForegroundKey = MuralBase.RegisterProperty<Brush | undefined>(
         TextElement, 'Foreground', undefined, MetaData.None);
 
     // Parent in the flow-content tree — for an Inline, a Span or the
@@ -123,7 +123,7 @@ export abstract class TextElement extends Model
 // content while a nested Bold keeps that underline).
 export abstract class Inline extends TextElement
 {
-    public static readonly TextDecorationsKey = Model.RegisterProperty<TextDecorations>(
+    public static readonly TextDecorationsKey = MuralBase.RegisterProperty<TextDecorations>(
         Inline, 'TextDecorations', TextDecorations.None, MetaData.None);
 
     public get TextDecorations(): TextDecorations  { return this.get_property_value(Inline.TextDecorationsKey); }

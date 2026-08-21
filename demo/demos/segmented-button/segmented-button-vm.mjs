@@ -1,4 +1,4 @@
-// SegmentedButtonVM — backs the segmented-button demo. Two scenarios:
+﻿// SegmentedButtonVM — backs the segmented-button demo. Two scenarios:
 //
 //   * Single-select timeframe picker (Day / Week / Month / Year). The
 //     selected segment binds to SelectedTimeframe.
@@ -7,13 +7,13 @@
 //
 // Each readout below the row shows the live VM state so the bind chain
 // is visible.
-import { Model, MetaData, ObservableCollection } from '@pragmatic-lab/mural/runtime';
-export class SegmentedButtonVM extends Model {
-    static TimeframesKey = Model.RegisterProperty(SegmentedButtonVM, 'Timeframes', undefined, MetaData.None);
-    static SelectedTimeframeKey = Model.RegisterProperty(SegmentedButtonVM, 'SelectedTimeframe', undefined, MetaData.None);
-    static FormatChoicesKey = Model.RegisterProperty(SegmentedButtonVM, 'FormatChoices', undefined, MetaData.None);
-    static SelectedFormatsKey = Model.RegisterProperty(SegmentedButtonVM, 'SelectedFormats', undefined, MetaData.None);
-    static SelectedFormatsLabelKey = Model.RegisterProperty(SegmentedButtonVM, 'SelectedFormatsLabel', '', MetaData.None);
+import { MuralBase, MetaData, ObservableCollection } from '@pragmatic-lab/mural/runtime';
+export class SegmentedButtonVM extends MuralBase {
+    static TimeframesKey = MuralBase.RegisterProperty(SegmentedButtonVM, 'Timeframes', undefined, MetaData.None);
+    static SelectedTimeframeKey = MuralBase.RegisterProperty(SegmentedButtonVM, 'SelectedTimeframe', undefined, MetaData.None);
+    static FormatChoicesKey = MuralBase.RegisterProperty(SegmentedButtonVM, 'FormatChoices', undefined, MetaData.None);
+    static SelectedFormatsKey = MuralBase.RegisterProperty(SegmentedButtonVM, 'SelectedFormats', undefined, MetaData.None);
+    static SelectedFormatsLabelKey = MuralBase.RegisterProperty(SegmentedButtonVM, 'SelectedFormatsLabel', '', MetaData.None);
     get Timeframes() { return this.get_property_value(SegmentedButtonVM.TimeframesKey); }
     set Timeframes(v) { this.set_property_value(SegmentedButtonVM.TimeframesKey, v); }
     get SelectedTimeframe() { return this.get_property_value(SegmentedButtonVM.SelectedTimeframeKey); }

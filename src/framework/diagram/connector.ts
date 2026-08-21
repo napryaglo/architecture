@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     type PointerEventArgs,
@@ -102,18 +102,18 @@ export class Connector extends Shape
     // applyDefaultStyle() resolves nothing and connectors get no default
     // cap. Same pattern as Figure ([figure.ts:77-79](./figure.ts#L77)).
     static {
-        Model.OverrideMetadata(Connector, Element.DefaultStyleKeyKey, { default_value: Connector });
+        MuralBase.OverrideMetadata(Connector, Element.DefaultStyleKeyKey, { default_value: Connector });
     }
 
-    public static readonly SourceKey      = Model.RegisterProperty<ConnectorEndpoint | undefined>(
+    public static readonly SourceKey      = MuralBase.RegisterProperty<ConnectorEndpoint | undefined>(
         Connector, 'Source',      undefined,             MetaData.None);
-    public static readonly TargetKey      = Model.RegisterProperty<ConnectorEndpoint | undefined>(
+    public static readonly TargetKey      = MuralBase.RegisterProperty<ConnectorEndpoint | undefined>(
         Connector, 'Target',      undefined,             MetaData.None);
-    public static readonly WaypointsKey   = Model.RegisterProperty<readonly RouteWaypoint[] | undefined>(
+    public static readonly WaypointsKey   = MuralBase.RegisterProperty<readonly RouteWaypoint[] | undefined>(
         Connector, 'Waypoints',   undefined,             MetaData.None);
-    public static readonly RoutingModeKey = Model.RegisterProperty<string>(
+    public static readonly RoutingModeKey = MuralBase.RegisterProperty<string>(
         Connector, 'RoutingMode', RoutingMode.Orthogonal, MetaData.None);
-    public static readonly AnchorClipKey  = Model.RegisterProperty<AnchorClip>(
+    public static readonly AnchorClipKey  = MuralBase.RegisterProperty<AnchorClip>(
         Connector, 'AnchorClip',  AnchorClip.Bbox,       MetaData.None);
 
     // Per-end cap template DPs. When set, the connector instantiates
@@ -122,9 +122,9 @@ export class Connector extends Shape
     // by that amount, and rotates the cap by tangentAt(end). Default
     // undefined = no cap at that end. § 3.4 + § 3.6 of
     // [docs/connectors.md](../../../docs/connectors.md).
-    public static readonly SourceCapTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly SourceCapTemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         Connector, 'SourceCapTemplate', undefined, MetaData.None);
-    public static readonly TargetCapTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly TargetCapTemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         Connector, 'TargetCapTemplate', undefined, MetaData.None);
 
     // Per-end cap size multipliers. 1 = the cap template's authored size;
@@ -134,9 +134,9 @@ export class Connector extends Shape
     // the CapInset used to shorten the painted line, so the line keeps
     // meeting the resized cap's back edge. A change re-routes to re-place +
     // re-inset the cap.
-    public static readonly SourceCapScaleKey = Model.RegisterProperty<number>(
+    public static readonly SourceCapScaleKey = MuralBase.RegisterProperty<number>(
         Connector, 'SourceCapScale', 1, MetaData.None);
-    public static readonly TargetCapScaleKey = Model.RegisterProperty<number>(
+    public static readonly TargetCapScaleKey = MuralBase.RegisterProperty<number>(
         Connector, 'TargetCapScale', 1, MetaData.None);
 
     // Connector label (§ diagram-text Slice 5). The connector owns a
@@ -144,16 +144,16 @@ export class Connector extends Shape
     // arc-length fraction along the rendered route where the label centres
     // (0.5 = midpoint). Both MetaData.None — a change repositions the label
     // imperatively (Canvas.Left/Top), not through a measure/arrange input.
-    public static readonly TextKey = Model.RegisterProperty<ShapeText | undefined>(
+    public static readonly TextKey = MuralBase.RegisterProperty<ShapeText | undefined>(
         Connector, 'Text', undefined, MetaData.None);
-    public static readonly LabelPositionKey = Model.RegisterProperty<number>(
+    public static readonly LabelPositionKey = MuralBase.RegisterProperty<number>(
         Connector, 'LabelPosition', 0.5, MetaData.None);
 
     // CapInset is an attached property on Visual — set by the cap
     // template author on the cap's template root to tell the connector
     // how far back to shorten the painted line. Registered here with
     // Connector as the owner so markup `[Connector.CapInset]=12` resolves.
-    public static readonly CapInsetKey = Model.RegisterAttachedProperty<number>(
+    public static readonly CapInsetKey = MuralBase.RegisterAttachedProperty<number>(
         Connector, 'CapInset', 0, MetaData.None);
 
     public static GetCapInset(v: Visual): number { return v.get_property_value(Connector.CapInsetKey); }
@@ -263,8 +263,8 @@ export class Connector extends Shape
     // same role for the inner Node DP.
     private _trackedSource:     ConnectorEndpoint | undefined = undefined;
     private _trackedTarget:     ConnectorEndpoint | undefined = undefined;
-    private _trackedSourceNode: Model | undefined = undefined;
-    private _trackedTargetNode: Model | undefined = undefined;
+    private _trackedSourceNode: MuralBase | undefined = undefined;
+    private _trackedTargetNode: MuralBase | undefined = undefined;
 
     // Side-anchored endpoint registration on the host Figure or VM (any
     // ISideEndpointHost). When an endpoint settles on (host, PortSide S)
@@ -300,7 +300,7 @@ export class Connector extends Shape
     private readonly _onLabelContentChanged = (): void => { this._syncLabelHitTest(); this._placeLabel(); this._refreshLabelFields(); };
 
     // Bound callbacks — required for symmetric Add/Remove on the
-    // Model PropertyChangedListener API.
+    // MuralBase PropertyChangedListener API.
     private readonly _onSourceEndpointInputChanged = (): void => {
         this._reattachSourceNodeListener();
         this._reregisterSourceSide();
@@ -647,7 +647,7 @@ export class Connector extends Shape
     private _reattachSourceNodeListener(): void
     {
         const prev = this._trackedSourceNode;
-        if (prev !== undefined && Model.HasProperty(prev.constructor, 'Left'))
+        if (prev !== undefined && MuralBase.HasProperty(prev.constructor, 'Left'))
         {
             prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Left'), this._onSourceNodeMoved);
             prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Top'),  this._onSourceNodeMoved);
@@ -655,8 +655,8 @@ export class Connector extends Shape
         const node = this.Source?.Node;
         this._trackedSourceNode = node;
         if (node !== undefined
-            && Model.HasProperty(node.constructor, 'Left')
-            && Model.HasProperty(node.constructor, 'Top'))
+            && MuralBase.HasProperty(node.constructor, 'Left')
+            && MuralBase.HasProperty(node.constructor, 'Top'))
         {
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Left'), this._onSourceNodeMoved);
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Top'),  this._onSourceNodeMoved);
@@ -666,7 +666,7 @@ export class Connector extends Shape
     private _reattachTargetNodeListener(): void
     {
         const prev = this._trackedTargetNode;
-        if (prev !== undefined && Model.HasProperty(prev.constructor, 'Left'))
+        if (prev !== undefined && MuralBase.HasProperty(prev.constructor, 'Left'))
         {
             prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Left'), this._onTargetNodeMoved);
             prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Top'),  this._onTargetNodeMoved);
@@ -674,8 +674,8 @@ export class Connector extends Shape
         const node = this.Target?.Node;
         this._trackedTargetNode = node;
         if (node !== undefined
-            && Model.HasProperty(node.constructor, 'Left')
-            && Model.HasProperty(node.constructor, 'Top'))
+            && MuralBase.HasProperty(node.constructor, 'Left')
+            && MuralBase.HasProperty(node.constructor, 'Top'))
         {
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Left'), this._onTargetNodeMoved);
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Top'),  this._onTargetNodeMoved);
@@ -772,14 +772,14 @@ export class Connector extends Shape
         this._trackedTarget = undefined;
 
         const sn = this._trackedSourceNode;
-        if (sn !== undefined && Model.HasProperty(sn.constructor, 'Left'))
+        if (sn !== undefined && MuralBase.HasProperty(sn.constructor, 'Left'))
         {
             sn.RemovePropertyChangedListener(resolveKey(sn, undefined, 'Left'), this._onSourceNodeMoved);
             sn.RemovePropertyChangedListener(resolveKey(sn, undefined, 'Top'),  this._onSourceNodeMoved);
         }
         this._trackedSourceNode = undefined;
         const tn = this._trackedTargetNode;
-        if (tn !== undefined && Model.HasProperty(tn.constructor, 'Left'))
+        if (tn !== undefined && MuralBase.HasProperty(tn.constructor, 'Left'))
         {
             tn.RemovePropertyChangedListener(resolveKey(tn, undefined, 'Left'), this._onTargetNodeMoved);
             tn.RemovePropertyChangedListener(resolveKey(tn, undefined, 'Top'),  this._onTargetNodeMoved);
@@ -1298,7 +1298,7 @@ function tryResolveSideSlot(
     // tests) still pick up positions from Left / Top / Width / Height.
     // Figure.ArrangedRect defaults to Rect.Zero, which would collapse
     // every slot onto the origin and silently break unit-test fixtures.
-    const r = nodeRect(host as unknown as Model);
+    const r = nodeRect(host as unknown as MuralBase);
     // A zero-size host (e.g. an arch node whose SizeToContent measure hasn't
     // written Width/Height yet) would collapse every slot onto the origin;
     // bail so the caller falls through to the standard anchor paths instead.
@@ -1574,12 +1574,12 @@ function geometricClip(
 
 // ── Node duck-typing helpers ─────────────────────────────────────────
 
-// Node IS a Model; we read its bbox + ports through narrow duck-typed
+// Node IS a MuralBase; we read its bbox + ports through narrow duck-typed
 // interfaces so non-Figure item Models still work as endpoint targets.
 // See § 3.5 / § 7.2 of
 // [docs/connectors.md](../../../docs/connectors.md).
 
-function nodeRect(node: Model | undefined): Rect | undefined
+function nodeRect(node: MuralBase | undefined): Rect | undefined
 {
     if (node === undefined) return undefined;
     // Prefer Left / Top / Width / Height (always fresh on the next DP
@@ -1608,7 +1608,7 @@ function nodeRect(node: Model | undefined): Rect | undefined
     return undefined;
 }
 
-function nodeAsPortHost(node: Model): IPortHost
+function nodeAsPortHost(node: MuralBase): IPortHost
 {
     return {
         ArrangedRect: nodeRect(node) ?? Rect.Zero,
@@ -1616,7 +1616,7 @@ function nodeAsPortHost(node: Model): IPortHost
     };
 }
 
-function nodePorts(node: Model): readonly Port[]
+function nodePorts(node: MuralBase): readonly Port[]
 {
     return (node as unknown as { Ports?: readonly Port[] }).Ports ?? [];
 }

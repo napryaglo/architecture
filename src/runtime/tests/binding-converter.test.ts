@@ -1,24 +1,24 @@
-// Runtime behavior behind `$path << converter`: the binding factories
+﻿// Runtime behavior behind `$path << converter`: the binding factories
 // carry a ValueConverter that runs source→target on read and convertBack
 // on TwoWay writeback, and composeConverters folds a chain.
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Model, MetaData, ElementNameBinding, composeConverters } from '../index.js';
+import { MuralBase, MetaData, ElementNameBinding, composeConverters } from '../index.js';
 import type { ValueConverter } from '../index.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
-class Src extends Model
+class Src extends MuralBase
 {
-    public static readonly YKey = Model.RegisterProperty<unknown>(Src, 'Y', undefined, MetaData.None);
+    public static readonly YKey = MuralBase.RegisterProperty<unknown>(Src, 'Y', undefined, MetaData.None);
     public get Y(): unknown { return this.get_property_value(Src.YKey); }
     public set Y(v: unknown) { this.set_property_value(Src.YKey, v); }
 }
 
-class Tgt extends Model
+class Tgt extends MuralBase
 {
-    public static readonly XKey = Model.RegisterProperty<unknown>(
+    public static readonly XKey = MuralBase.RegisterProperty<unknown>(
         Tgt, 'X', undefined, MetaData.None | MetaData.BindsTwoWayByDefault);
     public get X(): unknown { return this.get_property_value(Tgt.XKey); }
     public set X(v: unknown) { this.set_property_value(Tgt.XKey, v); }

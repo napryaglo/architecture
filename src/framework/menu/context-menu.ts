@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -49,7 +49,7 @@ import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 // there. On close, DetachOverlay unmounts.
 export class ContextMenu extends ItemsControl
 {
-    public static readonly IsOpenKey = Model.RegisterProperty<boolean>(
+    public static readonly IsOpenKey = MuralBase.RegisterProperty<boolean>(
         ContextMenu, 'IsOpen', false, MetaData.None,
     );
 
@@ -71,7 +71,7 @@ export class ContextMenu extends ItemsControl
     {
         // Theme-style lookup key for the default Style — pulled in by
         // applyDefaultStyle() in the ctor.
-        Model.OverrideMetadata(ContextMenu, Element.DefaultStyleKeyKey, { default_value: ContextMenu });
+        MuralBase.OverrideMetadata(ContextMenu, Element.DefaultStyleKeyKey, { default_value: ContextMenu });
     }
 
     constructor()
@@ -200,7 +200,7 @@ export class ContextMenu extends ItemsControl
 // the host-coords cursor position.
 export class ContextMenuService
 {
-    public static readonly ContextMenuKey = Model.RegisterAttachedProperty<ContextMenu | undefined>(
+    public static readonly ContextMenuKey = MuralBase.RegisterAttachedProperty<ContextMenu | undefined>(
         ContextMenuService, 'ContextMenu', undefined, MetaData.None,
     );
 

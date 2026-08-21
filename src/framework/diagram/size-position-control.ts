@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, type PropertyDescriptor } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element, type PropertyDescriptor } from '../../runtime/index.js';
 import { TemplatedControl } from '../../basic/templated-control.js';
 import { PositionAnchor } from './position-anchor.js';
 
@@ -18,30 +18,30 @@ const CENTER_LABEL   = 'Center';
 export class SizePositionControl extends TemplatedControl
 {
     static {
-        Model.OverrideMetadata(SizePositionControl, Element.DefaultStyleKeyKey, { default_value: SizePositionControl });
+        MuralBase.OverrideMetadata(SizePositionControl, Element.DefaultStyleKeyKey, { default_value: SizePositionControl });
     }
 
     // ── raw (bound to SelectedShape*) ────────────────────────────────────
-    public static readonly LeftKey        = Model.RegisterProperty<number>(SizePositionControl, 'Left', 0, MetaData.BindsTwoWayByDefault);
-    public static readonly TopKey         = Model.RegisterProperty<number>(SizePositionControl, 'Top', 0, MetaData.BindsTwoWayByDefault);
-    public static readonly WidthValueKey  = Model.RegisterProperty<number>(SizePositionControl, 'WidthValue', 0, MetaData.BindsTwoWayByDefault);
-    public static readonly HeightValueKey = Model.RegisterProperty<number>(SizePositionControl, 'HeightValue', 0, MetaData.BindsTwoWayByDefault);
-    public static readonly RotationKey    = Model.RegisterProperty<number>(SizePositionControl, 'Rotation', 0, MetaData.BindsTwoWayByDefault);
-    public static readonly BaseWidthKey   = Model.RegisterProperty<number>(SizePositionControl, 'BaseWidth', 0, MetaData.None);
-    public static readonly BaseHeightKey  = Model.RegisterProperty<number>(SizePositionControl, 'BaseHeight', 0, MetaData.None);
-    public static readonly HasTargetKey   = Model.RegisterProperty<boolean>(SizePositionControl, 'HasTarget', false, MetaData.None);
+    public static readonly LeftKey        = MuralBase.RegisterProperty<number>(SizePositionControl, 'Left', 0, MetaData.BindsTwoWayByDefault);
+    public static readonly TopKey         = MuralBase.RegisterProperty<number>(SizePositionControl, 'Top', 0, MetaData.BindsTwoWayByDefault);
+    public static readonly WidthValueKey  = MuralBase.RegisterProperty<number>(SizePositionControl, 'WidthValue', 0, MetaData.BindsTwoWayByDefault);
+    public static readonly HeightValueKey = MuralBase.RegisterProperty<number>(SizePositionControl, 'HeightValue', 0, MetaData.BindsTwoWayByDefault);
+    public static readonly RotationKey    = MuralBase.RegisterProperty<number>(SizePositionControl, 'Rotation', 0, MetaData.BindsTwoWayByDefault);
+    public static readonly BaseWidthKey   = MuralBase.RegisterProperty<number>(SizePositionControl, 'BaseWidth', 0, MetaData.None);
+    public static readonly BaseHeightKey  = MuralBase.RegisterProperty<number>(SizePositionControl, 'BaseHeight', 0, MetaData.None);
+    public static readonly HasTargetKey   = MuralBase.RegisterProperty<boolean>(SizePositionControl, 'HasTarget', false, MetaData.None);
 
     // ── derived (bound to the SpinEdit/ComboBox/Switch fields) ───────────
-    public static readonly HorizontalPositionKey = Model.RegisterProperty<number>(SizePositionControl, 'HorizontalPosition', 0, MetaData.BindsTwoWayByDefault);
-    public static readonly VerticalPositionKey   = Model.RegisterProperty<number>(SizePositionControl, 'VerticalPosition', 0, MetaData.BindsTwoWayByDefault);
-    public static readonly ScaleWidthKey  = Model.RegisterProperty<number>(SizePositionControl, 'ScaleWidth', 100, MetaData.BindsTwoWayByDefault);
-    public static readonly ScaleHeightKey = Model.RegisterProperty<number>(SizePositionControl, 'ScaleHeight', 100, MetaData.BindsTwoWayByDefault);
-    public static readonly PositionFromKey = Model.RegisterProperty<PositionAnchor>(SizePositionControl, 'PositionFrom', PositionAnchor.TopLeftCorner, MetaData.BindsTwoWayByDefault);
-    public static readonly LockAspectRatioKey = Model.RegisterProperty<boolean>(SizePositionControl, 'LockAspectRatio', false, MetaData.BindsTwoWayByDefault);
+    public static readonly HorizontalPositionKey = MuralBase.RegisterProperty<number>(SizePositionControl, 'HorizontalPosition', 0, MetaData.BindsTwoWayByDefault);
+    public static readonly VerticalPositionKey   = MuralBase.RegisterProperty<number>(SizePositionControl, 'VerticalPosition', 0, MetaData.BindsTwoWayByDefault);
+    public static readonly ScaleWidthKey  = MuralBase.RegisterProperty<number>(SizePositionControl, 'ScaleWidth', 100, MetaData.BindsTwoWayByDefault);
+    public static readonly ScaleHeightKey = MuralBase.RegisterProperty<number>(SizePositionControl, 'ScaleHeight', 100, MetaData.BindsTwoWayByDefault);
+    public static readonly PositionFromKey = MuralBase.RegisterProperty<PositionAnchor>(SizePositionControl, 'PositionFrom', PositionAnchor.TopLeftCorner, MetaData.BindsTwoWayByDefault);
+    public static readonly LockAspectRatioKey = MuralBase.RegisterProperty<boolean>(SizePositionControl, 'LockAspectRatio', false, MetaData.BindsTwoWayByDefault);
     // The "From" ComboBox: a static label list + the two-way selected label,
     // mapped to/from PositionFrom so the enum stays the source of truth.
-    public static readonly FromLabelsKey = Model.RegisterProperty<readonly string[]>(SizePositionControl, 'FromLabels', undefined as unknown as readonly string[], MetaData.None);
-    public static readonly SelectedFromLabelKey = Model.RegisterProperty<string>(SizePositionControl, 'SelectedFromLabel', TOP_LEFT_LABEL, MetaData.BindsTwoWayByDefault);
+    public static readonly FromLabelsKey = MuralBase.RegisterProperty<readonly string[]>(SizePositionControl, 'FromLabels', undefined as unknown as readonly string[], MetaData.None);
+    public static readonly SelectedFromLabelKey = MuralBase.RegisterProperty<string>(SizePositionControl, 'SelectedFromLabel', TOP_LEFT_LABEL, MetaData.BindsTwoWayByDefault);
 
     private _syncing = false;
 

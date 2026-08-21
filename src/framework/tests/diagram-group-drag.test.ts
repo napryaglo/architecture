@@ -1,11 +1,11 @@
-import { ModifierKeys } from '../../runtime/index.js';
+﻿import { ModifierKeys } from '../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     NoModifiers,
     ObservableCollection,
     PointerButton,
@@ -24,11 +24,11 @@ import { Figure } from '../diagram/figure.js';
 import { InputManager } from '../index.js';
 import { SelectionMode } from '../list/list-box.js';
 
-class NodeVM extends Model
+class NodeVM extends MuralBase
 {
-    public static readonly IdKey   = Model.RegisterProperty<string>(NodeVM, 'Id',   '', MetaData.None);
-    public static readonly LeftKey = Model.RegisterProperty<number>(NodeVM, 'Left', 0,  MetaData.None);
-    public static readonly TopKey  = Model.RegisterProperty<number>(NodeVM, 'Top',  0,  MetaData.None);
+    public static readonly IdKey   = MuralBase.RegisterProperty<string>(NodeVM, 'Id',   '', MetaData.None);
+    public static readonly LeftKey = MuralBase.RegisterProperty<number>(NodeVM, 'Left', 0,  MetaData.None);
+    public static readonly TopKey  = MuralBase.RegisterProperty<number>(NodeVM, 'Top',  0,  MetaData.None);
     constructor(id: string, left: number, top: number) {
         super();
         this.set_property_value(NodeVM.IdKey,   id);

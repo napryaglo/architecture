@@ -1,20 +1,20 @@
-import { Binding, type ValueConverter } from './binding.js';
+﻿import { Binding, type ValueConverter } from './binding.js';
 import type { PropertyChangeCallback } from './effective-value.js';
 import { MetaData } from '../metadata.js';
-import { Model } from '../model.js';
+import { MuralBase } from '../model.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import { Application } from '../application.js';
 import type { ServiceToken } from '../services/service-provider.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
-// Watcher Model — same shape as DataContextWatcher: a Model with a
+// Watcher MuralBase — same shape as DataContextWatcher: a MuralBase with a
 // single registered Value property. Bindings feed their resolved value
 // into this slot; the consumer EVD subscribes to it as the binding's
 // source.
-class ElementNameWatcher extends Model
+class ElementNameWatcher extends MuralBase
 {
-    public static readonly ValueKey = Model.RegisterProperty<unknown>(
+    public static readonly ValueKey = MuralBase.RegisterProperty<unknown>(
         ElementNameWatcher, 'Value', undefined, MetaData.None);
 
     public get Value(): unknown      { return this.get_property_value(ElementNameWatcher.ValueKey); }
@@ -35,15 +35,15 @@ class ElementNameWatcher extends Model
 // Shared impl for bindings whose source is FIXED (resolved once, never
 // re-resolved on a DataContext change): ElementName (an x:name'd Visual)
 // and Service (resolved from the ambient ServiceProvider). The source is
-// any `Model` — a Visual IS a Model, and a ServiceBase service IS a
-// Model, so both ride the same path-walk + property-change machinery.
+// any `MuralBase` — a Visual IS a MuralBase, and a ServiceBase service IS a
+// MuralBase, so both ride the same path-walk + property-change machinery.
 class FixedSourceBinding extends Binding
 {
     private readonly watcher:     ElementNameWatcher;
-    private readonly sourceThunk: () => Model | undefined;
+    private readonly sourceThunk: () => MuralBase | undefined;
     private readonly pathStr:     string;
 
-    private nameSource:     Model | undefined;
+    private nameSource:     MuralBase | undefined;
     private sourceCallback: PropertyChangeCallback | undefined;
     private disposed = false;
     // The forward-ref retry (activate) fires at most once. One microtask
@@ -60,21 +60,21 @@ class FixedSourceBinding extends Binding
     // distinguishable from "nothing pending".
     private pendingWrite:   { value: unknown } | undefined;
 
-    // Optional "the source may move" watch: a property on some Model whose
+    // Optional "the source may move" watch: a property on some MuralBase whose
     // change means the thunk could now resolve a DIFFERENT source. The
     // ElementName case is genuinely fixed (an x:name'd element never moves),
     // so it passes none. The Service case watches the target's inherited
     // `ServiceScope` — re-parenting the subtree under a different provider
     // must rebind to that provider's service. See reresolve().
-    private rebindTarget:   Model | undefined;
+    private rebindTarget:   MuralBase | undefined;
     private rebindKey:      PropertyKey<unknown> | undefined;
     private rebindCallback: PropertyChangeCallback | undefined;
 
     constructor(
-        source:    Model | (() => Model | undefined),
+        source:    MuralBase | (() => MuralBase | undefined),
         path:      string,
         converter?: ValueConverter,
-        rebind?:   { target: Model; property: string },
+        rebind?:   { target: MuralBase; property: string },
     )
     {
         const watcher = new ElementNameWatcher();
@@ -89,7 +89,7 @@ class FixedSourceBinding extends Binding
         // Subscribe to the rebind-trigger property AFTER the first activate
         // so the initial resolution path (incl. forward-ref retry) owns the
         // first value; subsequent changes re-resolve through reresolve().
-        if (rebind !== undefined && Model.HasProperty(rebind.target.constructor, rebind.property))
+        if (rebind !== undefined && MuralBase.HasProperty(rebind.target.constructor, rebind.property))
         {
             const key = resolveKey(rebind.target, undefined, rebind.property);
             this.rebindTarget   = rebind.target;
@@ -221,7 +221,7 @@ class FixedSourceBinding extends Binding
         for (let i = 0; i < segments.length - 1; i++)
         {
             const seg = segments[i]!;
-            if (cur instanceof Model)
+            if (cur instanceof MuralBase)
             {
                 cur = cur.get_property_value(resolveKey(cur, undefined, seg));
             }
@@ -239,7 +239,7 @@ class FixedSourceBinding extends Binding
         // the back-converted value to the watcher). No-op when no convertBack.
         const back = this.applyConvertBack(value);
         const lastSeg = segments[segments.length - 1]!;
-        if (cur instanceof Model)
+        if (cur instanceof MuralBase)
         {
             cur.set_property_value(resolveKey(cur, undefined, lastSeg), back);
         }
@@ -271,7 +271,7 @@ class FixedSourceBinding extends Binding
         // its properties.
         if (this.pathStr === '') return;
         const first = this.firstSegment();
-        if (!Model.HasProperty(src.constructor, first)) return;
+        if (!MuralBase.HasProperty(src.constructor, first)) return;
         const key = resolveKey(src, undefined, first);
         this.sourceKey      = key;
         this.sourceCallback = () => { this.watcher.Value = this.walkPath(src); };
@@ -297,9 +297,9 @@ class FixedSourceBinding extends Binding
         for (const seg of this.pathStr.split('.'))
         {
             if (cur === undefined || cur === null) return undefined;
-            if (cur instanceof Model)
+            if (cur instanceof MuralBase)
             {
-                if (!Model.HasProperty(cur.constructor, seg)) return undefined;
+                if (!MuralBase.HasProperty(cur.constructor, seg)) return undefined;
                 cur = cur.get_property_value(resolveKey(cur, undefined, seg));
             }
             else if (typeof cur === 'object')
@@ -349,7 +349,7 @@ export function ElementNameBinding(source: Visual | (() => Visual | undefined), 
 // `ServiceScope` and re-resolves when it changes, so re-parenting the
 // subtree under a different provider rebinds to that provider's service
 // (not just the install-before-parent forward-ref window).
-export function ServiceBinding(target: Model, token: ServiceToken<unknown>, path: string, converter?: ValueConverter): Binding
+export function ServiceBinding(target: MuralBase, token: ServiceToken<unknown>, path: string, converter?: ValueConverter): Binding
 {
     return new FixedSourceBinding(
         () => {
@@ -363,7 +363,7 @@ export function ServiceBinding(target: Model, token: ServiceToken<unknown>, path
             // and NOT also at the root, the pre-parent attempt resolves to
             // undefined and the retry lands on the scoped instance.
             const scope = readServiceScope(target) ?? Application.current?.Services;
-            return scope?.get(token) as Model | undefined;
+            return scope?.get(token) as MuralBase | undefined;
         },
         path, converter,
         // Re-resolve whenever the target's inherited ServiceScope changes.
@@ -373,9 +373,9 @@ export function ServiceBinding(target: Model, token: ServiceToken<unknown>, path
 // Reads the target's inherited `ServiceScope` by name — structurally, so
 // the runtime binding layer needn't import the Element class that owns the
 // DP. Returns a provider-shaped value (anything with `get`) or undefined.
-function readServiceScope(target: Model): Provider | undefined
+function readServiceScope(target: MuralBase): Provider | undefined
 {
-    if (!Model.HasProperty(target.constructor, 'ServiceScope')) return undefined;
+    if (!MuralBase.HasProperty(target.constructor, 'ServiceScope')) return undefined;
     const v = target.get_property_value(resolveKey(target, undefined, 'ServiceScope'));
     return (v !== undefined && typeof (v as Provider).get === 'function') ? v as Provider : undefined;
 }

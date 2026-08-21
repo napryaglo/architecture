@@ -1,9 +1,9 @@
-import {
+﻿import {
     Adorner,
     AdornerLayer,
     DynamicResource,
     MetaData,
-    Model,
+    MuralBase,
     PropertyDescriptor,
     Rect,
     Size,
@@ -60,26 +60,26 @@ import { Thumb, type DragDeltaEventArgs, type DragStartedEventArgs, type DragCom
 // the first move "commits" the sibling to an explicit pixel size.
 export class Splitter extends Thumb
 {
-    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
+    public static readonly OrientationKey = MuralBase.RegisterProperty<Orientation>(
         Splitter, 'Orientation', Orientation.Vertical, MetaData.Render);
 
-    public static readonly ReverseDirectionKey = Model.RegisterProperty<boolean>(
+    public static readonly ReverseDirectionKey = MuralBase.RegisterProperty<boolean>(
         Splitter, 'ReverseDirection', false, MetaData.None);
 
-    public static readonly ShowsPreviewKey = Model.RegisterProperty<boolean>(
+    public static readonly ShowsPreviewKey = MuralBase.RegisterProperty<boolean>(
         Splitter, 'ShowsPreview', false, MetaData.None);
 
-    public static readonly DragIncrementKey = Model.RegisterProperty<number>(
+    public static readonly DragIncrementKey = MuralBase.RegisterProperty<number>(
         Splitter, 'DragIncrement', 1, MetaData.None);
 
-    public static readonly KeyboardIncrementKey = Model.RegisterProperty<number>(
+    public static readonly KeyboardIncrementKey = MuralBase.RegisterProperty<number>(
         Splitter, 'KeyboardIncrement', 10, MetaData.None);
 
-    public static readonly PreviewBrushKey = Model.RegisterProperty<Brush | undefined>(
+    public static readonly PreviewBrushKey = MuralBase.RegisterProperty<Brush | undefined>(
         Splitter, 'PreviewBrush', undefined, MetaData.None);
 
     static {
-        Model.OverrideMetadata(Splitter, Element.DefaultStyleKeyKey, { default_value: Splitter });
+        MuralBase.OverrideMetadata(Splitter, Element.DefaultStyleKeyKey, { default_value: Splitter });
     }
 
     private _resizeTarget: Visual | undefined;

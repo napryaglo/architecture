@@ -1,12 +1,12 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, Model, ServiceProvider } from '../../runtime/index.js';
+import { Application, MuralBase, ServiceProvider } from '../../runtime/index.js';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import { NavigationService, NavigationDestination } from '../shell/services/navigation-service.js';
 import { Capability } from '../shell/module.js';
 
-class SvcA extends Model {}
-class SvcB extends Model {}
+class SvcA extends MuralBase {}
+class SvcB extends MuralBase {}
 
 describe('NavigationService — re-selecting a capability (switch back)', () => {
     let nav: NavigationService;

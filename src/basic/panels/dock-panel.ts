@@ -1,4 +1,4 @@
-import { MetaData, Model, Panel, Rect, Size, Visual } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Panel, Rect, Size, Visual } from '../../runtime/index.js';
 
 // Dock edge for a DockPanel child. Matches WPF's System.Windows.Controls.Dock
 // enum verbatim — Left / Top / Right / Bottom — and is the value carried by
@@ -35,8 +35,8 @@ export enum Dock
 // subscribe to Dock changes on its children. See [[mu-mural-scope-extensions-vs-attached-properties]].
 export class DockPanel extends Panel
 {
-    public static readonly DockKey          = Model.RegisterAttachedProperty<Dock>(DockPanel, 'Dock', Dock.Left, MetaData.None);
-    public static readonly LastChildFillKey = Model.RegisterProperty<boolean>(     DockPanel, 'LastChildFill', true,
+    public static readonly DockKey          = MuralBase.RegisterAttachedProperty<Dock>(DockPanel, 'Dock', Dock.Left, MetaData.None);
+    public static readonly LastChildFillKey = MuralBase.RegisterProperty<boolean>(     DockPanel, 'LastChildFill', true,
         MetaData.Measure | MetaData.Arrange);
 
     // Static accessors mirror WPF's DockPanel.SetDock / DockPanel.GetDock.

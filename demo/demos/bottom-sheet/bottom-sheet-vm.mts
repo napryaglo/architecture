@@ -1,20 +1,20 @@
-// BottomSheetVM — backs the bottom-sheet demo. BottomSheet ships no
+﻿// BottomSheetVM — backs the bottom-sheet demo. BottomSheet ships no
 // posture DP (its class doc leaves internal layout to the consumer), so
 // the peek-vs-expanded posture is modelled here: Expanded is a reactive
 // boolean and SheetHeight is the height the sheet's Height DP binds to.
 // TogglePosture flips between the peek height and the expanded height so
 // the sheet rises / settles live.
-import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 
 const PEEK_HEIGHT     = 96;
 const EXPANDED_HEIGHT = 320;
 
-export class BottomSheetVM extends Model
+export class BottomSheetVM extends MuralBase
 {
-    static ExpandedKey       = Model.RegisterProperty<boolean>(BottomSheetVM, 'Expanded',   false,       MetaData.None);
-    static SheetHeightKey    = Model.RegisterProperty<number>(BottomSheetVM,  'SheetHeight', PEEK_HEIGHT, MetaData.None);
-    static PostureLabelKey   = Model.RegisterProperty<string>(BottomSheetVM,  'PostureLabel', 'Peek',     MetaData.None);
-    static TogglePostureKey  = Model.RegisterProperty<RelayCommand | null>(BottomSheetVM, 'TogglePosture', null, MetaData.None);
+    static ExpandedKey       = MuralBase.RegisterProperty<boolean>(BottomSheetVM, 'Expanded',   false,       MetaData.None);
+    static SheetHeightKey    = MuralBase.RegisterProperty<number>(BottomSheetVM,  'SheetHeight', PEEK_HEIGHT, MetaData.None);
+    static PostureLabelKey   = MuralBase.RegisterProperty<string>(BottomSheetVM,  'PostureLabel', 'Peek',     MetaData.None);
+    static TogglePostureKey  = MuralBase.RegisterProperty<RelayCommand | null>(BottomSheetVM, 'TogglePosture', null, MetaData.None);
 
     get Expanded():     boolean { return this.get_property_value(BottomSheetVM.ExpandedKey); }
     set Expanded(v:     boolean) { this.set_property_value(BottomSheetVM.ExpandedKey, v); }

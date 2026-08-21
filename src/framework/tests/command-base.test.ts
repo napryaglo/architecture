@@ -1,4 +1,4 @@
-import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
+﻿import { ModifierKeys, toModifierKeys } from '../../runtime/index.js';
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
@@ -71,7 +71,7 @@ describe('CommandBase metadata', () => {
         // CommandBase.Text/Description/Icon are bindable DPs, but the
         // CanExecuteChanged pulse fires on RaiseCanExecuteChanged only.
         // Metadata writes are intentionally silent — re-rendering a
-        // tooltip uses Model-level property-changed listeners, not the
+        // tooltip uses MuralBase-level property-changed listeners, not the
         // command's CanExecuteChanged hook.
         const cmd = new RelayCommand(() => undefined);
         let pulses = 0;

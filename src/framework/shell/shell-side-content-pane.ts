@@ -1,4 +1,4 @@
-import { Element, MetaData, Model } from '../../runtime/index.js';
+﻿import { Element, MetaData, MuralBase } from '../../runtime/index.js';
 import { HeaderedContentControl } from '../base/headered-content-control.js';
 
 // A titled side pane for the shell's side regions — the VSCode Explorer/panel
@@ -30,10 +30,10 @@ import { HeaderedContentControl } from '../base/headered-content-control.js';
 export class ShellSideContentPane extends HeaderedContentControl
 {
     // Right-aligned header content. `unknown` — like Header — so it can carry a
-    // Visual (the usual case: a button row), a Model rendered via a DataTemplate,
+    // Visual (the usual case: a button row), a MuralBase rendered via a DataTemplate,
     // or a plain string. Measure + Render: it participates in the header row's
     // layout and paints.
-    public static readonly CommandsKey = Model.RegisterProperty<unknown>(
+    public static readonly CommandsKey = MuralBase.RegisterProperty<unknown>(
         ShellSideContentPane, 'Commands', undefined, MetaData.Measure | MetaData.Render);
 
     static
@@ -41,7 +41,7 @@ export class ShellSideContentPane extends HeaderedContentControl
         // Resolve the default Style keyed by this class function — the theme
         // dictionary holds Style[TargetType=ShellSideContentPane]. Without this
         // block applyDefaultStyle() silently no-ops.
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             ShellSideContentPane, Element.DefaultStyleKeyKey,
             { default_value: ShellSideContentPane });
     }

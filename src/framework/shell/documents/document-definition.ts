@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     type ServiceToken,
 } from '../../../runtime/index.js';
 
@@ -14,7 +14,7 @@ const EMPTY_CONTEXTS: readonly ServiceToken<unknown>[] = Object.freeze([]);
 // factory that creates it, the command contexts it activates); the live,
 // per-instance document is an IDocument a factory builds (from a file or blank).
 //
-// A Model so it is DP-backed, bindable, and declarable in markup — the same
+// A MuralBase so it is DP-backed, bindable, and declarable in markup — the same
 // shape as SettingDefinition:
 //
 //     module DiagramModule [ Name = "Diagram" ] {
@@ -35,32 +35,32 @@ const EMPTY_CONTEXTS: readonly ServiceToken<unknown>[] = Object.freeze([]);
 // so no bespoke grammar is needed — only the symbol-table registration of
 // DocumentDefinition. DocumentTypeRegistry aggregates these across every
 // composed module.
-export class DocumentDefinition extends Model
+export class DocumentDefinition extends MuralBase
 {
     // Stable id for the document type ("diagram", "settings"). The registry key,
     // and the correlation point a future commands service uses to map an active
     // document → its type → CommandContexts. Namespace by module.
-    public static readonly TypeKey = Model.RegisterProperty<string>(
+    public static readonly TypeKey = MuralBase.RegisterProperty<string>(
         DocumentDefinition, 'Type', '', MetaData.None);
 
     // Display name — a new-document menu / tab title binds this.
-    public static readonly TitleKey = Model.RegisterProperty<string>(
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(
         DocumentDefinition, 'Title', '', MetaData.None);
 
     // Longer help text (a new-document gallery entry, a tooltip).
-    public static readonly DescriptionKey = Model.RegisterProperty<string>(
+    public static readonly DescriptionKey = MuralBase.RegisterProperty<string>(
         DocumentDefinition, 'Description', '', MetaData.None);
 
     // File extensions this type opens (leading dot, matched case-insensitively:
     // ".diagram"). A file-open flow matches an extension here to pick the type
     // and its Factory. Authored as a markup list — `[".diagram", ".dgm"]`.
-    public static readonly FileExtensionsKey = Model.RegisterProperty<readonly string[]>(
+    public static readonly FileExtensionsKey = MuralBase.RegisterProperty<readonly string[]>(
         DocumentDefinition, 'FileExtensions', EMPTY_EXTENSIONS, MetaData.None);
 
     // The DI token of the factory that creates / opens documents of this type
     // (a future IDocumentFactory). A real reference in markup (`Factory =
     // SomeFactory`), resolved through the container like Capability.ServiceKey.
-    public static readonly FactoryKey = Model.RegisterProperty<ServiceToken<unknown> | undefined>(
+    public static readonly FactoryKey = MuralBase.RegisterProperty<ServiceToken<unknown> | undefined>(
         DocumentDefinition, 'Factory', undefined, MetaData.None);
 
     // Command-context tokens this document type activates while it is the active
@@ -68,7 +68,7 @@ export class DocumentDefinition extends Model
     // active context and hides the rest — the tokens are opaque identity tags
     // (ServiceKeys used as keys), NOT services to resolve. Authored as a markup
     // list of real references — `[DiagramEditingContext, DiagramShapeContext]`.
-    public static readonly CommandContextsKey = Model.RegisterProperty<readonly ServiceToken<unknown>[]>(
+    public static readonly CommandContextsKey = MuralBase.RegisterProperty<readonly ServiceToken<unknown>[]>(
         DocumentDefinition, 'CommandContexts', EMPTY_CONTEXTS, MetaData.None);
 
     public get Type(): string  { return this.get_property_value(DocumentDefinition.TypeKey); }

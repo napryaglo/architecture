@@ -1,4 +1,4 @@
-import { Model } from './model.js';
+﻿import { MuralBase } from './model.js';
 import { MetaData } from './metadata.js';
 
 // ICommand — the MVVM command contract that WPF popularised. Mural's
@@ -62,11 +62,11 @@ export interface CommandMetadataInit
      *  default Tooltip's second line. Empty by default. */
     Description?: string;
     /** Optional icon — anything ContentPresenter can paint (Visual /
-     *  Model VM / string). Used by toolbars and rich tooltips. */
+     *  MuralBase VM / string). Used by toolbars and rich tooltips. */
     Icon?:        unknown;
 }
 
-// CommandBase — abstract Model that every shipped command (RelayCommand,
+// CommandBase — abstract MuralBase that every shipped command (RelayCommand,
 // RoutedCommand, and consumer subclasses) extends. Carries the bindable
 // display metadata used by tooltips, menus, and toolbars. Implements
 // ICommand so it slots into any ICommandSource consumer.
@@ -79,13 +79,13 @@ export interface CommandMetadataInit
 // without dragging a hardcoded "Ctrl+S" along — and the same command
 // can carry different shortcuts in different windows / platforms /
 // keymaps.
-export abstract class CommandBase extends Model implements ICommand
+export abstract class CommandBase extends MuralBase implements ICommand
 {
-    public static readonly TextKey        = Model.RegisterProperty<string>(
+    public static readonly TextKey        = MuralBase.RegisterProperty<string>(
         CommandBase, 'Text',        '',        MetaData.None);
-    public static readonly DescriptionKey = Model.RegisterProperty<string>(
+    public static readonly DescriptionKey = MuralBase.RegisterProperty<string>(
         CommandBase, 'Description', '',        MetaData.None);
-    public static readonly IconKey        = Model.RegisterProperty<unknown>(
+    public static readonly IconKey        = MuralBase.RegisterProperty<unknown>(
         CommandBase, 'Icon',        undefined, MetaData.None);
 
     public get Text():        string  { return this.get_property_value(CommandBase.TextKey); }

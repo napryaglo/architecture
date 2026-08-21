@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -37,7 +37,7 @@ import { Shape } from './shape.js';
 export class Squircle extends Shape
 {
     // Superellipse exponent. M3 named "Squircle" is n = 4.
-    public static readonly SupernessKey       = Model.RegisterProperty<number>(           Squircle, 'Superness',       4,         MetaData.Render);
+    public static readonly SupernessKey       = MuralBase.RegisterProperty<number>(           Squircle, 'Superness',       4,         MetaData.Render);
 
     public get Superness(): number { return this.get_property_value(Squircle.SupernessKey); }
     public set Superness(v: number) { this.set_property_value(Squircle.SupernessKey, v); }

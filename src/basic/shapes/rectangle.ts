@@ -1,4 +1,4 @@
-import { MetaData, Model, Rect, Size, type DrawingContext } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Rect, Size, type DrawingContext } from '../../runtime/index.js';
 import { RectangleGeometry, type Geometry } from '../../visual-engine/index.js';
 import { Shape } from './shape.js';
 
@@ -15,8 +15,8 @@ import { Shape } from './shape.js';
 // Width/Height on Visual or from a Stretch-style parent slot.
 export class Rectangle extends Shape
 {
-    public static readonly RadiusXKey = Model.RegisterProperty<number>(Rectangle, 'RadiusX', 0, MetaData.Render);
-    public static readonly RadiusYKey = Model.RegisterProperty<number>(Rectangle, 'RadiusY', 0, MetaData.Render);
+    public static readonly RadiusXKey = MuralBase.RegisterProperty<number>(Rectangle, 'RadiusX', 0, MetaData.Render);
+    public static readonly RadiusYKey = MuralBase.RegisterProperty<number>(Rectangle, 'RadiusY', 0, MetaData.Render);
 
     public get RadiusX(): number { return this.get_property_value(Rectangle.RadiusXKey); }
     public set RadiusX(value: number) { this.set_property_value(Rectangle.RadiusXKey, value); }

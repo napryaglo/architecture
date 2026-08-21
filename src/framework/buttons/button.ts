@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type ICommand,
     type KeyEventArgs,
@@ -93,19 +93,19 @@ export type ClickHandler = (args: PointerEventArgs) => void;
 // drag onto + release".
 export class Button extends ContentControl implements ICommandSource
 {
-    public static readonly CommandKey          = Model.RegisterProperty<ICommand | undefined>(Button, 'Command',          undefined,         MetaData.None);
-    public static readonly CommandParameterKey = Model.RegisterProperty<unknown>(             Button, 'CommandParameter', undefined,         MetaData.None);
+    public static readonly CommandKey          = MuralBase.RegisterProperty<ICommand | undefined>(Button, 'Command',          undefined,         MetaData.None);
+    public static readonly CommandParameterKey = MuralBase.RegisterProperty<unknown>(             Button, 'CommandParameter', undefined,         MetaData.None);
     // CommandTarget — RoutedCommand-only override of the routing dispatch
     // target. Plain ICommand ignores this DP; RoutedCommand asks
     // CommandManager.Execute against CommandTarget ?? this. The default
     // (undefined) means "dispatch from the Button itself", which is what
     // a toolbar Button typically wants.
-    public static readonly CommandTargetKey    = Model.RegisterProperty<Visual | undefined>(  Button, 'CommandTarget',    undefined,         MetaData.None);
-    public static readonly ClickModeKey        = Model.RegisterProperty<ClickMode>(           Button, 'ClickMode',        ClickMode.Release, MetaData.None);
+    public static readonly CommandTargetKey    = MuralBase.RegisterProperty<Visual | undefined>(  Button, 'CommandTarget',    undefined,         MetaData.None);
+    public static readonly ClickModeKey        = MuralBase.RegisterProperty<ClickMode>(           Button, 'ClickMode',        ClickMode.Release, MetaData.None);
     // Material 3 visual variant. Drives the default Style's Template-
     // picker trigger chain in basic.resources.mu. MetaData.None — the
     // trigger system reacts to DP changes via OnPropertyChanged.
-    public static readonly VariantKey          = Model.RegisterProperty<ButtonVariant>(       Button, 'Variant',          ButtonVariant.Filled, MetaData.None);
+    public static readonly VariantKey          = MuralBase.RegisterProperty<ButtonVariant>(       Button, 'Variant',          ButtonVariant.Filled, MetaData.None);
     // Corner shape, TemplateBound to PART_Border (and PART_StateLayer) in
     // every variant template via `$$CornerRadius`. Lets a consumer compose
     // Button parts into a larger surface with per-instance corner shape
@@ -114,13 +114,13 @@ export class Button extends ContentControl implements ICommandSource
     // M3 pill default is applied by the default Style's `CornerRadius =
     // @ShapeFull` setter (theme-token reactive); this default_value is the
     // same shape as a safety net for a Button used without its Style.
-    public static readonly CornerRadiusKey     = Model.RegisterProperty<number | CornerRadius>(Button, 'CornerRadius',      CornerRadius.Full,    MetaData.None);
+    public static readonly CornerRadiusKey     = MuralBase.RegisterProperty<number | CornerRadius>(Button, 'CornerRadius',      CornerRadius.Full,    MetaData.None);
 
     static
     {
         // Theme-style lookup key — Button instances resolve their
         // default Style via TryFindResource(Button) on attach.
-        Model.OverrideMetadata(Button, Element.DefaultStyleKeyKey, { default_value: Button });
+        MuralBase.OverrideMetadata(Button, Element.DefaultStyleKeyKey, { default_value: Button });
         // Ensures the consolidated controls theme — which holds the
         // Button ControlTemplate keyed by the Button class function —
         // is registered with Application exactly once.

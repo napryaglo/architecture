@@ -1,9 +1,9 @@
-import {
+﻿import {
     Application,
     DynamicResource,
     Element,
     MetaData,
-    Model,
+    MuralBase,
     type ObservableCollection,
     type PersistentGuide,
     type GuidePreview,
@@ -143,49 +143,49 @@ const EMPTY_CAP_OPTIONS: readonly CapOption[] = Object.freeze([]) as readonly Ca
 export class Diagram extends Selector implements RigidConnectorDragHost
 {
     static {
-        Model.OverrideMetadata(Diagram, Element.DefaultStyleKeyKey, { default_value: Diagram });
+        MuralBase.OverrideMetadata(Diagram, Element.DefaultStyleKeyKey, { default_value: Diagram });
     }
 
     // §19.3 — `PositionSnap` callback. Default `undefined` = no snap,
     // identity behavior. When set, Figure.OnPointerMove calls it
     // with the cursor-derived candidate rect and uses the returned
     // rect's X / Y for its position write.
-    public static readonly PositionSnapKey = Model.RegisterProperty<DiagramPositionSnap | undefined>(
+    public static readonly PositionSnapKey = MuralBase.RegisterProperty<DiagramPositionSnap | undefined>(
         Diagram, 'PositionSnap', undefined, MetaData.None);
 
     // Camera DP — the infinite-canvas zoom. Applied as PART_Camera's
     // LayoutTransform scale (grows the measured footprint); pan is the
     // ScrollViewer's scroll offset (see ScrollX/ScrollY). Identity default
     // (Zoom 1). The host persists zoom + scroll offset per diagram. See camera.ts.
-    public static readonly ZoomKey = Model.RegisterProperty<number>(Diagram, 'Zoom', 1, MetaData.None);
+    public static readonly ZoomKey = MuralBase.RegisterProperty<number>(Diagram, 'Zoom', 1, MetaData.None);
 
     // Zoom commands — RelayCommand DPs the overlay + host keyboard bind. Seeded in
     // the ctor; behaviour lives in the ZoomIn/Fit/… methods below.
-    public static readonly ZoomInCommandKey         = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'ZoomInCommand', undefined, MetaData.None);
-    public static readonly ZoomOutCommandKey        = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'ZoomOutCommand', undefined, MetaData.None);
-    public static readonly ResetZoomCommandKey      = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'ResetZoomCommand', undefined, MetaData.None);
-    public static readonly FitCommandKey            = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitCommand', undefined, MetaData.None);
-    public static readonly FitToSelectionCommandKey = Model.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitToSelectionCommand', undefined, MetaData.None);
+    public static readonly ZoomInCommandKey         = MuralBase.RegisterProperty<RelayCommand | undefined>(Diagram, 'ZoomInCommand', undefined, MetaData.None);
+    public static readonly ZoomOutCommandKey        = MuralBase.RegisterProperty<RelayCommand | undefined>(Diagram, 'ZoomOutCommand', undefined, MetaData.None);
+    public static readonly ResetZoomCommandKey      = MuralBase.RegisterProperty<RelayCommand | undefined>(Diagram, 'ResetZoomCommand', undefined, MetaData.None);
+    public static readonly FitCommandKey            = MuralBase.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitCommand', undefined, MetaData.None);
+    public static readonly FitToSelectionCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(Diagram, 'FitToSelectionCommand', undefined, MetaData.None);
 
     // Opt-in gate: when true, the ZoomPanBehavior is attached (Ctrl+wheel
     // zoom-at-cursor). Plain/Shift wheel and scrollbars are the ScrollViewer's.
     // Default false so existing diagrams are unaffected until a host enables it.
-    public static readonly CameraEnabledKey = Model.RegisterProperty<boolean>(Diagram, 'CameraEnabled', false, MetaData.None);
+    public static readonly CameraEnabledKey = MuralBase.RegisterProperty<boolean>(Diagram, 'CameraEnabled', false, MetaData.None);
 
     // Selection-bounds DPs — read-only, derived from the union bbox of
     // every IFigure-shaped item in SelectedItems by SelectionBoundsTracker
     // (see collaborators/selection-bounds-tracker.ts). Consumers can bind
     // their resize-adorner / status-bar / inspector chrome to these DPs
     // without subscribing to per-item geometry themselves.
-    public static readonly SelectionLeftKey   = Model.RegisterReadOnlyProperty<number>(
+    public static readonly SelectionLeftKey   = MuralBase.RegisterReadOnlyProperty<number>(
         Diagram, 'SelectionLeft',   0, MetaData.None);
-    public static readonly SelectionTopKey    = Model.RegisterReadOnlyProperty<number>(
+    public static readonly SelectionTopKey    = MuralBase.RegisterReadOnlyProperty<number>(
         Diagram, 'SelectionTop',    0, MetaData.None);
-    public static readonly SelectionWidthKey  = Model.RegisterReadOnlyProperty<number>(
+    public static readonly SelectionWidthKey  = MuralBase.RegisterReadOnlyProperty<number>(
         Diagram, 'SelectionWidth',  0, MetaData.None);
-    public static readonly SelectionHeightKey = Model.RegisterReadOnlyProperty<number>(
+    public static readonly SelectionHeightKey = MuralBase.RegisterReadOnlyProperty<number>(
         Diagram, 'SelectionHeight', 0, MetaData.None);
-    public static readonly SelectionCountKey  = Model.RegisterReadOnlyProperty<number>(
+    public static readonly SelectionCountKey  = MuralBase.RegisterReadOnlyProperty<number>(
         Diagram, 'SelectionCount',  0, MetaData.None);
 
     // Single-selected-shape geometry channel — driven by SelectionGeometryMirror.
@@ -195,21 +195,21 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // plain read-write DPs (like SelectionFormat*) so the mirror writes via
     // set_property_value; the writable geometry is BindsTwoWayByDefault for the
     // inspector's two-way bind.
-    public static readonly HasSelectedShapeKey = Model.RegisterProperty<boolean>(
+    public static readonly HasSelectedShapeKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'HasSelectedShape', false, MetaData.None);
-    public static readonly SelectedShapeLeftKey = Model.RegisterProperty<number>(
+    public static readonly SelectedShapeLeftKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectedShapeLeft', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly SelectedShapeTopKey = Model.RegisterProperty<number>(
+    public static readonly SelectedShapeTopKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectedShapeTop', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly SelectedShapeWidthKey = Model.RegisterProperty<number>(
+    public static readonly SelectedShapeWidthKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectedShapeWidth', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly SelectedShapeHeightKey = Model.RegisterProperty<number>(
+    public static readonly SelectedShapeHeightKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectedShapeHeight', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly SelectedShapeRotationKey = Model.RegisterProperty<number>(
+    public static readonly SelectedShapeRotationKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectedShapeRotation', 0, MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly SelectedShapeBaseWidthKey = Model.RegisterProperty<number>(
+    public static readonly SelectedShapeBaseWidthKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectedShapeBaseWidth', 0, MetaData.None);
-    public static readonly SelectedShapeBaseHeightKey = Model.RegisterProperty<number>(
+    public static readonly SelectedShapeBaseHeightKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectedShapeBaseHeight', 0, MetaData.None);
 
     // Align commands — RelayCommand-typed DPs. DiagramCommands installs
@@ -217,22 +217,22 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // own RelayCommand to the DP. Each command's CanExecute returns
     // false for selections < 2 IFigure-shaped items. RaiseCanExecuteChanged
     // is fanned out on every SelectionChanged by DiagramCommands.
-    public static readonly AlignLeftCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly AlignLeftCommandKey   = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'AlignLeftCommand',   undefined, MetaData.None);
-    public static readonly AlignRightCommandKey  = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly AlignRightCommandKey  = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'AlignRightCommand',  undefined, MetaData.None);
-    public static readonly AlignTopCommandKey    = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly AlignTopCommandKey    = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'AlignTopCommand',    undefined, MetaData.None);
-    public static readonly AlignMiddleCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly AlignMiddleCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'AlignMiddleCommand', undefined, MetaData.None);
-    public static readonly AlignCenterCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly AlignCenterCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'AlignCenterCommand', undefined, MetaData.None);
 
     // Distribute commands — same shape as the align surface. CanExecute
     // requires ≥ 3 IFigure-shaped selected items (alignment-only fits 2).
-    public static readonly DistributeHorizontalCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly DistributeHorizontalCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'DistributeHorizontalCommand', undefined, MetaData.None);
-    public static readonly DistributeVerticalCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly DistributeVerticalCommandKey   = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'DistributeVerticalCommand',   undefined, MetaData.None);
 
     // Group / Ungroup commands — events-based mutation contract. The
@@ -244,9 +244,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     //   * GroupCommand   — ≥ 2 top-level entries in SelectedItems
     //   * UngroupCommand — ≥ 1 group-shaped (duck-typed on `Members`)
     //                      top-level entry in SelectedItems
-    public static readonly GroupCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly GroupCommandKey   = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'GroupCommand',   undefined, MetaData.None);
-    public static readonly UngroupCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly UngroupCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'UngroupCommand', undefined, MetaData.None);
 
     // Combine commands — one per GeometryCombineMode. Same event-based
@@ -255,13 +255,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // the collection mutation. The framework's `combine()` helper (from
     // src/visual-engine/geometry/combine.ts) is what consumers typically
     // invoke to fold-merge the input geometries.
-    public static readonly CombineUnionCommandKey     = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly CombineUnionCommandKey     = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'CombineUnionCommand',     undefined, MetaData.None);
-    public static readonly CombineIntersectCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly CombineIntersectCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'CombineIntersectCommand', undefined, MetaData.None);
-    public static readonly CombineSubtractCommandKey  = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly CombineSubtractCommandKey  = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'CombineSubtractCommand',  undefined, MetaData.None);
-    public static readonly CombineExcludeCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly CombineExcludeCommandKey   = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'CombineExcludeCommand',   undefined, MetaData.None);
 
     // Text-format commands — the command surface behind the two label toolbars
@@ -273,54 +273,54 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // CanExecute requires ≥ 1 selected shape that carries a label. The demo's
     // active-state toggles bind BOTH Command (the write) and IsChecked (the
     // reflection through `<< Is(...)`).
-    public static readonly SetTextAlignLeftCommandKey    = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextAlignLeftCommandKey    = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextAlignLeftCommand',    undefined, MetaData.None);
-    public static readonly SetTextAlignCenterCommandKey  = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextAlignCenterCommandKey  = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextAlignCenterCommand',  undefined, MetaData.None);
-    public static readonly SetTextAlignRightCommandKey   = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextAlignRightCommandKey   = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextAlignRightCommand',   undefined, MetaData.None);
-    public static readonly SetTextAlignJustifyCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextAlignJustifyCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextAlignJustifyCommand', undefined, MetaData.None);
 
-    public static readonly SetTextPlacementCenterCommandKey      = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextPlacementCenterCommandKey      = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextPlacementCenterCommand',      undefined, MetaData.None);
-    public static readonly SetTextPlacementTopCommandKey         = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextPlacementTopCommandKey         = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextPlacementTopCommand',         undefined, MetaData.None);
-    public static readonly SetTextPlacementBottomCommandKey      = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextPlacementBottomCommandKey      = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextPlacementBottomCommand',      undefined, MetaData.None);
-    public static readonly SetTextPlacementLeftCommandKey        = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextPlacementLeftCommandKey        = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextPlacementLeftCommand',        undefined, MetaData.None);
-    public static readonly SetTextPlacementRightCommandKey       = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextPlacementRightCommandKey       = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextPlacementRightCommand',       undefined, MetaData.None);
-    public static readonly SetTextPlacementTopLeftCommandKey     = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextPlacementTopLeftCommandKey     = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextPlacementTopLeftCommand',     undefined, MetaData.None);
-    public static readonly SetTextPlacementTopRightCommandKey    = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextPlacementTopRightCommandKey    = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextPlacementTopRightCommand',    undefined, MetaData.None);
-    public static readonly SetTextPlacementBottomLeftCommandKey  = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextPlacementBottomLeftCommandKey  = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextPlacementBottomLeftCommand',  undefined, MetaData.None);
-    public static readonly SetTextPlacementBottomRightCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextPlacementBottomRightCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextPlacementBottomRightCommand', undefined, MetaData.None);
 
     // Character-decoration toggle commands — flip bold / italic / underline /
     // strikethrough on the selection (the selected text run(s) while editing,
     // else the whole label). Toggle semantics: Execute applies the opposite of
     // the current reflected state. Same DP shape so Plexus binds them by id.
-    public static readonly SetTextBoldCommandKey          = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextBoldCommandKey          = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextBoldCommand',          undefined, MetaData.None);
-    public static readonly SetTextItalicCommandKey        = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextItalicCommandKey        = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextItalicCommand',        undefined, MetaData.None);
-    public static readonly SetTextUnderlineCommandKey     = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextUnderlineCommandKey     = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextUnderlineCommand',     undefined, MetaData.None);
-    public static readonly SetTextStrikethroughCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly SetTextStrikethroughCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'SetTextStrikethroughCommand', undefined, MetaData.None);
 
     // Grow / shrink the label font one point. Unlike the family/size/colour
     // pickers (which set one shared value), these step EACH selected label's own
     // size (the caret run while editing), so a mixed selection keeps its
     // relative sizing. Same RelayCommand-DP shape for Plexus binding by id.
-    public static readonly IncreaseFontSizeCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly IncreaseFontSizeCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'IncreaseFontSizeCommand', undefined, MetaData.None);
-    public static readonly DecreaseFontSizeCommandKey = Model.RegisterProperty<RelayCommand | undefined>(
+    public static readonly DecreaseFontSizeCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'DecreaseFontSizeCommand', undefined, MetaData.None);
 
     // ── Connectors collection + template ──────────────────────────
@@ -334,57 +334,57 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // the DiagramLayersPanel's connectors layer when the ItemsPanel
     // is layered. See § 3.5 of
     // [docs/connectors.md](../../../docs/connectors.md).
-    public static readonly ConnectorsKey = Model.RegisterProperty<ObservableCollection<Model> | undefined>(
+    public static readonly ConnectorsKey = MuralBase.RegisterProperty<ObservableCollection<MuralBase> | undefined>(
         Diagram, 'Connectors', undefined, MetaData.None);
-    public static readonly ConnectorTemplateKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly ConnectorTemplateKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         Diagram, 'ConnectorTemplate', undefined, MetaData.None);
 
     // Alignment-guides opt-in. Default off; consumers flip true to
     // enable both the behavior (snap-on-drag + guide-list computation)
     // and the adorner (paints dashed guide lines).
-    public static readonly AlignmentGuidesEnabledKey = Model.RegisterProperty<boolean>(
+    public static readonly AlignmentGuidesEnabledKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'AlignmentGuidesEnabled', false, MetaData.None);
     // Read-only — driven by AlignmentGuidesBehavior. Adorner subscribes
     // here; consumers can also bind for custom guide visualization.
-    public static readonly AlignmentGuidesKey = Model.RegisterReadOnlyProperty<readonly AlignmentGuide[]>(
+    public static readonly AlignmentGuidesKey = MuralBase.RegisterReadOnlyProperty<readonly AlignmentGuide[]>(
         Diagram, 'AlignmentGuides', Object.freeze([]) as readonly AlignmentGuide[], MetaData.None);
 
     // Persistent (Visio-style) ruler guides. Read-write: the app hydrates them
     // from the .diagram metadata and persists changes; the behavior mutates them
     // on placement/reposition/delete/glue; the adorner subscribes to paint them.
-    public static readonly GuidesKey = Model.RegisterProperty<readonly PersistentGuide[]>(
+    public static readonly GuidesKey = MuralBase.RegisterProperty<readonly PersistentGuide[]>(
         Diagram, 'Guides', Object.freeze([]) as readonly PersistentGuide[], MetaData.None);
 
     // Feature opt-in: shows the rulers AND attaches the persistent-guides behavior
     // + adorner. Default off — the template is visually identical to today.
-    public static readonly RulersVisibleKey = Model.RegisterProperty<boolean>(
+    public static readonly RulersVisibleKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'RulersVisible', false, MetaData.None);
 
     // Index of the currently-selected persistent guide (into Guides), or -1 for
     // none. Driven by the behavior on click; read by the adorner to highlight it
     // and by the behavior's Delete-key handler.
-    public static readonly SelectedGuideKey = Model.RegisterProperty<number>(
+    public static readonly SelectedGuideKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectedGuide', -1, MetaData.None);
 
     // Transient hover placement hint: where a guide would land if the user dragged
     // out right now, or undefined when not over a drag-out zone. The behavior sets
     // it on idle pointer-move; the adorner subscribes to paint the faint preview
     // line. Never persisted (view-only).
-    public static readonly GuidePreviewKey = Model.RegisterProperty<GuidePreview | undefined>(
+    public static readonly GuidePreviewKey = MuralBase.RegisterProperty<GuidePreview | undefined>(
         Diagram, 'GuidePreview', undefined, MetaData.None);
 
     // Selection-resize opt-in. Default off. When flipped true, a
     // SelectionBoundsAdorner mounts in the ItemsPanel's AdornerLayer
     // and drives resize gestures through DiagramSelectionSource (which
     // duck-types Width / Height writes through resolveKey).
-    public static readonly SelectionResizeEnabledKey = Model.RegisterProperty<boolean>(
+    public static readonly SelectionResizeEnabledKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'SelectionResizeEnabled', false, MetaData.None);
 
     // Text-block adorner opt-in (§ diagram-text Slice 3). Default off. When
     // true, a TextBlockAdorner mounts in the ItemsPanel's AdornerLayer and
     // shows move / rotate handles over the single selected Figure's text
     // block, writing back to its ShapeText.Offset / Angle.
-    public static readonly TextBlockAdornerEnabledKey = Model.RegisterProperty<boolean>(
+    public static readonly TextBlockAdornerEnabledKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'TextBlockAdornerEnabled', false, MetaData.None);
 
     // Connector-interactions opt-in. Default off. When flipped true, the
@@ -394,7 +394,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // ConnectorCreateBehavior + ConnectorEditAdorner state machines.
     // The DP is the consumer-facing toggle; the framework owns every
     // line of plumbing inside.
-    public static readonly ConnectorInteractionsEnabledKey = Model.RegisterProperty<boolean>(
+    public static readonly ConnectorInteractionsEnabledKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'ConnectorInteractionsEnabled', false, MetaData.None);
 
     // ── Input modes (§ diagram input modes) ─────────────────────────
@@ -407,7 +407,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // per interaction, not always-on. The ConnectorInteractionsEnabled DP above
     // still gates whether the behavior is mounted at all; this gates its
     // reactivity within a mounted behavior.
-    public static readonly ConnectorsModePinnedKey = Model.RegisterProperty<boolean>(
+    public static readonly ConnectorsModePinnedKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'ConnectorsModePinned', false, MetaData.None);
 
     // Drop receiver — when set, Diagram attaches its canvas-drop
@@ -421,7 +421,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // scrollbar (which lives outside Diagram's visual subtree), so the
     // typical wiring is `DropReceiver = $surface` against an enclosing
     // Border / ScrollViewer.
-    public static readonly DropReceiverKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly DropReceiverKey = MuralBase.RegisterProperty<Visual | undefined>(
         Diagram, 'DropReceiver', undefined, MetaData.None);
 
     // Mutation adapter — when set, Diagram subscribes its gesture
@@ -429,7 +429,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // DeleteRequested / ItemDropped) to the corresponding methods on
     // the adapter. Internalises the wiring that consumers used to do
     // by hand in their bootstrap. See attach-standard-mutations.ts.
-    public static readonly MutatorKey = Model.RegisterProperty<DiagramMutator | undefined>(
+    public static readonly MutatorKey = MuralBase.RegisterProperty<DiagramMutator | undefined>(
         Diagram, 'Mutator', undefined, MetaData.None);
 
     // Selection-reflection opt-in. When true, SelectionReflector mirrors
@@ -437,7 +437,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // findDescriptor — items without IsSelected are skipped). Off by
     // default so plain Selector consumers without an IsSelected
     // convention pay nothing.
-    public static readonly ReflectSelectionToItemsKey = Model.RegisterProperty<boolean>(
+    public static readonly ReflectSelectionToItemsKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'ReflectSelectionToItems', false, MetaData.None);
 
     // Multi-target format mirror DPs — driven by FormatMirror. Seeded
@@ -445,9 +445,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // edits to these DPs broadcast to every leaf in the flattened
     // selection. Duck-types on Fill / Stroke properties; items without
     // those (Groups, text-only labels) skip the broadcast.
-    public static readonly SelectionFormatFillKey   = Model.RegisterProperty<Brush | undefined>(
+    public static readonly SelectionFormatFillKey   = MuralBase.RegisterProperty<Brush | undefined>(
         Diagram, 'SelectionFormatFill',   undefined, MetaData.None);
-    public static readonly SelectionFormatStrokeKey = Model.RegisterProperty<Pen   | undefined>(
+    public static readonly SelectionFormatStrokeKey = MuralBase.RegisterProperty<Pen   | undefined>(
         Diagram, 'SelectionFormatStroke', undefined, MetaData.None);
 
     // Connector end-cap format channel. FormatMirror seeds these from the
@@ -456,18 +456,18 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // editor's "show the cap section" signal — true when the selection is
     // (entirely) connectors. The VALUE is the cap DataTemplate (undefined
     // = no cap at that end).
-    public static readonly SelectionFormatSourceCapKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly SelectionFormatSourceCapKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         Diagram, 'SelectionFormatSourceCap', undefined, MetaData.None);
-    public static readonly SelectionFormatTargetCapKey = Model.RegisterProperty<DataTemplate | undefined>(
+    public static readonly SelectionFormatTargetCapKey = MuralBase.RegisterProperty<DataTemplate | undefined>(
         Diagram, 'SelectionFormatTargetCap', undefined, MetaData.None);
-    public static readonly SelectionIsConnectorKey = Model.RegisterProperty<boolean>(
+    public static readonly SelectionIsConnectorKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'SelectionIsConnector', false, MetaData.None);
     // Per-end cap size multipliers. FormatMirror seeds these from the first
     // selected connector's Source/TargetCapScale and broadcasts edits onto
     // every selected connector. 1 = the cap template's authored size.
-    public static readonly SelectionFormatSourceCapScaleKey = Model.RegisterProperty<number>(
+    public static readonly SelectionFormatSourceCapScaleKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectionFormatSourceCapScale', 1, MetaData.None);
-    public static readonly SelectionFormatTargetCapScaleKey = Model.RegisterProperty<number>(
+    public static readonly SelectionFormatTargetCapScaleKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectionFormatTargetCapScale', 1, MetaData.None);
 
     // Text-format channel. FormatMirror seeds these from the first selected
@@ -478,9 +478,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // selected. The toolbars bind a ToolBarToggleButton's IsChecked through
     // `<< Is(TextAlignment.X)` / `<< Is(TextPlacement.X)` so exactly one
     // option shows active and clicking one writes it back here.
-    public static readonly SelectionTextAlignmentKey = Model.RegisterProperty<TextAlignment | undefined>(
+    public static readonly SelectionTextAlignmentKey = MuralBase.RegisterProperty<TextAlignment | undefined>(
         Diagram, 'SelectionTextAlignment', undefined, MetaData.None);
-    public static readonly SelectionTextPlacementKey = Model.RegisterProperty<TextPlacement | undefined>(
+    public static readonly SelectionTextPlacementKey = MuralBase.RegisterProperty<TextPlacement | undefined>(
         Diagram, 'SelectionTextPlacement', undefined, MetaData.None);
 
     // Character-style channel — the text-style toolbar (font family / size /
@@ -491,19 +491,19 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // FontSizePicker.Value / ColorPicker.ColorHex bind directly; colour rides a
     // hex string (converted to/from a Brush at the ShapeText boundary). The four
     // decoration booleans drive ToolBarToggleButton.IsChecked.
-    public static readonly SelectionFontFamilyKey   = Model.RegisterProperty<string>(
+    public static readonly SelectionFontFamilyKey   = MuralBase.RegisterProperty<string>(
         Diagram, 'SelectionFontFamily',   '', MetaData.None);
-    public static readonly SelectionFontSizeKey     = Model.RegisterProperty<number>(
+    public static readonly SelectionFontSizeKey     = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectionFontSize',     12, MetaData.None);
-    public static readonly SelectionFontColorHexKey = Model.RegisterProperty<string>(
+    public static readonly SelectionFontColorHexKey = MuralBase.RegisterProperty<string>(
         Diagram, 'SelectionFontColorHex', '#000000', MetaData.None);
-    public static readonly SelectionBoldKey          = Model.RegisterProperty<boolean>(
+    public static readonly SelectionBoldKey          = MuralBase.RegisterProperty<boolean>(
         Diagram, 'SelectionBold',          false, MetaData.None);
-    public static readonly SelectionItalicKey        = Model.RegisterProperty<boolean>(
+    public static readonly SelectionItalicKey        = MuralBase.RegisterProperty<boolean>(
         Diagram, 'SelectionItalic',        false, MetaData.None);
-    public static readonly SelectionUnderlineKey     = Model.RegisterProperty<boolean>(
+    public static readonly SelectionUnderlineKey     = MuralBase.RegisterProperty<boolean>(
         Diagram, 'SelectionUnderline',     false, MetaData.None);
-    public static readonly SelectionStrikethroughKey = Model.RegisterProperty<boolean>(
+    public static readonly SelectionStrikethroughKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'SelectionStrikethrough', false, MetaData.None);
 
     public get PositionSnap():  DiagramPositionSnap | undefined { return this.get_property_value(Diagram.PositionSnapKey); }
@@ -683,8 +683,8 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public get IncreaseFontSizeCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.IncreaseFontSizeCommandKey); }
     public get DecreaseFontSizeCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.DecreaseFontSizeCommandKey); }
 
-    public get Connectors(): ObservableCollection<Model> | undefined { return this.get_property_value(Diagram.ConnectorsKey); }
-    public set Connectors(v: ObservableCollection<Model> | undefined) { this.set_property_value(Diagram.ConnectorsKey, v); }
+    public get Connectors(): ObservableCollection<MuralBase> | undefined { return this.get_property_value(Diagram.ConnectorsKey); }
+    public set Connectors(v: ObservableCollection<MuralBase> | undefined) { this.set_property_value(Diagram.ConnectorsKey, v); }
 
     /** @see RigidConnectorDragHost — drives the internal-connector rigid
      *  translate for a multi-selection drag. Snapshots every connector
@@ -692,7 +692,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
      *  waypoints; a boundary connector (one end in the set) is left to its
      *  normal per-figure reroute, and a pure auto-routed internal one
      *  already translation-invariantly recomputes, so neither is tracked. */
-    public BeginRigidConnectorDrag(movingSet: ReadonlySet<Model>): RigidConnectorDragSession | undefined
+    public BeginRigidConnectorDrag(movingSet: ReadonlySet<MuralBase>): RigidConnectorDragSession | undefined
     {
         const connectors = this.Connectors;
         if (connectors === undefined) return undefined;
@@ -825,7 +825,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // the ctor; each option resolves its cap template lazily, so building
     // the list before the cap catalog is registered is fine. Convenience
     // only — the editor itself is cap-agnostic.
-    public static readonly ConnectorCapOptionsKey = Model.RegisterProperty<readonly CapOption[]>(
+    public static readonly ConnectorCapOptionsKey = MuralBase.RegisterProperty<readonly CapOption[]>(
         Diagram, 'ConnectorCapOptions', EMPTY_CAP_OPTIONS, MetaData.None);
     public get ConnectorCapOptions(): readonly CapOption[] { return this.get_property_value(Diagram.ConnectorCapOptionsKey); }
     public get AlignmentGuides(): readonly AlignmentGuide[] { return this.get_property_value(Diagram.AlignmentGuidesKey); }
@@ -1039,7 +1039,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // DiagramDocument subscribes so it can seed the container's geometry
     // from its NodeVisualStore (the container, not the VM, owns geometry)
     // and re-point connector endpoints that referenced the item by id.
-    // Fires only for Model items — a Figure/Group that is its own container
+    // Fires only for MuralBase items — a Figure/Group that is its own container
     // is not a wrapped data row and does not fire.
     private readonly _containerBoundListeners: Set<(container: Figure, item: unknown) => void> = new Set();
 
@@ -1098,7 +1098,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     {
         if (this._selectedConnectors.size === 0) return;
         const collection = this.Connectors;
-        const present = new Set<Model>();
+        const present = new Set<MuralBase>();
         if (collection !== undefined)
         {
             for (let i = 0; i < collection.Count; i++) present.add(collection.Get(i)!);
@@ -1106,7 +1106,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         let changed = false;
         for (const c of [...this._selectedConnectors])
         {
-            if (!present.has(c as unknown as Model))
+            if (!present.has(c as unknown as MuralBase))
             {
                 this._selectedConnectors.delete(c);
                 changed = true;
@@ -1813,7 +1813,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // Wire a freshly-created OR recycled Figure to its data row.
     // Mirrors ListBox.bindContainer: the container subclass owns the
     // DataContext setup so ItemContainerStyle bindings on the container
-    // (`Left = $Left`, `Top = $Top`, …) resolve against the per-item Model
+    // (`Left = $Left`, `Top = $Top`, …) resolve against the per-item MuralBase
     // rather than against whatever the surrounding inheritance chain exposes.
     // ContentControl's own DataContext is NOT set by Content assignment —
     // that's a WPF parity decision (a ContentControl's outer bindings see
@@ -1825,7 +1825,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // NodeVM, not the Figure container. Same pattern as ListBox.
     private bindContainer(node: Figure, item: unknown): void
     {
-        if (item instanceof Model)
+        if (item instanceof MuralBase)
         {
             node.Tag         = item;
             node.DataContext = item;

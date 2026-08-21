@@ -1,14 +1,14 @@
-// BannerVM — backs the banner demo. Dismissed is a reactive boolean the
+﻿// BannerVM — backs the banner demo. Dismissed is a reactive boolean the
 // template binds to (collapsing the Banner when the action fires); the
 // Dismiss / Restore RelayCommands the markup wires to the trailing action
 // Button and a Restore button so the in-flow Banner can be shown again.
-import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 
-export class BannerVM extends Model
+export class BannerVM extends MuralBase
 {
-    static DismissedKey = Model.RegisterProperty<boolean>(BannerVM, 'Dismissed', false, MetaData.None);
-    static DismissKey   = Model.RegisterProperty<RelayCommand | null>(BannerVM, 'Dismiss', null, MetaData.None);
-    static RestoreKey    = Model.RegisterProperty<RelayCommand | null>(BannerVM, 'Restore', null, MetaData.None);
+    static DismissedKey = MuralBase.RegisterProperty<boolean>(BannerVM, 'Dismissed', false, MetaData.None);
+    static DismissKey   = MuralBase.RegisterProperty<RelayCommand | null>(BannerVM, 'Dismiss', null, MetaData.None);
+    static RestoreKey    = MuralBase.RegisterProperty<RelayCommand | null>(BannerVM, 'Restore', null, MetaData.None);
 
     get Dismissed(): boolean { return this.get_property_value(BannerVM.DismissedKey); }
     set Dismissed(v: boolean) { this.set_property_value(BannerVM.DismissedKey, v); }

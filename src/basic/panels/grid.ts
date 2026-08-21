@@ -1,7 +1,7 @@
-import {
+﻿import {
     Color,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     Panel,
     Point,
@@ -100,24 +100,24 @@ export class GridLength
     public get IsStar():  boolean { return this.UnitType === GridUnitType.Star; }
 }
 
-class TrackDefinition extends Model
+class TrackDefinition extends MuralBase
 {
-    public static readonly WidthKey = Model.RegisterProperty<GridLength>(
+    public static readonly WidthKey = MuralBase.RegisterProperty<GridLength>(
         TrackDefinition, 'Width',  new GridLength(1, GridUnitType.Star),
         MetaData.Measure | MetaData.Arrange);
 
-    public static readonly HeightKey = Model.RegisterProperty<GridLength>(
+    public static readonly HeightKey = MuralBase.RegisterProperty<GridLength>(
         TrackDefinition, 'Height', new GridLength(1, GridUnitType.Star),
         MetaData.Measure | MetaData.Arrange);
 }
 
 export class ColumnDefinition extends TrackDefinition
 {
-    public static readonly MinWidthKey = Model.RegisterProperty<number>(
+    public static readonly MinWidthKey = MuralBase.RegisterProperty<number>(
         ColumnDefinition, 'MinWidth', 0,
         MetaData.Measure | MetaData.Arrange);
 
-    public static readonly MaxWidthKey = Model.RegisterProperty<number>(
+    public static readonly MaxWidthKey = MuralBase.RegisterProperty<number>(
         ColumnDefinition, 'MaxWidth', Number.POSITIVE_INFINITY,
         MetaData.Measure | MetaData.Arrange);
 
@@ -125,7 +125,7 @@ export class ColumnDefinition extends TrackDefinition
     // presentation target. See src/Controls/shared-size-group.ts and
     // grid.md § 0 / § 7 for the full semantics. Only Auto tracks
     // participate — Pixel and Star tracks ignore this DP even when set.
-    public static readonly SharedSizeGroupKey = Model.RegisterProperty<string | undefined>(
+    public static readonly SharedSizeGroupKey = MuralBase.RegisterProperty<string | undefined>(
         ColumnDefinition, 'SharedSizeGroup', undefined,
         MetaData.Measure | MetaData.Arrange);
 
@@ -141,15 +141,15 @@ export class ColumnDefinition extends TrackDefinition
 
 export class RowDefinition extends TrackDefinition
 {
-    public static readonly MinHeightKey = Model.RegisterProperty<number>(
+    public static readonly MinHeightKey = MuralBase.RegisterProperty<number>(
         RowDefinition, 'MinHeight', 0,
         MetaData.Measure | MetaData.Arrange);
 
-    public static readonly MaxHeightKey = Model.RegisterProperty<number>(
+    public static readonly MaxHeightKey = MuralBase.RegisterProperty<number>(
         RowDefinition, 'MaxHeight', Number.POSITIVE_INFINITY,
         MetaData.Measure | MetaData.Arrange);
 
-    public static readonly SharedSizeGroupKey = Model.RegisterProperty<string | undefined>(
+    public static readonly SharedSizeGroupKey = MuralBase.RegisterProperty<string | undefined>(
         RowDefinition, 'SharedSizeGroup', undefined,
         MetaData.Measure | MetaData.Arrange);
 
@@ -165,10 +165,10 @@ export class RowDefinition extends TrackDefinition
 
 export class Grid extends Panel
 {
-    public static readonly RowKey         = Model.RegisterAttachedProperty<number>(Grid, 'Row',         0, MetaData.Arrange);
-    public static readonly ColumnKey      = Model.RegisterAttachedProperty<number>(Grid, 'Column',      0, MetaData.Arrange);
-    public static readonly RowSpanKey     = Model.RegisterAttachedProperty<number>(Grid, 'RowSpan',     1, MetaData.Arrange);
-    public static readonly ColumnSpanKey  = Model.RegisterAttachedProperty<number>(Grid, 'ColumnSpan',  1, MetaData.Arrange);
+    public static readonly RowKey         = MuralBase.RegisterAttachedProperty<number>(Grid, 'Row',         0, MetaData.Arrange);
+    public static readonly ColumnKey      = MuralBase.RegisterAttachedProperty<number>(Grid, 'Column',      0, MetaData.Arrange);
+    public static readonly RowSpanKey     = MuralBase.RegisterAttachedProperty<number>(Grid, 'RowSpan',     1, MetaData.Arrange);
+    public static readonly ColumnSpanKey  = MuralBase.RegisterAttachedProperty<number>(Grid, 'ColumnSpan',  1, MetaData.Arrange);
 
     // Debug overlay (Grid v3 — § 14.1). When true, RenderOverride paints
     // dashed separator lines along every internal column boundary AND
@@ -177,8 +177,8 @@ export class Grid extends Panel
     // Defaults to a 1-pixel dashed line with a translucent grey stroke
     // so the debug overlay reads without dominating the rendered
     // content; consumers can override the stroke via GridLinesBrush.
-    public static readonly ShowGridLinesKey   = Model.RegisterProperty<boolean>(   Grid, 'ShowGridLines',   false,     MetaData.Render);
-    public static readonly GridLinesBrushKey  = Model.RegisterProperty<SolidColorBrush | undefined>(Grid, 'GridLinesBrush',  undefined, MetaData.Render);
+    public static readonly ShowGridLinesKey   = MuralBase.RegisterProperty<boolean>(   Grid, 'ShowGridLines',   false,     MetaData.Render);
+    public static readonly GridLinesBrushKey  = MuralBase.RegisterProperty<SolidColorBrush | undefined>(Grid, 'GridLinesBrush',  undefined, MetaData.Render);
 
     public get ShowGridLines():     boolean { return this.get_property_value(Grid.ShowGridLinesKey); }
     public set ShowGridLines(v:     boolean) { this.set_property_value(Grid.ShowGridLinesKey, v); }

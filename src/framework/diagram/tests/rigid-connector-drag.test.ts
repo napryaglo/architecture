@@ -1,4 +1,4 @@
-// Rigid-translate of connectors internal to a multi-selection drag:
+﻿// Rigid-translate of connectors internal to a multi-selection drag:
 // Diagram.BeginRigidConnectorDrag snapshots connectors whose BOTH endpoint
 // nodes are in the moving set AND that carry user waypoints, then slides
 // those waypoints by the accumulated drag delta. Boundary connectors (one
@@ -8,7 +8,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Application, ObservableCollection, type Model } from '../../../runtime/index.js';
+import { Application, ObservableCollection, type MuralBase } from '../../../runtime/index.js';
 import { Point } from '../../../visual-engine/index.js';
 import { waypoint } from '../route-waypoint.js';
 import { Connector } from '../connector.js';
@@ -36,7 +36,7 @@ function newDiagram(connectors: Connector[]): Diagram
 {
     Application.current = null; new Application();
     const d = new Diagram();
-    const coll = new ObservableCollection<Model>();
+    const coll = new ObservableCollection<MuralBase>();
     for (const c of connectors) coll.Add(c);
     d.Connectors = coll;
     return d;
@@ -49,7 +49,7 @@ describe('Diagram.BeginRigidConnectorDrag', () => {
         const boundary = connWith(a, c, [new Point(10, 100)]);
         const d = newDiagram([internal, boundary]);
 
-        const session = d.BeginRigidConnectorDrag(new Set<Model>([a, b]));
+        const session = d.BeginRigidConnectorDrag(new Set<MuralBase>([a, b]));
         assert.ok(session !== undefined, 'session opens — an internal connector has waypoints');
 
         session!.Translate(5, 7);
@@ -69,7 +69,7 @@ describe('Diagram.BeginRigidConnectorDrag', () => {
         const internal = connWith(a, b, [new Point(100, 10)]);
         const d = newDiagram([internal]);
 
-        const session = d.BeginRigidConnectorDrag(new Set<Model>([a, b]))!;
+        const session = d.BeginRigidConnectorDrag(new Set<MuralBase>([a, b]))!;
         session.Translate(5, 7);
         session.Translate(3, 4);                 // running total (8, 11)
 
@@ -81,7 +81,7 @@ describe('Diagram.BeginRigidConnectorDrag', () => {
         const a = fig(0, 0), b = fig(200, 0);
         const internal = connWith(a, b, [new Point(100, 10)]);   // pinned via connWith
         const d = newDiagram([internal]);
-        const session = d.BeginRigidConnectorDrag(new Set<Model>([a, b]))!;
+        const session = d.BeginRigidConnectorDrag(new Set<MuralBase>([a, b]))!;
         session.Translate(10, 5);
         const w = internal.Waypoints![0]!;
         assert.deepEqual([w.point.X, w.point.Y, w.userAltered], [110, 15, true]);
@@ -91,6 +91,6 @@ describe('Diagram.BeginRigidConnectorDrag', () => {
         const a = fig(0, 0), b = fig(200, 0), c = fig(0, 200);
         // boundary WITH waypoints + internal WITHOUT waypoints → nothing to track.
         const d = newDiagram([connWith(a, c, [new Point(10, 100)]), connWith(a, b)]);
-        assert.equal(d.BeginRigidConnectorDrag(new Set<Model>([a, b])), undefined);
+        assert.equal(d.BeginRigidConnectorDrag(new Set<MuralBase>([a, b])), undefined);
     });
 });

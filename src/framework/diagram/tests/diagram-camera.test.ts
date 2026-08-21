@@ -1,8 +1,8 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 import { Rect } from '../../../visual-engine/primitives.js';
-import { Model, ObservableCollection } from '../../../runtime/index.js';
+import { MuralBase, ObservableCollection } from '../../../runtime/index.js';
 import { Shape } from '../../../basic/shapes/shape.js';
 import { ScaleTransform } from '../../../visual-engine/index.js';
 import { Diagram } from '../diagram.js';
@@ -92,7 +92,7 @@ describe('Diagram camera', () => {
     test('connector hit band scales inversely with zoom', () => {
         const d = new Diagram();
         const c = new Connector();
-        const connectors = new ObservableCollection<Model>();
+        const connectors = new ObservableCollection<MuralBase>();
         connectors.Add(c);
         d.Connectors = connectors;
         d.SetCamera({ zoom: 2, offsetX: 0, offsetY: 0 });

@@ -1,4 +1,4 @@
-import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
+﻿import { ModifierKeys, toModifierKeys } from '../../../runtime/index.js';
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
@@ -677,7 +677,7 @@ describe('TreeView — nested collection mutation rebinds recycled rows', () => 
             (d) => new TextBlock((d as Mut).Name),
             (d) => (d as Mut).children,
         );
-        // Model → lazy Version (seeded Loading…). The Version's children carry
+        // MuralBase → lazy Version (seeded Loading…). The Version's children carry
         // a Group ('Concepts') that itself has entity children pre-populated.
         const version = mnode('0.1.0', [mnode('Loading…')]);
         const model = mnode('tech-architecture', [version]);

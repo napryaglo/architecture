@@ -1,4 +1,4 @@
-// Theme + Scheme + ThemeManager — the engine that implements the
+﻿// Theme + Scheme + ThemeManager — the engine that implements the
 // two-level theme architecture (see theme-architecture.md at the repo
 // root).
 //
@@ -26,7 +26,7 @@
 
 import { Application } from '../../runtime/application.js';
 import { MetaData } from '../../runtime/metadata.js';
-import { Model } from '../../runtime/model.js';
+import { MuralBase } from '../../runtime/model.js';
 import { ResourceDictionary } from '../../runtime/resource-dictionary.js';
 import {
     Density,
@@ -566,22 +566,22 @@ export class ThemeManager
     // the runtime resolves the descriptor under (ThemeManager,
     // 'Density') and walks the visual hierarchy for the value.
 
-    public static readonly DensityKey = Model.RegisterAttachedProperty<Density>(
+    public static readonly DensityKey = MuralBase.RegisterAttachedProperty<Density>(
         ThemeManager, 'Density', Density.Regular, MetaData.Inherits);
 
-    public static readonly ViewportClassKey = Model.RegisterAttachedProperty<ViewportClass>(
+    public static readonly ViewportClassKey = MuralBase.RegisterAttachedProperty<ViewportClass>(
         ThemeManager, 'ViewportClass', ViewportClass.Desktop, MetaData.Inherits);
 
-    public static readonly PointerKey = Model.RegisterAttachedProperty<Pointer>(
+    public static readonly PointerKey = MuralBase.RegisterAttachedProperty<Pointer>(
         ThemeManager, 'Pointer', Pointer.Fine, MetaData.Inherits);
 
-    public static readonly PrefersContrastKey = Model.RegisterAttachedProperty<PrefersContrast>(
+    public static readonly PrefersContrastKey = MuralBase.RegisterAttachedProperty<PrefersContrast>(
         ThemeManager, 'PrefersContrast', PrefersContrast.Normal, MetaData.Inherits);
 
-    public static readonly PrefersReducedMotionKey = Model.RegisterAttachedProperty<boolean>(
+    public static readonly PrefersReducedMotionKey = MuralBase.RegisterAttachedProperty<boolean>(
         ThemeManager, 'PrefersReducedMotion', false, MetaData.Inherits);
 
-    public static readonly PrefersColorSchemeKey = Model.RegisterAttachedProperty<PreferredScheme>(
+    public static readonly PrefersColorSchemeKey = MuralBase.RegisterAttachedProperty<PreferredScheme>(
         ThemeManager, 'PrefersColorScheme', PreferredScheme.NoPreference, MetaData.Inherits);
 
     // Theme / Scheme inherited DPs (§ 17.1 / § 17.2 / § 17.6). The
@@ -602,9 +602,9 @@ export class ThemeManager
     // registration, then the public Visual getters/setters cast to
     // the structural Theme / Scheme types that come in via the
     // type-only imports.
-    public static readonly SchemeKey = Model.RegisterAttachedProperty<Scheme | undefined>(
+    public static readonly SchemeKey = MuralBase.RegisterAttachedProperty<Scheme | undefined>(
         ThemeManager, 'Scheme', undefined, MetaData.Inherits);
-    public static readonly ThemeKey = Model.RegisterAttachedProperty<Theme | undefined>(
+    public static readonly ThemeKey = MuralBase.RegisterAttachedProperty<Theme | undefined>(
         ThemeManager, 'Theme', undefined, MetaData.Inherits);
 
     // Static getters/setters mirror the WPF attached-property API

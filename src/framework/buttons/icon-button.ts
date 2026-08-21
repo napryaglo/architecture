@@ -1,4 +1,4 @@
-import { Model, Element } from '../../runtime/index.js';
+﻿import { MuralBase, Element } from '../../runtime/index.js';
 import { Button } from './button.js';
 
 // M3 Icon Button — square 40×40 button whose Content is a glyph
@@ -37,6 +37,6 @@ export class IconButton extends Button
         // IconButton instances resolve their own default Style — the
         // theme dictionary holds `Style[TargetType=IconButton]` keyed
         // by the IconButton class function.
-        Model.OverrideMetadata(IconButton, Element.DefaultStyleKeyKey, { default_value: IconButton });
+        MuralBase.OverrideMetadata(IconButton, Element.DefaultStyleKeyKey, { default_value: IconButton });
     }
 }

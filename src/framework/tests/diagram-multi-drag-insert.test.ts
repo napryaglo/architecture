@@ -1,10 +1,10 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     SetterFactory,
     Style,
@@ -19,12 +19,12 @@ import { Diagram } from '../diagram/diagram.js';
 import { Figure } from '../diagram/figure.js';
 import { SelectionMode } from '../list/list-box.js';
 
-class TestNodeVM extends Model
+class TestNodeVM extends MuralBase
 {
-    public static readonly IdKey         = Model.RegisterProperty<string>(TestNodeVM, 'Id',         '',    MetaData.None);
-    public static readonly LeftKey       = Model.RegisterProperty<number>(TestNodeVM, 'Left',       0,     MetaData.None);
-    public static readonly TopKey        = Model.RegisterProperty<number>(TestNodeVM, 'Top',        0,     MetaData.None);
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(TestNodeVM, 'IsSelected', false, MetaData.None);
+    public static readonly IdKey         = MuralBase.RegisterProperty<string>(TestNodeVM, 'Id',         '',    MetaData.None);
+    public static readonly LeftKey       = MuralBase.RegisterProperty<number>(TestNodeVM, 'Left',       0,     MetaData.None);
+    public static readonly TopKey        = MuralBase.RegisterProperty<number>(TestNodeVM, 'Top',        0,     MetaData.None);
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(TestNodeVM, 'IsSelected', false, MetaData.None);
     constructor(id: string, left: number, top: number)
     {
         super();

@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     Size,
     Visual,
@@ -61,10 +61,10 @@ import { VirtualizingPanel } from './virtualizing-panel.js';
 //     right with no centering / justification.
 export class VirtualizingWrapPanel extends VirtualizingPanel implements IScrollInfo
 {
-    public static readonly ItemWidthKey         = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'ItemWidth',         100, MetaData.Measure);
-    public static readonly ItemHeightKey        = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'ItemHeight',        100, MetaData.Measure);
-    public static readonly HorizontalSpacingKey = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'HorizontalSpacing',   0, MetaData.Measure);
-    public static readonly VerticalSpacingKey   = Model.RegisterProperty<number>(VirtualizingWrapPanel, 'VerticalSpacing',     0, MetaData.Measure);
+    public static readonly ItemWidthKey         = MuralBase.RegisterProperty<number>(VirtualizingWrapPanel, 'ItemWidth',         100, MetaData.Measure);
+    public static readonly ItemHeightKey        = MuralBase.RegisterProperty<number>(VirtualizingWrapPanel, 'ItemHeight',        100, MetaData.Measure);
+    public static readonly HorizontalSpacingKey = MuralBase.RegisterProperty<number>(VirtualizingWrapPanel, 'HorizontalSpacing',   0, MetaData.Measure);
+    public static readonly VerticalSpacingKey   = MuralBase.RegisterProperty<number>(VirtualizingWrapPanel, 'VerticalSpacing',     0, MetaData.Measure);
 
     public get ItemWidth():  number { return this.get_property_value(VirtualizingWrapPanel.ItemWidthKey); }
     public set ItemWidth(v:  number) { this.set_property_value(VirtualizingWrapPanel.ItemWidthKey, v); }

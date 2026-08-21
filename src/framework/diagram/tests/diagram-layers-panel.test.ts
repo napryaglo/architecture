@@ -1,4 +1,4 @@
-// Step 8 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
+﻿// Step 8 / § 9 of [docs/connectors.md](../../../../docs/connectors.md):
 // pins (a) DiagramLayersPanel layer routing + z-order, and (b)
 // Diagram.Connectors collection materialization through the
 // DiagramConnectorsMaterializer collaborator.
@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     Size,
     Visual,
@@ -91,9 +91,9 @@ describe('DiagramLayersPanel — z-order', () => {
 
 // ── Diagram.Connectors materialization ───────────────────────────────
 
-class ConnectorVM extends Model
+class ConnectorVM extends MuralBase
 {
-    public static readonly IdKey = Model.RegisterProperty<string>(
+    public static readonly IdKey = MuralBase.RegisterProperty<string>(
         ConnectorVM, 'Id', '', MetaData.None);
     constructor(id: string)
     {
@@ -113,7 +113,7 @@ function newDiagram(): Diagram
 describe('Diagram.Connectors — materialization on assign', () => {
     test('initial Connectors collection materializes one Visual per item', () => {
         const d = newDiagram();
-        const items = new ObservableCollection<Model>([new ConnectorVM('a'), new ConnectorVM('b')]);
+        const items = new ObservableCollection<MuralBase>([new ConnectorVM('a'), new ConnectorVM('b')]);
         d.Connectors = items;
 
         const m = d._getConnectorsMaterializerForTesting();
@@ -130,7 +130,7 @@ describe('Diagram.Connectors — materialization on assign', () => {
     test('default ConnectorTemplate (undefined) materializes a `new Connector()`', () => {
         const d = newDiagram();
         const item = new ConnectorVM('a');
-        d.Connectors = new ObservableCollection<Model>([item]);
+        d.Connectors = new ObservableCollection<MuralBase>([item]);
         const v = d._getConnectorsMaterializerForTesting().MaterializedVisuals.get(item);
         assert.ok(v instanceof Connector);
     });
@@ -138,7 +138,7 @@ describe('Diagram.Connectors — materialization on assign', () => {
     test('materialized visuals are tagged for the connectors layer', () => {
         const d = newDiagram();
         const item = new ConnectorVM('a');
-        d.Connectors = new ObservableCollection<Model>([item]);
+        d.Connectors = new ObservableCollection<MuralBase>([item]);
         const v = d._getConnectorsMaterializerForTesting().MaterializedVisuals.get(item)!;
         assert.equal(DiagramLayersPanel.GetLayer(v), DiagramLayer.Connectors);
     });
@@ -147,7 +147,7 @@ describe('Diagram.Connectors — materialization on assign', () => {
 describe('Diagram.Connectors — collection mutation', () => {
     test('inserting an item materializes its Visual', () => {
         const d = newDiagram();
-        const items = new ObservableCollection<Model>();
+        const items = new ObservableCollection<MuralBase>();
         d.Connectors = items;
         const m = d._getConnectorsMaterializerForTesting();
         assert.equal(m.MaterializedVisuals.size, 0);
@@ -161,7 +161,7 @@ describe('Diagram.Connectors — collection mutation', () => {
     test('removing an item disposes its Visual', () => {
         const d = newDiagram();
         const a = new ConnectorVM('a');
-        const items = new ObservableCollection<Model>([a]);
+        const items = new ObservableCollection<MuralBase>([a]);
         d.Connectors = items;
         const m = d._getConnectorsMaterializerForTesting();
         assert.equal(m.MaterializedVisuals.size, 1);
@@ -173,7 +173,7 @@ describe('Diagram.Connectors — collection mutation', () => {
 
     test('clearing the collection disposes all materialized visuals', () => {
         const d = newDiagram();
-        const items = new ObservableCollection<Model>([
+        const items = new ObservableCollection<MuralBase>([
             new ConnectorVM('a'), new ConnectorVM('b'), new ConnectorVM('c'),
         ]);
         d.Connectors = items;
@@ -186,19 +186,19 @@ describe('Diagram.Connectors — collection mutation', () => {
 
     test('replacing Connectors with a different collection drops the old visuals', () => {
         const d = newDiagram();
-        const initial = new ObservableCollection<Model>([new ConnectorVM('a')]);
+        const initial = new ObservableCollection<MuralBase>([new ConnectorVM('a')]);
         d.Connectors = initial;
         const m = d._getConnectorsMaterializerForTesting();
         assert.equal(m.MaterializedVisuals.size, 1);
 
-        const fresh = new ObservableCollection<Model>([new ConnectorVM('b'), new ConnectorVM('c')]);
+        const fresh = new ObservableCollection<MuralBase>([new ConnectorVM('b'), new ConnectorVM('c')]);
         d.Connectors = fresh;
         assert.equal(m.MaterializedVisuals.size, 2);
     });
 
     test('setting Connectors to undefined disposes all visuals', () => {
         const d = newDiagram();
-        d.Connectors = new ObservableCollection<Model>([new ConnectorVM('a'), new ConnectorVM('b')]);
+        d.Connectors = new ObservableCollection<MuralBase>([new ConnectorVM('a'), new ConnectorVM('b')]);
         const m = d._getConnectorsMaterializerForTesting();
         assert.equal(m.MaterializedVisuals.size, 2);
         d.Connectors = undefined;
@@ -258,7 +258,7 @@ describe('Diagram.Connectors — cap visuals mount into the connectors layer', (
         const d = layeredDiagram();
         const panel = connectorsPanel(d);
         const c = straightConnectorWithTargetCap(8);
-        d.Connectors = new ObservableCollection<Model>([c]);
+        d.Connectors = new ObservableCollection<MuralBase>([c]);
 
         // Both the connector line AND its cap are in the connectors layer.
         assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(c), -1);
@@ -271,7 +271,7 @@ describe('Diagram.Connectors — cap visuals mount into the connectors layer', (
         const d = layeredDiagram();
         const panel = connectorsPanel(d);
         const c = straightConnectorWithTargetCap(8);
-        d.Connectors = new ObservableCollection<Model>([c]);
+        d.Connectors = new ObservableCollection<MuralBase>([c]);
         const firstCap = c.TargetCapInstance!;
         assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(firstCap), -1);
 
@@ -287,7 +287,7 @@ describe('Diagram.Connectors — cap visuals mount into the connectors layer', (
         const d = layeredDiagram();
         const panel = connectorsPanel(d);
         const c = straightConnectorWithTargetCap(8);
-        d.Connectors = new ObservableCollection<Model>([c]);
+        d.Connectors = new ObservableCollection<MuralBase>([c]);
         const cap = c.TargetCapInstance!;
         assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(cap), -1);
 
@@ -300,7 +300,7 @@ describe('Diagram.Connectors — cap visuals mount into the connectors layer', (
         const d = layeredDiagram();
         const panel = connectorsPanel(d);
         const c = straightConnectorWithTargetCap(8);
-        const items = new ObservableCollection<Model>([c]);
+        const items = new ObservableCollection<MuralBase>([c]);
         d.Connectors = items;
         const cap = c.TargetCapInstance!;
         assert.notEqual(panel.ConnectorsLayer.Children.IndexOf(cap), -1);
@@ -323,7 +323,7 @@ describe('Diagram.ConnectorTemplate — honored on materialization', () => {
         };
         d.ConnectorTemplate = new DataTemplate(sentinel);
         const item = new ConnectorVM('a');
-        d.Connectors = new ObservableCollection<Model>([item]);
+        d.Connectors = new ObservableCollection<MuralBase>([item]);
 
         const v = d._getConnectorsMaterializerForTesting().MaterializedVisuals.get(item)!;
         assert.ok(v instanceof Border);
@@ -333,7 +333,7 @@ describe('Diagram.ConnectorTemplate — honored on materialization', () => {
     test('changing ConnectorTemplate rebuilds existing visuals', () => {
         const d = newDiagram();
         const item = new ConnectorVM('a');
-        d.Connectors = new ObservableCollection<Model>([item]);
+        d.Connectors = new ObservableCollection<MuralBase>([item]);
         const m = d._getConnectorsMaterializerForTesting();
         const initialVisual = m.MaterializedVisuals.get(item)!;
         assert.ok(initialVisual instanceof Connector);

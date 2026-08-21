@@ -1,4 +1,4 @@
-import { Model } from '../runtime/model.js';
+﻿import { MuralBase } from '../runtime/model.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
 import { findDescriptor, propertyValues } from '../runtime/model-internals.js';
 import { inherits } from '../runtime/metadata.js';
@@ -25,7 +25,7 @@ function resolveSetterDescriptor(setter: Setter): PropertyDescriptor | undefined
 {
     const desc = findDescriptor(setter.owner, setter.property);
     if (desc !== undefined) return desc;
-    for (const candidate of Model._getInheritableDescriptors())
+    for (const candidate of MuralBase._getInheritableDescriptors())
     {
         if (candidate.Name === setter.property && inherits(candidate.MetaData))
         {
@@ -297,7 +297,7 @@ export class StyleApplicator
             if (writebackEnabled)
             {
                 targetListener = (
-                    _owner: Model, _propertyName: string,
+                    _owner: MuralBase, _propertyName: string,
                     _oldValue: unknown, newValue: unknown,
                 ): void => {
                     if (suppressTargetListener) return;

@@ -1,4 +1,4 @@
-import {
+﻿import {
     DataContextBinding,
     Element,
     EventTrigger,
@@ -16,7 +16,7 @@ import { registerNamedVisuals } from './control-template.js';
 // subtree for one item of data — typically run once per item by
 // ItemsControl's container generator.
 //
-// The data is opaque to the framework — it can be a Model (so the
+// The data is opaque to the framework — it can be a MuralBase (so the
 // factory can wire Bindings against it), a plain object, a primitive,
 // or anything else. The factory is responsible for knowing what shape
 // the data is in.
@@ -418,7 +418,7 @@ export class HierarchicalDataTemplate extends DataTemplate
 // A `[DataType=RelayCommand]` template wins over `[DataType=CommandBase]` for a
 // RelayCommand instance; a CommandBase template still catches arbitrary
 // CommandBase subclasses that don't have their own entry. Stops once the chain
-// reaches Object — DataTemplates keyed by `Object` (or root Model) would be
+// reaches Object — DataTemplates keyed by `Object` (or root MuralBase) would be
 // ambiguous and aren't allowed.
 export function findDataTemplateForType(klass: Function, start: Element): DataTemplate | undefined
 {

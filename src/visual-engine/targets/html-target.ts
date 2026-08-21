@@ -1,4 +1,4 @@
-// `Element as MuralElement` — this file uses the DOM's global `Element`
+﻿// `Element as MuralElement` — this file uses the DOM's global `Element`
 // heavily (setAttribute, elementsFromPoint, …), so the framework's
 // Element is aliased to avoid shadowing it.
 import { Element as MuralElement, type Visual } from '../../runtime/index.js';
@@ -359,7 +359,7 @@ export class HtmlTarget extends PresentationTarget
             this.Height = height;
             this.surface.setAttribute('width',  String(width));
             this.surface.setAttribute('height', String(height));
-            // PresentationTarget.OnPropertyChanged is a no-op (Model
+            // PresentationTarget.OnPropertyChanged is a no-op (MuralBase
             // default), so the Width / Height writes above don't
             // automatically schedule a layout pass. Invalidate the
             // Content + OverlayLayer explicitly so the next microtask

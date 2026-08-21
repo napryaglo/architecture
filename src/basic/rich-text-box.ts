@@ -1,8 +1,8 @@
-import {
+﻿import {
     APPROXIMATE_TEXT_MEASURER,
     Element,
     MetaData,
-    Model,
+    MuralBase,
     Rect,
     hasModifier,
     Key,
@@ -70,15 +70,15 @@ export class RichTextBox extends RichTextBlock
 {
     static
     {
-        Model.OverrideMetadata(RichTextBox, Element.DefaultStyleKeyKey, { default_value: RichTextBox });
+        MuralBase.OverrideMetadata(RichTextBox, Element.DefaultStyleKeyKey, { default_value: RichTextBox });
     }
 
     /** Replaceable clipboard surface (tests swap in a synchronous stub). */
     public static Clipboard: ClipboardSink = DEFAULT_CLIPBOARD;
 
-    public static readonly IsReadOnlyKey    = Model.RegisterProperty<boolean>(RichTextBox, 'IsReadOnly', false, MetaData.None);
-    public static readonly CaretBrushKey     = Model.RegisterProperty<Brush | undefined>(RichTextBox, 'CaretBrush', undefined, MetaData.Render);
-    public static readonly SelectionBrushKey = Model.RegisterProperty<Brush | undefined>(RichTextBox, 'SelectionBrush', undefined, MetaData.Render);
+    public static readonly IsReadOnlyKey    = MuralBase.RegisterProperty<boolean>(RichTextBox, 'IsReadOnly', false, MetaData.None);
+    public static readonly CaretBrushKey     = MuralBase.RegisterProperty<Brush | undefined>(RichTextBox, 'CaretBrush', undefined, MetaData.Render);
+    public static readonly SelectionBrushKey = MuralBase.RegisterProperty<Brush | undefined>(RichTextBox, 'SelectionBrush', undefined, MetaData.Render);
 
     // Selection endpoints. `_anchor` is fixed while dragging / shift-moving;
     // `_caret` is the moving end. Equal → a collapsed caret (no selection).

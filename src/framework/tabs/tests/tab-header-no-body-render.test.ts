@@ -1,6 +1,6 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, Model, ObservableCollection, type Visual } from '../../../runtime/index.js';
+import { Application, MuralBase, ObservableCollection, type Visual } from '../../../runtime/index.js';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 import { DataTemplate } from '../../../basic/templates/data-template.js';
 import { Border } from '../../../basic/border.js';
@@ -18,7 +18,7 @@ import { TabControl, TabItem } from '../tabs.js';
 // implicit template MORE THAN ONCE (e.g. the tab header wrongly renders the whole
 // document as well as the content slot), the second attach of a shared Visual
 // throws "Visual already has a visual parent".
-class SharedVisualDoc extends Model {
+class SharedVisualDoc extends MuralBase {
     public readonly Id = 'seed';
     public readonly Title = 'Untitled';
     public readonly IsDirty = false;

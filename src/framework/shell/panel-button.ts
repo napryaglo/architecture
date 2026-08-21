@@ -1,4 +1,4 @@
-import { Element, Model } from '../../runtime/index.js';
+﻿import { Element, MuralBase } from '../../runtime/index.js';
 import { IconButton } from '../buttons/icon-button.js';
 
 // PanelButton — the rounded-rectangle icon button for shell panel headers
@@ -29,6 +29,6 @@ export class PanelButton extends IconButton
         // this class function. Without this override applyDefaultStyle()
         // (run from Button's ctor) would resolve the IconButton Style and
         // render a circle.
-        Model.OverrideMetadata(PanelButton, Element.DefaultStyleKeyKey, { default_value: PanelButton });
+        MuralBase.OverrideMetadata(PanelButton, Element.DefaultStyleKeyKey, { default_value: PanelButton });
     }
 }

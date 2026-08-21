@@ -1,4 +1,4 @@
-import type { Model, PropertyKey } from '../../runtime/model.js';
+﻿import type { MuralBase, PropertyKey } from '../../runtime/model.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 
 import { AnimationManager } from './manager.js';
@@ -29,10 +29,10 @@ export enum StoryboardState
 
 interface StoryboardChild
 {
-    readonly target:       Model;
+    readonly target:       MuralBase;
     readonly propertyName: string;
     /** Resolved at Add() so per-tick reads / animated-slot writes go
-     *  through the typed-key API on Model rather than re-resolving the
+     *  through the typed-key API on MuralBase rather than re-resolving the
      *  string on every clock tick. */
     readonly propertyKey:  PropertyKey<unknown>;
     readonly timeline:     AnimationTimeline;
@@ -46,7 +46,7 @@ interface StoryboardChild
     everWritten:           boolean;
 }
 
-// Composes multiple AnimationTimelines, each bound to a (Model, propertyName)
+// Composes multiple AnimationTimelines, each bound to a (MuralBase, propertyName)
 // target. Begin() captures every target's current value as that timeline's
 // baseValue (used when From is undefined) and registers the storyboard with
 // the AnimationManager. AdvanceTo (called once per clock tick) evaluates
@@ -59,7 +59,7 @@ interface StoryboardChild
 // Authoring patterns:
 //
 //   // Single-target — wrap a Timeline in a Storyboard implicitly via
-//   // Model.BeginAnimation(propertyName, timeline) below. Storyboard
+//   // MuralBase.BeginAnimation(propertyName, timeline) below. Storyboard
 //   // returned for explicit .Stop() control.
 //
 //   // Multi-target — explicit Storyboard.
@@ -85,7 +85,7 @@ export class Storyboard
     /** Bind a timeline to (target, propertyName). All Adds must happen
      *  before Begin(); adding after Begin throws — capturing baseValue
      *  consistently requires a fixed child set at start. */
-    public Add(target: Model, propertyName: string, timeline: AnimationTimeline): void
+    public Add(target: MuralBase, propertyName: string, timeline: AnimationTimeline): void
     {
         if (this._state !== StoryboardState.NotStarted)
         {

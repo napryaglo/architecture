@@ -1,4 +1,4 @@
-// Application-services composition. A small, explicit DI container:
+﻿// Application-services composition. A small, explicit DI container:
 // register service implementations against tokens, resolve them by
 // token, compose deps through factories, and layer per-scope overrides
 // via child providers. No reflection / decorators / auto-wiring — TS
@@ -234,7 +234,7 @@ export class ServiceProvider implements IServiceProvider, IServiceContainer
     // here), then clear the cache. Does NOT touch the parent chain or any
     // child scopes — dispose the scope you created. Idempotent: a second
     // call finds an empty cache. Structural Disposable check keeps the
-    // container decoupled from ServiceBase / Model.
+    // container decoupled from ServiceBase / MuralBase.
     public dispose(): void
     {
         for (const inst of this._cache.values())

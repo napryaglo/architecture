@@ -1,10 +1,10 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 import { HeadlessTarget, SvgDrawingContext } from '../../../visual-engine/index.js';
 import { ContentPresenter } from '../../../basic/templates/content-presenter.js';
 import { DataTemplate } from '../../../basic/templates/data-template.js';
-import { DataContextBinding, ServiceBinding, ServiceProvider, Model, MetaData } from '../../../runtime/index.js';
+import { DataContextBinding, ServiceBinding, ServiceProvider, MuralBase, MetaData } from '../../../runtime/index.js';
 import { TextBlock } from '../../../basic/text-block.js';
 import { ContentHostService } from '../services/content-host-service.js';
 
@@ -21,9 +21,9 @@ import { ContentHostService } from '../services/content-host-service.js';
 // (`$service(ContentHostService).Content`) instead, which resolves through the
 // provider and stays reactive. This test reproduces the exact
 // present-the-service → inner-binding shape and asserts the swap.
-class DemoContent extends Model
+class DemoContent extends MuralBase
 {
-    static readonly LabelKey = Model.RegisterProperty<string>(DemoContent, 'Label', '', MetaData.None);
+    static readonly LabelKey = MuralBase.RegisterProperty<string>(DemoContent, 'Label', '', MetaData.None);
     public get Label(): string { return this.get_property_value(DemoContent.LabelKey); }
     public set Label(v: string) { this.set_property_value(DemoContent.LabelKey, v); }
 }

@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -40,7 +40,7 @@ import { Orientation } from './orientation.js';
 // fixed-size cells; everything else carries over.
 export class WrapPanel extends Panel
 {
-    public static readonly OrientationKey = Model.RegisterProperty<Orientation>(
+    public static readonly OrientationKey = MuralBase.RegisterProperty<Orientation>(
         WrapPanel, 'Orientation', Orientation.Horizontal,
         MetaData.Measure | MetaData.Arrange);
 
@@ -49,7 +49,7 @@ export class WrapPanel extends Panel
     // The panel still WRAPS by how many uniform cells fit the available
     // primary extent; contrast UniformGrid, which instead partitions the
     // container into a fixed Rows×Columns of container-derived cells.
-    public static readonly IsUniformChildrenKey = Model.RegisterProperty<boolean>(
+    public static readonly IsUniformChildrenKey = MuralBase.RegisterProperty<boolean>(
         WrapPanel, 'IsUniformChildren', false,
         MetaData.Measure | MetaData.Arrange);
 

@@ -1,4 +1,4 @@
-import { Visual, safeFire, KNOWN_ROUTED_EVENTS, type InheritableEntry } from './visual.js';
+﻿import { Visual, safeFire, KNOWN_ROUTED_EVENTS, type InheritableEntry } from './visual.js';
 
 // Sentinel for "this node provides no value for a key" — distinct from any
 // real value (including undefined) so change-detection never confuses a
@@ -14,7 +14,7 @@ function providedValue(evd: EffectiveValueDescriptor | undefined): unknown
 {
     return evd !== undefined && evd.Source !== PropertyValueSource.Default ? evd.value : NOT_PROVIDED;
 }
-import { Model } from '../runtime/model.js';
+import { MuralBase } from '../runtime/model.js';
 import type {
     PointerEventArgs,
     WheelEventArgs,
@@ -102,7 +102,7 @@ export class Element extends Visual implements ITriggerHost
     // SetStyleValue fire their own invalidation per their own
     // metadata. MetaData.None keeps OnPropertyChanged from doing
     // redundant work.
-    public static readonly StyleKey = Model.RegisterProperty<Style | undefined>(Element, 'Style', undefined, MetaData.None);
+    public static readonly StyleKey = MuralBase.RegisterProperty<Style | undefined>(Element, 'Style', undefined, MetaData.None);
 
     // Type-keyed lookup for the theme-supplied default Style. Read-only
     // at the instance level (no public per-instance writes); subclasses
@@ -110,7 +110,7 @@ export class Element extends Visual implements ITriggerHost
     //
     //     class Button extends ContentControl {
     //         static {
-    //             Model.OverrideMetadata(Button, Element.DefaultStyleKeyKey,
+    //             MuralBase.OverrideMetadata(Button, Element.DefaultStyleKeyKey,
     //                 { default_value: Button });
     //         }
     //     }
@@ -123,11 +123,11 @@ export class Element extends Visual implements ITriggerHost
     // theme chrome until it opts into its own. Default is undefined —
     // an Element whose DefaultStyleKey is undefined skips theme lookup.
     //
-    // Key is public so subclasses can pass it to Model.OverrideMetadata;
+    // Key is public so subclasses can pass it to MuralBase.OverrideMetadata;
     // the read-only gate on set_property_value / by-name paths still
     // prevents per-instance writes (set_property_value_with_key is the
     // documented framework-internal escape hatch).
-    public static readonly DefaultStyleKeyKey = Model.RegisterReadOnlyProperty<Function | undefined>(
+    public static readonly DefaultStyleKeyKey = MuralBase.RegisterReadOnlyProperty<Function | undefined>(
         Element, 'DefaultStyleKey', undefined, MetaData.None,
     );
 
@@ -136,7 +136,7 @@ export class Element extends Visual implements ITriggerHost
     // / selection listener can recover the consumer's data without an
     // external WeakMap. Pure storage — never read by the framework
     // itself — hence MetaData.None.
-    public static readonly TagKey = Model.RegisterProperty<unknown>(Element, 'Tag', undefined, MetaData.None);
+    public static readonly TagKey = MuralBase.RegisterProperty<unknown>(Element, 'Tag', undefined, MetaData.None);
 
     // Ambient data root for bindings. Inherits down the logical tree so
     // a binding written as `$Path` on a descendant resolves against the
@@ -145,7 +145,7 @@ export class Element extends Visual implements ITriggerHost
     // IsAnimationProhibited: a DataContext swap is a coherent identity
     // change, not a value to tween; animating it would silently break
     // every binding rooted in it.
-    public static readonly DataContextKey = Model.RegisterProperty<unknown>(Element, 'DataContext', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
+    public static readonly DataContextKey = MuralBase.RegisterProperty<unknown>(Element, 'DataContext', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
 
     // Ambient service provider for `$service(Token)` bindings. Inherits
     // down the tree the same way DataContext does, so a descendant's
@@ -157,7 +157,7 @@ export class Element extends Visual implements ITriggerHost
     // swap reason as DataContext. Typed `unknown` to keep Element free of a
     // runtime dependency on the ServiceProvider class (the runtime layer);
     // ServiceBinding reads it by name and treats it structurally.
-    public static readonly ServiceScopeKey = Model.RegisterProperty<unknown>(Element, 'ServiceScope', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
+    public static readonly ServiceScopeKey = MuralBase.RegisterProperty<unknown>(Element, 'ServiceScope', undefined, MetaData.Inherits | MetaData.IsAnimationProhibited);
 
     // Disabled-state surface. WPF parity: a disabled Element swallows
     // pointer / keyboard input across its entire subtree, and templates
@@ -172,7 +172,7 @@ export class Element extends Visual implements ITriggerHost
     // `Element[]` (every routed node is an Element). Enter / Leave still
     // update IsMouseOver on enabled ancestors so hover chrome on a
     // disabled descendant's surrounding container behaves naturally.
-    public static readonly IsEnabledKey = Model.RegisterProperty<boolean>(
+    public static readonly IsEnabledKey = MuralBase.RegisterProperty<boolean>(
         Element, 'IsEnabled', true, MetaData.Inherits | MetaData.IsAnimationProhibited);
 
     // ── Style / Resources / apply_setter ──────────────────────────────
@@ -299,7 +299,7 @@ export class Element extends Visual implements ITriggerHost
     }
 
     // Read-only at the instance level. Subclasses override the default
-    // value via Model.OverrideMetadata at type-init; see the docstring
+    // value via MuralBase.OverrideMetadata at type-init; see the docstring
     // on DefaultStyleKeyKey. Returns undefined for any Element whose
     // class (or any base) hasn't opted in.
     public get DefaultStyleKey(): Function | undefined
@@ -917,7 +917,7 @@ export class Element extends Visual implements ITriggerHost
     private static dataContextComposedKey(): string
     {
         return (Element._dataContextComposedKey ??=
-            Model.compose_key(Element, 'DataContext'));
+            MuralBase.compose_key(Element, 'DataContext'));
     }
 
     /** @internal — the DataContext this element would INHERIT from its
@@ -1498,32 +1498,32 @@ export class Element extends Visual implements ITriggerHost
     // press chrome (Button / ClickableBorder), not by user code.
     // Read-only DPs (§ 1.13) — external `set_property_value` writes throw;
     // maintainers route through the typed `_setIsXxx` @internal methods.
-    public static readonly IsMouseOverKey = Model.RegisterReadOnlyProperty<boolean>(Element, 'IsMouseOver', false, MetaData.None);
-    public static readonly IsPressedKey   = Model.RegisterReadOnlyProperty<boolean>(Element, 'IsPressed',   false, MetaData.None);
+    public static readonly IsMouseOverKey = MuralBase.RegisterReadOnlyProperty<boolean>(Element, 'IsMouseOver', false, MetaData.None);
+    public static readonly IsPressedKey   = MuralBase.RegisterReadOnlyProperty<boolean>(Element, 'IsPressed',   false, MetaData.None);
     // IsFocused — true when this Element is the InputManager's current
     // focused target. Read-only; use `Focus()` / `Blur()` to change.
-    public static readonly IsFocusedKey   = Model.RegisterReadOnlyProperty<boolean>(Element, 'IsFocused',   false, MetaData.None);
+    public static readonly IsFocusedKey   = MuralBase.RegisterReadOnlyProperty<boolean>(Element, 'IsFocused',   false, MetaData.None);
 
     // Drop-target flags. AllowDrop is consumer-set (defaults false so a
     // random Element never accidentally accepts drops); IsDragOver is
     // framework-written and behaves like IsMouseOver — public read, no
     // public setter (Style triggers like `when{ IsDragOver }` read it).
-    public static readonly AllowDropKey  = Model.RegisterProperty<boolean>(Element, 'AllowDrop',  false, MetaData.None);
-    public static readonly IsDragOverKey = Model.RegisterReadOnlyProperty<boolean>(Element, 'IsDragOver', false, MetaData.None);
+    public static readonly AllowDropKey  = MuralBase.RegisterProperty<boolean>(Element, 'AllowDrop',  false, MetaData.None);
+    public static readonly IsDragOverKey = MuralBase.RegisterReadOnlyProperty<boolean>(Element, 'IsDragOver', false, MetaData.None);
 
     // Hit-test opt-out (WPF parity — UIElement.IsHitTestVisible). When
     // false, this Element AND its visual subtree are transparent to the
     // hit-test pipeline. Renderer emits `pointer-events="none"` on the
     // outer <g>; the routed-event dispatcher skips it in the route walk.
     // MetaData.Render so flips repaint without further wiring.
-    public static readonly IsHitTestVisibleKey = Model.RegisterProperty<boolean>(Element, 'IsHitTestVisible', true, MetaData.Render);
+    public static readonly IsHitTestVisibleKey = MuralBase.RegisterProperty<boolean>(Element, 'IsHitTestVisible', true, MetaData.Render);
 
     // Focusable — opt-in for keyboard focus. Default false so a random
     // Border / TextBlock / Panel never accidentally swallows keys;
     // controls that handle keyboard input (TextBox, Button) set this to
     // true. The InputManager refuses to focus an Element whose Focusable
     // is false.
-    public static readonly FocusableKey = Model.RegisterProperty<boolean>(Element, 'Focusable', false, MetaData.None);
+    public static readonly FocusableKey = MuralBase.RegisterProperty<boolean>(Element, 'Focusable', false, MetaData.None);
 
     // Keyboard-navigation order (WPF parity). `IsTabStop` opts an element
     // into Tab traversal (true by default — WPF Control default); a
@@ -1533,13 +1533,13 @@ export class Element extends Visual implements ITriggerHost
     // document (visual-tree) order. Default TabIndex is +Infinity so an
     // unset element sorts AFTER any explicitly-indexed one (mirrors WPF's
     // Int32.MaxValue default).
-    public static readonly IsTabStopKey = Model.RegisterProperty<boolean>(Element, 'IsTabStop', true, MetaData.None);
-    public static readonly TabIndexKey  = Model.RegisterProperty<number>(Element, 'TabIndex', Number.POSITIVE_INFINITY, MetaData.None);
+    public static readonly IsTabStopKey = MuralBase.RegisterProperty<boolean>(Element, 'IsTabStop', true, MetaData.None);
+    public static readonly TabIndexKey  = MuralBase.RegisterProperty<number>(Element, 'TabIndex', Number.POSITIVE_INFINITY, MetaData.None);
 
     // Touch-manipulation opt-in (WPF parity). When true, touch contacts
     // on this element drive Manipulation* routed events (pan / pinch /
     // rotate + inertia) via the InputManager's ManipulationCoordinator.
-    public static readonly IsManipulationEnabledKey = Model.RegisterProperty<boolean>(Element, 'IsManipulationEnabled', false, MetaData.None);
+    public static readonly IsManipulationEnabledKey = MuralBase.RegisterProperty<boolean>(Element, 'IsManipulationEnabled', false, MetaData.None);
 
     // Declarative drag source. When IsDraggable = true the framework
     // installs a PointerDown / Move / Up latch (see _onDragLatch* below)
@@ -1547,10 +1547,10 @@ export class Element extends Visual implements ITriggerHost
     // DragDrop.DragThreshold pixels. The callback returns either null
     // (cancel) or { data, effects, preview? } which the framework feeds
     // straight into DragDrop.DoDragDrop. Spec § 6.
-    public static readonly IsDraggableKey = Model.RegisterProperty<boolean>(Element, 'IsDraggable', false, MetaData.None);
+    public static readonly IsDraggableKey = MuralBase.RegisterProperty<boolean>(Element, 'IsDraggable', false, MetaData.None);
     // Declarative drag-source callback. See `DragStartCallback` /
     // `DragStartSpec` in drag-drop.ts for the return-shape contract.
-    public static readonly OnDragStartKey = Model.RegisterProperty<DragStartCallback | undefined>(Element, 'OnDragStart', undefined, MetaData.None);
+    public static readonly OnDragStartKey = MuralBase.RegisterProperty<DragStartCallback | undefined>(Element, 'OnDragStart', undefined, MetaData.None);
 
     // Input state — read-only mirrors of the DPs, set exclusively by the
     // InputManager during pointer dispatch.

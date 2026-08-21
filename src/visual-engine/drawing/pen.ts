@@ -1,4 +1,4 @@
-import { MetaData, Model } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase } from '../../runtime/index.js';
 import { Freezable } from '../../runtime/freezable.js';
 import type { Brush } from './brush.js';
 
@@ -20,7 +20,7 @@ export enum LineJoin
     Bevel = 'bevel',
 }
 
-// Dash pattern + offset. Plain value type (not a Model) — mutate by
+// Dash pattern + offset. Plain value type (not a MuralBase) — mutate by
 // constructing a new DashStyle and assigning it to Pen.DashStyle, which
 // then fires the Render invalidation through Pen's property machinery.
 //
@@ -53,7 +53,7 @@ export class DashStyle
     }
 }
 
-// Stroke spec consumed by DrawingContext draw calls. Pen is a Model so
+// Stroke spec consumed by DrawingContext draw calls. Pen is a MuralBase so
 // its attributes (Brush, Thickness, DashStyle, …) bind / animate / inherit
 // like any other property — a binding that mutates Pen.Thickness fires
 // InvalidateVisual on every Visual that holds this Pen through the
@@ -65,12 +65,12 @@ export class DashStyle
 // MiterLimit=10.
 export class Pen extends Freezable
 {
-    public static readonly BrushKey      = Model.RegisterProperty<Brush | undefined>(Pen, 'Brush',      undefined,       MetaData.Render);
-    public static readonly ThicknessKey  = Model.RegisterProperty<number>(           Pen, 'Thickness',  1,               MetaData.Render);
-    public static readonly DashStyleKey  = Model.RegisterProperty<DashStyle>(        Pen, 'DashStyle',  DashStyle.Solid, MetaData.Render);
-    public static readonly LineCapKey    = Model.RegisterProperty<LineCap>(          Pen, 'LineCap',    LineCap.Flat,    MetaData.Render);
-    public static readonly LineJoinKey   = Model.RegisterProperty<LineJoin>(         Pen, 'LineJoin',   LineJoin.Miter,  MetaData.Render);
-    public static readonly MiterLimitKey = Model.RegisterProperty<number>(           Pen, 'MiterLimit', 10,              MetaData.Render);
+    public static readonly BrushKey      = MuralBase.RegisterProperty<Brush | undefined>(Pen, 'Brush',      undefined,       MetaData.Render);
+    public static readonly ThicknessKey  = MuralBase.RegisterProperty<number>(           Pen, 'Thickness',  1,               MetaData.Render);
+    public static readonly DashStyleKey  = MuralBase.RegisterProperty<DashStyle>(        Pen, 'DashStyle',  DashStyle.Solid, MetaData.Render);
+    public static readonly LineCapKey    = MuralBase.RegisterProperty<LineCap>(          Pen, 'LineCap',    LineCap.Flat,    MetaData.Render);
+    public static readonly LineJoinKey   = MuralBase.RegisterProperty<LineJoin>(         Pen, 'LineJoin',   LineJoin.Miter,  MetaData.Render);
+    public static readonly MiterLimitKey = MuralBase.RegisterProperty<number>(           Pen, 'MiterLimit', 10,              MetaData.Render);
 
     // Convenience for the common cases — `new Pen()`, `new Pen(brush)`,
     // `new Pen(brush, 2)`. Anything beyond brush+thickness goes through

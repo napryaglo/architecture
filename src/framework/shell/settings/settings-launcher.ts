@@ -1,8 +1,8 @@
-import {
+﻿import {
     type ICommand,
     type IServiceProvider,
     MetaData,
-    Model,
+    MuralBase,
     RelayCommand,
     ServiceBase,
     ServiceKey,
@@ -23,7 +23,7 @@ import type { Geometry } from '../../../visual-engine/index.js';
 //   * CreateView() — builds the settings view VM (a page grouping
 //     ApplicationSettings.Settings). The launcher shows it in a modal dialog, so
 //     its rendered body comes from its `DataTemplate`. It stays typed as IDocument
-//     (a Model at runtime) for back-compat with hosts that still tab it.
+//     (a MuralBase at runtime) for back-compat with hosts that still tab it.
 //
 // EditorShell detects the contribution and wires a footer RailAction; this
 // launcher's OpenCommand opens CreateView()'s result in a modal DialogService
@@ -45,7 +45,7 @@ export class SettingsLauncherService extends ServiceBase
 {
     public static readonly Key = new ServiceKey<SettingsLauncherService>('SettingsLauncherService');
 
-    public static readonly OpenCommandKey = Model.RegisterProperty<ICommand>(
+    public static readonly OpenCommandKey = MuralBase.RegisterProperty<ICommand>(
         SettingsLauncherService, 'OpenCommand', undefined as unknown as ICommand, MetaData.None);
 
     // Built once — the view's editors bind live to the same Setting DPs, so the
@@ -73,7 +73,7 @@ export class SettingsLauncherService extends ServiceBase
         this._view ??= contribution.CreateView();
         void dialogs.Show({
             Title:     this._view.Title,
-            Content:   this._view as unknown as Model,
+            Content:   this._view as unknown as MuralBase,
             Width:     720,
             MaxHeight: 640,
         });

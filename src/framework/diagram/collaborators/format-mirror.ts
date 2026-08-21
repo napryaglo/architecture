@@ -1,4 +1,4 @@
-import { Model, type PropertyKey } from '../../../runtime/index.js';
+﻿import { MuralBase, type PropertyKey } from '../../../runtime/index.js';
 import {
     Brush,
     Color,
@@ -28,7 +28,7 @@ import { flattenToLeaves } from '../commands/group-ops.js';
 // shapes. The flattenToLeaves walk handles "selecting a group
 // applies format to all its leaves" without needing to know
 // whether the consumer's group VM is the Phase B Group class or a
-// custom IGroup-shaped Model.
+// custom IGroup-shaped MuralBase.
 //
 // Pen-shaped DPs: BroadcastWholePen on each FormatStroke replacement
 // copies all 6 Pen DPs (Brush, Thickness, DashStyle, LineCap, LineJoin,
@@ -141,7 +141,7 @@ export class FormatMirror
         diagram.AddPropertyChangedListener(Diagram.SelectionStrikethroughKey, pulseRequery);
     }
 
-    private _leaves(): Model[]
+    private _leaves(): MuralBase[]
     {
         return flattenToLeaves(this._diagram.SelectedItems);
     }
@@ -150,9 +150,9 @@ export class FormatMirror
     // don't nest (no group analog), so the array is the selection list
     // verbatim. Pulled out as a method to mirror _leaves() — broadcast
     // helpers iterate both.
-    private _strokeTargetsFromConnectors(): Model[]
+    private _strokeTargetsFromConnectors(): MuralBase[]
     {
-        return [...this._diagram.SelectedConnectors] as unknown as Model[];
+        return [...this._diagram.SelectedConnectors] as unknown as MuralBase[];
     }
 
     private _seedFromSelection(): void
@@ -205,7 +205,7 @@ export class FormatMirror
             // own Stroke). The hover-halo behavior clears figure
             // selection on connector pick, so the mixed-population case
             // only arises if a caller bypasses the halo.
-            const firstStrokable: Model | undefined =
+            const firstStrokable: MuralBase | undefined =
                 leaves.length > 0 ? leaves[0] : connectors[0];
             const firstFill = leaves.length > 0
                 ? (leaves[0] as unknown as Partial<IFillableItem>).Fill
@@ -262,7 +262,7 @@ export class FormatMirror
     // (Re)subscribe to every selected shape's edit-selection-changed signal.
     // Fires on caret moves inside an editing shape (and on edit begin/end);
     // we re-seed just the alignment DP from the caret paragraph.
-    private _rewireEditListeners(leaves: Model[]): void
+    private _rewireEditListeners(leaves: MuralBase[]): void
     {
         for (const s of this._editSelSubs) s.text.RemoveEditSelectionChangedListener(s.handler);
         this._editSelSubs = [];

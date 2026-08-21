@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     type CollectionChange,
@@ -57,7 +57,7 @@ export function isNestedViewportHost(v: unknown): v is INestedViewportHost
 
 export abstract class VirtualizingPanel extends Panel
 {
-    public static readonly ViewportKey = Model.RegisterProperty<Rect>(
+    public static readonly ViewportKey = MuralBase.RegisterProperty<Rect>(
         VirtualizingPanel, 'Viewport', Rect.Zero, MetaData.Measure);
 
     public get Viewport(): Rect { return this.get_property_value(VirtualizingPanel.ViewportKey); }

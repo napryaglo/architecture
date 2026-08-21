@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -35,24 +35,24 @@ import { TextBlock } from '../../basic/text-block.js';
 // own selection state directly.
 export class NavigationItem extends ContentControl
 {
-    public static readonly IconKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly IconKey = MuralBase.RegisterProperty<Visual | undefined>(
         NavigationItem, 'Icon', undefined, MetaData.Render,
     );
 
-    public static readonly LabelKey = Model.RegisterProperty<string>(
+    public static readonly LabelKey = MuralBase.RegisterProperty<string>(
         NavigationItem, 'Label', '', MetaData.Render,
     );
 
     // Instance-level IsSelected mirror — see ListBoxItem for the
     // rationale (Selector.IsSelected is the source of truth; the
     // instance DP is what template triggers can subscribe to).
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(
         NavigationItem, 'IsSelected', false, MetaData.Render,
     );
 
     static
     {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             NavigationItem, Element.DefaultStyleKeyKey,
             { default_value: NavigationItem },
         );

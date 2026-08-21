@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, Visual, type PointerEventArgs, type PropertyDescriptor } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element, Visual, type PointerEventArgs, type PropertyDescriptor } from '../../runtime/index.js';
 import { HeaderedContentControl } from '../base/headered-content-control.js';
 import { Selector } from '../list/selector.js';
 
@@ -22,7 +22,7 @@ import { Selector } from '../list/selector.js';
 export class TabControl extends Selector
 {
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             TabControl, Element.DefaultStyleKeyKey,
             { default_value: TabControl });
     }
@@ -36,7 +36,7 @@ export class TabControl extends Selector
     //     is that TabItem's Content.
     // Read-only to consumers; the control maintains it on every selection
     // change (see updateSelectedContent).
-    public static readonly SelectedContentKey = Model.RegisterProperty<unknown>(
+    public static readonly SelectedContentKey = MuralBase.RegisterProperty<unknown>(
         TabControl, 'SelectedContent', undefined, MetaData.None);
 
     constructor()
@@ -98,7 +98,7 @@ export class TabControl extends Selector
         // Do NOT set ti.Content in the data path. TabItem is a
         // HeaderedContentControl and its default template's ONLY ContentPresenter
         // is PART_Header — so ContentControl would present ti.Content THERE, and a
-        // data row (a document Model) would render through its implicit
+        // data row (a document MuralBase) would render through its implicit
         // DataTemplate (e.g. DataTemplate[DiagramDocument] → a Diagram) INSIDE the
         // tab header. For a document whose view hosts shared Visuals (the Diagram's
         // node Visuals), that duplicate render collides with the content slot's
@@ -178,11 +178,11 @@ export class TabControl extends Selector
 // for richer chrome — same pattern WPF uses).
 export class TabItem extends HeaderedContentControl
 {
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(
         TabItem, 'IsSelected', false, MetaData.Render);
 
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             TabItem, Element.DefaultStyleKeyKey,
             { default_value: TabItem });
     }

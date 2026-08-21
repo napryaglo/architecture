@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Rect,
     Size,
@@ -92,35 +92,35 @@ export class ScrollBarLayout extends Panel
 // clamped value; reads on `.Value` return whatever was last written.
 export class ScrollBar extends TemplatedControl
 {
-    public static readonly OrientationKey  = Model.RegisterProperty<Orientation>(ScrollBar, 'Orientation',  Orientation.Vertical, MetaData.Measure | MetaData.Arrange);
-    public static readonly MinimumKey      = Model.RegisterProperty<number>(     ScrollBar, 'Minimum',      0, MetaData.Arrange);
-    public static readonly MaximumKey      = Model.RegisterProperty<number>(     ScrollBar, 'Maximum',      1, MetaData.Arrange);
-    public static readonly ValueKey        = Model.RegisterProperty<number>(     ScrollBar, 'Value',        0, MetaData.Arrange);
-    public static readonly ViewportSizeKey = Model.RegisterProperty<number>(     ScrollBar, 'ViewportSize', 0, MetaData.Arrange);
+    public static readonly OrientationKey  = MuralBase.RegisterProperty<Orientation>(ScrollBar, 'Orientation',  Orientation.Vertical, MetaData.Measure | MetaData.Arrange);
+    public static readonly MinimumKey      = MuralBase.RegisterProperty<number>(     ScrollBar, 'Minimum',      0, MetaData.Arrange);
+    public static readonly MaximumKey      = MuralBase.RegisterProperty<number>(     ScrollBar, 'Maximum',      1, MetaData.Arrange);
+    public static readonly ValueKey        = MuralBase.RegisterProperty<number>(     ScrollBar, 'Value',        0, MetaData.Arrange);
+    public static readonly ViewportSizeKey = MuralBase.RegisterProperty<number>(     ScrollBar, 'ViewportSize', 0, MetaData.Arrange);
     // macOS / Slack-style auto-fade. When true, the track + thumb start
     // invisible and only become opaque on activity (scroll value change,
     // hover, drag). After ~1.5 s idle they fade back out. v1
     // implementation is a discrete show/hide — no smooth tween — but the
     // appear-on-activity / hide-on-idle behavior matches what users
     // expect from the platform convention.
-    public static readonly IsAutoHideKey   = Model.RegisterProperty<boolean>(    ScrollBar, 'IsAutoHide',   false, MetaData.None);
+    public static readonly IsAutoHideKey   = MuralBase.RegisterProperty<boolean>(    ScrollBar, 'IsAutoHide',   false, MetaData.None);
     // Read-only "thumb is being dragged" + "bar is in the auto-fade
     // resting state" DPs. Surfaced so the DefaultScrollBar template's
     // `when(IsDragging)` and `when(IsFaded)` triggers fire off the
     // same flags the drag / auto-hide handlers flip. Write-keys stay
     // private to the imperative state-machines; consumers see them
     // through the public boolean getters.
-    private static readonly _IsDraggingPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsDraggingPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         ScrollBar, 'IsDragging', false, MetaData.None,
     );
     public  static readonly IsDraggingKey   = ScrollBar._IsDraggingPriv;
-    private static readonly _IsFadedPriv    = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsFadedPriv    = MuralBase.RegisterReadOnlyProperty<boolean>(
         ScrollBar, 'IsFaded',    false, MetaData.None,
     );
     public  static readonly IsFadedKey      = ScrollBar._IsFadedPriv;
 
     static {
-        Model.OverrideMetadata(ScrollBar, Element.DefaultStyleKeyKey, { default_value: ScrollBar });
+        MuralBase.OverrideMetadata(ScrollBar, Element.DefaultStyleKeyKey, { default_value: ScrollBar });
     }
 
     // ── Template parts ──────────────────────────────────────────────

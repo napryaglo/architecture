@@ -1,4 +1,4 @@
-import { MetaData, Model } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase } from '../../runtime/index.js';
 import { Size } from '../primitives.js';
 
 // How an Image's source bitmap fills its layout slot. Mirrors WPF's
@@ -25,13 +25,13 @@ export enum Stretch
 // keeps room for DrawingImage / RenderTargetBitmap later without
 // changing the Image control's API.
 //
-// NaturalSize is exposed as a Model DP so it participates in change
+// NaturalSize is exposed as a MuralBase DP so it participates in change
 // notification — when the source's intrinsic dimensions become known
 // (e.g. a future async-decode hook fires), every Image bound to it can
 // invalidate measure through the binding plumbing.
-export abstract class ImageSource extends Model
+export abstract class ImageSource extends MuralBase
 {
-    public static readonly NaturalSizeKey = Model.RegisterProperty<Size>(
+    public static readonly NaturalSizeKey = MuralBase.RegisterProperty<Size>(
         ImageSource, 'NaturalSize', Size.Zero, MetaData.None);
 
     public get NaturalSize(): Size { return this.get_property_value(ImageSource.NaturalSizeKey); }
@@ -55,7 +55,7 @@ export abstract class ImageSource extends Model
 // automatically.
 export class BitmapImage extends ImageSource
 {
-    public static readonly UriKey = Model.RegisterProperty<string>(
+    public static readonly UriKey = MuralBase.RegisterProperty<string>(
         BitmapImage, 'Uri', '', MetaData.None);
 
     constructor(uri?: string, naturalSize?: Size)

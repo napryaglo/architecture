@@ -1,16 +1,16 @@
-// ContextMenuVM — three colored panels each with its OWN ContextMenu.
+﻿// ContextMenuVM — three colored panels each with its OWN ContextMenu.
 // Right-click any panel to open its menu; the route-walker finds the
 // nearest ancestor with an attached ContextMenu and opens it at the
 // cursor position.
 import {
     MetaData,
-    Model,
+    MuralBase,
     RelayCommand,
 } from '@pragmatic-lab/mural/runtime';
 
-export class ContextMenuVM extends Model
+export class ContextMenuVM extends MuralBase
 {
-    static StatusKey = Model.RegisterProperty<string>(ContextMenuVM, 'Status', 'Right-click any panel.', MetaData.None);
+    static StatusKey = MuralBase.RegisterProperty<string>(ContextMenuVM, 'Status', 'Right-click any panel.', MetaData.None);
 
     // Per-panel commands exposed as plain fields the ContextMenu markup
     // binds to. The CommandParameter (the menu-item label) arrives as the

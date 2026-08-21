@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     ServiceBase,
     type IServiceProvider,
@@ -28,14 +28,14 @@ export class DocumentSelectorService extends ServiceBase implements IActivatable
     // The selectable items. A stable per-instance collection a list binds
     // (`ItemsSource = $Items`); the reference never changes, so this DP only
     // hands it back — mirrors NavigationService.Items.
-    public static readonly ItemsKey = Model.RegisterProperty<ObservableCollection<object>>(
+    public static readonly ItemsKey = MuralBase.RegisterProperty<ObservableCollection<object>>(
         DocumentSelectorService, 'Items',
         undefined as unknown as ObservableCollection<object>, MetaData.None);
 
     // The current selection (`SelectedItem = $SelectedItem`, usually TwoWay
     // from the list). Every change — programmatic, binding-driven, or a list
     // click — routes onSelectedItemChanged below.
-    public static readonly SelectedItemKey = Model.RegisterProperty<object | undefined>(
+    public static readonly SelectedItemKey = MuralBase.RegisterProperty<object | undefined>(
         DocumentSelectorService, 'SelectedItem', undefined, MetaData.None);
 
     constructor(provider: IServiceProvider)

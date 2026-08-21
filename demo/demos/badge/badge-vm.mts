@@ -1,13 +1,13 @@
-// BadgeVM — backs the badge demo. Count is a reactive number the Numeric
+﻿// BadgeVM — backs the badge demo. Count is a reactive number the Numeric
 // badge binds to; Increment / Reset are RelayCommands the markup wires to
 // its Buttons so the Count DP visibly drives the pill's label live.
-import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 
-export class BadgeVM extends Model
+export class BadgeVM extends MuralBase
 {
-    static CountKey     = Model.RegisterProperty<number>(BadgeVM, 'Count', 3, MetaData.None);
-    static IncrementKey = Model.RegisterProperty<RelayCommand | null>(BadgeVM, 'Increment', null, MetaData.None);
-    static ResetKey     = Model.RegisterProperty<RelayCommand | null>(BadgeVM, 'Reset',     null, MetaData.None);
+    static CountKey     = MuralBase.RegisterProperty<number>(BadgeVM, 'Count', 3, MetaData.None);
+    static IncrementKey = MuralBase.RegisterProperty<RelayCommand | null>(BadgeVM, 'Increment', null, MetaData.None);
+    static ResetKey     = MuralBase.RegisterProperty<RelayCommand | null>(BadgeVM, 'Reset',     null, MetaData.None);
 
     get Count():     number { return this.get_property_value(BadgeVM.CountKey); }
     set Count(v:     number) { this.set_property_value(BadgeVM.CountKey, v); }

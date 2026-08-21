@@ -1,4 +1,4 @@
-import { Element, Model } from '../../runtime/index.js';
+﻿import { Element, MuralBase } from '../../runtime/index.js';
 import { ShellBase } from './shell.js';
 
 // Readonly application shell for displaying purposed applications — a
@@ -14,7 +14,7 @@ export class ViewerShell extends ShellBase
 {
     static
     {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             ViewerShell, Element.DefaultStyleKeyKey,
             { default_value: ViewerShell });
     }

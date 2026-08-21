@@ -1,7 +1,7 @@
-import {
+﻿import {
     Element,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     type CollectionChange,
     type PropertyDescriptor,
@@ -46,18 +46,18 @@ type GroupMember = Figure | Group;
 export class Group extends ContentControl
 {
     static {
-        Model.OverrideMetadata(Group, Element.DefaultStyleKeyKey, { default_value: Group });
+        MuralBase.OverrideMetadata(Group, Element.DefaultStyleKeyKey, { default_value: Group });
     }
 
-    public static readonly LeftKey   = Model.RegisterProperty<number>(
+    public static readonly LeftKey   = MuralBase.RegisterProperty<number>(
         Group, 'Left',   0, MetaData.Arrange);
-    public static readonly TopKey    = Model.RegisterProperty<number>(
+    public static readonly TopKey    = MuralBase.RegisterProperty<number>(
         Group, 'Top',    0, MetaData.Arrange);
-    public static override readonly WidthKey  = Model.RegisterReadOnlyProperty<number>(
+    public static override readonly WidthKey  = MuralBase.RegisterReadOnlyProperty<number>(
         Group, 'Width',  0, MetaData.Measure);
-    public static override readonly HeightKey = Model.RegisterReadOnlyProperty<number>(
+    public static override readonly HeightKey = MuralBase.RegisterReadOnlyProperty<number>(
         Group, 'Height', 0, MetaData.Measure);
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(
         Group, 'IsSelected', false, MetaData.None);
 
     public readonly Members: ObservableCollection<GroupMember> = new ObservableCollection();

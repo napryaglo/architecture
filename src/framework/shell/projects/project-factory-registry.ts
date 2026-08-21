@@ -1,7 +1,7 @@
-import {
+﻿import {
     ApplicationService,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     ServiceBase,
     ServiceKey,
@@ -28,7 +28,7 @@ export class ProjectFactoryRegistry extends ServiceBase
 {
     public static readonly Key = new ServiceKey<ProjectFactoryRegistry>('ProjectFactoryRegistry');
 
-    public static readonly DefinitionsKey = Model.RegisterProperty<ObservableCollection<ProjectFactoryDefinition>>(
+    public static readonly DefinitionsKey = MuralBase.RegisterProperty<ObservableCollection<ProjectFactoryDefinition>>(
         ProjectFactoryRegistry, 'Definitions',
         undefined as unknown as ObservableCollection<ProjectFactoryDefinition>, MetaData.None);
 

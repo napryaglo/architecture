@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Point,
     Visibility,
@@ -69,43 +69,43 @@ export enum FillEditorVariant
 export class FillEditor extends TemplatedControl
 {
     // ── Output ─────────────────────────────────────────────────────────
-    public static override readonly FillKey    = Model.RegisterProperty<Brush | undefined>(FillEditor, 'Fill',    undefined,                MetaData.None | MetaData.BindsTwoWayByDefault);
-    public static readonly VariantKey = Model.RegisterProperty<FillEditorVariant>(FillEditor, 'Variant', FillEditorVariant.Solid,  MetaData.None);
-    public static readonly FillOpacityKey = Model.RegisterProperty<number>(       FillEditor, 'FillOpacity', 100,                  MetaData.None);
+    public static override readonly FillKey    = MuralBase.RegisterProperty<Brush | undefined>(FillEditor, 'Fill',    undefined,                MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly VariantKey = MuralBase.RegisterProperty<FillEditorVariant>(FillEditor, 'Variant', FillEditorVariant.Solid,  MetaData.None);
+    public static readonly FillOpacityKey = MuralBase.RegisterProperty<number>(       FillEditor, 'FillOpacity', 100,                  MetaData.None);
     // Section header text shown above the variant tabs. Defaults to "Fill";
     // set to "" to suppress the header entirely (e.g. when the editor is
     // embedded under another section's title, like the Line section reusing
     // this tabbed editor for its stroke brush).
-    public static readonly HeaderKey = Model.RegisterProperty<string>(           FillEditor, 'Header',      'Fill',                MetaData.None);
+    public static readonly HeaderKey = MuralBase.RegisterProperty<string>(           FillEditor, 'Header',      'Fill',                MetaData.None);
     // Style trigger picks the variant body and writes it here.
-    public static readonly BodyTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(FillEditor, 'BodyTemplate', undefined, MetaData.None);
+    public static readonly BodyTemplateKey = MuralBase.RegisterProperty<ControlTemplate | undefined>(FillEditor, 'BodyTemplate', undefined, MetaData.None);
 
     // ── Solid mirror ───────────────────────────────────────────────────
-    public static readonly SolidColorKey = Model.RegisterProperty<Color>(FillEditor, 'SolidColor', Color.FromHex('#1976d2'), MetaData.None);
+    public static readonly SolidColorKey = MuralBase.RegisterProperty<Color>(FillEditor, 'SolidColor', Color.FromHex('#1976d2'), MetaData.None);
 
     // ── Linear mirror ──────────────────────────────────────────────────
-    public static readonly LinearStartColorKey = Model.RegisterProperty<Color>( FillEditor, 'LinearStartColor', Color.FromHex('#ffffff'), MetaData.None);
-    public static readonly LinearEndColorKey   = Model.RegisterProperty<Color>( FillEditor, 'LinearEndColor',   Color.FromHex('#1976d2'), MetaData.None);
-    public static readonly LinearAngleKey      = Model.RegisterProperty<number>(FillEditor, 'LinearAngle',      0,                        MetaData.None);
+    public static readonly LinearStartColorKey = MuralBase.RegisterProperty<Color>( FillEditor, 'LinearStartColor', Color.FromHex('#ffffff'), MetaData.None);
+    public static readonly LinearEndColorKey   = MuralBase.RegisterProperty<Color>( FillEditor, 'LinearEndColor',   Color.FromHex('#1976d2'), MetaData.None);
+    public static readonly LinearAngleKey      = MuralBase.RegisterProperty<number>(FillEditor, 'LinearAngle',      0,                        MetaData.None);
 
     // ── Radial mirror ──────────────────────────────────────────────────
-    public static readonly RadialInnerColorKey = Model.RegisterProperty<Color>( FillEditor, 'RadialInnerColor', Color.FromHex('#ffffff'), MetaData.None);
-    public static readonly RadialOuterColorKey = Model.RegisterProperty<Color>( FillEditor, 'RadialOuterColor', Color.FromHex('#1976d2'), MetaData.None);
-    public static readonly RadialCenterXKey    = Model.RegisterProperty<number>(FillEditor, 'RadialCenterX',    50,                       MetaData.None);
-    public static readonly RadialCenterYKey    = Model.RegisterProperty<number>(FillEditor, 'RadialCenterY',    50,                       MetaData.None);
-    public static readonly RadialRadiusKey     = Model.RegisterProperty<number>(FillEditor, 'RadialRadius',     50,                       MetaData.None);
+    public static readonly RadialInnerColorKey = MuralBase.RegisterProperty<Color>( FillEditor, 'RadialInnerColor', Color.FromHex('#ffffff'), MetaData.None);
+    public static readonly RadialOuterColorKey = MuralBase.RegisterProperty<Color>( FillEditor, 'RadialOuterColor', Color.FromHex('#1976d2'), MetaData.None);
+    public static readonly RadialCenterXKey    = MuralBase.RegisterProperty<number>(FillEditor, 'RadialCenterX',    50,                       MetaData.None);
+    public static readonly RadialCenterYKey    = MuralBase.RegisterProperty<number>(FillEditor, 'RadialCenterY',    50,                       MetaData.None);
+    public static readonly RadialRadiusKey     = MuralBase.RegisterProperty<number>(FillEditor, 'RadialRadius',     50,                       MetaData.None);
 
     // ── Pattern mirror ─────────────────────────────────────────────────
-    public static readonly PatternKindKey       = Model.RegisterProperty<PatternKind>(FillEditor, 'PatternKind',       PatternKind.Stripes,        MetaData.None);
-    public static readonly PatternForegroundKey = Model.RegisterProperty<Color>(      FillEditor, 'PatternForeground', Color.FromHex('#1976d2'),   MetaData.None);
-    public static readonly PatternBackgroundKey = Model.RegisterProperty<Color>(      FillEditor, 'PatternBackground', Color.Transparent,          MetaData.None);
-    public static readonly PatternSizeKey       = Model.RegisterProperty<number>(     FillEditor, 'PatternSize',       8,                          MetaData.None);
-    public static readonly PatternAngleKey      = Model.RegisterProperty<number>(     FillEditor, 'PatternAngle',      0,                          MetaData.None);
-    public static readonly PatternStrokeKey     = Model.RegisterProperty<number>(     FillEditor, 'PatternStroke',     1,                          MetaData.None);
+    public static readonly PatternKindKey       = MuralBase.RegisterProperty<PatternKind>(FillEditor, 'PatternKind',       PatternKind.Stripes,        MetaData.None);
+    public static readonly PatternForegroundKey = MuralBase.RegisterProperty<Color>(      FillEditor, 'PatternForeground', Color.FromHex('#1976d2'),   MetaData.None);
+    public static readonly PatternBackgroundKey = MuralBase.RegisterProperty<Color>(      FillEditor, 'PatternBackground', Color.Transparent,          MetaData.None);
+    public static readonly PatternSizeKey       = MuralBase.RegisterProperty<number>(     FillEditor, 'PatternSize',       8,                          MetaData.None);
+    public static readonly PatternAngleKey      = MuralBase.RegisterProperty<number>(     FillEditor, 'PatternAngle',      0,                          MetaData.None);
+    public static readonly PatternStrokeKey     = MuralBase.RegisterProperty<number>(     FillEditor, 'PatternStroke',     1,                          MetaData.None);
 
     // ── Picture mirror ─────────────────────────────────────────────────
-    public static readonly PictureUriKey   = Model.RegisterProperty<string>(    FillEditor, 'PictureUri',   '',                MetaData.None);
-    public static readonly PictureStretchKey = Model.RegisterProperty<Stretch>( FillEditor, 'PictureStretch', Stretch.Uniform, MetaData.None);
+    public static readonly PictureUriKey   = MuralBase.RegisterProperty<string>(    FillEditor, 'PictureUri',   '',                MetaData.None);
+    public static readonly PictureStretchKey = MuralBase.RegisterProperty<Stretch>( FillEditor, 'PictureStretch', Stretch.Uniform, MetaData.None);
 
     public override get Fill():    Brush | undefined  { return this.get_property_value(FillEditor.FillKey); }
     public override set Fill(v:    Brush | undefined) { this.set_property_value(FillEditor.FillKey, v); }
@@ -154,7 +154,7 @@ export class FillEditor extends TemplatedControl
     public set PictureStretch(v: Stretch){ this.set_property_value(FillEditor.PictureStretchKey, v); }
 
     static {
-        Model.OverrideMetadata(FillEditor, Element.DefaultStyleKeyKey, { default_value: FillEditor });
+        MuralBase.OverrideMetadata(FillEditor, Element.DefaultStyleKeyKey, { default_value: FillEditor });
     }
 
     private _syncing = false;

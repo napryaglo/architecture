@@ -1,6 +1,6 @@
-import {
+﻿import {
     type CollectionChange,
-    type Model,
+    type MuralBase,
     type Visual,
 } from '../../../runtime/index.js';
 import { Connector } from '../connector.js';
@@ -20,27 +20,27 @@ import type { Diagram } from '../diagram.js';
 export class DiagramConnectorsMaterializer
 {
     private readonly _diagram: Diagram;
-    private readonly _visuals: Map<Model, Visual> = new Map();
+    private readonly _visuals: Map<MuralBase, Visual> = new Map();
     private _collectionUnsub: (() => void) | undefined = undefined;
 
     // Per-connector cap bookkeeping. `_mountedCaps` is the set of cap
     // visuals currently in the connectors layer for a given item;
     // `_capUnsubs` detaches the cap-template DP listeners that keep that
     // set in sync when a connector's Source/TargetCapTemplate flips.
-    private readonly _mountedCaps: Map<Model, Visual[]> = new Map();
-    private readonly _capUnsubs:   Map<Model, () => void> = new Map();
+    private readonly _mountedCaps: Map<MuralBase, Visual[]> = new Map();
+    private readonly _capUnsubs:   Map<MuralBase, () => void> = new Map();
 
     // Per-connector label visual (§ Slice 5). The connector's ShapeText is
     // mounted as a connectors-layer sibling, just like a cap; the connector
     // positions it (Canvas.Left/Top) on each route recompute.
-    private readonly _mountedLabels: Map<Model, Visual> = new Map();
+    private readonly _mountedLabels: Map<MuralBase, Visual> = new Map();
 
     constructor(diagram: Diagram)
     {
         this._diagram = diagram;
     }
 
-    public get MaterializedVisuals(): ReadonlyMap<Model, Visual> { return this._visuals; }
+    public get MaterializedVisuals(): ReadonlyMap<MuralBase, Visual> { return this._visuals; }
 
     /** @internal — called by Diagram.OnPropertyChanged on the Connectors DP. */
     public _onConnectorsCollectionChanged(): void
@@ -91,7 +91,7 @@ export class DiagramConnectorsMaterializer
         }
     }
 
-    private _onCollectionChange(change: CollectionChange<Model>): void
+    private _onCollectionChange(change: CollectionChange<MuralBase>): void
     {
         switch (change.kind)
         {
@@ -114,7 +114,7 @@ export class DiagramConnectorsMaterializer
         }
     }
 
-    private _materializeAndMount(item: Model): void
+    private _materializeAndMount(item: MuralBase): void
     {
         if (this._visuals.has(item)) return;
         const visual = this._instantiate(item);
@@ -129,7 +129,7 @@ export class DiagramConnectorsMaterializer
     // can re-run it once the panel materializes. The connector positions the
     // label via Canvas.Left/Top in _placeLabel — the same absolute-canvas
     // coordinate space caps and the route line use.
-    private _mountLabel(item: Model, visual: Visual): void
+    private _mountLabel(item: MuralBase, visual: Visual): void
     {
         if (!(visual instanceof Connector)) return;
         const label = visual.LabelInstance;
@@ -138,7 +138,7 @@ export class DiagramConnectorsMaterializer
         this._mountedLabels.set(item, label);
     }
 
-    private _teardownLabel(item: Model): void
+    private _teardownLabel(item: MuralBase): void
     {
         const label = this._mountedLabels.get(item);
         if (label !== undefined)
@@ -158,7 +158,7 @@ export class DiagramConnectorsMaterializer
     // changes. The connector's own OnPropertyChanged runs BEFORE this
     // listener (internal callback precedes user listeners), so the
     // *CapInstance getters already hold the fresh visuals here.
-    private _wireCaps(item: Model, visual: Visual): void
+    private _wireCaps(item: MuralBase, visual: Visual): void
     {
         if (!(visual instanceof Connector)) return;
         const connector = visual;
@@ -172,7 +172,7 @@ export class DiagramConnectorsMaterializer
         this._syncCaps(item, connector);
     }
 
-    private _syncCaps(item: Model, connector: Connector): void
+    private _syncCaps(item: MuralBase, connector: Connector): void
     {
         const panel = this._diagram.ItemsPanelInstance;
         if (panel === undefined) return;          // wait for layout (_mountPending re-runs)
@@ -228,7 +228,7 @@ export class DiagramConnectorsMaterializer
         (panel as { RemoveChild?(v: Visual): void }).RemoveChild?.(cap);
     }
 
-    private _instantiate(item: Model): Visual
+    private _instantiate(item: MuralBase): Visual
     {
         // Items-are-Connectors convention (§ 1a). A Connector entry
         // IS the Visual that renders; skip template wrap so the same
@@ -287,7 +287,7 @@ export class DiagramConnectorsMaterializer
         visual._release_from_logical_parent();
     }
 
-    private _unmaterialize(item: Model): void
+    private _unmaterialize(item: MuralBase): void
     {
         const visual = this._visuals.get(item);
         if (visual === undefined) return;
@@ -299,7 +299,7 @@ export class DiagramConnectorsMaterializer
 
     // Detach the cap-template listeners and unmount any cap visuals this
     // item had in the connectors layer.
-    private _teardownCaps(item: Model): void
+    private _teardownCaps(item: MuralBase): void
     {
         this._capUnsubs.get(item)?.();
         this._capUnsubs.delete(item);

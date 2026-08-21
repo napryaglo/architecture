@@ -1,4 +1,4 @@
-// StatusBarVM — backs the status-bar demo. Holds the status text the
+﻿// StatusBarVM — backs the status-bar demo. Holds the status text the
 // strip displays, a modified flag, an item-count number, and command
 // hooks that flip them.
 //
@@ -13,19 +13,19 @@
 
 import {
     MetaData,
-    Model,
+    MuralBase,
     RelayCommand,
 } from '@pragmatic-lab/mural/runtime';
 
-export class StatusBarVM extends Model
+export class StatusBarVM extends MuralBase
 {
-    static StatusTextKey        = Model.RegisterProperty<string>(StatusBarVM, 'StatusText',        'Ready', MetaData.None);
-    static IsModifiedKey        = Model.RegisterProperty<boolean>(StatusBarVM, 'IsModified',        false,   MetaData.None);
-    static ItemCountKey         = Model.RegisterProperty<number>(StatusBarVM, 'ItemCount',         0,       MetaData.None);
-    static LastActionKey        = Model.RegisterProperty<string>(StatusBarVM, 'LastAction',        '—',     MetaData.None);
-    static AddItemCommandKey    = Model.RegisterProperty<RelayCommand | undefined>(StatusBarVM, 'AddItemCommand',    undefined, MetaData.None);
-    static RemoveItemCommandKey = Model.RegisterProperty<RelayCommand | undefined>(StatusBarVM, 'RemoveItemCommand', undefined, MetaData.None);
-    static SaveCommandKey       = Model.RegisterProperty<RelayCommand | undefined>(StatusBarVM, 'SaveCommand',       undefined, MetaData.None);
+    static StatusTextKey        = MuralBase.RegisterProperty<string>(StatusBarVM, 'StatusText',        'Ready', MetaData.None);
+    static IsModifiedKey        = MuralBase.RegisterProperty<boolean>(StatusBarVM, 'IsModified',        false,   MetaData.None);
+    static ItemCountKey         = MuralBase.RegisterProperty<number>(StatusBarVM, 'ItemCount',         0,       MetaData.None);
+    static LastActionKey        = MuralBase.RegisterProperty<string>(StatusBarVM, 'LastAction',        '—',     MetaData.None);
+    static AddItemCommandKey    = MuralBase.RegisterProperty<RelayCommand | undefined>(StatusBarVM, 'AddItemCommand',    undefined, MetaData.None);
+    static RemoveItemCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(StatusBarVM, 'RemoveItemCommand', undefined, MetaData.None);
+    static SaveCommandKey       = MuralBase.RegisterProperty<RelayCommand | undefined>(StatusBarVM, 'SaveCommand',       undefined, MetaData.None);
 
     get StatusText():        string  { return this.get_property_value(StatusBarVM.StatusTextKey); }
     set StatusText(v:        string) { this.set_property_value(StatusBarVM.StatusTextKey, v); }

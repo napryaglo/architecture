@@ -1,4 +1,4 @@
-import { Model } from '../../../runtime/index.js';
+﻿import { MuralBase } from '../../../runtime/index.js';
 import { findDescriptor, resolveKey } from '../../../runtime/model-internals.js';
 import type { Diagram } from '../diagram.js';
 
@@ -25,7 +25,7 @@ export class SelectionReflector
     // Items currently marked IsSelected=true by this reflector. Tracked
     // so a SelectionChanged that drops an item lets us flip its
     // IsSelected back to false without iterating the entire ItemsSource.
-    private _reflected: Set<Model> = new Set();
+    private _reflected: Set<MuralBase> = new Set();
 
     constructor(diagram: Diagram)
     {
@@ -47,10 +47,10 @@ export class SelectionReflector
         // Next selection — elevate every selected entity to its outermost
         // ancestor via the Parent chain. Deduped through Set so multiple
         // members of the same group collapse to one entry.
-        const next: Set<Model> = new Set();
+        const next: Set<MuralBase> = new Set();
         for (const item of this._diagram.SelectedItems)
         {
-            if (item instanceof Model) next.add(topLevelOf(item));
+            if (item instanceof MuralBase) next.add(topLevelOf(item));
         }
 
         // Clear items that left the reflected set.
@@ -73,7 +73,7 @@ export class SelectionReflector
         this._reflected = new Set();
     }
 
-    private _setIsSelected(item: Model, value: boolean): void
+    private _setIsSelected(item: MuralBase, value: boolean): void
     {
         // Duck-type — items without an IsSelected DP (plain data rows
         // not designed for this convention) are silently skipped.
@@ -88,12 +88,12 @@ export class SelectionReflector
 // itself when Parent is absent (already top-level). Item-shape is
 // duck-typed — anything with a `Parent` property participates;
 // consumers don't have to subclass a framework type to opt in.
-function topLevelOf(entity: Model): Model
+function topLevelOf(entity: MuralBase): MuralBase
 {
     let cur: { Parent?: unknown } = entity as unknown as { Parent?: unknown };
     while (cur.Parent !== undefined && cur.Parent !== null)
     {
         cur = cur.Parent as { Parent?: unknown };
     }
-    return cur as unknown as Model;
+    return cur as unknown as MuralBase;
 }

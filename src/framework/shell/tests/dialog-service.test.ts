@@ -1,13 +1,13 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
-import { Application, Model } from '../../../runtime/index.js';
+import { Application, MuralBase } from '../../../runtime/index.js';
 import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { Border } from '../../../basic/border.js';
 import { DialogService } from '../services/dialog-service.js';
 
 // A trivial content VM to stand in for a settings page (rendered via ContentPresenter).
-class FakeContent extends Model { }
+class FakeContent extends MuralBase { }
 
 function makeService(host: Border): DialogService
 {

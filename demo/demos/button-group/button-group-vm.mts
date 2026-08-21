@@ -1,21 +1,21 @@
-// ButtonGroupVM — backs the button-group demo. Tracks click counts
+﻿// ButtonGroupVM — backs the button-group demo. Tracks click counts
 // for each action button so the hover-expand interaction can be
 // verified end-to-end (hover widens, click increments).
-import { Model, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
 
-export class ButtonGroupVM extends Model
+export class ButtonGroupVM extends MuralBase
 {
-    static UndoClicksKey   = Model.RegisterProperty<number>(ButtonGroupVM, 'UndoClicks',   0, MetaData.None);
-    static RedoClicksKey   = Model.RegisterProperty<number>(ButtonGroupVM, 'RedoClicks',   0, MetaData.None);
-    static CutClicksKey    = Model.RegisterProperty<number>(ButtonGroupVM, 'CutClicks',    0, MetaData.None);
-    static CopyClicksKey   = Model.RegisterProperty<number>(ButtonGroupVM, 'CopyClicks',   0, MetaData.None);
-    static PasteClicksKey  = Model.RegisterProperty<number>(ButtonGroupVM, 'PasteClicks',  0, MetaData.None);
+    static UndoClicksKey   = MuralBase.RegisterProperty<number>(ButtonGroupVM, 'UndoClicks',   0, MetaData.None);
+    static RedoClicksKey   = MuralBase.RegisterProperty<number>(ButtonGroupVM, 'RedoClicks',   0, MetaData.None);
+    static CutClicksKey    = MuralBase.RegisterProperty<number>(ButtonGroupVM, 'CutClicks',    0, MetaData.None);
+    static CopyClicksKey   = MuralBase.RegisterProperty<number>(ButtonGroupVM, 'CopyClicks',   0, MetaData.None);
+    static PasteClicksKey  = MuralBase.RegisterProperty<number>(ButtonGroupVM, 'PasteClicks',  0, MetaData.None);
 
-    static UndoCommandKey  = Model.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'UndoCommand',  null, MetaData.None);
-    static RedoCommandKey  = Model.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'RedoCommand',  null, MetaData.None);
-    static CutCommandKey   = Model.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'CutCommand',   null, MetaData.None);
-    static CopyCommandKey  = Model.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'CopyCommand',  null, MetaData.None);
-    static PasteCommandKey = Model.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'PasteCommand', null, MetaData.None);
+    static UndoCommandKey  = MuralBase.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'UndoCommand',  null, MetaData.None);
+    static RedoCommandKey  = MuralBase.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'RedoCommand',  null, MetaData.None);
+    static CutCommandKey   = MuralBase.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'CutCommand',   null, MetaData.None);
+    static CopyCommandKey  = MuralBase.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'CopyCommand',  null, MetaData.None);
+    static PasteCommandKey = MuralBase.RegisterProperty<RelayCommand | null>(ButtonGroupVM, 'PasteCommand', null, MetaData.None);
 
     get UndoClicks():  number { return this.get_property_value(ButtonGroupVM.UndoClicksKey); }
     set UndoClicks(v:  number) { this.set_property_value(ButtonGroupVM.UndoClicksKey, v); }

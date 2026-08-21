@@ -1,5 +1,5 @@
-import type { Brush } from './drawing/brush.js';
-import { Model } from '../runtime/model.js';
+﻿import type { Brush } from './drawing/brush.js';
+import { MuralBase } from '../runtime/model.js';
 import { Freezable } from '../runtime/freezable.js';
 import { peekPropertyBag, propertyValues } from '../runtime/model-internals.js';
 import type { PropertyDescriptor } from '../runtime/property-descriptor.js';
@@ -163,7 +163,7 @@ export interface VisualHost
     DetachOverlay(visual: Visual): void;
 }
 
-// Tree-aware Model with WPF-style layout + render lifecycle.
+// Tree-aware MuralBase with WPF-style layout + render lifecycle.
 //
 // Public lifecycle entry points (called by the layout/render pass — do
 // not override directly):
@@ -190,7 +190,7 @@ export interface VisualHost
 //
 // Plain Models stay storage-only. Only Visuals participate in layout,
 // rendering, the visual tree, and property value inheritance.
-export class Visual extends Model
+export class Visual extends MuralBase
 {
     // Typed-key DPs. Inline static initializers run in declaration order
     // when the class is loaded, so by the time the first Visual is
@@ -202,20 +202,20 @@ export class Visual extends Model
     // NaN is the "not set" sentinel for explicit size constraints —
     // matches WPF FrameworkElement.Width / .Height. Marked Measure so
     // changing either invalidates the layout pass.
-    public static readonly WidthKey      = Model.RegisterProperty<number>(Visual, 'Width',     Number.NaN,               MetaData.Measure);
-    public static readonly HeightKey     = Model.RegisterProperty<number>(Visual, 'Height',    Number.NaN,               MetaData.Measure);
-    public static readonly MinWidthKey   = Model.RegisterProperty<number>(Visual, 'MinWidth',  0,                        MetaData.Measure);
-    public static readonly MinHeightKey  = Model.RegisterProperty<number>(Visual, 'MinHeight', 0,                        MetaData.Measure);
-    public static readonly MaxWidthKey   = Model.RegisterProperty<number>(Visual, 'MaxWidth',  Number.POSITIVE_INFINITY, MetaData.Measure);
-    public static readonly MaxHeightKey  = Model.RegisterProperty<number>(Visual, 'MaxHeight', Number.POSITIVE_INFINITY, MetaData.Measure);
-    public static readonly HorizontalAlignmentKey = Model.RegisterProperty<HorizontalAlignment>(Visual, 'HorizontalAlignment', HorizontalAlignment.Stretch, MetaData.Arrange);
-    public static readonly VerticalAlignmentKey   = Model.RegisterProperty<VerticalAlignment>(  Visual, 'VerticalAlignment',   VerticalAlignment.Stretch,   MetaData.Arrange);
+    public static readonly WidthKey      = MuralBase.RegisterProperty<number>(Visual, 'Width',     Number.NaN,               MetaData.Measure);
+    public static readonly HeightKey     = MuralBase.RegisterProperty<number>(Visual, 'Height',    Number.NaN,               MetaData.Measure);
+    public static readonly MinWidthKey   = MuralBase.RegisterProperty<number>(Visual, 'MinWidth',  0,                        MetaData.Measure);
+    public static readonly MinHeightKey  = MuralBase.RegisterProperty<number>(Visual, 'MinHeight', 0,                        MetaData.Measure);
+    public static readonly MaxWidthKey   = MuralBase.RegisterProperty<number>(Visual, 'MaxWidth',  Number.POSITIVE_INFINITY, MetaData.Measure);
+    public static readonly MaxHeightKey  = MuralBase.RegisterProperty<number>(Visual, 'MaxHeight', Number.POSITIVE_INFINITY, MetaData.Measure);
+    public static readonly HorizontalAlignmentKey = MuralBase.RegisterProperty<HorizontalAlignment>(Visual, 'HorizontalAlignment', HorizontalAlignment.Stretch, MetaData.Arrange);
+    public static readonly VerticalAlignmentKey   = MuralBase.RegisterProperty<VerticalAlignment>(  Visual, 'VerticalAlignment',   VerticalAlignment.Stretch,   MetaData.Arrange);
 
     // Outer spacing around this Visual. Eats into availableSize at
     // Measure time, inflates DesiredSize so the parent reserves the
     // space, and offsets the rendered area at Arrange time. Mirrors
     // WPF FrameworkElement.Margin.
-    public static readonly MarginKey = Model.RegisterProperty<Thickness>(Visual, 'Margin', Thickness.Zero, MetaData.Measure);
+    public static readonly MarginKey = MuralBase.RegisterProperty<Thickness>(Visual, 'Margin', Thickness.Zero, MetaData.Measure);
 
     // StyleKey (and the Style getter/setter) live on `Element`
     // (FrameworkElement tier — see [./element.ts](./element.ts) § Phase
@@ -235,7 +235,7 @@ export class Visual extends Model
     // renderer is allowed to no-op when the new filter string equals
     // the previously applied one — equality is the contract this DP
     // doesn't enforce.
-    public static readonly EffectKey = Model.RegisterProperty<Effect | undefined>(Visual, 'Effect', undefined, MetaData.Render);
+    public static readonly EffectKey = MuralBase.RegisterProperty<Effect | undefined>(Visual, 'Effect', undefined, MetaData.Render);
 
     // Fill is the inherited fill brush — kept on Visual so Border
     // / Panel / Canvas / ContentControl all read it from the same slot.
@@ -243,13 +243,13 @@ export class Visual extends Model
     // DP on `Shape` and ignore Visual.Fill entirely. Subclasses
     // that don't paint (Panel, ContentControl, …) leave Fill at
     // its default undefined with zero render cost.
-    public static readonly FillKey      = Model.RegisterProperty<Brush | undefined>(Visual, 'Fill',      undefined, MetaData.Render);
+    public static readonly FillKey      = MuralBase.RegisterProperty<Brush | undefined>(Visual, 'Fill',      undefined, MetaData.Render);
 
     // Stroke pen — the outline drawn around this Visual's shape geometry
     // (buildClipGeometry). Consolidation target for Shape.Stroke. Default
     // undefined ≡ no outline; the base paint no-ops when both Fill and
     // Stroke are undefined, so plain Panels/Controls are unaffected.
-    public static readonly StrokeKey    = Model.RegisterProperty<Pen | undefined>(Visual, 'Stroke',    undefined, MetaData.Render);
+    public static readonly StrokeKey    = MuralBase.RegisterProperty<Pen | undefined>(Visual, 'Stroke',    undefined, MetaData.Render);
 
     // Affine transform applied to the Visual's painted output (and the
     // painted output of every descendant) at render time. WPF parity —
@@ -271,7 +271,7 @@ export class Visual extends Model
     // outer <g>, so `elementsFromPoint` automatically projects the
     // input coordinate into the visual's pre-transform local space —
     // a rotated button hit-tests by the rotated shape, matching WPF.
-    public static readonly RenderTransformKey = Model.RegisterProperty<Transform | undefined>(
+    public static readonly RenderTransformKey = MuralBase.RegisterProperty<Transform | undefined>(
         Visual, 'RenderTransform', undefined, MetaData.Render);
 
     // Origin of the RenderTransform expressed as a fraction of the
@@ -284,7 +284,7 @@ export class Visual extends Model
     // before applying the matrix and back after, so a 45°
     // RotateTransform with Origin (0.5, 0.5) spins the visual around
     // its own center rather than around its top-left corner.
-    public static readonly RenderTransformOriginKey = Model.RegisterProperty<Point>(
+    public static readonly RenderTransformOriginKey = MuralBase.RegisterProperty<Point>(
         Visual, 'RenderTransformOrigin', Point.Zero, MetaData.Render);
 
     // Affine transform that participates in LAYOUT (WPF parity —
@@ -298,7 +298,7 @@ export class Visual extends Model
     // so measure/arrange are invalidated). Default undefined ≡ identity ≡ no layout
     // effect (the pre-existing code path runs verbatim). See EffectiveLayoutMatrix
     // for the render/adorner-facing composed matrix.
-    public static readonly LayoutTransformKey = Model.RegisterProperty<Transform | undefined>(
+    public static readonly LayoutTransformKey = MuralBase.RegisterProperty<Transform | undefined>(
         Visual, 'LayoutTransform', undefined, MetaData.Measure | MetaData.Arrange);
 
     // Per-subtree paint opacity. Default 1 = fully opaque. The SVG
@@ -309,11 +309,11 @@ export class Visual extends Model
     // 0-opacity visual still receives pointer events unless
     // IsHitTestVisible is also false. Authors hide-without-interaction
     // by combining the two; pure visual fades flip just Opacity.
-    public static readonly OpacityKey = Model.RegisterProperty<number>(Visual, 'Opacity', 1, MetaData.Render);
+    public static readonly OpacityKey = MuralBase.RegisterProperty<number>(Visual, 'Opacity', 1, MetaData.Render);
 
     // DefaultStyleKeyKey lives on `Element` (FE tier) alongside Style /
     // Resources. Subclasses opting into theme styles override metadata
-    // via `Model.OverrideMetadata(MyControl, Element.DefaultStyleKeyKey,
+    // via `MuralBase.OverrideMetadata(MyControl, Element.DefaultStyleKeyKey,
     // { default_value: MyControl })`.
 
     // Optional clip geometry applied to this Visual and its visual
@@ -321,7 +321,7 @@ export class Visual extends Model
     // doesn't depend on visual-engine's Geometry class — the host's
     // DrawingContext.PushClip is what reads it. MetaData.Render so
     // changes re-render.
-    public static readonly ClipKey = Model.RegisterProperty<Geometry | undefined>(Visual, 'Clip', undefined, MetaData.Render);
+    public static readonly ClipKey = MuralBase.RegisterProperty<Geometry | undefined>(Visual, 'Clip', undefined, MetaData.Render);
 
     // When true, clip this Visual's CHILDREN (not its own paint) to its shape
     // inset by the full stroke — the region inside the outline. Off by default
@@ -333,13 +333,13 @@ export class Visual extends Model
     // a bordered / shaped container trims its content while the stroke keeps
     // painting. For a hand-authored whole-subtree mask (own paint included), set
     // the Clip DP directly.
-    public static readonly ClipToBoundsKey = Model.RegisterProperty<boolean>(Visual, 'ClipToBounds', false, MetaData.Arrange);
+    public static readonly ClipToBoundsKey = MuralBase.RegisterProperty<boolean>(Visual, 'ClipToBounds', false, MetaData.Arrange);
 
     // The children-only clip geometry, in this Visual's local space. Set only by
     // syncChildClip (never authored directly); read by the renderers alongside
     // Clip / HitTestGeometry. MetaData.None so writing it never re-invalidates
     // layout. Public getter, internal setter.
-    public static readonly ChildClipKey = Model.RegisterProperty<Geometry | undefined>(Visual, 'ChildClip', undefined, MetaData.None);
+    public static readonly ChildClipKey = MuralBase.RegisterProperty<Geometry | undefined>(Visual, 'ChildClip', undefined, MetaData.None);
 
     // DataContext DP + accessor moved to `Element` (§ Phase B / B5.2) —
     // FE-tier ambient-data root. The DP fires inheritance through the
@@ -372,7 +372,7 @@ export class Visual extends Model
     // on Control. The compiler's `Transitions { … }` body block routes
     // its inner PropertyTransition elements through this getter, so
     // markup authoring never deals with the undefined case.
-    public static readonly TransitionsKey = Model.RegisterProperty<ObservableCollection<PropertyTransition> | undefined>(
+    public static readonly TransitionsKey = MuralBase.RegisterProperty<ObservableCollection<PropertyTransition> | undefined>(
         Visual, 'Transitions', undefined, MetaData.None);
 
 
@@ -385,7 +385,7 @@ export class Visual extends Model
     // (un)collapsed child. Default Visible matches WPF and is what every
     // existing visual already assumes — switching the default later
     // would silently break every consumer that never sets the DP.
-    public static readonly VisibilityKey = Model.RegisterProperty<Visibility>(
+    public static readonly VisibilityKey = MuralBase.RegisterProperty<Visibility>(
         Visual, 'Visibility', Visibility.Visible,
         MetaData.Measure | MetaData.Arrange | MetaData.Render);
 
@@ -403,7 +403,7 @@ export class Visual extends Model
     // Pairs with §5.7: a Visual with HitTestGeometry set is by
     // definition interactive in the precise-shape sense, so the SVG
     // renderer can drop the `mural-hit` pad — the geometry IS the pad.
-    public static readonly HitTestGeometryKey = Model.RegisterProperty<Geometry | undefined>(
+    public static readonly HitTestGeometryKey = MuralBase.RegisterProperty<Geometry | undefined>(
         Visual, 'HitTestGeometry', undefined, MetaData.None);
 
     // Hover-cursor affordance. String value passes through to the SVG
@@ -414,7 +414,7 @@ export class Visual extends Model
     // means "inherit from the parent visual / host" — no attribute
     // emitted, browser's default cursor wins. MetaData.Render so flips
     // repaint without further wiring. WPF parity — UIElement.Cursor.
-    public static readonly CursorKey = Model.RegisterProperty<string | undefined>(
+    public static readonly CursorKey = MuralBase.RegisterProperty<string | undefined>(
         Visual, 'Cursor', undefined, MetaData.Render);
 
     // Tag DP + Tag accessor moved to `Element` (§ Phase B / B5.1) —
@@ -450,7 +450,7 @@ export class Visual extends Model
      *  listener on first allocation. Visuals without any
      *  PropertyTransition pay zero per-write overhead: no listener,
      *  no Set, no fanout. Subscribers added via the public
-     *  `AddBaseValueWriteListener` on Model. */
+     *  `AddBaseValueWriteListener` on MuralBase. */
     public EnsureTransitions(): ObservableCollection<PropertyTransition>
     {
         let t = this.get_property_value(Visual.TransitionsKey);
@@ -1633,7 +1633,7 @@ export class Visual extends Model
     // Property-change routing
     // ------------------------------------------------------------------
 
-    // Visual override of Model's virtual hook. Consults the property's
+    // Visual override of MuralBase's virtual hook. Consults the property's
     // MetaData flags and routes to the matching Invalidate* method
     // plus — when the property is marked Inherits — pushes the change
     // down the subtree.
@@ -1821,13 +1821,13 @@ export class Visual extends Model
     // Per-class memo. The result is a pure function of (klass's
     // prototype-chain bags) + (the global inheritable registry); both only
     // ever grow, and only a NEW inheritable registration changes the output
-    // — captured by Model's inheritable-generation counter. A subtree
+    // — captured by MuralBase's inheritable-generation counter. A subtree
     // refresh calls this once PER ELEMENT, so without the cache a click that
     // stamps a large template re-walked every prototype chain + re-allocated
     // per node (≈1s of a multi-second stall in the profiled trace).
     private static inheritableMemo(klass: Function): { gen: number; list: PropertyDescriptor[]; keyed: InheritableEntry[] }
     {
-        const gen = Model._inheritableGeneration();
+        const gen = MuralBase._inheritableGeneration();
         const hit = Visual._inheritableCache.get(klass);
         if (hit !== undefined && hit.gen === gen) return hit;
 
@@ -1865,7 +1865,7 @@ export class Visual extends Model
         // Visual's prototype chain still cascades through the logical
         // tree — the registry exposes those descriptors so the refresh
         // picks them up.
-        for (const desc of Model._getInheritableDescriptors()) add(desc);
+        for (const desc of MuralBase._getInheritableDescriptors()) add(desc);
 
         const entry = { gen, list, keyed };
         Visual._inheritableCache.set(klass, entry);
@@ -1873,7 +1873,7 @@ export class Visual extends Model
     }
 
     // Memo for the inheritable-descriptor collection, keyed by class and
-    // validated against Model's inheritable-generation counter. WeakMap so
+    // validated against MuralBase's inheritable-generation counter. WeakMap so
     // an unreachable class lets its cached lists be GC'd.
     private static _inheritableCache =
         new WeakMap<Function, { gen: number; list: PropertyDescriptor[]; keyed: InheritableEntry[] }>();

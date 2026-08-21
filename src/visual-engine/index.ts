@@ -1,10 +1,10 @@
-// Barrel re-exports for the visual engine.
+﻿// Barrel re-exports for the visual engine.
 //
 // After consolidation, visual-engine owns Visual + everything the
 // display / input / animation pipeline needs (primitives, brushes,
 // geometries, drawing context, routed events, drag-drop, themes,
 // adorners, behaviors, name-scope, text measurement). The runtime
-// package retains only Model + property system + bindings + styles +
+// package retains only MuralBase + property system + bindings + styles +
 // collections + commands.
 
 export * from './geometry/index.js';

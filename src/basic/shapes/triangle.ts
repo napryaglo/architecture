@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Size,
     type DrawingContext,
@@ -22,7 +22,7 @@ import { buildRoundedPolygon, maxCornerRadius } from './polygon-helpers.js';
 // Stroke insets by half-thickness.
 export class Triangle extends Shape
 {
-    public static readonly CornerRadiusKey    = Model.RegisterProperty<number>(           Triangle, 'CornerRadius',    0,         MetaData.Render);
+    public static readonly CornerRadiusKey    = MuralBase.RegisterProperty<number>(           Triangle, 'CornerRadius',    0,         MetaData.Render);
 
     public get CornerRadius(): number { return this.get_property_value(Triangle.CornerRadiusKey); }
     public set CornerRadius(v: number) { this.set_property_value(Triangle.CornerRadiusKey, v); }

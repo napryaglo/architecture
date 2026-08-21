@@ -1,4 +1,4 @@
-// ElementNameBinding forward-reference writeback survival.
+﻿// ElementNameBinding forward-reference writeback survival.
 //
 // A markup binding `Foo=$nodes.Bar` where `nodes` is declared LATER in
 // the same body compiles to ElementNameBinding(() => _nodes, "Bar") — a
@@ -11,23 +11,23 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { Model, MetaData } from '../index.js';
+import { MuralBase, MetaData } from '../index.js';
 import { ElementNameBinding } from '../binding/element-name-binding.js';
 import type { Visual } from '../../visual-engine/visual.js';
 
-class Src extends Model
+class Src extends MuralBase
 {
-    public static readonly YKey = Model.RegisterProperty<unknown>(
+    public static readonly YKey = MuralBase.RegisterProperty<unknown>(
         Src, 'Y', undefined, MetaData.None);
     public get Y(): unknown { return this.get_property_value(Src.YKey); }
     public set Y(v: unknown) { this.set_property_value(Src.YKey, v); }
 }
 
-class Tgt extends Model
+class Tgt extends MuralBase
 {
     // BindsTwoWayByDefault so the installed ElementNameBinding resolves to
     // TwoWay (the cap-DP shape).
-    public static readonly XKey = Model.RegisterProperty<unknown>(
+    public static readonly XKey = MuralBase.RegisterProperty<unknown>(
         Tgt, 'X', undefined, MetaData.None | MetaData.BindsTwoWayByDefault);
     public get X(): unknown { return this.get_property_value(Tgt.XKey); }
     public set X(v: unknown) { this.set_property_value(Tgt.XKey, v); }

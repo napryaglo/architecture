@@ -1,10 +1,10 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { compile } from '../compile.js';
 
 describe('compile — InputBindings / CommandBindings markup authoring', () => {
     test('KeyBinding[Key=…, Modifiers=…] lowers to plain-field assignment + push', () => {
-        // KeyBinding is a plain value-object (not a Model/DP subclass), so
+        // KeyBinding is a plain value-object (not a MuralBase/DP subclass), so
         // the emitter sets its fields directly and appends to the
         // (array-backed) InputBindings collection via push.
         const js = compile(`
@@ -50,7 +50,7 @@ describe('compile — InputBindings / CommandBindings markup authoring', () => {
         `), /Nope/);
     });
 
-    test('an unknown property on a Model class still errors (plain-field path is non-DP only)', () => {
+    test('an unknown property on a MuralBase class still errors (plain-field path is non-DP only)', () => {
         // Regression guard: the non-DP fallback must NOT swallow real
         // authoring mistakes on DP-backed classes.
         assert.throws(() => compile(`

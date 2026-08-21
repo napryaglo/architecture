@@ -1,4 +1,4 @@
-import { MetaData, Model } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase } from '../../runtime/index.js';
 import type { Point } from '../../visual-engine/index.js';
 import type { PortSide } from './port.js';
 
@@ -6,7 +6,7 @@ import type { PortSide } from './port.js';
 // any omitted field stays at the DP's registered default.
 export interface ConnectorEndpointInit
 {
-    readonly Node?:      Model;
+    readonly Node?:      MuralBase;
     readonly PortName?:  string;
     readonly PortSide?:  PortSide;
     readonly PortIndex?: number;
@@ -26,32 +26,32 @@ export interface ConnectorEndpointInit
 //   4. Node + non-empty Ports list → closest-to-other auto-pick
 //   5. Node + empty/missing Ports  → geometric clip
 //
-// The Node DP is typed Model rather than Figure so a consumer-authored
-// item Model that satisfies the duck-typed Left / Top / Width / Height
+// The Node DP is typed MuralBase rather than Figure so a consumer-authored
+// item MuralBase that satisfies the duck-typed Left / Top / Width / Height
 // + Ports surface participates as an endpoint target without inheriting
 // from Figure.
-export class ConnectorEndpoint extends Model
+export class ConnectorEndpoint extends MuralBase
 {
-    public static readonly NodeKey      = Model.RegisterProperty<Model | undefined>(
+    public static readonly NodeKey      = MuralBase.RegisterProperty<MuralBase | undefined>(
         ConnectorEndpoint, 'Node',      undefined, MetaData.None);
-    public static readonly PortNameKey  = Model.RegisterProperty<string | undefined>(
+    public static readonly PortNameKey  = MuralBase.RegisterProperty<string | undefined>(
         ConnectorEndpoint, 'PortName',  undefined, MetaData.None);
-    public static readonly PortSideKey  = Model.RegisterProperty<PortSide | undefined>(
+    public static readonly PortSideKey  = MuralBase.RegisterProperty<PortSide | undefined>(
         ConnectorEndpoint, 'PortSide',  undefined, MetaData.None);
-    public static readonly PortIndexKey = Model.RegisterProperty<number | undefined>(
+    public static readonly PortIndexKey = MuralBase.RegisterProperty<number | undefined>(
         ConnectorEndpoint, 'PortIndex', undefined, MetaData.None);
-    public static readonly FreePointKey = Model.RegisterProperty<Point | undefined>(
+    public static readonly FreePointKey = MuralBase.RegisterProperty<Point | undefined>(
         ConnectorEndpoint, 'FreePoint', undefined, MetaData.None);
     // A node id that could NOT be resolved to a live Node when the endpoint
     // was rehydrated (e.g. the node's serializer wasn't registered at load
     // time, so its record was skipped). Kept so a later, correct load
     // re-binds the endpoint instead of the reference being destroyed. Never
     // set alongside a resolved Node — resolution clears it by construction.
-    public static readonly UnresolvedNodeIdKey = Model.RegisterProperty<string | undefined>(
+    public static readonly UnresolvedNodeIdKey = MuralBase.RegisterProperty<string | undefined>(
         ConnectorEndpoint, 'UnresolvedNodeId', undefined, MetaData.None);
 
-    public get Node():      Model | undefined    { return this.get_property_value(ConnectorEndpoint.NodeKey); }
-    public set Node(v:      Model | undefined)   { this.set_property_value(ConnectorEndpoint.NodeKey, v); }
+    public get Node():      MuralBase | undefined    { return this.get_property_value(ConnectorEndpoint.NodeKey); }
+    public set Node(v:      MuralBase | undefined)   { this.set_property_value(ConnectorEndpoint.NodeKey, v); }
     public get PortName():  string | undefined   { return this.get_property_value(ConnectorEndpoint.PortNameKey); }
     public set PortName(v:  string | undefined)  { this.set_property_value(ConnectorEndpoint.PortNameKey, v); }
     public get PortSide():  PortSide | undefined { return this.get_property_value(ConnectorEndpoint.PortSideKey); }

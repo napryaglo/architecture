@@ -1,4 +1,4 @@
-// Binding — the data-binding pipeline. The core Binding class plus its
+﻿// Binding — the data-binding pipeline. The core Binding class plus its
 // specialised subtypes (DataContextBinding, ElementNameBinding,
 // AncestorBinding, TemplateBinding, MultiBinding, PriorityBinding,
 // DynamicResource), the Validation framework that runs inside that
@@ -8,8 +8,8 @@
 // Export order is load-bearing. effective-value.ts is listed FIRST so
 // model.ts's transitive load (model → binding/binding → ../model cycle)
 // finds effective-value.ts already in-flight rather than triggering a
-// fresh load that would chain through validation.ts and hit Model
-// before its `class Model { … }` declaration has run.
+// fresh load that would chain through validation.ts and hit MuralBase
+// before its `class MuralBase { … }` declaration has run.
 export {
     EffectiveValueDescriptor,
     PropertyValueSource,

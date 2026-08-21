@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element, Visual,
     type PointerEventArgs,
     type PropertyDescriptor,
@@ -73,7 +73,7 @@ function displayString(item: unknown): string
 export class ListBox extends Selector
 {
     static {
-        Model.OverrideMetadata(ListBox, Element.DefaultStyleKeyKey, { default_value: ListBox });
+        MuralBase.OverrideMetadata(ListBox, Element.DefaultStyleKeyKey, { default_value: ListBox });
     }
 
     // Cached after first template apply — the lookup walks the
@@ -128,7 +128,7 @@ export class ListBox extends Selector
         //     per-row VM's DPs rather than the parent VM's. Matches
         //     ContentPresenter behavior in ItemsControl.
         //   * Content routing:
-        //       Model with a registered DataTemplate → li.Content = item
+        //       MuralBase with a registered DataTemplate → li.Content = item
         //         (ContentControl.resolveContentVisual finds the template
         //         and applies it). This is the ItemTemplate-driven path.
         //       everything else → wrap in TextBlock(displayString(item))
@@ -163,7 +163,7 @@ export class ListBox extends Selector
         li.Content     = this.contentForItem(item);
     }
 
-    private contentForItem(item: unknown): Visual | Model {
+    private contentForItem(item: unknown): Visual | MuralBase {
         // A Visual item is shown directly — WPF parity: a UIElement item
         // bypasses templating (ItemTemplate applies to DATA only).
         if (item instanceof Visual) return item;
@@ -173,7 +173,7 @@ export class ListBox extends Selector
         // (Selector → ItemTemplate → …). ListBoxItem is a ContentControl
         // with no ContentTemplate seam, so apply the template here and
         // hand the produced Visual over as Content (which slots directly).
-        // Skipping this made a Model row with a registered
+        // Skipping this made a MuralBase row with a registered
         // `DataTemplate[T]` in scope IGNORE an explicit ItemTemplate and
         // materialize T's template instead — e.g. a document tab strip
         // (ItemTemplate = a title+close row) rendered each open
@@ -187,9 +187,9 @@ export class ListBox extends Selector
             return v;
         }
 
-        // No ItemTemplate — implicit DataType dispatch for a Model with a
+        // No ItemTemplate — implicit DataType dispatch for a MuralBase with a
         // registered DataTemplate, else the display-string text fallback.
-        if (item instanceof Model
+        if (item instanceof MuralBase
             && findDataTemplateForType(item.constructor, this) !== undefined)
         {
             return item;
@@ -307,7 +307,7 @@ export class ListBoxItem extends ContentControl
     // DP that templates watch via `when (IsSelected)`. Source of truth
     // is `Selector.IsSelected` (attached); this DP is kept in lock-step
     // by an attached-DP change listener wired in the constructor.
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(
         ListBoxItem, 'IsSelected', false, MetaData.Render);
 
     // M3 list-row anatomy slots. `Content` (from ContentControl) hosts
@@ -320,11 +320,11 @@ export class ListBoxItem extends ContentControl
     // an explicit newline ('\n') flips to 3-line. Auto-computed from
     // content rather than gated on a separate Lines enum — keeps the
     // API surface narrow.
-    public static readonly LeadingKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly LeadingKey = MuralBase.RegisterProperty<Visual | undefined>(
         ListBoxItem, 'Leading', undefined, MetaData.Render);
-    public static readonly SupportingTextKey = Model.RegisterProperty<string>(
+    public static readonly SupportingTextKey = MuralBase.RegisterProperty<string>(
         ListBoxItem, 'SupportingText', '', MetaData.Render);
-    public static readonly TrailingKey = Model.RegisterProperty<Visual | undefined>(
+    public static readonly TrailingKey = MuralBase.RegisterProperty<Visual | undefined>(
         ListBoxItem, 'Trailing', undefined, MetaData.Render);
 
     // Derived state DPs the template observes via `when()` triggers to
@@ -333,15 +333,15 @@ export class ListBoxItem extends ContentControl
     // to express "is supporting text non-empty" through the trigger
     // DSL (which doesn't carry an "!=" form today). Read-only — only
     // the class writes them.
-    private static readonly _HasSupportingTextPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _HasSupportingTextPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         ListBoxItem, 'HasSupportingText', false, MetaData.None);
     public static readonly HasSupportingTextKey = ListBoxItem._HasSupportingTextPriv;
-    private static readonly _IsThreeLinePriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _IsThreeLinePriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         ListBoxItem, 'IsThreeLine', false, MetaData.None);
     public static readonly IsThreeLineKey = ListBoxItem._IsThreeLinePriv;
 
     static {
-        Model.OverrideMetadata(ListBoxItem, Element.DefaultStyleKeyKey, { default_value: ListBoxItem });
+        MuralBase.OverrideMetadata(ListBoxItem, Element.DefaultStyleKeyKey, { default_value: ListBoxItem });
     }
 
     private _pressOriginatedHere = false;

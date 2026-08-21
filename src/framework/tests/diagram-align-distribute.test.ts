@@ -1,10 +1,10 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
     Application,
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     SetterFactory,
     Style,
@@ -21,14 +21,14 @@ import { SelectionMode } from '../list/list-box.js';
 
 // Stand-in for a shape node. Carries Left / Top / Width /
 // Height / IsSelected — the surface the alignment math reads + writes.
-class NodeVM extends Model
+class NodeVM extends MuralBase
 {
-    public static readonly IdKey         = Model.RegisterProperty<string>(NodeVM, 'Id',         '',    MetaData.None);
-    public static readonly LeftKey       = Model.RegisterProperty<number>(NodeVM, 'Left',       0,     MetaData.None);
-    public static readonly TopKey        = Model.RegisterProperty<number>(NodeVM, 'Top',        0,     MetaData.None);
-    public static readonly WidthKey      = Model.RegisterProperty<number>(NodeVM, 'Width',      80,    MetaData.None);
-    public static readonly HeightKey     = Model.RegisterProperty<number>(NodeVM, 'Height',     80,    MetaData.None);
-    public static readonly IsSelectedKey = Model.RegisterProperty<boolean>(NodeVM, 'IsSelected', false, MetaData.None);
+    public static readonly IdKey         = MuralBase.RegisterProperty<string>(NodeVM, 'Id',         '',    MetaData.None);
+    public static readonly LeftKey       = MuralBase.RegisterProperty<number>(NodeVM, 'Left',       0,     MetaData.None);
+    public static readonly TopKey        = MuralBase.RegisterProperty<number>(NodeVM, 'Top',        0,     MetaData.None);
+    public static readonly WidthKey      = MuralBase.RegisterProperty<number>(NodeVM, 'Width',      80,    MetaData.None);
+    public static readonly HeightKey     = MuralBase.RegisterProperty<number>(NodeVM, 'Height',     80,    MetaData.None);
+    public static readonly IsSelectedKey = MuralBase.RegisterProperty<boolean>(NodeVM, 'IsSelected', false, MetaData.None);
     constructor(id: string, left: number, top: number, w: number = 80, h: number = 80)
     {
         super();

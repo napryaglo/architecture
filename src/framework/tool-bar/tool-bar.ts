@@ -1,5 +1,5 @@
-import {
-    Model,
+﻿import {
+    MuralBase,
     MetaData,
     ObservableCollection,
     Panel,
@@ -87,7 +87,7 @@ function itemAtOf(items: IndexedItems | readonly unknown[], i: number): unknown
 // gray out / hide the chevron when nothing has overflowed.
 export class ToolBar extends ItemsControl
 {
-    public static readonly IsOverflowOpenKey = Model.RegisterProperty<boolean>(
+    public static readonly IsOverflowOpenKey = MuralBase.RegisterProperty<boolean>(
         ToolBar, 'IsOverflowOpen', false, MetaData.None,
     );
     // PopupTemplate — the overflow popup chrome (ToolBarPopupHost +
@@ -98,7 +98,7 @@ export class ToolBar extends ItemsControl
     // The default Style sets it to @DefaultToolBarPopup; ToolBar's ctor
     // reads it via the DP getter, applies it, FindNames the parts, then
     // mountPopup attaches the host onto the OverlayLayer on demand.
-    public static readonly PopupTemplateKey = Model.RegisterProperty<ControlTemplate | undefined>(
+    public static readonly PopupTemplateKey = MuralBase.RegisterProperty<ControlTemplate | undefined>(
         ToolBar, 'PopupTemplate', undefined, MetaData.None,
     );
 
@@ -108,9 +108,9 @@ export class ToolBar extends ItemsControl
         // `Style [TargetType=ToolBar]` in framework.resources.mu wires
         // both `Template` (inline chrome with chevron + ItemsPresenter)
         // and `PopupTemplate` (overlay popup with overflow ItemsControl).
-        Model.OverrideMetadata(ToolBar, Element.DefaultStyleKeyKey, { default_value: ToolBar });
+        MuralBase.OverrideMetadata(ToolBar, Element.DefaultStyleKeyKey, { default_value: ToolBar });
     }
-    private static readonly _HasOverflowItemsPriv = Model.RegisterReadOnlyProperty<boolean>(
+    private static readonly _HasOverflowItemsPriv = MuralBase.RegisterReadOnlyProperty<boolean>(
         ToolBar, 'HasOverflowItems', false, MetaData.None,
     );
     public static readonly HasOverflowItemsKey = ToolBar._HasOverflowItemsPriv;

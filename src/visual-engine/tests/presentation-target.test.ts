@@ -1,9 +1,9 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import {
     Color,
     MetaData,
-    Model,
+    MuralBase,
     Panel,
     Size,
     Element,
@@ -85,7 +85,7 @@ function freshClassWithProp(meta: MetaData, defaultValue: unknown = 0): {
 {
     class Subject extends Element {}
     const name = 'p_' + Math.random().toString(36).slice(2, 8);
-    Model.RegisterProperty(Subject, name, defaultValue, meta);
+    MuralBase.RegisterProperty(Subject, name, defaultValue, meta);
     return { Klass: Subject, name };
 }
 

@@ -1,4 +1,4 @@
-import { Element, MetaData, Model, Size, type DrawingContext } from '../../runtime/index.js';
+﻿import { Element, MetaData, MuralBase, Size, type DrawingContext } from '../../runtime/index.js';
 import { Brush, Color, Geometry, LineCap, LineJoin, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { MatrixTransform } from '../../visual-engine/drawing/transform.js';
 import { Matrix } from '../../visual-engine/primitives.js';
@@ -32,7 +32,7 @@ import { TextBlock } from '../text-block.js';
 // the visual, so subclasses keep the geometry local.
 export class Shape extends Element
 {
-    public static readonly GeometryKey = Model.RegisterProperty<Geometry | undefined>(
+    public static readonly GeometryKey = MuralBase.RegisterProperty<Geometry | undefined>(
         Shape, 'Geometry', undefined, MetaData.Render);
     // Fill and Stroke are inherited from Visual (Visual.Fill / Visual.Stroke) —
     // a Shape IS a paintable Visual, so it reads the same slots every other
@@ -48,7 +48,7 @@ export class Shape extends Element
     // hit-testing (only `none` is excluded), so the band catches pointer
     // events while staying invisible. The band rides the SAME fit transform
     // as the visible content, so it tracks scaled icons too.
-    public static readonly HitTestStrokeWidthKey = Model.RegisterProperty<number>(
+    public static readonly HitTestStrokeWidthKey = MuralBase.RegisterProperty<number>(
         Shape, 'HitTestStrokeWidth', 0, MetaData.Render);
 
     public get Geometry(): Geometry | undefined { return this.get_property_value(Shape.GeometryKey); }

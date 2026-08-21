@@ -1,7 +1,7 @@
-import { test, describe } from 'node:test';
+﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
-import { Model, ModifierKeys, Visual } from '../../runtime/index.js';
+import { MuralBase, ModifierKeys, Visual } from '../../runtime/index.js';
 import { HeadlessTarget } from '../../visual-engine/index.js';
 import { RadioButtonGroup, RadioButtonItem } from '../toggles/radio-button-group.js';
 import { SelectionMode, Selector } from '../list/selector.js';
@@ -59,7 +59,7 @@ describe('RadioButtonGroup item generation', () => {
         // must still receive the MODEL as Content so a ContentControl can
         // resolve one from the app's resource chain at render time. The
         // failure this guards against is stringifying to "[object Object]".
-        class OptionModel extends Model {}
+        class OptionModel extends MuralBase {}
         const g = new RadioButtonGroup();
         const vm = new OptionModel();
         g.Items = [vm];

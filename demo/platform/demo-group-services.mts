@@ -1,4 +1,4 @@
-// demo-group-services.mts — per-group content services for the demo platform.
+﻿// demo-group-services.mts — per-group content services for the demo platform.
 //
 // The service-backed content model: each demo GROUP is its OWN service, named
 // by its capability's `ServiceKey` in demo-platform.module.mu. When a group's
@@ -22,7 +22,7 @@
 
 import {
     MetaData,
-    Model,
+    MuralBase,
     ObservableCollection,
     ServiceKey,
     type Visual,
@@ -44,12 +44,12 @@ function insertSorted<T>(coll: ObservableCollection<T>, item: T, cmp: (a: T, b: 
 // One demo row. `Label` is the display string the list template binds. The
 // content host's ListBox renders each of these through the
 // `DataTemplate [DataType = DemoVM]` in platform.mu.
-export class DemoVM extends Model
+export class DemoVM extends MuralBase
 {
-    static readonly IdKey       = Model.RegisterProperty<string>(DemoVM, 'Id',       '', MetaData.None);
-    static readonly LabelKey    = Model.RegisterProperty<string>(DemoVM, 'Label',    '', MetaData.None);
-    static readonly TitleKey    = Model.RegisterProperty<string>(DemoVM, 'Title',    '', MetaData.None);
-    static readonly SubtitleKey = Model.RegisterProperty<string>(DemoVM, 'Subtitle', '', MetaData.None);
+    static readonly IdKey       = MuralBase.RegisterProperty<string>(DemoVM, 'Id',       '', MetaData.None);
+    static readonly LabelKey    = MuralBase.RegisterProperty<string>(DemoVM, 'Label',    '', MetaData.None);
+    static readonly TitleKey    = MuralBase.RegisterProperty<string>(DemoVM, 'Title',    '', MetaData.None);
+    static readonly SubtitleKey = MuralBase.RegisterProperty<string>(DemoVM, 'Subtitle', '', MetaData.None);
 
     // The raw registry definition, carried for instantiateDemo lookup — the
     // Visual is built lazily from this on first activation.
@@ -84,9 +84,9 @@ export class DemoVM extends Model
 //     └─ Title / Subtitle / Content   derived from the selection (Content lazy)
 export abstract class DemoGroupService extends DocumentSelectorService
 {
-    static readonly TitleKey    = Model.RegisterProperty<string>(DemoGroupService, 'Title', '', MetaData.None);
-    static readonly SubtitleKey = Model.RegisterProperty<string>(DemoGroupService, 'Subtitle', '', MetaData.None);
-    static readonly ContentKey  = Model.RegisterProperty<Visual | undefined>(
+    static readonly TitleKey    = MuralBase.RegisterProperty<string>(DemoGroupService, 'Title', '', MetaData.None);
+    static readonly SubtitleKey = MuralBase.RegisterProperty<string>(DemoGroupService, 'Subtitle', '', MetaData.None);
+    static readonly ContentKey  = MuralBase.RegisterProperty<Visual | undefined>(
         DemoGroupService, 'Content', undefined, MetaData.None);
 
     // The group this service owns — the registry `group` value / capability Name.

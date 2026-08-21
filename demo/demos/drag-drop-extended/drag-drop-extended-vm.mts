@@ -1,4 +1,4 @@
-// drag-drop-extended VM — single demo covering the four §8 follow-ups
+﻿// drag-drop-extended VM — single demo covering the four §8 follow-ups
 // closed in this branch: OS file drops (8.1), source-side feedback /
 // continue hooks (8.3), ScrollViewer auto-scroll near edges (8.4), and
 // the insertion-line adorner on ListReorderBehavior (8.5).
@@ -10,7 +10,7 @@
 
 import {
     DataObject, DragDropEffects,
-    MetaData, Model, ObservableCollection,
+    MetaData, MuralBase, ObservableCollection,
     type DragStartSpec,
 } from '@pragmatic-lab/mural/runtime';
 
@@ -22,11 +22,11 @@ export const FMT_FROM_INDEX = '@pragmatic-lab/mural/reorder/from-index';
 
 let _nextId = 1;
 
-export class RowVM extends Model
+export class RowVM extends MuralBase
 {
-    static IdKey            = Model.RegisterProperty(RowVM, 'Id',            '',         MetaData.None);
-    static LabelKey         = Model.RegisterProperty(RowVM, 'Label',         '',         MetaData.None);
-    static BeginDragDataKey = Model.RegisterProperty<(() => DragStartSpec) | undefined>(RowVM, 'BeginDragData', undefined,  MetaData.None);
+    static IdKey            = MuralBase.RegisterProperty(RowVM, 'Id',            '',         MetaData.None);
+    static LabelKey         = MuralBase.RegisterProperty(RowVM, 'Label',         '',         MetaData.None);
+    static BeginDragDataKey = MuralBase.RegisterProperty<(() => DragStartSpec) | undefined>(RowVM, 'BeginDragData', undefined,  MetaData.None);
 
     private _indexInList: number;
 
@@ -48,10 +48,10 @@ export class RowVM extends Model
 
 // Per-file row in the OS-drop receiver's bound collection. Pure data —
 // the view templates render Name / Size.
-export class DroppedFileVM extends Model
+export class DroppedFileVM extends MuralBase
 {
-    static NameKey = Model.RegisterProperty(DroppedFileVM, 'Name', '', MetaData.None);
-    static SizeKey = Model.RegisterProperty(DroppedFileVM, 'Size', '', MetaData.None);
+    static NameKey = MuralBase.RegisterProperty(DroppedFileVM, 'Name', '', MetaData.None);
+    static SizeKey = MuralBase.RegisterProperty(DroppedFileVM, 'Size', '', MetaData.None);
 
     constructor(name: string, sizeBytes: number) {
         super();
@@ -69,16 +69,16 @@ function formatSize(bytes: number): string {
     return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
 }
 
-export class DragDropExtendedVM extends Model
+export class DragDropExtendedVM extends MuralBase
 {
-    static RowsKey         = Model.RegisterProperty<ObservableCollection<RowVM> | undefined>(DragDropExtendedVM, 'Rows',         undefined, MetaData.None);
-    static DroppedFilesKey = Model.RegisterProperty<ObservableCollection<DroppedFileVM> | undefined>(DragDropExtendedVM, 'DroppedFiles', undefined, MetaData.None);
+    static RowsKey         = MuralBase.RegisterProperty<ObservableCollection<RowVM> | undefined>(DragDropExtendedVM, 'Rows',         undefined, MetaData.None);
+    static DroppedFilesKey = MuralBase.RegisterProperty<ObservableCollection<DroppedFileVM> | undefined>(DragDropExtendedVM, 'DroppedFiles', undefined, MetaData.None);
     // Status strings driven by source-side hooks (8.3) and by the
     // file-drop receiver. Plain DPs so triggers / bindings can
     // observe them.
-    static LastEffectKey   = Model.RegisterProperty(DragDropExtendedVM, 'LastEffect',   '—',       MetaData.None);
-    static ShiftHintKey    = Model.RegisterProperty(DragDropExtendedVM, 'ShiftHint',    'Hold Shift to cancel the drag.', MetaData.None);
-    static FileStatusKey   = Model.RegisterProperty(DragDropExtendedVM, 'FileStatus',   'Drag OS files here.',            MetaData.None);
+    static LastEffectKey   = MuralBase.RegisterProperty(DragDropExtendedVM, 'LastEffect',   '—',       MetaData.None);
+    static ShiftHintKey    = MuralBase.RegisterProperty(DragDropExtendedVM, 'ShiftHint',    'Hold Shift to cancel the drag.', MetaData.None);
+    static FileStatusKey   = MuralBase.RegisterProperty(DragDropExtendedVM, 'FileStatus',   'Drag OS files here.',            MetaData.None);
 
     constructor() {
         super();

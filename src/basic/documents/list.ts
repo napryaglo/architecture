@@ -1,4 +1,4 @@
-import { MetaData, Model, ObservableCollection } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, ObservableCollection } from '../../runtime/index.js';
 import { TextElement } from './text-element.js';
 import { Block, type BlockHost, BlockCollection } from './block.js';
 
@@ -59,15 +59,15 @@ export class ListItem extends TextElement implements BlockHost
 // because each level lays its items out in the reduced content width.
 export class List extends Block implements BlockHost
 {
-    public static readonly MarkerStyleKey = Model.RegisterProperty<ListMarkerStyle>(
+    public static readonly MarkerStyleKey = MuralBase.RegisterProperty<ListMarkerStyle>(
         List, 'MarkerStyle', ListMarkerStyle.Disc, MetaData.None);
 
     // First ordinal for ordered markers (Decimal/…Latin/…Roman).
-    public static readonly StartIndexKey = Model.RegisterProperty<number>(
+    public static readonly StartIndexKey = MuralBase.RegisterProperty<number>(
         List, 'StartIndex', 1, MetaData.None);
 
     // Gap in DIPs between the marker column and the item content.
-    public static readonly MarkerOffsetKey = Model.RegisterProperty<number>(
+    public static readonly MarkerOffsetKey = MuralBase.RegisterProperty<number>(
         List, 'MarkerOffset', 8, MetaData.None);
 
     private readonly _items: ObservableCollection<ListItem>;

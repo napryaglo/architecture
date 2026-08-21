@@ -1,4 +1,4 @@
-import {
+﻿import {
     Color,
     CornerRadius,
     Matrix,
@@ -10,7 +10,7 @@ import {
     type PointerEventArgs,
     type ObservableCollection,
     type CollectionChange,
-    type Model,
+    type MuralBase,
     hasModifier,
     ModifierKeys,
 } from '../../../runtime/index.js';
@@ -883,8 +883,8 @@ function pickSideOfFigure(figure: Figure, p: Point): ResolvedPortSide
 }
 
 function collectionContains(
-    collection: ObservableCollection<Model> | undefined,
-    item: Model,
+    collection: ObservableCollection<MuralBase> | undefined,
+    item: MuralBase,
 ): boolean
 {
     if (collection === undefined) return false;
@@ -1045,16 +1045,16 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
     // hover halo, its edit handles, and any in-flight edit drag. Diagram
     // already prunes the SELECTION on removal; this clears the view-side
     // state the adorners hold and repaints them.
-    let subscribedConnectors: ObservableCollection<Model> | undefined = undefined;
+    let subscribedConnectors: ObservableCollection<MuralBase> | undefined = undefined;
     let connectorsUnsub: (() => void) | undefined = undefined;
-    const onConnectorsChanged = (change: CollectionChange<Model>): void => {
-        let gone: Set<Model> | 'all' | undefined;
+    const onConnectorsChanged = (change: CollectionChange<MuralBase>): void => {
+        let gone: Set<MuralBase> | 'all' | undefined;
         if      (change.kind === 'cleared')  gone = 'all';
-        else if (change.kind === 'removed')  gone = new Set<Model>(change.items);
-        else if (change.kind === 'replaced') gone = new Set<Model>([change.oldItem]);
+        else if (change.kind === 'removed')  gone = new Set<MuralBase>(change.items);
+        else if (change.kind === 'replaced') gone = new Set<MuralBase>([change.oldItem]);
         else                                 return;   // inserted / moved — no removal
         const isGone = (c: Connector | undefined): boolean =>
-            c !== undefined && (gone === 'all' || gone.has(c as unknown as Model));
+            c !== undefined && (gone === 'all' || gone.has(c as unknown as MuralBase));
 
         // Stale hover halo on a removed connector.
         if (isGone(state.hoveredConnector))

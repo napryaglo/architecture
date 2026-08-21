@@ -1,4 +1,4 @@
-import { MetaData, Model, Element, Visual } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element, Visual } from '../../runtime/index.js';
 import { ToggleButton } from '../buttons/toggle-button.js';
 
 // M3 Switch — a binary toggle styled as a track with a sliding thumb.
@@ -20,7 +20,7 @@ import { ToggleButton } from '../buttons/toggle-button.js';
 export class Switch extends ToggleButton
 {
     static {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             Switch, Element.DefaultStyleKeyKey,
             { default_value: Switch });
     }
@@ -32,8 +32,8 @@ export class Switch extends ToggleButton
     // overrides these defaults via the LocalValue tier (above Default
     // in the EVD precedence ladder).
     static {
-        Model.OverrideMetadata(Switch, Visual.WidthKey,  { default_value: 52 });
-        Model.OverrideMetadata(Switch, Visual.HeightKey, { default_value: 32 });
+        MuralBase.OverrideMetadata(Switch, Visual.WidthKey,  { default_value: 52 });
+        MuralBase.OverrideMetadata(Switch, Visual.HeightKey, { default_value: 32 });
     }
 }
 

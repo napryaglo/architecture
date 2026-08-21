@@ -1,9 +1,9 @@
-// Bouncing-ball VM. A single ball flies in a fixed-size box, reflecting
+﻿// Bouncing-ball VM. A single ball flies in a fixed-size box, reflecting
 // velocity off each wall. Pure simulation state lives here; the
 // per-tick integration runs from the bootstrap subscribing to the
 // animation clock (Rule 5: VMs don't touch host globals — the clock is
 // the framework's injectable service, the bootstrap does the wiring).
-import { MetaData, Model } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
 // Fixed playfield, in CSS pixels. The view's Border is sized to match;
 // the VM's collision logic is the source of truth.
 const BOUNDS_W = 640;
@@ -14,14 +14,14 @@ const BOUNDS_H = 360;
 const DIAMETER = 36;
 export const PLAYFIELD_W = BOUNDS_W;
 export const PLAYFIELD_H = BOUNDS_H;
-export class BouncingBallVM extends Model {
+export class BouncingBallVM extends MuralBase {
     // X / Y are the top-left of the ball's bounding box, in
     // playfield-local pixel coordinates. The view binds Ellipse's
     // Canvas.Left / Canvas.Top straight to them, so a single Step
     // call moves the ball on screen via the binding.
-    static XKey = Model.RegisterProperty(BouncingBallVM, 'X', 0, MetaData.None);
-    static YKey = Model.RegisterProperty(BouncingBallVM, 'Y', 0, MetaData.None);
-    static DiameterKey = Model.RegisterProperty(BouncingBallVM, 'Diameter', DIAMETER, MetaData.None);
+    static XKey = MuralBase.RegisterProperty(BouncingBallVM, 'X', 0, MetaData.None);
+    static YKey = MuralBase.RegisterProperty(BouncingBallVM, 'Y', 0, MetaData.None);
+    static DiameterKey = MuralBase.RegisterProperty(BouncingBallVM, 'Diameter', DIAMETER, MetaData.None);
     // Velocity (px / ms). Plain fields — the view never binds them, so
     // keeping them off the DP system avoids change-notification spam.
     _vx;

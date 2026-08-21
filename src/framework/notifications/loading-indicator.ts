@@ -1,6 +1,6 @@
-import {
+﻿import {
     MetaData,
-    Model,
+    MuralBase,
     Element,
     Point,
     Storyboard,
@@ -52,7 +52,7 @@ const MAX_SWEEP = 290;
 
 export class LoadingIndicator extends TemplatedControl
 {
-    public static readonly VariantKey = Model.RegisterProperty<LoadingIndicatorVariant>(
+    public static readonly VariantKey = MuralBase.RegisterProperty<LoadingIndicatorVariant>(
         LoadingIndicator, 'Variant', LoadingIndicatorVariant.ActiveIndicator,
         MetaData.Render);
 
@@ -61,7 +61,7 @@ export class LoadingIndicator extends TemplatedControl
     // releases the clock subscription (an idle indicator burns no
     // frames); flipping it back true restarts (when the control is
     // loaded).
-    public static readonly IsActiveKey = Model.RegisterProperty<boolean>(
+    public static readonly IsActiveKey = MuralBase.RegisterProperty<boolean>(
         LoadingIndicator, 'IsActive', true, MetaData.None);
 
     public get Variant(): LoadingIndicatorVariant { return this.get_property_value(LoadingIndicator.VariantKey); }
@@ -72,7 +72,7 @@ export class LoadingIndicator extends TemplatedControl
 
     static
     {
-        Model.OverrideMetadata(
+        MuralBase.OverrideMetadata(
             LoadingIndicator, Element.DefaultStyleKeyKey,
             { default_value: LoadingIndicator });
     }

@@ -1,4 +1,4 @@
-import { TriggerPresence } from './ast.js';
+﻿import { TriggerPresence } from './ast.js';
 import type {
     AnimationDecl,
     Attribute,
@@ -109,13 +109,13 @@ import {
     type SlotInfo,
 } from './symbol-table.js';
 import type { SourceSpan } from './tokens.js';
-import { Model } from '../runtime/model.js';
+import { MuralBase } from '../runtime/model.js';
 import { findDescriptor } from '../runtime/model-internals.js';
 
 // Namespace imports — give the compiler a direct handle on every
 // framework class so emitSetDP can resolve a class name to its
 // Function value even when the class doesn't register its own DPs
-// (Model.find_class only knows classes that registered something).
+// (MuralBase.find_class only knows classes that registered something).
 import * as RuntimeNS  from '../runtime/index.js';
 import * as BasicNS    from '../basic/index.js';
 import * as EngineNS   from '../visual-engine/index.js';
@@ -137,7 +137,7 @@ const FRAMEWORK_BUNDLES: readonly Record<string, unknown>[] = [
 // fails, and `build:templates` can't run to create it. Load it lazily and
 // tolerate absence — once built, class-name lookups see the real Material*
 // classes; during a clean/bootstrap build the load fails and we fall back
-// to Model.find_class. No `.mu` references a Material class by name, so the
+// to MuralBase.find_class. No `.mu` references a Material class by name, so the
 // fallback path isn't exercised in practice.
 let materialBundleCache: Record<string, unknown> | undefined;
 function materialBundle(): Record<string, unknown>
@@ -157,7 +157,7 @@ function materialBundle(): Record<string, unknown>
 // Resolve a class name to its Function value. Searches the framework
 // bundles first (so subclasses without own DPs — e.g. Ellipse extends
 // Shape — are reachable), then the lazily-loaded Material bundle; falls
-// back to Model.find_class which knows every class that ever registered a
+// back to MuralBase.find_class which knows every class that ever registered a
 // DP (the test-defined-inline path).
 function resolveClassByName(name: string): Function | undefined
 {
@@ -168,7 +168,7 @@ function resolveClassByName(name: string): Function | undefined
     }
     const m = materialBundle()[name];
     if (typeof m === 'function') return m;
-    return Model.find_class(name);
+    return MuralBase.find_class(name);
 }
 
 // Walks `klass`'s constructor [[Prototype]] chain — the static-field
@@ -197,7 +197,7 @@ const ARRAY_COLLECTION_PROPERTIES: ReadonlySet<string> = new Set([
     'CommandBindings',
 ]);
 
-// True when `cls` is a Model/DP subclass — its instances carry the
+// True when `cls` is a MuralBase/DP subclass — its instances carry the
 // dependency-property machinery (`set_property_value` on the prototype).
 // Plain value-object classes used in markup (KeyBinding, MouseBinding,
 // CommandBinding) return false, so the emitter falls back to a direct
@@ -3308,7 +3308,7 @@ export class Compiler
     }
 
     // Emit a typed-key DP write. Resolves the property's registering
-    // class via Model.find_class + findDescriptor at compile time and
+    // class via MuralBase.find_class + findDescriptor at compile time and
     // emits `target.set_property_value(Owner.PropKey, value)` against
     // the convention that every DP is exposed as `${Owner}.${Name}Key`.
     //
@@ -3349,11 +3349,11 @@ export class Compiler
         if (descriptor === undefined)
         {
             // Plain value-object classes (KeyBinding / MouseBinding /
-            // CommandBinding) aren't Model/DP subclasses — they carry
+            // CommandBinding) aren't MuralBase/DP subclasses — they carry
             // ordinary fields, so a DP write would fail. Emit a direct
             // field assignment instead. Restricted to the single-name
             // attribute form (attached `Owner.Prop` syntax only applies to
-            // DP classes). A *Model* class with an unknown property is a
+            // DP classes). A *MuralBase* class with an unknown property is a
             // genuine authoring error and still throws.
             if (ownerClassName === undefined && !isDependencyObjectClass(lookupClass))
             {
@@ -4523,7 +4523,7 @@ export class Compiler
             // element-value attr like `DiagramTool [ Icon = @alignLeft ]`
             // assigned the raw SetterFactory to _e.Icon — the consumer then
             // read a factory object where a Geometry was expected. `_e` being
-            // a plain Model (not a Visual) is fine: DynamicResource falls back
+            // a plain MuralBase (not a Visual) is fine: DynamicResource falls back
             // to Application-level resolution for non-visual hosts.
             const valExpr = this.compileValue(attr.value, { propertyName: propName, targetExpr: '_e' });
             sets.push(`_e.${propName} = ${valExpr};`);

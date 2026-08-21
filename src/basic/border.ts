@@ -1,7 +1,7 @@
-import {
+﻿import {
     CornerRadius,
     MetaData,
-    Model,
+    MuralBase,
     Point,
     Rect,
     Single,
@@ -81,7 +81,7 @@ export class Border extends Single
     // owner class is fine — class declarations are hoisted, only their
     // statics aren't filled in yet, and only the class identity matters
     // to RegisterProperty.
-    public static readonly BorderThicknessKey = Model.RegisterProperty<Thickness>(
+    public static readonly BorderThicknessKey = MuralBase.RegisterProperty<Thickness>(
         Border, 'BorderThickness', Thickness.Zero,
         MetaData.Measure | MetaData.Arrange | MetaData.Render);
     // CornerRadius accepts either a plain `number` (uniform radius —
@@ -94,7 +94,7 @@ export class Border extends Single
     // Top → TopRight, Right → BottomRight, Bottom → BottomLeft, so
     // `CornerRadius = (@ShapeFull, 0, 0, @ShapeFull)` in markup
     // produces the rounded-left / square-right shape one would expect.
-    public static readonly CornerRadiusKey = Model.RegisterProperty<number | CornerRadius>(
+    public static readonly CornerRadiusKey = MuralBase.RegisterProperty<number | CornerRadius>(
         Border, 'CornerRadius', 0,
         MetaData.Arrange | MetaData.Render,
         (_model, base_value) =>
@@ -106,7 +106,7 @@ export class Border extends Single
             }
             return base_value;
         });
-    public static readonly PaddingKey = Model.RegisterProperty<Thickness>(
+    public static readonly PaddingKey = MuralBase.RegisterProperty<Thickness>(
         Border, 'Padding', Thickness.Zero,
         MetaData.Measure | MetaData.Arrange);
 

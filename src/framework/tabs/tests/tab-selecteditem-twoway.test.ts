@@ -1,7 +1,7 @@
-import { test, describe, beforeEach } from 'node:test';
+﻿import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    Model, MetaData, PointerButton, NoModifiers,
+    MuralBase, MetaData, PointerButton, NoModifiers,
     DataContextBinding, ObservableCollection,
     type PointerEventInit,
 } from '../../../runtime/index.js';
@@ -20,23 +20,23 @@ import { initTestApp } from '../../../basic/tests/test-app.js';
 // the highlight moves but the content region (driven by ActiveDocument) never
 // switches — the reported symptom.
 
-class Doc extends Model
+class Doc extends MuralBase
 {
-    public static readonly TitleKey = Model.RegisterProperty<string>(Doc, 'Title', '', MetaData.None);
+    public static readonly TitleKey = MuralBase.RegisterProperty<string>(Doc, 'Title', '', MetaData.None);
     public get Title(): string { return this.get_property_value(Doc.TitleKey); }
     public set Title(v: string) { this.set_property_value(Doc.TitleKey, v); }
 }
 
 // Stand-in for DocumentsContentHostService: holds the ActiveDocument the tab
 // strip's SelectedItem is TwoWay-bound to.
-class Shell extends Model
+class Shell extends MuralBase
 {
-    public static readonly ActiveDocumentKey = Model.RegisterProperty<Doc | undefined>(
+    public static readonly ActiveDocumentKey = MuralBase.RegisterProperty<Doc | undefined>(
         Shell, 'ActiveDocument', undefined, MetaData.None);
     // A stable open-document collection the tab strip binds ItemsSource to
     // (mirrors DocumentsContentHostService.OpenDocuments — the reference never
     // changes; only its contents mutate on Open/Close).
-    public static readonly OpenDocsKey = Model.RegisterProperty<ObservableCollection<Doc>>(
+    public static readonly OpenDocsKey = MuralBase.RegisterProperty<ObservableCollection<Doc>>(
         Shell, 'OpenDocs', undefined as unknown as ObservableCollection<Doc>, MetaData.None);
     constructor() { super(); this.set_property_value(Shell.OpenDocsKey, new ObservableCollection<Doc>()); }
     public get ActiveDocument(): Doc | undefined { return this.get_property_value(Shell.ActiveDocumentKey); }
