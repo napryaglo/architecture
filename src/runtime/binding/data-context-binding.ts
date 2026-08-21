@@ -1,6 +1,7 @@
 ﻿import { Binding, type ValueConverter } from './binding.js';
 import { MetaData } from '../metadata.js';
 import { MuralBase } from '../model.js';
+import { Observable } from '../observable.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import type { PropertyChangeCallback } from './effective-value.js';
@@ -57,13 +58,20 @@ class DataContextBindingImpl extends Binding
     private readonly pathStr: string;
     private readonly dcCallback: PropertyChangeCallback;
 
-    // The MuralBase we're currently subscribed to for property changes on
+    // The source we're currently subscribed to for property changes on
     // the first path segment, the callback we registered, and the key
     // we registered it under. Cleared on each refresh so we can detach
     // cleanly without re-resolving the descriptor.
-    private currentSource:     MuralBase | undefined;
-    private sourceCallback:    PropertyChangeCallback | undefined;
-    private currentSourceKey:  PropertyKey<unknown> | undefined;
+    //
+    // Typed `Observable` (the common base) so both mechanisms typecheck: a
+    // MuralBase source keys off `currentSourceKey` (its RemovePropertyChanged
+    // Listener widened to PropertyKey), a plain Observable source keys off
+    // `currentSourceName` (Observable's name-based overload). Exactly one of
+    // the two keys is set at a time.
+    private currentSource:      Observable | undefined;
+    private sourceCallback:     PropertyChangeCallback | undefined;
+    private currentSourceKey:   PropertyKey<unknown> | undefined;
+    private currentSourceName:  string | undefined;
     // Cached at construction — `'DataContext'` resolves on every Visual,
     // and the binding listens to it for its entire lifetime.
     private readonly dataContextKey: PropertyKey<unknown>;
@@ -223,15 +231,24 @@ class DataContextBindingImpl extends Binding
 
     private unsubscribeSource(): void
     {
-        if (this.currentSource !== undefined
-            && this.sourceCallback !== undefined
-            && this.currentSourceKey !== undefined)
+        if (this.currentSource !== undefined && this.sourceCallback !== undefined)
         {
-            this.currentSource.RemovePropertyChangedListener(this.currentSourceKey, this.sourceCallback);
+            // MuralBase source → remove by descriptor key (its widened
+            // overload). Plain Observable source → remove by property name.
+            if (this.currentSourceKey !== undefined)
+            {
+                (this.currentSource as MuralBase)
+                    .RemovePropertyChangedListener(this.currentSourceKey, this.sourceCallback);
+            }
+            else if (this.currentSourceName !== undefined)
+            {
+                this.currentSource.RemovePropertyChangedListener(this.currentSourceName, this.sourceCallback);
+            }
         }
-        this.currentSource     = undefined;
-        this.sourceCallback    = undefined;
-        this.currentSourceKey  = undefined;
+        this.currentSource      = undefined;
+        this.sourceCallback     = undefined;
+        this.currentSourceKey   = undefined;
+        this.currentSourceName  = undefined;
     }
 
     private firstSegment(): string
@@ -273,6 +290,18 @@ class DataContextBindingImpl extends Binding
             this.currentSourceKey = key;
             this.sourceCallback   = () => { this.watcher.Value = this.walkPath(dc); };
             dc.AddPropertyChangedListener(key, this.sourceCallback);
+        }
+        else if (!(dc instanceof MuralBase) && dc instanceof Observable)
+        {
+            // PLAIN Observable DataContext only — a MuralBase is also an
+            // Observable, but it took (or intentionally skipped, when the
+            // first segment isn't a DP on it) the key branch above. Subscribe
+            // by property NAME; walkPath's bracket fallthrough reads it via
+            // the subclass getter.
+            this.currentSource     = dc;
+            this.currentSourceName = first;
+            this.sourceCallback    = () => { this.watcher.Value = this.walkPath(dc); };
+            dc.AddPropertyChangedListener(first, this.sourceCallback);
         }
         this.watcher.Value = this.walkPath(dc);
     }

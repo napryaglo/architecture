@@ -1,6 +1,7 @@
 ﻿import {
     MetaData,
     MuralBase,
+    Observable,
     Thickness,
     Visual,
     type PropertyDescriptor,
@@ -30,7 +31,7 @@ import { TextBlock, TextWrapping } from '../../basic/text-block.js';
 // logical-only container).
 export class ContentControl extends Control
 {
-    public static readonly ContentKey = MuralBase.RegisterProperty<Visual | MuralBase | undefined>(
+    public static readonly ContentKey = MuralBase.RegisterProperty<Visual | Observable | undefined>(
         ContentControl, 'Content', undefined, MetaData.Measure);
 
     // Border chrome (WPF Control parity): the default template wraps its
@@ -81,7 +82,7 @@ export class ContentControl extends Control
     // view — same rationale + shape as ContentPresenter._viewCache.
     private readonly _viewCache = new WeakMap<object, Visual>();
 
-    public get Content(): Visual | MuralBase | undefined
+    public get Content(): Visual | Observable | undefined
     {
         return this.get_property_value(ContentControl.ContentKey);
     }
@@ -99,14 +100,14 @@ export class ContentControl extends Control
     //                 (Models aren't Visuals); $-bindings inside the
     //                 template see the MuralBase via the generated Visual's
     //                 DataContext.
-    public set Content(value: Visual | MuralBase | undefined)
+    public set Content(value: Visual | Observable | undefined)
     {
         // Side-effect dispatched from OnPropertyChanged so binding pushes
         // (which bypass JS setters) behave like direct assignment.
         this.set_property_value(ContentControl.ContentKey, value);
     }
 
-    private applyContent(oldValue: Visual | MuralBase | undefined, newValue: Visual | MuralBase | undefined): void
+    private applyContent(oldValue: Visual | Observable | undefined, newValue: Visual | Observable | undefined): void
     {
         const presenter = this.templateContentPresenter;
 
@@ -148,7 +149,7 @@ export class ContentControl extends Control
     // otherwise finds a DataTemplate matching the MuralBase's runtime type,
     // applies it, and sets the result's DataContext so $-bindings inside
     // the template resolve against the data.
-    private resolveContentVisual(value: Visual | MuralBase | undefined): Visual | undefined
+    private resolveContentVisual(value: Visual | Observable | undefined): Visual | undefined
     {
         if (value === undefined || value === null) return undefined;
         if (value instanceof Visual) return value;
@@ -263,8 +264,8 @@ export class ContentControl extends Control
         if (descriptor.Name === 'Content')
         {
             this.applyContent(
-                oldValue as Visual | MuralBase | undefined,
-                newValue as Visual | MuralBase | undefined,
+                oldValue as Visual | Observable | undefined,
+                newValue as Visual | Observable | undefined,
             );
         }
     }

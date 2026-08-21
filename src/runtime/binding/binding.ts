@@ -1,6 +1,7 @@
 ﻿import type { PropertyChangeCallback } from './effective-value.js';
 import { bindsTwoWayByDefault } from '../metadata.js';
 import { MuralBase } from '../model.js';
+import { Observable } from '../observable.js';
 import type { PropertyKey } from '../model.js';
 import { resolveKey } from '../model-internals.js';
 import { ObservableCollection } from '../observable-collection.js';
@@ -31,6 +32,12 @@ class PropertyPathSegment
     // against the same key the listener was registered with — without
     // re-resolving the descriptor through the class-hierarchy walk.
     private resolvedKey: PropertyKey<unknown> | undefined;
+    // Set when the segment is attached to a PLAIN Observable (non-MuralBase)
+    // source. A MuralBase source uses the `object`/`resolvedKey` (key) path
+    // above; a bare Observable has no descriptor, so reactivity is keyed by
+    // the property NAME instead. Mutually exclusive with `object` at any time.
+    private observableSource: Observable | undefined;
+    private observableName: string | undefined;
 
     constructor(
         propertyName: string,
@@ -71,6 +78,26 @@ class PropertyPathSegment
     get ResolvedKey(): PropertyKey<unknown> | undefined
     {
         return this.resolvedKey;
+    }
+
+    set ObservableSource(value: Observable | undefined)
+    {
+        this.observableSource = value;
+    }
+
+    get ObservableSource(): Observable | undefined
+    {
+        return this.observableSource;
+    }
+
+    set ObservableName(value: string | undefined)
+    {
+        this.observableName = value;
+    }
+
+    get ObservableName(): string | undefined
+    {
+        return this.observableName;
     }
 
     get PropertyName(): string
@@ -142,7 +169,9 @@ class PropertyPath
     {
         for (const segment of this.segments)
         {
-            if (segment.MuralBase !== undefined || segment.CollectionUnsub !== undefined)
+            if (segment.MuralBase !== undefined
+                || segment.CollectionUnsub !== undefined
+                || segment.ObservableSource !== undefined)
             {
                 this.detach_segment(segment);
                 segment.MuralBase = undefined;
@@ -274,6 +303,7 @@ class PropertyPath
         if (current === undefined || current === null)
         {
             segment.MuralBase = undefined;
+            segment.ObservableSource = undefined;
             segment.ResolvedKey = undefined;
             return undefined;
         }
@@ -286,9 +316,21 @@ class PropertyPath
             current.AddPropertyChangedListener(key, this.onChangedBound);
             return current.get_property_value(key);
         }
+        // A PLAIN Observable (MuralBase already handled above, so this is a
+        // non-MuralBase INotifyPropertyChanged source). No descriptor — key
+        // reactivity off the property NAME. Read stays a bracket access,
+        // which invokes the subclass getter.
+        if (current instanceof Observable)
+        {
+            segment.ObservableSource = current;
+            segment.ObservableName = segment.PropertyName;
+            current.AddPropertyChangedListener(segment.PropertyName, this.onChangedBound);
+            return (current as unknown as Record<string, unknown>)[segment.PropertyName];
+        }
         if (current instanceof ObservableCollection)
         {
             segment.MuralBase = undefined;
+            segment.ObservableSource = undefined;
             const idx = Number(segment.PropertyName);
             if (!Number.isFinite(idx)) return undefined;
             segment.CollectionUnsub = current.Subscribe(() => this.OnCollectionChanged(segment));
@@ -297,6 +339,7 @@ class PropertyPath
         if (Array.isArray(current))
         {
             segment.MuralBase = undefined;
+            segment.ObservableSource = undefined;
             const idx = Number(segment.PropertyName);
             if (!Number.isFinite(idx)) return (current as any)[segment.PropertyName];
             const wrapped = observe_array(current);
@@ -304,6 +347,7 @@ class PropertyPath
             return wrapped[idx];
         }
         segment.MuralBase = undefined;
+        segment.ObservableSource = undefined;
         return current[segment.PropertyName];
     }
 
@@ -316,6 +360,15 @@ class PropertyPath
         {
             segment.CollectionUnsub();
             segment.CollectionUnsub = undefined;
+            return;
+        }
+        // Plain-Observable teardown — mirror the name-based subscribe from
+        // attach_and_step. Mutually exclusive with the MuralBase key path.
+        if (segment.ObservableSource !== undefined && segment.ObservableName !== undefined)
+        {
+            segment.ObservableSource.RemovePropertyChangedListener(segment.ObservableName, this.onChangedBound);
+            segment.ObservableSource = undefined;
+            segment.ObservableName = undefined;
             return;
         }
         if (segment.MuralBase === undefined || segment.ResolvedKey === undefined) return;
@@ -409,7 +462,15 @@ class PropertyPath
         for (let i = 0; i < this.segments.length; i++)
         {
             const seg_i = this.segments[i];
-            if (seg_i?.MuralBase === model && seg_i?.PropertyName === property)
+            // Match a MuralBase-keyed segment OR a plain-Observable segment —
+            // for the latter the notifying `model` is the Observable itself
+            // (its MuralBase is undefined). Both key off the property name.
+            const matches = seg_i !== undefined
+                && seg_i.PropertyName === property
+                && (seg_i.MuralBase === model
+                    || (seg_i.ObservableSource !== undefined
+                        && (seg_i.ObservableSource as unknown) === (model as unknown)));
+            if (matches)
             {
                 let current: any = new_value;
                 for (let j = i + 1; j < this.segments.length; j++)
