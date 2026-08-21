@@ -23,6 +23,13 @@ export class SelectionGeometryMirror
     private readonly _d: Diagram;
     private _target: Figure | undefined;
     private _seeding = false;
+    // True while a _writeBack is pushing a value INTO the figure. Writing one
+    // field (e.g. Height, from a lock-linked resize) fires the figure's change
+    // listener, which would otherwise re-seed EVERY SelectedShape* from the
+    // figure — reading a SIBLING field (Width) that is still mid-update and
+    // clobbering the correct inspector value. We already hold the values we're
+    // writing, so a re-seed here is both redundant and corrupting; suppress it.
+    private _writingBack = false;
     private _figureUnsub: (() => void) | undefined;
 
     constructor(diagram: Diagram)
@@ -69,6 +76,11 @@ export class SelectionGeometryMirror
 
     private _seed(f: Figure): void
     {
+        // A figure change fired by our own _writeBack must not re-seed — the
+        // figure is only partially updated and would overwrite in-flight
+        // sibling values (see _writingBack). External changes (canvas drag /
+        // resize) still seed normally.
+        if (this._writingBack) return;
         const D = this._d.constructor as typeof import('../diagram.js').Diagram;
         this._seeding = true;
         try {
@@ -88,6 +100,11 @@ export class SelectionGeometryMirror
         const v = ({ Left: this._d.SelectedShapeLeft, Top: this._d.SelectedShapeTop,
                      Width: this._d.SelectedShapeWidth, Height: this._d.SelectedShapeHeight,
                      Rotation: this._d.SelectedShapeRotation })[prop];
-        (this._target as unknown as Record<string, number>)[prop] = v;
+        // Guard the figure write so the change it fires can't re-seed us from a
+        // half-updated figure (which would clobber the sibling field a
+        // lock-linked resize is writing in the same gesture).
+        this._writingBack = true;
+        try { (this._target as unknown as Record<string, number>)[prop] = v; }
+        finally { this._writingBack = false; }
     }
 }
