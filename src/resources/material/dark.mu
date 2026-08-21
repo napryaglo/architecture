@@ -42,6 +42,9 @@ scheme MaterialDark against Material {
     @OnSurface = #E6E1E5
     @SurfaceVariant = #49454F
     @OnSurfaceVariant = #CAC4D0
+    // Diagram drawing surface — a soft dark, one step lighter than @Surface
+    // (#1C1B1F) so the ruler strips frame the canvas rather than merge with it.
+    @DiagramCanvas = #2A2A2E
 
     // ── M3 Surface containers (elevation tinting) ───────────────────
     @SurfaceContainerLowest = #0F0D13

@@ -55,6 +55,7 @@ theme Material {
         @OnSurface : Brush "Text / icon over Surface"
         @SurfaceVariant : Brush
         @OnSurfaceVariant : Brush
+        @DiagramCanvas : Brush "Diagram scroll-surface background (drawing paper)"
         @SurfaceContainerLowest : Brush
         @SurfaceContainerLow : Brush
         @SurfaceContainer : Brush

@@ -256,6 +256,14 @@ resources Diagrams {
             Border x:name="PART_RulerCorner" [ Grid.Row = 0, Grid.Column = 0, Fill = #00000000, Visibility = Collapsed ]
             RulerBar x:name="PART_RulerTop"  [ Grid.Row = 0, Grid.Column = 1, Orientation = Horizontal, Visibility = Collapsed ]
             RulerBar x:name="PART_RulerLeft" [ Grid.Row = 1, Grid.Column = 0, Orientation = Vertical,   Visibility = Collapsed ]
+            // Diagram drawing surface — a theme-adaptive paper fill behind the
+            // content. Sits in the SAME Grid cell as PART_Scroll but is declared
+            // first, so it paints BEHIND the scroll viewport and fills the whole
+            // viewport (not the zoomed content extent) — it neither zooms nor
+            // scrolls. PART_Camera stays transparent so this shows through under
+            // the nodes. @DiagramCanvas re-paints on a light/dark scheme swap.
+            Border x:name="PART_CanvasBg"
+                [ Grid.Row = 1, Grid.Column = 1, Fill = @DiagramCanvas ]
             // Zoom is a LayoutTransform Scale on PART_Camera (grows its measured
             // footprint), so the ScrollViewer sizes real scrollbars to the zoomed
             // content and pan IS the scroll offset. AdornerDecorator wraps

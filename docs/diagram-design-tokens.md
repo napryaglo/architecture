@@ -18,6 +18,41 @@ Status legend: **✓ theme** = existing `@`-token · **✓ settings** = existing
 
 ---
 
+## Status — theme-adaptive diagram surface (IMPLEMENTED, mural 0.18.0)
+
+Shipped in `mural@0.18.0` + Plexus `^0.18.0`. Live-verified in **both** schemes
+(diagram-3, 22 arch nodes): light canvas `#fdfdfd` w/ dark labels; dark canvas
+`#2a2a2e` w/ light labels; page borders, connectors, node ink all adapt.
+
+**New theme token** — `@DiagramCanvas` (Material catalog, `material.mu`):
+light `#FDFDFD`, dark `#2A2A2E`. The dedicated diagram drawing-surface color.
+
+**Tunable-with-theme-defaults model** (`diagram-settings.ts`): five `DiagramSettings`
+colors now seed an *undefined* definition default, so — absent a user override —
+`color()` resolves a live scheme token via `themeBrush(token)` (app-level
+`Application.Resources.Resolve`); the compiled hex survives only as the no-theme
+fallback. A user override still persists and wins; `Reset` returns to the theme
+default. Linked keys (`THEME_LINK`):
+- `ShapeLabelInk` → `@OnSurface` · `ConnectorDefaultStroke` → `@OnSurfaceVariant`
+- `RulerFill` → `@Surface` · `RulerTickColor` → `@OnSurfaceVariant`
+- `RulerHoverFill` → `@Primary` wash (α≈41)
+
+**Surface wiring** (dynamic resources → re-paint live on scheme swap):
+- **Pages** (the paper): Plexus `DiagramCanvasPanel` `PaginatedCanvas.PaperBrush =
+  @DiagramCanvas`, `PageBorderBrush = @OutlineVariant`. (Root cause of the old white
+  canvas: `PaginatedCanvas` hardcodes `#ffffff` paper — themed at the app wiring
+  point, the layer that instantiates it.)
+- **Desk** (pasteboard behind/around pages, viewport-filling): mural
+  `diagram.template.mu` `PART_CanvasBg` Border `Fill = @DiagramCanvas`.
+- **Arch-node caption ink** (Plexus): `#000000` → `@OnSurface`.
+- **Selection / halo**: stay `@Primary` (correct now the canvas adapts).
+
+Deferred: paper fill is not yet a `DiagramSettings`-tunable key (theme-adaptive via
+the token only); mural `PaginatedCanvas` keeps its generic `#ffffff` default for
+non-diagram consumers (the Diagrammer demo); callout leader `#64748b` still inline.
+
+---
+
 ## 1. Colors
 
 ### 1a. Node & content colors

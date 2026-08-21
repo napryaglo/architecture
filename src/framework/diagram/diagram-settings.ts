@@ -224,17 +224,17 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
       description: 'Colour of the faint preview line shown while hovering a guide drag-out zone.',
       category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#e5484d')) },
     { key: DiagramSettingKey.RulerFill, label: 'Ruler fill',
-      description: 'Background fill of the ruler strips.',
+      description: 'Background fill of the ruler strips. Defaults to the theme Surface; override to pin a colour.',
       category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#f3f4f6')) },
     { key: DiagramSettingKey.RulerTickColor, label: 'Ruler tick colour',
-      description: 'Colour of ruler tick marks and labels.',
+      description: 'Colour of ruler tick marks and labels. Defaults to the theme OnSurfaceVariant; override to pin a colour.',
       category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#6b7280')) },
     { key: DiagramSettingKey.RulerHoverFill, label: 'Ruler hover fill',
-      description: 'Accent wash painted over a ruler strip while the pointer is over it.',
+      description: 'Accent wash painted over a ruler strip while the pointer is over it. Defaults to a theme Primary wash; override to pin a colour.',
       category: CAT_RULERS, default: new SolidColorBrush(Color.FromHex('#dbeafe')) },
 
     { key: DiagramSettingKey.ShapeLabelInk, label: 'Shape label ink',
-      description: 'Default text colour of a shape label.',
+      description: 'Default text colour of a shape label. Defaults to the theme OnSurface; override to pin a colour.',
       category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#000000')) },
     { key: DiagramSettingKey.TextNodeFill, label: 'Text-node fill',
       description: 'Fill of a text box node (transparent by default).',
@@ -243,7 +243,7 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
       description: 'Outline colour of a text box node.',
       category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#94a3b8')) },
     { key: DiagramSettingKey.ConnectorDefaultStroke, label: 'Default connector stroke',
-      description: 'Line colour of a freshly-drawn connector.',
+      description: 'Line colour of a freshly-drawn connector. Defaults to the theme OnSurfaceVariant; override to pin a colour.',
       category: CAT_CONNECTORS, default: new SolidColorBrush(Color.FromHex('#475569')) },
 
     { key: DiagramSettingKey.ChromeHandleFill, label: 'Handle fill',
@@ -265,6 +265,27 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
 
 const COLOR_DEFAULTS: ReadonlyMap<DiagramSettingKey, SolidColorBrush> =
     new Map(COLOR_SPECS.map(s => [s.key, s.default]));
+
+// ── Theme-linked colour defaults ───────────────────────────────────────
+//
+// A colour whose DEFAULT tracks the active theme scheme rather than a fixed
+// hex, so the diagram surface reads correctly in both light and dark. The
+// contract: the setting seeds an UNDEFINED default (see Definitions), so when
+// the user has NOT overridden it the accessor resolves `token` against the
+// live scheme; a genuine user override still persists and wins; the compiled
+// COLOR_SPECS brush survives only as the no-theme fallback (tests / embeds).
+//
+// `alpha` (0–255), when set, re-tints the resolved token — used for the ruler-
+// hover Primary WASH, since the raw @Primary token is opaque.
+interface ThemeLink { readonly token: string; readonly alpha?: number; }
+
+const THEME_LINK: ReadonlyMap<DiagramSettingKey, ThemeLink> = new Map<DiagramSettingKey, ThemeLink>([
+    [DiagramSettingKey.ShapeLabelInk,          { token: 'OnSurface' }],
+    [DiagramSettingKey.ConnectorDefaultStroke, { token: 'OnSurfaceVariant' }],
+    [DiagramSettingKey.RulerFill,              { token: 'Surface' }],
+    [DiagramSettingKey.RulerTickColor,         { token: 'OnSurfaceVariant' }],
+    [DiagramSettingKey.RulerHoverFill,         { token: 'Primary', alpha: 41 }], // ≈ 16%
+]);
 
 // Every catalogued key, numeric + colour — the change-listener wiring binds all.
 const ALL_KEYS: readonly DiagramSettingKey[] =
@@ -353,7 +374,11 @@ export class DiagramSettings
             d.Description = spec.description;
             d.Category    = spec.category;
             d.Kind        = SettingKind.Color;
-            d.Default     = spec.default;
+            // Theme-linked colours seed NO baked default — the accessor derives
+            // their default from the active scheme (see color / THEME_LINK) so
+            // the surface tracks light/dark. A user override still persists and
+            // wins; the compiled brush is only the no-theme fallback.
+            d.Default     = THEME_LINK.has(spec.key) ? undefined : spec.default;
             return d;
         });
         return [...numeric, ...color];
@@ -367,8 +392,45 @@ export class DiagramSettings
 
     private static color(key: DiagramSettingKey): SolidColorBrush
     {
+        // A brush present in the settings host is honoured directly. For a
+        // NON-linked key that is its seeded compiled default (unchanged
+        // behaviour); for a THEME-LINKED key the seed is undefined, so a brush
+        // here can only be a genuine user override — which still wins.
         const value = DiagramSettings.resolve()?.Get(key);
-        return value instanceof SolidColorBrush ? value : COLOR_DEFAULTS.get(key)!;
+        if (value instanceof SolidColorBrush) return value;
+
+        // No override. Theme-linked → resolve the live scheme token so the
+        // default tracks light/dark.
+        const link = THEME_LINK.get(key);
+        if (link !== undefined)
+        {
+            const themed = DiagramSettings.themeBrush(link.token, link.alpha);
+            if (themed !== undefined) return themed;
+        }
+
+        // Final fallback — the compiled-in constant (no settings host and/or no
+        // reachable theme: tests, embeds, headless).
+        return COLOR_DEFAULTS.get(key)!;
+    }
+
+    // Resolve a theme token (e.g. 'OnSurface') to a live brush against the
+    // ACTIVE scheme, via the app-level merged resource dictionary the
+    // ThemeManager maintains on Application.Resources. Returns undefined when
+    // no Application / theme is reachable so the caller falls back to a compiled
+    // default. `alpha` (0–255), when given, re-tints the resolved colour (the
+    // token itself is opaque) — used for wash fills.
+    private static themeBrush(token: string, alpha?: number): SolidColorBrush | undefined
+    {
+        const resolved = Application.current?.Resources?.Resolve(token);
+        let color: Color | undefined;
+        if (resolved instanceof SolidColorBrush) color = resolved.Color;
+        else if (resolved instanceof Color)      color = resolved;
+        if (color === undefined) return undefined;
+
+        if (alpha !== undefined) return new SolidColorBrush(color.WithAlpha(alpha));
+        // Untinted: reuse the token's own brush instance when it is one (its
+        // identity is paid once at scheme registration); else wrap the Color.
+        return resolved instanceof SolidColorBrush ? resolved : new SolidColorBrush(color);
     }
 
     // ── Shapes ───────────────────────────────────────────────────────────

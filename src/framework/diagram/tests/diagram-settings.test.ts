@@ -1,6 +1,6 @@
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, Color } from '../../../runtime/index.js';
+import { Application, Color, ResourceDictionary } from '../../../runtime/index.js';
 import { SolidColorBrush } from '../../../visual-engine/index.js';
 import { ApplicationSettings } from '../../shell/services/application-settings-service.js';
 import { DiagramSettings, DiagramSettingKey } from '../diagram-settings.js';
@@ -124,6 +124,64 @@ describe('DiagramSettings', () => {
         assert.ok(DiagramSettings.RulerFill() instanceof SolidColorBrush);
         assert.ok(DiagramSettings.RulerTickColor() instanceof SolidColorBrush);
         assert.ok(DiagramSettings.RulerHoverFill() instanceof SolidColorBrush);
+    });
+
+    // ── Theme-linked colour defaults ──────────────────────────────────
+    // Merge a bare token dict into Application.Resources to stand in for an
+    // active scheme (themeBrush resolves through exactly this path).
+    function appWithScheme(tokens: Record<string, string>): Application
+    {
+        const app = new Application();
+        const dict = new ResourceDictionary();
+        for (const [k, hex] of Object.entries(tokens))
+        {
+            dict.Set(k, new SolidColorBrush(Color.FromHex(hex)));
+        }
+        app.Resources.AddMergedDictionary(dict);
+        return app;
+    }
+
+    test('theme-linked colours resolve the active scheme token when unoverridden', () => {
+        appWithScheme({
+            OnSurface:        '#112233',
+            OnSurfaceVariant: '#445566',
+            Surface:          '#778899',
+            Primary:          '#aabbcc',
+        });
+        const hex = (b: SolidColorBrush): string => b.Color.ToHex().toLowerCase();
+        assert.equal(hex(DiagramSettings.ShapeLabelInk()),          '#112233');
+        assert.equal(hex(DiagramSettings.ConnectorDefaultStroke()), '#445566');
+        assert.equal(hex(DiagramSettings.RulerFill()),              '#778899');
+        assert.equal(hex(DiagramSettings.RulerTickColor()),         '#445566');
+        // Ruler hover is a Primary WASH — the token re-tinted to α=41 (#29).
+        assert.equal(hex(DiagramSettings.RulerHoverFill()),         '#aabbcc29');
+    });
+
+    test('a theme-linked colour re-resolves after the scheme token changes', () => {
+        const app = appWithScheme({ OnSurface: '#111111' });
+        assert.equal(DiagramSettings.ShapeLabelInk().Color.ToHex().toLowerCase(), '#111111');
+        // Swap the token (a scheme swap merges a new dict last-added-wins).
+        const dark = new ResourceDictionary();
+        dark.Set('OnSurface', new SolidColorBrush(Color.FromHex('#eeeeee')));
+        app.Resources.AddMergedDictionary(dark);
+        assert.equal(DiagramSettings.ShapeLabelInk().Color.ToHex().toLowerCase(), '#eeeeee');
+    });
+
+    test('with a settings host but no override, a theme-linked colour still resolves the scheme token', () => {
+        const app = appWithScheme({ OnSurface: '#123456' });
+        app.Services.register(ApplicationSettings.Key, p => new ApplicationSettings(p));
+        // Reading binds + contributes the definitions (seeding an UNDEFINED
+        // default for the linked key), yet the accessor derives from the theme.
+        assert.equal(DiagramSettings.ShapeLabelInk().Color.ToHex().toLowerCase(), '#123456');
+    });
+
+    test('a user override wins over the theme-linked default', () => {
+        const app = appWithScheme({ OnSurface: '#123456' });
+        app.Services.register(ApplicationSettings.Key, p => new ApplicationSettings(p));
+        const settings = app.Services.getRequired(ApplicationSettings.Key);
+        DiagramSettings.ShapeLabelInk();                 // bind + contribute
+        settings.Set(DiagramSettingKey.ShapeLabelInk, new SolidColorBrush(Color.FromHex('#ff0000')));
+        assert.equal(DiagramSettings.ShapeLabelInk().Color.ToHex().toLowerCase(), '#ff0000');
     });
 
     test('Subscribe fires when a Diagram setting changes', () => {

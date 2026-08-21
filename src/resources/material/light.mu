@@ -54,6 +54,9 @@ scheme MaterialLight against Material {
     @OnSurface = #1C1B1F
     @SurfaceVariant = #E7E0EC
     @OnSurfaceVariant = #49454F
+    // Diagram drawing surface — a hair off pure white so the ruler strips
+    // (@Surface #FFFBFE) read as a distinct frame around the canvas.
+    @DiagramCanvas = #FDFDFD
 
     // ── M3 Surface containers (elevation tinting) ───────────────────
     @SurfaceContainerLowest = #FFFFFF
