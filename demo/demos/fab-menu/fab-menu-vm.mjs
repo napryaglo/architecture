@@ -1,4 +1,4 @@
-﻿// FabMenuVM — backs the fab-menu demo. Tracks per-action click
+// FabMenuVM — backs the fab-menu demo. Tracks per-action click
 // counts so the user can verify each mini-FAB in the popup fires
 // through to a command target, and the FAB-toggle state for the
 // read-out.

@@ -1,4 +1,4 @@
-﻿// demo-group-services.mts — per-group content services for the demo platform.
+// demo-group-services.mts — per-group content services for the demo platform.
 //
 // The service-backed content model: each demo GROUP is its OWN service, named
 // by its capability's `ServiceKey` in demo-platform.module.mu. When a group's

@@ -1,4 +1,4 @@
-﻿// drag-drop demo VM — two lists, items move between them via drag.
+// drag-drop demo VM — two lists, items move between them via drag.
 //
 // Follows the MVVM rules in CLAUDE.md strictly:
 //   * Data + commands only; no view reaches, no Visual mutation, no

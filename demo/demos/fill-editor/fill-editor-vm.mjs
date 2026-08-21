@@ -1,4 +1,4 @@
-﻿// VM for the fill-editor demo. Holds a Fill DP the editor edits; the
+// VM for the fill-editor demo. Holds a Fill DP the editor edits; the
 // view binds the preview Shape's Fill to the same brush so user
 // gestures repaint live. Mirror Pen DP + the previous demo's pattern
 // for a static stroke around the preview shape.

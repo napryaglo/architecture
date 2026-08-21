@@ -1,4 +1,4 @@
-﻿// Bouncing-ball VM. A single ball flies in a fixed-size box, reflecting
+// Bouncing-ball VM. A single ball flies in a fixed-size box, reflecting
 // velocity off each wall. Pure simulation state lives here; the
 // per-tick integration runs from the bootstrap subscribing to the
 // animation clock (Rule 5: VMs don't touch host globals — the clock is

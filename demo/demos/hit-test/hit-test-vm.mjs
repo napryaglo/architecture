@@ -1,4 +1,4 @@
-﻿// HitTestVM — backs the "Hit test" demo. The only view-observable state
+// HitTestVM — backs the "Hit test" demo. The only view-observable state
 // is IsToggled: false paints the heart control orange, true flips it to
 // white. The heart-hit behaviour (behaviors/heart-hit-behavior.mts) flips
 // this DP on a MouseLeftButtonDown that survives the Border's

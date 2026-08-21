@@ -1,4 +1,4 @@
-﻿// MenuVM — command catalogue + status mirror for the menu demo. The
+// MenuVM — command catalogue + status mirror for the menu demo. The
 // MenuButton hosts a vertical column of MenuItems; click an item to
 // run its command. Status reflects the latest invocation.
 //

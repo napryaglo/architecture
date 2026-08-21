@@ -1,4 +1,4 @@
-﻿// BottomSheetVM — backs the bottom-sheet demo. BottomSheet ships no
+// BottomSheetVM — backs the bottom-sheet demo. BottomSheet ships no
 // posture DP (its class doc leaves internal layout to the consumer), so
 // the peek-vs-expanded posture is modelled here: Expanded is a reactive
 // boolean and SheetHeight is the height the sheet's Height DP binds to.

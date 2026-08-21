@@ -1,4 +1,4 @@
-﻿// DiagramTool — one toolbar-command descriptor: an icon geometry paired
+// DiagramTool — one toolbar-command descriptor: an icon geometry paired
 // with the ICommand it invokes. The diagrammer authors inline arrays of
 // these in markup (one array per ToolBar group — Align / Distribute /
 // Group / Combine) and a single shared DataTemplate renders each as a

@@ -1,4 +1,4 @@
-﻿// ListBoxVM — three-pane ListBox showcase: declarative items on the
+// ListBoxVM — three-pane ListBox showcase: declarative items on the
 // left (markup-only), Items=[...] convenience in the middle, and an
 // ItemsSource + CollectionView pane on the right whose Sort / Filter
 // state is exercised through host-side click handlers.

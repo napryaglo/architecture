@@ -1,4 +1,4 @@
-﻿// ContextMenuVM — three colored panels each with its OWN ContextMenu.
+// ContextMenuVM — three colored panels each with its OWN ContextMenu.
 // Right-click any panel to open its menu; the route-walker finds the
 // nearest ancestor with an attached ContextMenu and opens it at the
 // cursor position.

@@ -1,4 +1,4 @@
-﻿// CarouselVM — backs the carousel demo. A small list of hero cards plus an
+// CarouselVM — backs the carousel demo. A small list of hero cards plus an
 // ActiveIndex the prev/next chevrons page through (bound TwoWay), echoed as
 // a "card N of M" caption.
 import { MuralBase, MetaData, ObservableCollection } from '@pragmatic-lab/mural/runtime';

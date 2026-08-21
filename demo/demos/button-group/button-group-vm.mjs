@@ -1,4 +1,4 @@
-﻿// ButtonGroupVM — backs the button-group demo. Tracks click counts
+// ButtonGroupVM — backs the button-group demo. Tracks click counts
 // for each action button so the hover-expand interaction can be
 // verified end-to-end (hover widens, click increments).
 import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';

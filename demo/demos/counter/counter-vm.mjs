@@ -1,4 +1,4 @@
-﻿// CounterVM — the model the counter demo binds against. The .mu file
+// CounterVM — the model the counter demo binds against. The .mu file
 // (counter.mu) declares a DataTemplate parameterized by this type;
 // ContentControl auto-resolves the template by matching
 // CounterVM.constructor.name against the template's DataType.

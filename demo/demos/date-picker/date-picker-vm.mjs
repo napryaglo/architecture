@@ -1,4 +1,4 @@
-﻿// DatePickerVM — backs the date-picker demo. SelectedDate binds TwoWay to
+// DatePickerVM — backs the date-picker demo. SelectedDate binds TwoWay to
 // the DatePicker; SelectedLabel echoes the picked day. Because the picker
 // writes SelectedDate through the binding (bypassing the JS setter), the
 // label is refreshed from OnPropertyChanged, which fires on every write —

@@ -1,4 +1,4 @@
-﻿// ToolBarVM — backs the tool-bar demo. Holds the shared command
+// ToolBarVM — backs the tool-bar demo. Holds the shared command
 // catalogue + a status string the toolbar items mutate as they fire.
 //
 // Three RelayCommands:

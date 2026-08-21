@@ -1,4 +1,4 @@
-﻿// VM for the color-picker demo. Three independent hex string DPs the
+// VM for the color-picker demo. Three independent hex string DPs the
 // view binds to a ColorPicker each — surface, accent, ink. The .mu
 // pipes those into preview swatches so the user can see the picked
 // colour ride live.

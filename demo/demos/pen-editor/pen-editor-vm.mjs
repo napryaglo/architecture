@@ -1,4 +1,4 @@
-﻿// VM for the pen-editor demo. A single Pen DP the editor edits in
+// VM for the pen-editor demo. A single Pen DP the editor edits in
 // place; the .mu file binds the preview Shape's Stroke to the same Pen
 // instance so user gestures repaint the preview live.
 //

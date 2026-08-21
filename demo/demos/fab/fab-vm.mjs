@@ -1,4 +1,4 @@
-﻿// FabVM — backs the FAB demo. One click counter per Size variant + per
+// FabVM — backs the FAB demo. One click counter per Size variant + per
 // Extended slot so the dynamic-binding chain is visible end-to-end. No
 // IsChecked story because FAB is monomorphic on container colour and
 // doesn't ship a toggle variant.

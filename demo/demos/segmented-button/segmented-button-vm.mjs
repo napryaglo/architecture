@@ -1,4 +1,4 @@
-﻿// SegmentedButtonVM — backs the segmented-button demo. Two scenarios:
+// SegmentedButtonVM — backs the segmented-button demo. Two scenarios:
 //
 //   * Single-select timeframe picker (Day / Week / Month / Year). The
 //     selected segment binds to SelectedTimeframe.

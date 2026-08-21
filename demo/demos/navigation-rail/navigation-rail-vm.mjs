@@ -1,4 +1,4 @@
-﻿// NavigationRailVM — backs the navigation-rail demo. Holds a list of
+// NavigationRailVM — backs the navigation-rail demo. Holds a list of
 // destination labels + a SelectedItem that the rail two-way binds. The
 // active demo body switches based on SelectedItem.
 import { MuralBase, MetaData, ObservableCollection } from '@pragmatic-lab/mural/runtime';

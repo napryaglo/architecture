@@ -1,4 +1,4 @@
-﻿// word-toolbox VM — toolbox of 100 words on the left, a virtualized
+// word-toolbox VM — toolbox of 100 words on the left, a virtualized
 // WrapPanel-backed listbox on the right pre-populated with ~2k
 // entries. Drag-from-toolbox copies a word into the listbox; drag-
 // within-listbox reorders.

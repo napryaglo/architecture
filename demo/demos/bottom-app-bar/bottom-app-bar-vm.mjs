@@ -1,4 +1,4 @@
-﻿// BottomAppBarVM — backs the bottom-app-bar demo. LastAction echoes which
+// BottomAppBarVM — backs the bottom-app-bar demo. LastAction echoes which
 // action (or the FAB) was tapped last; Tap is a single parameterised
 // RelayCommand every action button invokes with its own label, so the
 // BottomAppBar's Actions row + FloatingAction slot are visibly live

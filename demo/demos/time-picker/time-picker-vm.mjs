@@ -1,4 +1,4 @@
-﻿// TimePickerVM — backs the time-picker demo. Hour (0-23) + Minute bind
+// TimePickerVM — backs the time-picker demo. Hour (0-23) + Minute bind
 // TwoWay to the dial; TimeLabel echoes the picked time in 12h form,
 // refreshed from OnPropertyChanged so both direct and binding-driven
 // writes update it.

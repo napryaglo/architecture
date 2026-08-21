@@ -1,4 +1,4 @@
-﻿// VM for the text-on-path demo.
+// VM for the text-on-path demo.
 //
 // State the view binds to:
 //   * Text         — the text run laid along the path.

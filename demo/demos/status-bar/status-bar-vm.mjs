@@ -1,4 +1,4 @@
-﻿// StatusBarVM — backs the status-bar demo. Holds the status text the
+// StatusBarVM — backs the status-bar demo. Holds the status text the
 // strip displays, a modified flag, an item-count number, and command
 // hooks that flip them.
 //

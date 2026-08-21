@@ -1,4 +1,4 @@
-﻿// SplitButtonVM — backs the split-button demo. Exposes:
+// SplitButtonVM — backs the split-button demo. Exposes:
 //   * SendCommand (primary action)
 //   * SendCount   (click count for the primary action)
 //   * MenuActionCommand + MenuActionTaken — fired by each menu-item

@@ -1,4 +1,4 @@
-﻿// DrawerVM — drives the drawer demo's two Drawers through a single
+// DrawerVM — drives the drawer demo's two Drawers through a single
 // view-model. NavOpen and OptionsOpen are reactive booleans;
 // ToggleNav / OpenOptions / CloseOptions are commands the markup
 // binds to its Buttons. The template's two Drawers OneWay-bind

@@ -1,4 +1,4 @@
-﻿// BannerVM — backs the banner demo. Dismissed is a reactive boolean the
+// BannerVM — backs the banner demo. Dismissed is a reactive boolean the
 // template binds to (collapsing the Banner when the action fires); the
 // Dismiss / Restore RelayCommands the markup wires to the trailing action
 // Button and a Restore button so the in-flow Banner can be shown again.

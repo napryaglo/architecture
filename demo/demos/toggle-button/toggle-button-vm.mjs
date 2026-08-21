@@ -1,4 +1,4 @@
-﻿// ToggleButtonVM — backs the toggle-button demo. Three bound boolean
+// ToggleButtonVM — backs the toggle-button demo. Three bound boolean
 // DPs (IsBold / IsItalic / IsUnderline) plus a sample preview string.
 // The view binds each toggle's IsChecked TwoWay onto the corresponding
 // DP; per-DP style triggers on the preview Border style its TextBlock

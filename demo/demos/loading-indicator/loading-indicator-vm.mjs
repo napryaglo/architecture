@@ -1,4 +1,4 @@
-﻿// LoadingIndicatorVM — backs the loading-indicator demo. Drives the
+// LoadingIndicatorVM — backs the loading-indicator demo. Drives the
 // shared IsActive flag both indicators bind to, plus a Toggle command
 // (with a label that flips Pause ↔ Resume) so the viewer can watch the
 // M3 spinner start and stop on the shared animation clock.

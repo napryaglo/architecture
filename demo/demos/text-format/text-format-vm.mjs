@@ -1,4 +1,4 @@
-﻿// VM for the text-format demo. Holds the character-format state as pure
+// VM for the text-format demo. Holds the character-format state as pure
 // runtime primitives — a family name (string), a point size (number),
 // three garniture toggles (bool), and a colour hex (string). No
 // visual-engine types here: the FontWeight / FontStyle / TextDecorations

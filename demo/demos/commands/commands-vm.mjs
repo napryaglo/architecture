@@ -1,4 +1,4 @@
-﻿// CommandsVM — exercises all three command surfaces (Menu, ToolBar,
+// CommandsVM — exercises all three command surfaces (Menu, ToolBar,
 // ContextMenu) over the framework Diagram. Extends DiagramDocument with:
 //
 //   * Alignment commands (AlignLeft / AlignTop / AlignRight / AlignBottom)

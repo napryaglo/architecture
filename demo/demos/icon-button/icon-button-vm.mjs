@@ -1,4 +1,4 @@
-﻿// IconButtonVM — backs the icon-button demo. Tracks how many times each
+// IconButtonVM — backs the icon-button demo. Tracks how many times each
 // icon variant has been clicked and the checked state of the four
 // IconButtonToggle variants so the UI can show a live tally + reflect
 // the toggle state back into the chrome.

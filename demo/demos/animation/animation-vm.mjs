@@ -1,4 +1,4 @@
-﻿// AnimationVM — drives the imperative animation showcase. Each row's
+// AnimationVM — drives the imperative animation showcase. Each row's
 // click handler is wired in OnViewMounted via FindName; the VM keeps
 // per-row Storyboard references so a fresh click stops the prior
 // animation before starting the next one.

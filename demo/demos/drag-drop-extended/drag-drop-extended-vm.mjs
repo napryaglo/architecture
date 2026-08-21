@@ -1,4 +1,4 @@
-﻿// drag-drop-extended VM — single demo covering the four §8 follow-ups
+// drag-drop-extended VM — single demo covering the four §8 follow-ups
 // closed in this branch: OS file drops (8.1), source-side feedback /
 // continue hooks (8.3), ScrollViewer auto-scroll near edges (8.4), and
 // the insertion-line adorner on ListReorderBehavior (8.5).

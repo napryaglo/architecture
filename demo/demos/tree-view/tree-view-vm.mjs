@@ -1,4 +1,4 @@
-﻿// TreeViewVM — two-pane TreeView showcase: a composed-markup tree on
+// TreeViewVM — two-pane TreeView showcase: a composed-markup tree on
 // the left and a HierarchicalDataTemplate-driven tree on the right.
 //
 // The right pane carries a JS itemsSelector closure that can't be

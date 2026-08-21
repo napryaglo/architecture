@@ -1,4 +1,4 @@
-﻿// RichTextBlockVM — backs the rich-text-block demo. The demo is a
+// RichTextBlockVM — backs the rich-text-block demo. The demo is a
 // read-only typography showcase: a single RichTextBlock flows mixed text
 // styles (bold / italic / underline / colour / size) and inline chips over
 // one FlowDocument authored entirely in markup. There is no editable state,
