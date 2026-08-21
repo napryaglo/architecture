@@ -107,71 +107,80 @@ renamed `Model`) extends it and adds the DP system; `Visual` extends `MuralBase`
 
 ### `Observable` — the contract
 
-`Observable` presents the **same typed-key surface** the binding engine and
-`ContentControl` already consume, so the engine's key resolution
-(`resolveKey` → `PropertyKey` → `descriptor.ComposedKey`) is unchanged:
+`Observable` is a minimal **name-based** `INotifyPropertyChanged` analog. It has
+**no** `PropertyKey`, **no** descriptor registry, **no** effective-value
+machinery — a subclass declares real typed fields and drives notification from
+its own setters:
 
 ```ts
 class Observable {
-  // Static registration is SHARED with MuralBase (per-class, cheap):
-  //   RegisterProperty / RegisterReadOnlyProperty, compose_key,
-  //   property_bags, find_descriptor, HasProperty, EnumerateProperties.
-  // These produce the PropertyKey / PropertyDescriptor the binding engine
-  // resolves against — identical for Observable and MuralBase.
+  // Lazily allocated on first subscribe: property NAME → callbacks.
+  private _listeners?: Map<string, PropertyChangeCallback[]>;
 
-  get_property_value<T>(key: PropertyKey<T>): T;
-  set_property_value<T>(key: PropertyKey<T>, value: T): void;
-  AddPropertyChangedListener(key: PropertyKey<unknown>, cb: PropertyChangeCallback): void;
-  RemovePropertyChangedListener(key: PropertyKey<unknown>, cb: PropertyChangeCallback): void;
-  protected OnPropertyChanged(descriptor: PropertyDescriptor, oldValue: unknown, newValue: unknown): void;
+  // Virtual — MuralBase overrides it (widened to string | PropertyKey).
+  AddPropertyChangedListener(name: string, cb: PropertyChangeCallback): void;
+  RemovePropertyChangedListener(name: string, cb: PropertyChangeCallback): void;
+
+  // Subclass setters call this after writing the backing field, on real change.
+  protected notify(name: string, oldValue: unknown, newValue: unknown): void;
 }
 ```
 
-**Storage (the whole point):** an `Observable` stores each property's value in a
-**plain instance field** and holds a **lazily-allocated per-instance listener
-registry** keyed by `ComposedKey` — created only when someone subscribes.
-Concretely:
+A subclass property is a plain field + getter + setter that calls `notify`:
 
-- `get_property_value(key)` reads the backing field (by the descriptor's name);
-  falls back to the descriptor's default when unset.
-- `set_property_value(key, v)` writes the field, then — if a listener registry
-  exists for that key — fires `OnPropertyChanged` + the callbacks. No EVD, no
-  effective-value arbitration.
-- The listener registry is a single `Map<string, PropertyChangeCallback[]>`
-  (or equivalent), allocated on first `AddPropertyChangedListener`. An
-  `Observable` that is never bound allocates **no** value Map and **no**
-  listener Map — its memory floor is a plain object plus its declared fields.
+```ts
+class Location extends Observable {
+  private _label = '';
+  get label(): string { return this._label; }
+  set label(v: string) {
+    const old = this._label;
+    if (old === v) return;
+    this._label = v;
+    this.notify('label', old, v);
+  }
+}
+```
+
+`PropertyChangeCallback` is the **existing public** binding callback arity
+`(owner, name: string, oldValue, newValue)` (from
+[binding/effective-value.ts:10](../../../src/runtime/binding/effective-value.ts#L10)) —
+the same shape the engine already delivers for `MuralBase`, so a single callback
+type serves both source kinds.
+
+**Storage (the whole point):** value lives in the subclass's own typed field —
+no value Map, no descriptor, no `ComposedKey`. The only allocation `Observable`
+itself owns is `_listeners`, created on first `AddPropertyChangedListener`. An
+`Observable` that is never subscribed to allocates **nothing** beyond its
+declared fields.
 
 **What `Observable` deliberately does NOT have** (all of this stays on
-`MuralBase`): the `EffectiveValueDescriptor` store, effective-value resolution
-across sources, `PropertyValueSource` arbitration, styles, triggers, animation
+`MuralBase`): `PropertyKey`, the per-class descriptor registry
+(`RegisterProperty`, `property_bags`, `find_descriptor`, …), the
+`EffectiveValueDescriptor` store, effective-value resolution across sources,
+`PropertyValueSource` arbitration, styles, triggers, animation
 (`SetAnimatedValue`/`ClearAnimatedValue`), value inheritance
 (`_getInheritableDescriptors`), attached properties
-(`RegisterAttachedProperty`), and `OverrideMetadata`. Calling a
-`MuralBase`-only API on an `Observable` is a compile-time type error (the
-methods live on `MuralBase`), with a defensive runtime guard where the engine
-might reach polymorphically.
-
-> Value-storage sub-choice: generated concept classes declare real typed fields
-> (fastest, zero Map). A generic `Observable` subclass that does not declare
-> fields may use a small raw-value `Map<string, unknown>` (still far lighter
-> than the EVD Map). The spec mandates the *contract*; the plan picks the
-> default backing (recommended: plain fields for codegen, raw-value map
-> fallback for hand-authored generic subclasses).
+(`RegisterAttachedProperty`), `OverrideMetadata`, and coerce/validate
+callbacks. Calling any of these on a plain `Observable` is a compile-time type
+error (the members live on `MuralBase`).
 
 ### `MuralBase` — the renamed `Model`
 
 `MuralBase` **is today's `Model`, verbatim**, with two changes:
 
-1. It `extends Observable` instead of nothing. The static registration
-   machinery (`RegisterProperty`, `compose_key`, `property_bags`,
-   `find_descriptor`, …) moves to `Observable` and is *inherited*, so
-   `MuralBase.RegisterProperty(...)` keeps working unchanged.
-2. Its instance value storage (`property_values` EVD Map + effective-value
-   resolution) **overrides** `Observable`'s plain-field storage. `MuralBase`'s
-   `get_property_value` / `set_property_value` / `Add`/`RemovePropertyChangedListener`
-   keep their current EVD-backed implementations. The listener *surface* is the
-   same signature the base declares; the *backing* differs.
+1. It `extends Observable` instead of nothing. The **entire** property system
+   stays on `MuralBase` — `PropertyKey`, the static registry (`RegisterProperty`,
+   `compose_key`, `property_bags`, `find_descriptor`, …), descriptors, and the
+   `property_values` EVD store are all unchanged and unmoved.
+2. It **overrides** the one virtual `Observable` declares —
+   `AddPropertyChangedListener` — widening the parameter to `string |
+   PropertyKey`: a `PropertyKey` routes to the existing EVD listener path
+   (parity, byte-for-byte); a `string` resolves via `find_descriptor` to the
+   key, then the same path. `RemovePropertyChangedListener` mirrors it.
+   `PropertyKey` therefore appears only in `MuralBase`'s signature, never in
+   `Observable`'s. `MuralBase` does **not** use `Observable`'s `_listeners`
+   registry or `notify` — its notifications flow through the EVD listeners as
+   they do today.
 
 No `MuralBase` subclass changes behavior. `Visual extends MuralBase`.
 
@@ -180,14 +189,17 @@ No `MuralBase` subclass changes behavior. `Visual extends MuralBase`.
 Every current `instanceof Model` site is reclassified by **intent**, because
 the two meanings now diverge:
 
-- *"is this bindable / observable?"* → **`instanceof Observable`**. Sites:
+- *"is this bindable / observable?"* → **`instanceof Observable`**, then
+  **dual-branch** inside on `instanceof MuralBase` (key path) vs plain
+  `Observable` (name/getter/setter path). Sites:
   - `binding.ts` source observation (the three `instanceof Model` checks at
-    ~227/246/280) and its teardown key handling.
+    ~227/246/280), its teardown, and the two-way write-back.
   - `data-context-binding.ts` first-segment subscription
     ([:41](../../../src/runtime/binding/data-context-binding.ts#L41)).
   - `ancestor-binding.ts` ancestor subscription.
   - `content-control.ts` `DataTemplate` auto-resolution (non-Visual observable →
-    match `DataType === value.constructor`).
+    match `DataType === value.constructor`; the dispatch key is unchanged, only
+    the type gate widens).
 - *"does this have the full DP system?"* (reaches for `RegisterAttachedProperty`,
   effective-value sources, animation, inheritance, `OverrideMetadata`) →
   **`instanceof MuralBase`**. These are the framework/visual-internal sites.
@@ -207,18 +219,23 @@ classification above:
 - Plexus: every `extends Model` → `extends MuralBase` and imports
   (`NodeViewModel`, `DiagramDocument`, `OpenProject`, and all VM subclasses).
 
-### Data flow — binding an `Observable` source
+### Data flow — binding a source (dual-branch, `MuralBase`-first)
 
-1. A binding path segment resolves its property to a `PropertyKey` via the
-   existing `resolveKey` (unchanged — `Observable` registers properties through
-   the shared `RegisterProperty`, producing the same descriptor/`ComposedKey`).
-2. The engine checks `current instanceof Observable` (was `Model`) and calls
-   `current.AddPropertyChangedListener(key, onChanged)` and
-   `current.get_property_value(key)` — same calls as today; `Observable`
-   implements them over its field + lazy-registry backing.
-3. On `set_property_value`, `Observable` notifies the registry, the binding
-   callback fires, and the target updates — identical downstream behavior.
-4. Teardown calls `RemovePropertyChangedListener(key, cb)` — same surface.
+The engine widens its gate from `instanceof MuralBase` to `instanceof
+Observable`, then branches on the concrete type:
+
+- **`source instanceof MuralBase`** → the existing path, unchanged: `resolveKey`
+  → `PropertyKey`, `get_property_value(key)`, `AddPropertyChangedListener(key,
+  cb)`, teardown `RemovePropertyChangedListener(key, cb)`. Zero behavioral diff.
+- **plain `Observable`** → the name path:
+  1. The segment's property name is used directly (no key resolution).
+  2. Read `(source as Record<string, unknown>)[name]` — the subclass getter.
+  3. Subscribe `source.AddPropertyChangedListener(name, onChanged)`; the
+     callback receives `(owner, name, old, new)` — the same arity as the
+     `MuralBase` branch, so downstream target-update code is shared.
+  4. Two-way write-back sets `(source as Record<string, unknown>)[name] = value`
+     — the subclass setter runs and fires `notify`.
+  5. Teardown calls `source.RemovePropertyChangedListener(name, onChanged)`.
 
 ### Data flow — `DataTemplate` dispatch on an `Observable`
 
@@ -232,19 +249,19 @@ preserved and now names an `Observable` type.
 
 ## Error handling & edge cases
 
-- **MuralBase-only APIs on an `Observable`:** compile-time type error (methods
-  live on `MuralBase`). Where the engine could reach one polymorphically, guard
-  with `instanceof MuralBase` and no-op/throw a clear diagnostic.
+- **MuralBase-only APIs on an `Observable`:** compile-time type error
+  (`PropertyKey`, `get/set_property_value`, `RegisterProperty`, and the rest
+  live on `MuralBase`). The binding engine never reaches them on a plain
+  `Observable` because it branches on `instanceof MuralBase` first.
 - **Inherited/attached properties, animation, styles, triggers, bound-source
-  arbitration:** available only on `MuralBase`. An `Observable` property has
-  exactly two states — set or default — so `GetValueSource` collapses to
-  `Local | Default` if exposed at all (recommend not exposing it on
-  `Observable`).
-- **Read of an unset `Observable` property:** returns the descriptor default,
-  matching `Model` semantics for an unset local value.
-- **Two-way binding into an `Observable`:** `set_property_value` writes the
-  field and notifies; no source arbitration is needed because there is only the
-  local source.
+  arbitration, coerce/validate:** available only on `MuralBase`. A plain
+  `Observable` field has exactly one source — its own value — so no arbitration
+  exists to expose.
+- **Read of an unwritten `Observable` field:** returns the field's declared
+  initializer (ordinary JS), the subclass's chosen default.
+- **Two-way binding into an `Observable`:** the engine assigns `source[name] =
+  value`, running the subclass setter, which fires `notify`; no source
+  arbitration because there is only the local field.
 
 ## Testing
 
@@ -255,9 +272,10 @@ Written first; parity is the gate.
   trigger, animation, inheritance, and attached-property test behaves
   identically after `Model → MuralBase extends Observable`. Zero behavioral
   diff for existing `MuralBase` subclasses and `Visual`.
-- **`Observable` binds.** A plain `Observable` subclass with two registered
+- **`Observable` binds.** A plain `Observable` subclass with two field
   properties: a `TextBlock [ Text = $label ]` binding reflects the initial
-  value, updates on `set_property_value`, and two-way writes back.
+  value, updates when the subclass setter runs (`notify`), and two-way writes
+  back through the setter.
 - **`DataTemplate` dispatch on `Observable`.** `DataType = <ObservableSubclass>`
   resolves and renders; an unmatched type shows the red diagnostic naming the
   type.
