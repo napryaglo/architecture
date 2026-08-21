@@ -95,7 +95,11 @@ export abstract class CommandBase extends MuralBase implements ICommand
     public get Icon():        unknown { return this.get_property_value(CommandBase.IconKey); }
     public set Icon(v:        unknown){ this.set_property_value(CommandBase.IconKey, v); }
 
-    private readonly _listeners: Set<() => void> = new Set();
+    // CanExecute-changed subscribers. Renamed from `_listeners` to avoid
+    // colliding with the private `_listeners` field on `Observable` (the
+    // light property-change store) now that `CommandBase` descends from
+    // it via `MuralBase`.
+    private readonly _canExecuteListeners: Set<() => void> = new Set();
 
     constructor(meta?: CommandMetadataInit)
     {
@@ -113,12 +117,12 @@ export abstract class CommandBase extends MuralBase implements ICommand
 
     public AddCanExecuteChangedListener(listener: () => void): void
     {
-        this._listeners.add(listener);
+        this._canExecuteListeners.add(listener);
     }
 
     public RemoveCanExecuteChangedListener(listener: () => void): void
     {
-        this._listeners.delete(listener);
+        this._canExecuteListeners.delete(listener);
     }
 
     // Subclass hook — current listener count. RoutedCommand consults
@@ -127,7 +131,7 @@ export abstract class CommandBase extends MuralBase implements ICommand
     // with zero subscribers.
     protected _listenerCount(): number
     {
-        return this._listeners.size;
+        return this._canExecuteListeners.size;
     }
 
     // Notify subscribers that CanExecute may have transitioned. Snapshot
@@ -135,7 +139,7 @@ export abstract class CommandBase extends MuralBase implements ICommand
     // within its callback doesn't perturb the iteration.
     public RaiseCanExecuteChanged(): void
     {
-        const snap = [...this._listeners];
+        const snap = [...this._canExecuteListeners];
         for (const cb of snap) cb();
     }
 }

@@ -264,9 +264,11 @@ describe('Button — ICommand integration', () => {
         // so a structural peek is fair game.
         // Listener bookkeeping moved to CommandBase after the
         // RelayCommand-extends-CommandBase refactor. The base stores the
-        // set as a private `_listeners`; the structural peek follows.
+        // set as a private `_canExecuteListeners` (renamed from
+        // `_listeners` to avoid colliding with `Observable`'s private
+        // property-change store); the structural peek follows.
         const peek = (c: RelayCommand) =>
-            ((c as unknown as { _listeners: Set<unknown> })._listeners).size;
+            ((c as unknown as { _canExecuteListeners: Set<unknown> })._canExecuteListeners).size;
 
         assert.equal(peek(oldCmd), 1, 'Button subscribes to its current Command');
 

@@ -50,7 +50,8 @@ export {
     type ValidationRule,
     type ValueConverter,
 } from './binding/index.js';
-export { MuralBase, PropertyKey } from './model.js';
+export { Observable, PropertyKey } from './observable.js';
+export { MuralBase } from './model.js';
 export { Freezable, cloneFreezableValue } from './freezable.js';
 export { Behavior } from '../visual-engine/behavior.js';
 export {
