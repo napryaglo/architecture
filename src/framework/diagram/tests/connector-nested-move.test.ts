@@ -53,3 +53,23 @@ test('moving an ancestor container re-routes a connector anchored to its nested 
 
     assert.equal(endPt(c).Y - beforeY, 60, 'target anchor tracked the container move');
 });
+
+test('nesting an already-connected node then moving the container re-routes it', () => {
+    app();
+    const container = new ContainerFigure();
+    container.Left = 100; container.Top = 100; container.Width = 220; container.Height = 160;
+    const child = Figure.fromKind('rectangle', 300, 120, { width: 30, height: 20 }); // starts at ROOT
+    const c = new Connector();
+    c.RoutingMode = RoutingMode.Straight;
+    c.Source = new ConnectorEndpoint({ Node: child });   // attached while child is root → no ancestors yet
+    c.Target = new ConnectorEndpoint({ FreePoint: new Point(800, 200) });
+
+    // Simulate ContainerPlacement.reparent: link the parent, then write parent-
+    // relative Left/Top (the write is what fires the node-moved handler → refresh).
+    child.ContainerParent = container;
+    child.Left = 20; child.Top = 20;
+
+    const beforeX = startPt(c).X;
+    container.Left = container.Left + 150;   // move the ancestor
+    assert.equal(startPt(c).X - beforeX, 150, 'ancestor subscription was refreshed on reparent');
+});

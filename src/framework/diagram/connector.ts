@@ -318,8 +318,12 @@ export class Connector extends Shape
         this._reregisterTargetSide();
         this._scheduleRecompute();
     };
-    private readonly _onSourceNodeMoved = (): void => { this._onAttachedNodeMoved(); };
-    private readonly _onTargetNodeMoved = (): void => { this._onAttachedNodeMoved(); };
+    // The endpoint node's OWN Left/Top ticked — drag, or a reparent (which writes
+    // parent-relative coords). Refresh the ancestor set first (reparent is the only
+    // thing that changes the chain, and it always writes these), then re-route. The
+    // refresh touches ANCESTOR listeners, never this node's, so it's re-entrancy-safe.
+    private readonly _onSourceNodeMoved = (): void => { this._refreshSourceAncestorListeners(); this._onAttachedNodeMoved(); };
+    private readonly _onTargetNodeMoved = (): void => { this._refreshTargetAncestorListeners(); this._onAttachedNodeMoved(); };
     // An ANCESTOR container of a nested endpoint moved — re-route only (the chain
     // is unchanged by an ancestor move, so no re-subscribe here; that would detach
     // the very listener mid-dispatch).
