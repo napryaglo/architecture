@@ -702,6 +702,64 @@ describe('Connector reactivity — source / target node moves', () => {
         assert.ok(c.Geometry !== undefined, 're-routed clean to the new position');
     });
 
+    test('resizing the source Figure.Width re-routes (perimeter anchor follows)', () => {
+        const fig = makeFigure(100, 100, 80, 80, []);  // right edge = 180
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        c.Source = new ConnectorEndpoint({ Node: fig });
+        c.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 200) });
+        const before = startOf(c).X;
+        fig.Width = 180;                       // grow width → right edge 180 → 280
+        const after = startOf(c).X;
+        assert.equal(before, 180);
+        assert.equal(after,  280);
+    });
+
+    test('resizing the target Figure.Height re-routes', () => {
+        const fig = makeFigure(300, 100, 80, 80, []);
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        c.Source = new ConnectorEndpoint({ FreePoint: new Point(0, 50) });
+        c.Target = new ConnectorEndpoint({ Node: fig });
+        const before = (c.Geometry as PathGeometry).Figures[0]!.Segments[0]! as { Point: Point };
+        const beforeEndY = before.Point.Y;
+        fig.Height = 400;                      // taller figure → left-edge anchor shifts
+        const after = (c.Geometry as PathGeometry).Figures[0]!.Segments[0]! as { Point: Point };
+        assert.notEqual(beforeEndY, after.Point.Y);
+    });
+
+    test('resizing an attached figure PRESERVES waypoints (unlike a move)', () => {
+        const src = makeFigure(100, 100, 80, 80, []);
+        const tgt = makeFigure(400, 100, 80, 80, []);
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Orthogonal;
+        c.Source = new ConnectorEndpoint({ Node: src, PortSide: PortSide.E });
+        c.Target = new ConnectorEndpoint({ Node: tgt, PortSide: PortSide.W });
+        c.Waypoints = [waypoint(new Point(250, 100), true), waypoint(new Point(250, 300))];   // one pin, one auto
+
+        src.Width = 120;                       // resize (Width only, Left unchanged)
+        // A resize reroutes against the new rect but keeps user bends — a move
+        // would have dropped them (see the move tests above).
+        assert.notEqual(c.Waypoints, undefined, 'waypoints survive a resize');
+        assert.equal(c.Waypoints!.length, 2, 'both vertices retained');
+        assert.ok(c.Geometry !== undefined, 're-routed against the new size');
+    });
+
+    test('replacing Source.Node stops resize reactivity on the old node', () => {
+        const figA = makeFigure(100, 100, 80, 80, []);
+        const figB = makeFigure(300, 300, 80, 80, []);
+        const c = new Connector();
+        c.RoutingMode = RoutingMode.Straight;
+        const src = new ConnectorEndpoint({ Node: figA });
+        c.Source = src;
+        c.Target = new ConnectorEndpoint({ FreePoint: new Point(500, 200) });
+
+        src.Node = figB;                       // swap
+        const afterSwap = startOf(c).X;
+        figA.Width = 999;                      // resizing the OLD node must not re-route
+        assert.equal(startOf(c).X, afterSwap, 'old node resize is ignored after swap');
+    });
+
     test('moving the TARGET figure also clears the waypoints', () => {
         const src = makeFigure(100, 100, 80, 80, []);
         const tgt = makeFigure(400, 100, 80, 80, []);

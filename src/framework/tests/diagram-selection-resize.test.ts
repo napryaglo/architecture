@@ -39,6 +39,15 @@ class FigureVM extends MuralBase {
     public get Height(): number  { return this.get_property_value(FigureVM.HeightKey); }
 }
 
+// A figure-shaped item that also carries the LockAspectRatio DP (real Figures
+// do; the plain FigureVM above does not). DiagramSelectionSource reads the flag
+// duck-typed off the geometry host, so this exercises the aspect-lock path.
+class LockFigureVM extends FigureVM {
+    public static readonly LockAspectRatioKey = MuralBase.RegisterProperty<boolean>(LockFigureVM, 'LockAspectRatio', false, MetaData.None);
+    public get LockAspectRatio(): boolean { return this.get_property_value(LockFigureVM.LockAspectRatioKey); }
+    public set LockAspectRatio(v: boolean) { this.set_property_value(LockFigureVM.LockAspectRatioKey, v); }
+}
+
 class FakeTarget implements MountableTarget {
     public Content: Visual | undefined;
     public SetFocus(_v: Visual | undefined): void { /* noop */ }
@@ -185,6 +194,67 @@ describe('DiagramSelectionSource — direct resize semantics', () => {
 
         assert.equal(a.Width,  8);
         assert.equal(a.Height, 8);
+    });
+
+    test('aspect lock: corner drag scales uniformly (80×80 +1 → 81×81, not 81×82)', () => {
+        const a = new LockFigureVM(0, 0, 80, 80);
+        a.LockAspectRatio = true;
+        const { diagram } = setup([a]);
+        selectMany(diagram, [a]);
+
+        const src = new DiagramSelectionSource(diagram);
+        src.beginResize();
+        src.applyResize(1, 1, 'left', 'top');   // SE-ish corner, +1 each axis
+        src.endResize();
+
+        assert.equal(a.Width,  81);
+        assert.equal(a.Height, 81);
+    });
+
+    test('aspect lock: single-axis (edge) drag scales BOTH dims proportionally', () => {
+        const a = new LockFigureVM(0, 0, 100, 50);   // ratio 2:1
+        a.LockAspectRatio = true;
+        const { diagram } = setup([a]);
+        selectMany(diagram, [a]);
+
+        const src = new DiagramSelectionSource(diagram);
+        src.beginResize();
+        src.applyResize(50, 0, 'left', 'none');   // E handle: +50 width, no height delta
+        src.endResize();
+
+        // scaleW = 150/100 = 1.5 dominant → newW = 150, newH = 50 * 1.5 = 75.
+        assert.equal(a.Width,  150);
+        assert.equal(a.Height, 75);
+    });
+
+    test('aspect lock: shrink past MIN clamps uniformly (ratio preserved)', () => {
+        const a = new LockFigureVM(0, 0, 40, 20);   // ratio 2:1, MIN = 8
+        a.LockAspectRatio = true;
+        const { diagram } = setup([a]);
+        selectMany(diagram, [a]);
+
+        const src = new DiagramSelectionSource(diagram);
+        src.beginResize();
+        src.applyResize(-100, -100, 'left', 'top');   // would drive both negative
+        src.endResize();
+
+        // minScale = max(8/40, 8/20) = 0.4 → newW = 16, newH = 8. Ratio still 2:1.
+        assert.equal(a.Width,  16);
+        assert.equal(a.Height, 8);
+    });
+
+    test('aspect lock OFF: axes remain independent (regression guard)', () => {
+        const a = new LockFigureVM(0, 0, 80, 80);   // lock defaults false
+        const { diagram } = setup([a]);
+        selectMany(diagram, [a]);
+
+        const src = new DiagramSelectionSource(diagram);
+        src.beginResize();
+        src.applyResize(1, 0, 'left', 'top');
+        src.endResize();
+
+        assert.equal(a.Width,  81);
+        assert.equal(a.Height, 80);   // untouched — no aspect coupling
     });
 
     test('applyResize without prior beginResize is a no-op', () => {

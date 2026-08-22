@@ -38,6 +38,10 @@ interface FigureSnapshot {
     // hand-resize sets it so their content auto-fit stops and the size sticks.
     userSizedKey?: PropertyKey<unknown>;
     left: number; top: number; w: number; h: number;
+    // Snapshot of the figure's LockAspectRatio at gesture start. When true,
+    // applyResize constrains the drag to a uniform scale so the shape keeps
+    // its w:h ratio (per-shape — content VMs lack the DP → always false).
+    lockAspect: boolean;
     // True iff every geometry DP is read-only — skip this entry in
     // applyResize (we can't write through). Groups land here.
     isReadOnly: boolean;
@@ -117,6 +121,7 @@ export class DiagramSelectionSource implements SelectionSource
                 top:  (item as unknown as { Top:  number }).Top,
                 w:    (item as unknown as { Width:  number }).Width,
                 h:    (item as unknown as { Height: number }).Height,
+                lockAspect: (item as unknown as { LockAspectRatio?: boolean }).LockAspectRatio === true,
                 isReadOnly,
             });
         }
@@ -137,9 +142,29 @@ export class DiagramSelectionSource implements SelectionSource
             // and apply custom resize semantics if needed.
             if (s.isReadOnly) continue;
 
-            const minDim  = DiagramSettings.ShapeMinResize();
-            const newW    = Math.max(minDim, s.w + dw);
-            const newH    = Math.max(minDim, s.h + dh);
+            const minDim = DiagramSettings.ShapeMinResize();
+            let newW: number;
+            let newH: number;
+            if (s.lockAspect && s.w > 0 && s.h > 0)
+            {
+                // Aspect-locked: collapse the (dw, dh) drag to ONE uniform scale.
+                // Drive it by whichever axis the user pushed further (larger
+                // deviation from 1) — so a corner drag scales by its dominant
+                // axis and an edge handle (one delta zero) still scales both.
+                const scaleW = (s.w + dw) / s.w;
+                const scaleH = (s.h + dh) / s.h;
+                let scale = Math.abs(scaleW - 1) >= Math.abs(scaleH - 1) ? scaleW : scaleH;
+                // Clamp the single scale so BOTH dims stay ≥ min (clamping each
+                // dim independently would break the locked ratio).
+                scale = Math.max(scale, minDim / s.w, minDim / s.h);
+                newW = s.w * scale;
+                newH = s.h * scale;
+            }
+            else
+            {
+                newW = Math.max(minDim, s.w + dw);
+                newH = Math.max(minDim, s.h + dh);
+            }
             const newLeft = (xAnchor === HorizontalAnchor.Right)  ? s.left + s.w - newW : s.left;
             const newTop  = (yAnchor === VerticalAnchor.Bottom) ? s.top  + s.h - newH : s.top;
 

@@ -333,6 +333,12 @@ export class Connector extends Shape
             this._scheduleRecompute();
         }
     }
+    // An attached figure RESIZED (Width / Height changed) — from an adorner
+    // handle drag or a Size & Position editor edit. Unlike a move, a resize
+    // keeps the figure roughly in place, so we reroute against the new rect
+    // (re-resolving the perimeter anchors) WITHOUT discarding user waypoints.
+    private readonly _onSourceNodeResized = (): void => { this._scheduleRecompute(); };
+    private readonly _onTargetNodeResized = (): void => { this._scheduleRecompute(); };
     private readonly _onSourceSideRebalance = (): void => { this._scheduleRecompute(); };
     private readonly _onTargetSideRebalance = (): void => { this._scheduleRecompute(); };
 
@@ -652,6 +658,13 @@ export class Connector extends Shape
             prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Left'), this._onSourceNodeMoved);
             prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Top'),  this._onSourceNodeMoved);
         }
+        if (prev !== undefined
+            && MuralBase.HasProperty(prev.constructor, 'Width')
+            && MuralBase.HasProperty(prev.constructor, 'Height'))
+        {
+            prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Width'),  this._onSourceNodeResized);
+            prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Height'), this._onSourceNodeResized);
+        }
         const node = this.Source?.Node;
         this._trackedSourceNode = node;
         if (node !== undefined
@@ -660,6 +673,16 @@ export class Connector extends Shape
         {
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Left'), this._onSourceNodeMoved);
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Top'),  this._onSourceNodeMoved);
+        }
+        // Resize reactivity: reroute (preserving waypoints) when the figure's
+        // Width / Height change. Duck-typed like Left / Top — nodes without the
+        // DPs simply don't fire.
+        if (node !== undefined
+            && MuralBase.HasProperty(node.constructor, 'Width')
+            && MuralBase.HasProperty(node.constructor, 'Height'))
+        {
+            node.AddPropertyChangedListener(resolveKey(node, undefined, 'Width'),  this._onSourceNodeResized);
+            node.AddPropertyChangedListener(resolveKey(node, undefined, 'Height'), this._onSourceNodeResized);
         }
     }
 
@@ -671,6 +694,13 @@ export class Connector extends Shape
             prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Left'), this._onTargetNodeMoved);
             prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Top'),  this._onTargetNodeMoved);
         }
+        if (prev !== undefined
+            && MuralBase.HasProperty(prev.constructor, 'Width')
+            && MuralBase.HasProperty(prev.constructor, 'Height'))
+        {
+            prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Width'),  this._onTargetNodeResized);
+            prev.RemovePropertyChangedListener(resolveKey(prev, undefined, 'Height'), this._onTargetNodeResized);
+        }
         const node = this.Target?.Node;
         this._trackedTargetNode = node;
         if (node !== undefined
@@ -679,6 +709,14 @@ export class Connector extends Shape
         {
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Left'), this._onTargetNodeMoved);
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Top'),  this._onTargetNodeMoved);
+        }
+        // Resize reactivity — see _reattachSourceNodeListener.
+        if (node !== undefined
+            && MuralBase.HasProperty(node.constructor, 'Width')
+            && MuralBase.HasProperty(node.constructor, 'Height'))
+        {
+            node.AddPropertyChangedListener(resolveKey(node, undefined, 'Width'),  this._onTargetNodeResized);
+            node.AddPropertyChangedListener(resolveKey(node, undefined, 'Height'), this._onTargetNodeResized);
         }
     }
 
