@@ -27,6 +27,9 @@ import {
     type SerializedText,
 } from './node-serializers-default.js';
 import { GeometryCombineMode } from './commands/combine.js';
+import { wrapTargets, containerGeometryFor } from './commands/container-ops.js';
+import { ContainerFigure } from './container-figure.js';
+import { diagramSpaceRect, toParentSpace } from './coordinate-space.js';
 import type { DiagramMutator } from './behaviors/attach-standard-mutations.js';
 import { Connector } from './connector.js';
 import { waypoint } from './route-waypoint.js';
@@ -871,6 +874,42 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
         for (const sub  of grp.EnumerateSubGroups()) sub.IsSelected = false;
         this.Status = `Grouped ${selection.length} items.`;
         this._markDirty();
+    }
+
+    /** Wrap the current top-level selection in a new ContainerFigure. Data
+     *  mutation only: create the container sized to enclose the selection, claim
+     *  each node via ParentId, and convert each node's Left/Top to container-local
+     *  so its on-screen position is preserved when the RESTORE pass (placeAll,
+     *  driven by the container's ContainerBound on realize) re-parents it into the
+     *  container's ChildHost. No-op below one target. */
+    public WrapInContainer(items: readonly unknown[]): void
+    {
+        const targets = wrapTargets(items);
+        if (targets.length < 1) return;
+        const box = containerGeometryFor(targets);
+        const container = Figure.fromKind('container', box.left, box.top,
+                                          { width: box.width, height: box.height }) as ContainerFigure;
+        container.Id = 'n' + this._nextId++;
+
+        // Insert behind its future children (min index), like Group.
+        let minIdx = this.Nodes.Count;
+        for (const t of targets) { const i = this.Nodes.IndexOf(t); if (i >= 0 && i < minIdx) minIdx = i; }
+        this.Nodes.Insert(minIdx, container);
+
+        for (const t of targets)
+        {
+            const abs   = diagramSpaceRect(t);                       // current diagram-space top-left
+            const local = toParentSpace(new Point(abs.X, abs.Y), container);
+            t.ParentId = container.Id;
+            t.Left = local.X;
+            t.Top  = local.Y;
+        }
+        container.IsSelected = true;
+        this.Status = `Wrapped ${targets.length} item${targets.length === 1 ? '' : 's'}.`;
+        this._markDirty();
+        // Re-parent now if the container is already realized; otherwise its
+        // ContainerBound (fired on realize) re-runs placeAll and attaches them.
+        this._boundView?.ContainerPlacement.placeAll();
     }
 
     /** Dissolve every Group-shaped entry in `items`. Members lift to
