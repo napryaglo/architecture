@@ -259,6 +259,17 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public get ParentId(): string | undefined { return this._parentId; }
     public set ParentId(v: string | undefined) { this._parentId = v; }
 
+    // Live link to the ContainerFigure this node nests in (undefined = root).
+    // Maintained by ContainerPlacement in lock-step with ParentId; read by
+    // diagramSpaceRect to walk the ancestor chain. A plain field, not a DP: it is
+    // view-tree structure the collaborator owns, not bindable content.
+    public ContainerParent: Figure | undefined = undefined;
+
+    // The inset of this node's child host from its own top-left. A plain Figure
+    // hosts no children, so (0,0); ContainerFigure overrides with its title band +
+    // padding. Part of the ContainerLike shape diagramSpaceRect consumes.
+    public get ContentOrigin(): Point { return Point.Zero; }
+
     // ── Static factories ─────────────────────────────────────────────
     //
     // Three construction paths for a self-painting shape node:
