@@ -73,6 +73,20 @@ describe('NodeVisualStore', () => {
         assert.equal('fill' in bv, false);
         assert.equal('stroke' in bv, false);
     });
+    test('parentId: omitted when unset, captured + round-tripped when set', () => {
+        const store = new NodeVisualStore();
+        // Unset → omitted.
+        const bare = fig();
+        assert.equal('parentId' in store.Read(bare), false);
+        // Set → captured...
+        const child = fig(); child.ParentId = 'container-7';
+        const v = store.Read(child);
+        assert.equal(v.parentId, 'container-7');
+        // ...and restored onto a fresh node.
+        const g = fig();
+        store.Apply(v, g);
+        assert.equal(g.ParentId, 'container-7');
+    });
     test('Seed → Snapshot round-trips the map', () => {
         const s = new NodeVisualStore();
         const map = { a: { left: 1, top: 2, w: 3, h: 4 } };

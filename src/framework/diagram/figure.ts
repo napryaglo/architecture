@@ -250,6 +250,15 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // the field is always a Group instance.
     public Parent: Group | undefined = undefined;
 
+    // Container membership tag: the id of the ContainerFigure this node nests in
+    // (undefined = a root node). Not layout geometry — the ContainerPlacement
+    // collaborator reads it to re-parent this Figure's Visual into that
+    // container's child host, and mirrors it to the live ContainerParent link.
+    // Persisted via NodeVisualStore; a nested node's Left/Top are parent-relative.
+    private _parentId: string | undefined = undefined;
+    public get ParentId(): string | undefined { return this._parentId; }
+    public set ParentId(v: string | undefined) { this._parentId = v; }
+
     // ── Static factories ─────────────────────────────────────────────
     //
     // Three construction paths for a self-painting shape node:
