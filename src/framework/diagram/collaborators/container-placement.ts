@@ -1,7 +1,7 @@
 import { Panel } from '../../../runtime/index.js';
 import { Point } from '../../../visual-engine/index.js';
 import { diagramSpaceRect, toParentSpace } from '../coordinate-space.js';
-import { ContainerFigure } from '../container-figure.js';
+import { ContainerFigure, CONTAINER_PADDING } from '../container-figure.js';
 import { Figure } from '../figure.js';
 import type { Diagram } from '../diagram.js';
 
@@ -72,6 +72,18 @@ export class ContainerPlacement
         node.Left = local.X;
         node.Top  = local.Y;
         host.AddVisualChild(node);
+        this._growToFit(target, node);
+    }
+
+    // Grow (never shrink) `container` so `child`'s just-placed local rect fits
+    // inside the child region with CONTAINER_PADDING to spare. child.Left/Top are
+    // already in container-local space at call time.
+    private _growToFit(container: ContainerFigure, child: Figure): void
+    {
+        const needW = container.ContentOrigin.X + child.Left + child.Width  + CONTAINER_PADDING;
+        const needH = container.ContentOrigin.Y + child.Top  + child.Height + CONTAINER_PADDING;
+        if (needW > container.Width)  container.Width  = needW;
+        if (needH > container.Height) container.Height = needH;
     }
 
     // Move every realized child of `container` out to the container's own parent
