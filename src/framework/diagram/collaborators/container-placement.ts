@@ -48,16 +48,18 @@ export class ContainerPlacement
     // from the current frame to the target's content frame (or to root).
     public reparent(node: Figure, parentId: string | undefined): void
     {
-        const before = diagramSpaceRect(node);   // current on-screen rect
+        const old = node.ParentId;                // container membership before the move
+        const before = diagramSpaceRect(node);    // current on-screen rect
         node.ParentId = parentId;
         if (parentId === undefined)
         {
-            if (node.ContainerParent === undefined) return;   // already root
+            if (node.ContainerParent === undefined) return;   // already root — no membership change
             this._detach(node);
             node.ContainerParent = undefined;
             node.Left = before.X;
             node.Top  = before.Y;
             this._rootHost?.AddVisualChild(node);
+            this._diagram._fireNodeReparented({ Node: node, OldParentId: old, NewParentId: undefined });
             return;
         }
         const target = this._containers.get(parentId);
@@ -73,6 +75,7 @@ export class ContainerPlacement
         node.Top  = local.Y;
         host.AddVisualChild(node);
         this._growToFit(target, node);
+        this._diagram._fireNodeReparented({ Node: node, OldParentId: old, NewParentId: parentId });
     }
 
     // Grow (never shrink) `container` so `child`'s just-placed local rect fits
