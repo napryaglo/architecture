@@ -70,6 +70,29 @@ resources Diagrams {
         Template = @DefaultContainerFigure;
     }
 
+    // ── ContentContainerFigure: a VM-backed container ──────────────────
+    // Same box + child host as ContainerFigure, but its header shows the bound
+    // VM's own content (PART_Content → the VM's DataTemplate, e.g. an arch node's
+    // icon+label tile) instead of a ShapeText title. Header band is 56 tall
+    // (CONTAINER_HEADER_BAND); the child region begins at (8, 64) = (CONTAINER_
+    // PADDING, CONTAINER_HEADER_BAND + CONTAINER_PADDING), matching ContentOrigin.
+    Template x:key="DefaultContentContainerFigure" [ TargetType = ContentContainerFigure ] {
+        Border x:name="PART_Box" [ Fill = $$Fill, Stroke = $$Stroke ] {
+            Canvas {
+                ContentPresenter x:name="PART_Content"
+                    [ Canvas.Left = 8, Canvas.Top = 4, Width = $$Width, Height = 56,
+                      IsHitTestVisible = false ]
+                Canvas x:name="PART_ChildContainer"
+                    [ Canvas.Left = 8, Canvas.Top = 64,
+                      Width = $$Width, Height = $$Height, ClipToBounds = true ]
+            }
+        }
+        when ( IsDropCandidate ) { PART_Box.Fill = @SecondaryContainer; }
+    }
+    Style [ TargetType = ContentContainerFigure ] {
+        Template = @DefaultContentContainerFigure;
+    }
+
     // Geometric shape nodes are self-painting Figures (not a VM + Shape
     // primitive), so they need no DataTemplate — a shape Figure IS the node and
     // paints its own silhouette. See Figure.fromKind / the 'shape' serializer.
