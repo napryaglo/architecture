@@ -124,6 +124,18 @@ export interface FigureFromSourceOptions extends FigureFromKindOptions
     readonly kind?: string;
 }
 
+// Kind → factory registry for NON-silhouette figure kinds (e.g. 'container',
+// whose factory returns a ContainerFigure). It lets fromKind mint subclass
+// instances without figure.ts importing them — the subclass registers itself on
+// module load, breaking the figure ↔ subclass import cycle. Silhouette shapes
+// stay in SHAPE_CATALOG_MAP and fall through to the plain-Figure path.
+export type FigureKindFactory = (left: number, top: number, options?: FigureFromKindOptions) => Figure;
+const FIGURE_KIND_FACTORIES = new Map<string, FigureKindFactory>();
+export function registerFigureKind(kind: string, factory: FigureKindFactory): void
+{
+    FIGURE_KIND_FACTORIES.set(kind, factory);
+}
+
 export class Figure extends ContentControl implements ISideEndpointHost
 {
     static {
@@ -289,6 +301,10 @@ export class Figure extends ContentControl implements ISideEndpointHost
 
     public static fromKind(kind: string, left: number, top: number, options?: FigureFromKindOptions): Figure
     {
+        // Registered non-silhouette kinds (e.g. 'container') mint their own
+        // subclass instance; silhouette shapes fall through to the catalog.
+        const factory = FIGURE_KIND_FACTORIES.get(kind);
+        if (factory !== undefined) return factory(left, top, options);
         const entry = SHAPE_CATALOG_MAP.get(kind);
         if (entry === undefined)
         {

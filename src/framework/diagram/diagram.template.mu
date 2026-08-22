@@ -44,6 +44,29 @@ resources Diagrams {
         Template = @DefaultFigure;
     }
 
+    // ── ContainerFigure: a titled box that hosts nested Figures ────────
+    // A shapeless Figure (box drawn by the outer Border's Fill/Stroke, like
+    // TextNode). PART_LabelHost is the title band at the top (Figure's ctor slots
+    // its ShapeText there). PART_ChildContainer is a clipped Canvas below the band
+    // that hosts child Figures as true visual descendants — ContainerPlacement
+    // re-parents each child here. The Figure's own ClipToBounds trims children to
+    // the box; the inner Canvas's ClipToBounds trims them to the child region.
+    // Canvas.Left/Top on the child host == (CONTAINER_PADDING, CONTAINER_TITLE_BAND
+    // + CONTAINER_PADDING) in container-figure.ts (8 and 32).
+    Template x:key="DefaultContainerFigure" [ TargetType = ContainerFigure ] {
+        Border [ Fill = $$Fill, Stroke = $$Stroke ] {
+            Canvas {
+                Border x:name="PART_LabelHost" [ Width = $$Width, Height = 24 ]
+                Canvas x:name="PART_ChildContainer"
+                    [ Canvas.Left = 8, Canvas.Top = 32,
+                      Width = $$Width, Height = $$Height, ClipToBounds = true ]
+            }
+        }
+    }
+    Style [ TargetType = ContainerFigure ] {
+        Template = @DefaultContainerFigure;
+    }
+
     // Geometric shape nodes are self-painting Figures (not a VM + Shape
     // primitive), so they need no DataTemplate — a shape Figure IS the node and
     // paints its own silhouette. See Figure.fromKind / the 'shape' serializer.
