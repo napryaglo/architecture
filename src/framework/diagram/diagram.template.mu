@@ -54,7 +54,7 @@ resources Diagrams {
     // Canvas.Left/Top on the child host == (CONTAINER_PADDING, CONTAINER_TITLE_BAND
     // + CONTAINER_PADDING) in container-figure.ts (8 and 32).
     Template x:key="DefaultContainerFigure" [ TargetType = ContainerFigure ] {
-        Border [ Fill = $$Fill, Stroke = $$Stroke ] {
+        Border x:name="PART_Box" [ Fill = $$Fill, Stroke = $$Stroke ] {
             Canvas {
                 Border x:name="PART_LabelHost" [ Width = $$Width, Height = 24 ]
                 Canvas x:name="PART_ChildContainer"
@@ -62,6 +62,9 @@ resources Diagrams {
                       Width = $$Width, Height = $$Height, ClipToBounds = true ]
             }
         }
+        // Drop-candidate affordance: tint the box while a drag hovers it as its
+        // drop target (ContainerPlacement.highlightCandidate sets IsDropCandidate).
+        when ( IsDropCandidate ) { PART_Box.Fill = @SecondaryContainer; }
     }
     Style [ TargetType = ContainerFigure ] {
         Template = @DefaultContainerFigure;

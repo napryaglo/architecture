@@ -103,6 +103,28 @@ export class ContainerPlacement
         return best;
     }
 
+    // ── Drop-candidate highlight (drag affordance) ──────────────────────
+    private _candidate: ContainerFigure | undefined;
+
+    // Highlight the container the given diagram-space point would drop into
+    // (innermost, excluding `exclude` + its descendants), clearing any prior
+    // highlight. Called on each drag move.
+    public highlightCandidate(point: Point, exclude: Figure): void
+    {
+        const next = this.containerAt(point, exclude);
+        if (next === this._candidate) return;
+        if (this._candidate !== undefined) this._candidate.IsDropCandidate = false;
+        this._candidate = next;
+        if (next !== undefined) next.IsDropCandidate = true;
+    }
+
+    // Drop any active candidate highlight (drag ended / cancelled).
+    public clearCandidate(): void
+    {
+        if (this._candidate !== undefined) this._candidate.IsDropCandidate = false;
+        this._candidate = undefined;
+    }
+
     private _register(node: Figure): void
     {
         this._captureRootHost(node);
