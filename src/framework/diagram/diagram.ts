@@ -23,6 +23,8 @@ import { NodeViewModel } from './node-view-model.js';
 import type { DataTemplate } from '../../basic/templates/data-template.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
 import { Figure, resolveEditTarget } from './figure.js';
+import { ContainerFigure } from './container-figure.js';
+import { ContentContainerFigure } from './content-container-figure.js';
 import { PositionAnchor } from './position-anchor.js';
 import type { IPortProvider } from './port-providers/port-provider.js';
 import { Group } from './group.js';
@@ -1761,8 +1763,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         if (item instanceof Figure || item instanceof Group) return item;
         // Fallback for non-Figure/Group items — wrap in a fresh Figure
         // (preserves the old WPF-style data-container split for consumers
-        // that bind a VM collection to ItemsSource).
-        const node = new Figure();
+        // that bind a VM collection to ItemsSource). A VM can opt into a
+        // container host (duck-typed, like PortProvider): it realizes as a
+        // ContentContainerFigure that holds children, its header showing the
+        // VM's own content.
+        const wantsContainer = (item as { IsContainer?: boolean }).IsContainer === true;
+        const node: Figure = wantsContainer ? new ContentContainerFigure() : new Figure();
         this.bindContainer(node, item);
         return node;
     }
@@ -1902,7 +1908,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
                 // are seeded from the document's NodeVisualStore via ContainerBound
                 // (fired below), not bound off the VM.
                 node.Id            = item.Id;
-                node.SizeToContent = true;
+                // A plain VM container is a content tile (fits its box to the
+                // content); a ContentContainerFigure sizes to its box + auto-grow
+                // for children, not to its header, so it opts out.
+                node.SizeToContent = !(node instanceof ContainerFigure);
                 // A content tile styles like a rounded-rect card via its own
                 // Fill/Stroke (Format Shape edits the container — see FormatMirror
                 // paint targets). Default both TRANSPARENT so an unstyled tile
