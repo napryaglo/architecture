@@ -33,20 +33,45 @@ export class ContainerPlacement
         diagram.AddContainerBoundListener(() => this.placeAll());
     }
 
-    // Register every realized container, then apply every node's ParentId.
-    // Idempotent — safe to call repeatedly (a node already correctly placed is a
-    // no-op).
+    // RESTORE pass (load / mount): register every realized container, then link +
+    // attach each node to its ParentId container WITHOUT moving it — a saved
+    // node's Left/Top are already parent-relative, so no coordinate conversion.
+    // Idempotent.
     public placeAll(): void
     {
         for (const node of this._realizedNodes()) this._register(node);
-        for (const node of this._realizedNodes()) this._apply(node);
+        for (const node of this._realizedNodes()) this._restore(node);
     }
 
-    // Imperative reparent (drag-in/out, wrap/unwrap): set the tag, then place.
+    // MOVE reparent (drag-in/out, wrap/unwrap): change the node's frame while
+    // preserving its on-screen (diagram-space) position — its Left/Top convert
+    // from the current frame to the target's content frame (or to root).
     public reparent(node: Figure, parentId: string | undefined): void
     {
+        const before = diagramSpaceRect(node);   // current on-screen rect
         node.ParentId = parentId;
-        this._apply(node);
+        if (parentId === undefined)
+        {
+            if (node.ContainerParent === undefined) return;   // already root
+            this._detach(node);
+            node.ContainerParent = undefined;
+            node.Left = before.X;
+            node.Top  = before.Y;
+            this._rootHost?.AddVisualChild(node);
+            return;
+        }
+        const target = this._containers.get(parentId);
+        if (target === undefined) { this._queue(parentId, node); return; }
+        if (target === node || this._isDescendant(target, node)) return;   // cycle guard
+        if (node.ContainerParent === target) return;                       // already there
+        const host = target.ChildHost;
+        if (host === undefined) return;
+        this._detach(node);
+        node.ContainerParent = target;
+        const local = toParentSpace(new Point(before.X, before.Y), target);
+        node.Left = local.X;
+        node.Top  = local.Y;
+        host.AddVisualChild(node);
     }
 
     // The container that currently holds `point` (diagram-space), innermost first,
@@ -74,43 +99,27 @@ export class ContainerPlacement
         if (waiting !== undefined)
         {
             this._pending.delete(node.Id);
-            for (const child of waiting) this._apply(child);
+            for (const child of waiting) this._restore(child);
         }
     }
 
-    private _apply(node: Figure): void
+    // Link + attach a node to its ParentId container using its already-correct
+    // parent-relative coords (no conversion). Queues if the container is not
+    // registered yet (record order irrelevant). A root node needs nothing —
+    // it stays on the root host with root coords.
+    private _restore(node: Figure): void
     {
         const parentId = node.ParentId;
-        if (parentId === undefined) { this._moveToRoot(node); return; }
+        if (parentId === undefined) return;
         const target = this._containers.get(parentId);
         if (target === undefined) { this._queue(parentId, node); return; }
         if (target === node || this._isDescendant(target, node)) return;   // cycle guard
         if (node.ContainerParent === target) return;                       // already placed
-        this._attach(node, target);
-    }
-
-    private _attach(node: Figure, target: ContainerFigure): void
-    {
         const host = target.ChildHost;
         if (host === undefined) return;
-        const before = diagramSpaceRect(node);
         this._detach(node);
         node.ContainerParent = target;
-        const local = toParentSpace(new Point(before.X, before.Y), target);
-        node.Left = local.X;
-        node.Top  = local.Y;
-        host.AddVisualChild(node);
-    }
-
-    private _moveToRoot(node: Figure): void
-    {
-        if (node.ContainerParent === undefined) return;   // already root
-        const before = diagramSpaceRect(node);
-        this._detach(node);
-        node.ContainerParent = undefined;
-        node.Left = before.X;
-        node.Top  = before.Y;
-        this._rootHost?.AddVisualChild(node);
+        host.AddVisualChild(node);   // coords kept as-is (already parent-relative)
     }
 
     private _detach(node: Figure): void

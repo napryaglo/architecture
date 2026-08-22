@@ -17,7 +17,8 @@ test('selecting a nested node reports its diagram-space rect as the selection bb
     initTestApp();
     const container = new ContainerFigure();
     container.Id = 'C'; container.Left = 100; container.Top = 100; container.Width = 220; container.Height = 160;
-    const child = Figure.fromKind('rectangle', 130, 150, { width: 30, height: 20 });
+    // Parent-relative coords (content-space) → diagram-space (130,150) once restored.
+    const child = Figure.fromKind('rectangle', 22, 18, { width: 30, height: 20 });
     child.Id = 'n1'; child.ParentId = 'C';
 
     const items = new ObservableCollection<Figure>();

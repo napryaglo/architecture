@@ -19,35 +19,53 @@ function mount(items: ObservableCollection<Figure>): Diagram {
     return diagram;
 }
 
-test('placeAll re-parents a node into its ParentId container, preserving diagram-space position', () => {
+test('placeAll (restore) links a node with a saved parentId into its container, coords already parent-relative', () => {
     initTestApp();
     const container = new ContainerFigure();
     container.Id = 'C'; container.Left = 100; container.Top = 100; container.Width = 220; container.Height = 160;
-    const child = Figure.fromKind('rectangle', 130, 150, { width: 30, height: 20 });
+    // Saved (loaded) child: Left/Top are ALREADY parent-relative (content-space).
+    const child = Figure.fromKind('rectangle', 22, 18, { width: 30, height: 20 });
     child.Id = 'n1'; child.ParentId = 'C';
 
     const items = new ObservableCollection<Figure>();
     items.Add(container); items.Add(child);
     const diagram = mount(items);
-
-    // Before placement the child sits on the root host at its own Left/Top.
     assert.equal(child.ContainerParent, undefined);
 
     diagram.ContainerPlacement.placeAll();
 
-    // The child is now a visual descendant of the container's ChildHost...
+    // Linked + attached with its parent-relative coords kept as-is (no conversion).
     assert.equal(child.ContainerParent, container, 'ContainerParent link set');
     assert.equal(child.GetVisualParent(), container.ChildHost, 'child re-parented into ChildHost');
-    // ...its stored Left/Top became parent-relative, but diagram-space is unchanged.
-    const r = diagramSpaceRect(child);
+    assert.equal(child.Left, 22); assert.equal(child.Top, 18);
+    const r = diagramSpaceRect(child);   // origin (100,100)+ContentOrigin(8,32)+local(22,18)
     assert.equal(r.X, 130); assert.equal(r.Y, 150);
+});
+
+test('reparent (move) nests a root node preserving its diagram-space position', () => {
+    initTestApp();
+    const container = new ContainerFigure();
+    container.Id = 'Cm'; container.Left = 100; container.Top = 100; container.Width = 220; container.Height = 160;
+    const child = Figure.fromKind('rectangle', 130, 150, { width: 30, height: 20 });   // root diagram-space
+    child.Id = 'nm';
+    const items = new ObservableCollection<Figure>();
+    items.Add(container); items.Add(child);
+    const diagram = mount(items);
+    diagram.ContainerPlacement.placeAll();   // registers the container
+
+    diagram.ContainerPlacement.reparent(child, 'Cm');
+    assert.equal(child.ContainerParent, container);
+    assert.equal(child.Left, 22); assert.equal(child.Top, 18);        // converted to content-space
+    const r = diagramSpaceRect(child);
+    assert.equal(r.X, 130); assert.equal(r.Y, 150);                   // on-screen position preserved
 });
 
 test('un-nesting (reparent to undefined) returns the node to root, preserving diagram-space position', () => {
     initTestApp();
     const container = new ContainerFigure();
     container.Id = 'C2'; container.Left = 100; container.Top = 100; container.Width = 220; container.Height = 160;
-    const child = Figure.fromKind('rectangle', 130, 150, { width: 30, height: 20 });
+    // Parent-relative (22,18) → diagram-space (130,150) once restored.
+    const child = Figure.fromKind('rectangle', 22, 18, { width: 30, height: 20 });
     child.Id = 'n2'; child.ParentId = 'C2';
     const items = new ObservableCollection<Figure>();
     items.Add(container); items.Add(child);
@@ -57,6 +75,7 @@ test('un-nesting (reparent to undefined) returns the node to root, preserving di
 
     diagram.ContainerPlacement.reparent(child, undefined);
     assert.equal(child.ContainerParent, undefined, 'un-nested');
+    assert.equal(child.Left, 130); assert.equal(child.Top, 150);   // now root diagram-space coords
     const r = diagramSpaceRect(child);
     assert.equal(r.X, 130); assert.equal(r.Y, 150);   // stayed put in diagram space
 });
