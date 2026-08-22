@@ -25,15 +25,16 @@ export class Switch extends ToggleButton
             { default_value: Switch });
     }
 
-    // Switch's `Width` / `Height` defaults override Visual's NaN
-    // so an in-flow Switch ships at the M3-spec 52 × 32 dp without
-    // every consumer having to size it. The default Style still passes
-    // through unchanged, and an explicit Width / Height on the Switch
-    // overrides these defaults via the LocalValue tier (above Default
-    // in the EVD precedence ladder).
+    // Switch's `Width` / `Height` defaults override Visual's NaN so an in-flow
+    // Switch ships sized without every consumer having to size it. These are the
+    // M3-spec 52 × 32 dp scaled to 70% (30% smaller), matching the track/thumb
+    // sizes in the default template. The default Style still passes through
+    // unchanged, and an explicit Width / Height on the Switch overrides these
+    // defaults via the LocalValue tier (above Default in the EVD precedence
+    // ladder).
     static {
-        MuralBase.OverrideMetadata(Switch, Visual.WidthKey,  { default_value: 52 });
-        MuralBase.OverrideMetadata(Switch, Visual.HeightKey, { default_value: 32 });
+        MuralBase.OverrideMetadata(Switch, Visual.WidthKey,  { default_value: 36.4 });
+        MuralBase.OverrideMetadata(Switch, Visual.HeightKey, { default_value: 22.4 });
     }
 }
 

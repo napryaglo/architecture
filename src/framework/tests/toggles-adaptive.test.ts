@@ -9,7 +9,7 @@ import { RadioButton } from '../toggles/radio-button.js';
 // §18.6 — Switch / Checkbox / RadioButton adaptive touch targets.
 //
 // These controls pin their own Width/Height defaults (Checkbox 18, Radio
-// 20, Switch 52×32), so the render size clamps to those regardless of the
+// 20, Switch 36.4×22.4), so the render size clamps to those regardless of the
 // template root. The touch-target ladder therefore grows the CONTROL's
 // Width/Height (Style triggers), NOT a template wrapper's MinHeight — the
 // earlier wrapper-MinHeight attempt silently no-op'd because the control's
@@ -38,7 +38,7 @@ describe('Toggles — adaptive touch targets (§18.6)', () => {
     test('rest sizes unchanged (no layout shift for existing usages)', () => {
         initTestApp();
         assert.deepEqual({ ...measure(new Checkbox()) },    { Width: 18, Height: 18 });
-        assert.deepEqual({ ...measure(new Switch()) },      { Width: 52, Height: 32 });
+        assert.deepEqual({ ...measure(new Switch()) },      { Width: 36.4, Height: 22.4 });
         assert.deepEqual({ ...measure(new RadioButton()) }, { Width: 20, Height: 20 });
     });
 
@@ -55,9 +55,9 @@ describe('Toggles — adaptive touch targets (§18.6)', () => {
         ThemeManager.SetPointer(s, Pointer.Coarse);
         const ds = measure(s);
         assert.equal(ds.Height, 48, 'switch height grows to 48');
-        assert.equal(ds.Width, 52, 'switch width stays 52 (already ≥ 48)');
-        assert.deepEqual({ ...walk(s, 'PART_Track')!.DesiredSize }, { Width: 52, Height: 32 },
-            'switch track stays 52×32 (thumb not clipped)');
+        assert.equal(ds.Width, 48, 'switch width grows to 48 (30%-smaller track is now below the floor)');
+        assert.deepEqual({ ...walk(s, 'PART_Track')!.DesiredSize }, { Width: 36.4, Height: 22.4 },
+            'switch track stays 36.4×22.4 (thumb not clipped)');
 
         const r = new RadioButton();
         ThemeManager.SetPointer(r, Pointer.Coarse);

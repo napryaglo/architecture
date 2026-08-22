@@ -28,7 +28,7 @@ resources Toggles {
     // below.
     Template x:key="DefaultSwitch" [TargetType = Switch] {
         // PART_HitTarget — transparent fill wrapper (§18.6). Stretches to
-        // fill the control's bounds; the visible 52×32 track sits centred
+        // fill the control's bounds; the visible 36.4×22.4 track sits centred
         // inside. The touch target grows by enlarging the CONTROL's own
         // Height (Style triggers below) — the Switch pins its Width/Height
         // defaults, so THAT is what the render size clamps to; this wrapper
@@ -43,25 +43,24 @@ resources Toggles {
                   Stroke         = Pen [ Brush = @Outline ],
                   BorderThickness     = (2),
                   CornerRadius        = @ShapeFull,
-                  Width               = 52,
-                  Height              = 32,
+                  Width               = 36.4,
+                  Height              = 22.4,
                   HorizontalAlignment = Center,
                   VerticalAlignment   = Center ] {
-                // Thumb is a circle (ShapeFull) inside an absolutely-sized
-                // 32dp track. Margin (Left, Top, Right, Bottom) anchors it
-                // to the left edge with a 4dp inset top/bottom — the
-                // resulting render size is 16×24 dp (24dp inner track
-                // height, 16dp Width fixed below). The IsChecked trigger
-                // shifts to right-anchored + 24dp width.
+                // Thumb is a circle (ShapeFull) inside the absolutely-sized
+                // track. Margin (Left, Top, Right, Bottom) anchors it to the
+                // left edge, vertically centred. All sizes here are the M3
+                // 52×32 switch scaled to 70% (30% smaller). The IsChecked
+                // trigger shifts to right-anchored + a larger thumb.
                 Border x:name="PART_Thumb"
                     [ Fill          = @Outline,
                       CornerRadius        = @ShapeFull,
                       BorderThickness     = (0),
-                      Width               = 16,
-                      Height              = 16,
+                      Width               = 11.2,
+                      Height              = 11.2,
                       VerticalAlignment   = Center,
                       HorizontalAlignment = Left,
-                      Margin              = (8,0,0,0) ]
+                      Margin              = (5.6,0,0,0) ]
             }
         }
         // IsChecked — track + thumb both flip palette; the thumb grows
@@ -70,9 +69,9 @@ resources Toggles {
             PART_Track.Fill = @Primary;
             PART_Track.Stroke = Pen [ Brush = @Primary ];
             PART_Thumb.Fill = @OnPrimary;
-            PART_Thumb.Width = 24;
-            PART_Thumb.Height = 24;
-            PART_Thumb.Margin = (24,0,0,0);
+            PART_Thumb.Width = 16.8;
+            PART_Thumb.Height = 16.8;
+            PART_Thumb.Margin = (16.8,0,0,0);
         }
         // State-layer ladder. Hover / focus / press tint the thumb at
         // the Primary state-layer opacities so the affordance reads
@@ -80,23 +79,23 @@ resources Toggles {
         when ( IsMouseOver ) { PART_Thumb.Fill = @OnSurface; }
         when ( IsFocused ) { PART_Thumb.Fill = @OnSurface; }
         when ( IsPressed ) {
-            PART_Thumb.Width = 28;
-            PART_Thumb.Height = 28;
+            PART_Thumb.Width = 19.6;
+            PART_Thumb.Height = 19.6;
         }
         when ( IsEnabled = false ) { PART_Track.Opacity = @DisabledContentOpacity; }
     }
     Style [TargetType = Switch] {
         Template = @DefaultSwitch;
         // Adaptive touch target — the Switch pins its own Width/Height
-        // (52×32), which the render size clamps to, so the hit target grows
-        // by enlarging the CONTROL's Height here; PART_HitTarget then fills
-        // the taller bounds and the 52×32 track stays centred (no thumb
-        // clipping). Width already ≥ 48 so only Height grows. Compact
-        // omitted: 32dp is the a11y floor — a toggle target must not shrink
-        // below rest. Coarse declared last so it wins a coincident
-        // Comfortable+Coarse (a11y-favouring).
-        when ( ThemeManager.Density = Comfortable ) { Height = 40; }
-        when ( ThemeManager.Pointer = Coarse ) { Height = 48; }
+        // (36.4×22.4), which the render size clamps to, so the hit target grows
+        // by enlarging the CONTROL's Width/Height here; PART_HitTarget then
+        // fills the grown bounds and the 36.4×22.4 track stays centred (no thumb
+        // clipping). Both dimensions grow now that the 30%-smaller track is
+        // below the 40/48 touch floor on each axis (same as Checkbox/Radio).
+        // Coarse declared last so it wins a coincident Comfortable+Coarse
+        // (a11y-favouring).
+        when ( ThemeManager.Density = Comfortable ) { Width = 40; Height = 40; }
+        when ( ThemeManager.Pointer = Coarse ) { Width = 48; Height = 48; }
     }
 
     // ── Checkbox: M3 18 × 18 dp square toggle ──────────────────────
