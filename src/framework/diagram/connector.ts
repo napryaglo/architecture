@@ -266,6 +266,12 @@ export class Connector extends Shape
     private _trackedTarget:     ConnectorEndpoint | undefined = undefined;
     private _trackedSourceNode: MuralBase | undefined = undefined;
     private _trackedTargetNode: MuralBase | undefined = undefined;
+    // Ancestor containers whose Left/Top this connector watches, so a nested
+    // endpoint re-routes when an ANCESTOR moves (its own Left/Top don't tick).
+    // Refreshed whenever the endpoint node's own Left/Top ticks (reparent writes
+    // them) — the only signal the ContainerParent chain changed.
+    private _sourceAncestors: MuralBase[] = [];
+    private _targetAncestors: MuralBase[] = [];
 
     // Side-anchored endpoint registration on the host Figure or VM (any
     // ISideEndpointHost). When an endpoint settles on (host, PortSide S)
@@ -312,8 +318,17 @@ export class Connector extends Shape
         this._reregisterTargetSide();
         this._scheduleRecompute();
     };
-    private readonly _onSourceNodeMoved = (): void => { this._onAttachedNodeMoved(); };
-    private readonly _onTargetNodeMoved = (): void => { this._onAttachedNodeMoved(); };
+    // The endpoint node's OWN Left/Top ticked — drag, or a reparent (which writes
+    // parent-relative coords). Refresh the ancestor set first (reparent is the only
+    // thing that changes the chain, and it always writes these), then re-route. The
+    // refresh touches ANCESTOR listeners, never this node's, so it's re-entrancy-safe.
+    private readonly _onSourceNodeMoved = (): void => { this._refreshSourceAncestorListeners(); this._onAttachedNodeMoved(); };
+    private readonly _onTargetNodeMoved = (): void => { this._refreshTargetAncestorListeners(); this._onAttachedNodeMoved(); };
+    // An ANCESTOR container of a nested endpoint moved — re-route only (the chain
+    // is unchanged by an ancestor move, so no re-subscribe here; that would detach
+    // the very listener mid-dispatch).
+    private readonly _onSourceAncestorMoved = (): void => { this._onAttachedNodeMoved(); };
+    private readonly _onTargetAncestorMoved = (): void => { this._onAttachedNodeMoved(); };
 
     // An attached figure moved (Left / Top changed). Waypoints are absolute
     // canvas coordinates, so they don't follow the figure — a manually routed /
@@ -685,6 +700,7 @@ export class Connector extends Shape
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Width'),  this._onSourceNodeResized);
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Height'), this._onSourceNodeResized);
         }
+        this._refreshSourceAncestorListeners();
     }
 
     private _reattachTargetNodeListener(): void
@@ -719,6 +735,45 @@ export class Connector extends Shape
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Width'),  this._onTargetNodeResized);
             node.AddPropertyChangedListener(resolveKey(node, undefined, 'Height'), this._onTargetNodeResized);
         }
+        this._refreshTargetAncestorListeners();
+    }
+
+    // Re-point the ancestor-container Left/Top subscriptions at the CURRENT chain
+    // of an endpoint's node, so a nested endpoint re-routes when an ANCESTOR moves.
+    // Detach the previously-tracked ancestors first (distinct objects from the
+    // node, so calling this from the node-moved handler is re-entrancy-safe).
+    private _refreshSourceAncestorListeners(): void
+    {
+        for (const anc of this._sourceAncestors)
+            if (MuralBase.HasProperty(anc.constructor, 'Left'))
+            {
+                anc.RemovePropertyChangedListener(resolveKey(anc, undefined, 'Left'), this._onSourceAncestorMoved);
+                anc.RemovePropertyChangedListener(resolveKey(anc, undefined, 'Top'),  this._onSourceAncestorMoved);
+            }
+        this._sourceAncestors = ancestorChain(this.Source?.Node);
+        for (const anc of this._sourceAncestors)
+            if (MuralBase.HasProperty(anc.constructor, 'Left'))
+            {
+                anc.AddPropertyChangedListener(resolveKey(anc, undefined, 'Left'), this._onSourceAncestorMoved);
+                anc.AddPropertyChangedListener(resolveKey(anc, undefined, 'Top'),  this._onSourceAncestorMoved);
+            }
+    }
+
+    private _refreshTargetAncestorListeners(): void
+    {
+        for (const anc of this._targetAncestors)
+            if (MuralBase.HasProperty(anc.constructor, 'Left'))
+            {
+                anc.RemovePropertyChangedListener(resolveKey(anc, undefined, 'Left'), this._onTargetAncestorMoved);
+                anc.RemovePropertyChangedListener(resolveKey(anc, undefined, 'Top'),  this._onTargetAncestorMoved);
+            }
+        this._targetAncestors = ancestorChain(this.Target?.Node);
+        for (const anc of this._targetAncestors)
+            if (MuralBase.HasProperty(anc.constructor, 'Left'))
+            {
+                anc.AddPropertyChangedListener(resolveKey(anc, undefined, 'Left'), this._onTargetAncestorMoved);
+                anc.AddPropertyChangedListener(resolveKey(anc, undefined, 'Top'),  this._onTargetAncestorMoved);
+            }
     }
 
     // Side-endpoint registration: the endpoint registers with its host
@@ -824,6 +879,21 @@ export class Connector extends Shape
             tn.RemovePropertyChangedListener(resolveKey(tn, undefined, 'Top'),  this._onTargetNodeMoved);
         }
         this._trackedTargetNode = undefined;
+
+        for (const anc of this._sourceAncestors)
+            if (MuralBase.HasProperty(anc.constructor, 'Left'))
+            {
+                anc.RemovePropertyChangedListener(resolveKey(anc, undefined, 'Left'), this._onSourceAncestorMoved);
+                anc.RemovePropertyChangedListener(resolveKey(anc, undefined, 'Top'),  this._onSourceAncestorMoved);
+            }
+        this._sourceAncestors = [];
+        for (const anc of this._targetAncestors)
+            if (MuralBase.HasProperty(anc.constructor, 'Left'))
+            {
+                anc.RemovePropertyChangedListener(resolveKey(anc, undefined, 'Left'), this._onTargetAncestorMoved);
+                anc.RemovePropertyChangedListener(resolveKey(anc, undefined, 'Top'),  this._onTargetAncestorMoved);
+            }
+        this._targetAncestors = [];
 
         const pen = this._trackedCapPen;
         if (pen !== undefined)
@@ -1617,6 +1687,18 @@ function geometricClip(
 // interfaces so non-Figure item Models still work as endpoint targets.
 // See § 3.5 / § 7.2 of
 // [docs/connectors.md](../../../docs/connectors.md).
+
+// The container-ancestor chain of a (possibly nested) endpoint node, outermost
+// last. Duck-typed on ContainerParent (a plain Figure field, not a DP) — same
+// contract nodeRect reads. Empty for a root node.
+interface ContainerParentLike { ContainerParent?: ContainerParentLike | undefined; }
+function ancestorChain(node: unknown): MuralBase[]
+{
+    const out: MuralBase[] = [];
+    let c = (node as ContainerParentLike | undefined)?.ContainerParent;
+    while (c !== undefined) { out.push(c as unknown as MuralBase); c = c.ContainerParent; }
+    return out;
+}
 
 function nodeRect(node: MuralBase | undefined): Rect | undefined
 {
