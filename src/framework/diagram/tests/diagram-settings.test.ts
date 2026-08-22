@@ -1,9 +1,10 @@
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, Color, ResourceDictionary } from '../../../runtime/index.js';
+import { Application, Color, ResourceDictionary, ThemeManager } from '../../../runtime/index.js';
 import { SolidColorBrush } from '../../../visual-engine/index.js';
 import { ApplicationSettings } from '../../shell/services/application-settings-service.js';
 import { DiagramSettings, DiagramSettingKey } from '../diagram-settings.js';
+import { Material, MaterialLight, MaterialDark } from '../../../resources/material/material.js';
 
 // Build an Application with ApplicationSettings registered at the ROOT — the
 // same shape Plexus / EditorShell produce, and where the static helper resolves
@@ -198,5 +199,33 @@ describe('DiagramSettings', () => {
         unsub();
         settings.Set(DiagramSettingKey.ShapeDefaultSize, 64);
         assert.equal(fired, 1, 'no further notifications after unsubscribe');
+    });
+
+    // Regression: a light/dark scheme swap changes the tokens the theme-linked
+    // colours resolve against (RulerFill = @Surface, …) but touches no Setting,
+    // so without the ThemeManager hook Subscribe stayed silent and the rulers
+    // kept the previous scheme's colours (a dark @Surface reads as a black strip
+    // in light mode). The hook routes activation into the same change signal.
+    test('Subscribe fires on a scheme swap so theme-linked colours repaint', () => {
+        new Application();                                   // constructor sets Application.current
+        if (ThemeManager.GetTheme(Material.instance.name) === undefined)
+        {
+            ThemeManager.RegisterTheme(Material.instance);
+        }
+        ThemeManager.ActivateTheme(Material.instance.name, { scheme: MaterialLight.name });
+
+        let fired = 0;
+        const unsub = DiagramSettings.Subscribe(() => { fired++; });
+        ThemeManager.ActivateScheme(MaterialDark.name);
+        assert.ok(fired >= 1, 'Subscribe notified on scheme swap (light → dark)');
+
+        fired = 0;
+        ThemeManager.ActivateScheme(MaterialLight.name);
+        assert.ok(fired >= 1, 'Subscribe notified on scheme swap (dark → light)');
+
+        unsub();
+        fired = 0;
+        ThemeManager.ActivateScheme(MaterialDark.name);
+        assert.equal(fired, 0, 'no notification after unsubscribe');
     });
 });

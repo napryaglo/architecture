@@ -1222,6 +1222,14 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     private _onDiagramSettingsChanged(): void
     {
         this.InvalidateMeasure();
+        // The rulers paint their (theme-linked) fill/tick colours straight from
+        // DiagramSettings in RenderOverride; a measure invalidation alone need not
+        // re-run their paint, so invalidate them directly. This is what repaints
+        // them when the light/dark theme swaps (see DiagramSettings' ThemeManager
+        // hook) — otherwise a dark @Surface strip stays black in light mode.
+        const { top, left } = this._rulerParts();
+        top?.InvalidateVisual();
+        left?.InvalidateVisual();
         const connectors = this.Connectors;
         if (connectors === undefined) return;
         for (let i = 0; i < connectors.Count; i++)

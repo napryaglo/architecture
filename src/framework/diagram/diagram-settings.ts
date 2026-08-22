@@ -1,4 +1,4 @@
-import { Application, Color } from '../../runtime/index.js';
+import { Application, Color, ThemeManager } from '../../runtime/index.js';
 import { SolidColorBrush } from '../../visual-engine/index.js';
 import { ApplicationSettings } from '../shell/services/application-settings-service.js';
 import { SettingDefinition, SettingKind } from '../shell/settings/setting-definition.js';
@@ -338,6 +338,17 @@ export class DiagramSettings
     {
         for (const listener of [...DiagramSettings._listeners]) listener();
     };
+
+    // A light/dark theme swap changes the scheme tokens our theme-linked
+    // defaults resolve against (RulerFill = @Surface, ShapeLabelInk = @OnSurface,
+    // ConnectorDefaultStroke = @OnSurfaceVariant, …) WITHOUT touching any Setting
+    // value — so the per-setting listeners in resolve() never fire. Route the
+    // ThemeManager's activation into the same change signal so every
+    // DiagramSettings.Subscribe consumer (the Diagram) re-reads and repaints on a
+    // scheme swap. Wired once at class load; _emit is a stable ref and
+    // AddActivatedListener dedups. (Without this the rulers keep the previous
+    // scheme's colours — a dark @Surface reads as a black strip in light mode.)
+    static { ThemeManager.AddActivatedListener(DiagramSettings._emit); }
 
     // Subscribe to "a Diagram setting changed". Returns an unsubscribe thunk.
     // Resolving here also binds/publishes to the settings host if one now exists.
