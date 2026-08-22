@@ -43,6 +43,10 @@ export class SelectionGeometryMirror
         diagram.AddPropertyChangedListener(D.SelectedShapeWidthKey,    () => this._writeBack('Width'));
         diagram.AddPropertyChangedListener(D.SelectedShapeHeightKey,   () => this._writeBack('Height'));
         diagram.AddPropertyChangedListener(D.SelectedShapeRotationKey, () => this._writeBack('Rotation'));
+        // Per-shape editor intents (lock aspect, position anchor) also mirror
+        // to/from the Figure so they are per-shape and persist.
+        diagram.AddPropertyChangedListener(D.SelectedShapeLockAspectKey, () => this._writeBack('LockAspect'));
+        diagram.AddPropertyChangedListener(D.SelectedShapeAnchorKey,     () => this._writeBack('Anchor'));
         this._retarget();
     }
 
@@ -67,7 +71,8 @@ export class SelectionGeometryMirror
         {
             const seed = (): void => this._seed(f);
             const keys = [Figure.LeftKey, Figure.TopKey, Visual.WidthKey, Visual.HeightKey,
-                          Figure.RotationKey, Figure.BaseWidthKey, Figure.BaseHeightKey];
+                          Figure.RotationKey, Figure.BaseWidthKey, Figure.BaseHeightKey,
+                          Figure.LockAspectRatioKey, Figure.PositionFromKey];
             keys.forEach(k => f.AddPropertyChangedListener(k, seed));
             this._figureUnsub = (): void => keys.forEach(k => f.RemovePropertyChangedListener(k, seed));
             this._seed(f);
@@ -91,20 +96,31 @@ export class SelectionGeometryMirror
             this._d.SelectedShapeRotation = f.Rotation;
             this._d.set_property_value(D.SelectedShapeBaseWidthKey,  Number.isNaN(f.BaseWidth)  ? f.Width  : f.BaseWidth);
             this._d.set_property_value(D.SelectedShapeBaseHeightKey, Number.isNaN(f.BaseHeight) ? f.Height : f.BaseHeight);
+            this._d.SelectedShapeLockAspect = f.LockAspectRatio;
+            this._d.SelectedShapeAnchor     = f.PositionFrom;
         } finally { this._seeding = false; }
     }
 
-    private _writeBack(prop: 'Left' | 'Top' | 'Width' | 'Height' | 'Rotation'): void
+    private _writeBack(prop: 'Left' | 'Top' | 'Width' | 'Height' | 'Rotation' | 'LockAspect' | 'Anchor'): void
     {
         if (this._seeding || this._target === undefined) return;
-        const v = ({ Left: this._d.SelectedShapeLeft, Top: this._d.SelectedShapeTop,
-                     Width: this._d.SelectedShapeWidth, Height: this._d.SelectedShapeHeight,
-                     Rotation: this._d.SelectedShapeRotation })[prop];
+        // Each inspector DP maps to the value to push and the Figure property to
+        // write it onto (lock/anchor use different names than the SelectedShape*
+        // key, hence the explicit figProp).
+        const spec = ({
+            Left:       { v: this._d.SelectedShapeLeft,       figProp: 'Left' },
+            Top:        { v: this._d.SelectedShapeTop,        figProp: 'Top' },
+            Width:      { v: this._d.SelectedShapeWidth,      figProp: 'Width' },
+            Height:     { v: this._d.SelectedShapeHeight,     figProp: 'Height' },
+            Rotation:   { v: this._d.SelectedShapeRotation,   figProp: 'Rotation' },
+            LockAspect: { v: this._d.SelectedShapeLockAspect, figProp: 'LockAspectRatio' },
+            Anchor:     { v: this._d.SelectedShapeAnchor,     figProp: 'PositionFrom' },
+        })[prop];
         // Guard the figure write so the change it fires can't re-seed us from a
         // half-updated figure (which would clobber the sibling field a
         // lock-linked resize is writing in the same gesture).
         this._writingBack = true;
-        try { (this._target as unknown as Record<string, number>)[prop] = v; }
+        try { (this._target as unknown as Record<string, unknown>)[spec.figProp] = spec.v; }
         finally { this._writingBack = false; }
     }
 }

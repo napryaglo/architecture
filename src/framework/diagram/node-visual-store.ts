@@ -1,4 +1,5 @@
 import { Figure } from './figure.js';
+import { PositionAnchor } from './position-anchor.js';
 
 // A node's visual (geometry) record — the presentation half of the two-section
 // serialization format, keyed by node id in the `visuals` section. The base
@@ -16,6 +17,10 @@ export interface NodeVisual
     baseHeight?:    number;
     sizeToContent?: boolean;
     userSized?:     boolean;
+    // Per-shape Size & Position editor intents (omit-when-default, so old files
+    // load unchanged): lock aspect ratio, and the "From" position anchor.
+    lockAspect?:    boolean;
+    anchor?:        PositionAnchor;
 }
 
 // Document-owned `id → NodeVisual` map: the serialization boundary between a
@@ -57,6 +62,8 @@ export class NodeVisualStore
         if (!Number.isNaN(node.BaseHeight))  v.baseHeight    = node.BaseHeight;
         if (node.SizeToContent)              v.sizeToContent = true;
         if (node.UserSized)                  v.userSized     = true;
+        if (node.LockAspectRatio)            v.lockAspect    = true;
+        if (node.PositionFrom !== PositionAnchor.TopLeftCorner) v.anchor = node.PositionFrom;
         return v;
     }
 
@@ -72,5 +79,7 @@ export class NodeVisualStore
         if (v.baseHeight    !== undefined) node.BaseHeight    = v.baseHeight;
         if (v.sizeToContent !== undefined) node.SizeToContent = v.sizeToContent;
         if (v.userSized     !== undefined) node.UserSized     = v.userSized;
+        if (v.lockAspect    !== undefined) node.LockAspectRatio = v.lockAspect;
+        if (v.anchor        !== undefined) node.PositionFrom    = v.anchor;
     }
 }

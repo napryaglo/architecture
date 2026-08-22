@@ -400,14 +400,16 @@ resources Diagrams {
                   HorizontalScrollEnabled = false,
                   DataContext             = $View ] {
                 SizePositionControl
-                    [ Left        = $SelectedShapeLeft,
-                      Top         = $SelectedShapeTop,
-                      WidthValue  = $SelectedShapeWidth,
-                      HeightValue = $SelectedShapeHeight,
-                      Rotation    = $SelectedShapeRotation,
-                      BaseWidth   = $SelectedShapeBaseWidth,
-                      BaseHeight  = $SelectedShapeBaseHeight,
-                      HasTarget   = $HasSelectedShape ]
+                    [ Left            = $SelectedShapeLeft,
+                      Top             = $SelectedShapeTop,
+                      WidthValue      = $SelectedShapeWidth,
+                      HeightValue     = $SelectedShapeHeight,
+                      Rotation        = $SelectedShapeRotation,
+                      BaseWidth       = $SelectedShapeBaseWidth,
+                      BaseHeight      = $SelectedShapeBaseHeight,
+                      LockAspectRatio = $SelectedShapeLockAspect,
+                      PositionFrom    = $SelectedShapeAnchor,
+                      HasTarget       = $HasSelectedShape ]
             }
         }
     }

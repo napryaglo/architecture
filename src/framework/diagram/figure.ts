@@ -26,6 +26,7 @@ import type { ConnectorEndpoint } from './connector-endpoint.js';
 import { SideEndpointRegistry, type ISideAnchoredConnector, type ISideEndpointHost } from './side-endpoint-host.js';
 import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-connector-drag.js';
 import { DiagramSettings } from './diagram-settings.js';
+import { PositionAnchor } from './position-anchor.js';
 
 // A movable, content-hosting control intended as the container shape
 // inside the diagrammer's ItemsControl (see Diagram). Figure owns
@@ -177,6 +178,16 @@ export class Figure extends ContentControl implements ISideEndpointHost
         Figure, 'BaseWidth', Number.NaN, MetaData.None);
     public static readonly BaseHeightKey = MuralBase.RegisterProperty<number>(
         Figure, 'BaseHeight', Number.NaN, MetaData.None);
+
+    // Lock aspect ratio during resize — a per-shape intent (PowerPoint keeps it
+    // on the shape). Persisted so it survives reload; the Size & Position
+    // inspector seeds/writes it through SelectionGeometryMirror.
+    public static readonly LockAspectRatioKey = MuralBase.RegisterProperty<boolean>(
+        Figure, 'LockAspectRatio', false, MetaData.None);
+    // The "From" reference corner the inspector reads/writes this shape's
+    // position against (Top-Left vs Center). Per-shape, persisted.
+    public static readonly PositionFromKey = MuralBase.RegisterProperty<PositionAnchor>(
+        Figure, 'PositionFrom', PositionAnchor.TopLeftCorner, MetaData.None);
 
     // Per-Figure port-provider override. When set, the `Ports` getter
     // routes through this provider's GetPorts() instead of the
@@ -484,6 +495,10 @@ export class Figure extends ContentControl implements ISideEndpointHost
     public set BaseWidth(value: number)  { this.set_property_value(Figure.BaseWidthKey, value); }
     public get BaseHeight(): number { return this.get_property_value(Figure.BaseHeightKey); }
     public set BaseHeight(value: number) { this.set_property_value(Figure.BaseHeightKey, value); }
+    public get LockAspectRatio(): boolean { return this.get_property_value(Figure.LockAspectRatioKey); }
+    public set LockAspectRatio(value: boolean) { this.set_property_value(Figure.LockAspectRatioKey, value); }
+    public get PositionFrom(): PositionAnchor { return this.get_property_value(Figure.PositionFromKey); }
+    public set PositionFrom(value: PositionAnchor) { this.set_property_value(Figure.PositionFromKey, value); }
 
     // Read-only view of the scaled silhouette (was a DP). Kept because the port
     // resolver's outline mode reads `host.Geometry` (see port.ts / PortResolver);

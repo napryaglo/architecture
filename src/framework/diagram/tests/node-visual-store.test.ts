@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
 import { Figure } from '../figure.js';
 import { NodeVisualStore } from '../node-visual-store.js';
+import { PositionAnchor } from '../position-anchor.js';
 
 function fig(): Figure { Application.current = null; new Application(); return Figure.fromKind('rectangle', 10, 20, { width: 100, height: 50 }); }
 
@@ -17,6 +18,23 @@ describe('NodeVisualStore', () => {
         const v = new NodeVisualStore().Read(f);
         assert.equal(v.rotation, 30);
         assert.equal(v.userSized, true);
+    });
+    test('lock aspect + position anchor: omitted at default, captured when set, round-tripped', () => {
+        const store = new NodeVisualStore();
+        // Defaults (lock off, Top-Left anchor) are omitted.
+        const def = store.Read(fig());
+        assert.equal('lockAspect' in def, false);
+        assert.equal('anchor' in def, false);
+        // Non-default values are captured...
+        const f = fig(); f.LockAspectRatio = true; f.PositionFrom = PositionAnchor.Center;
+        const v = store.Read(f);
+        assert.equal(v.lockAspect, true);
+        assert.equal(v.anchor, PositionAnchor.Center);
+        // ...and restored onto a fresh node.
+        const g = fig();
+        store.Apply(v, g);
+        assert.equal(g.LockAspectRatio, true);
+        assert.equal(g.PositionFrom, PositionAnchor.Center);
     });
     test('Apply writes a record onto a node', () => {
         const f = fig();

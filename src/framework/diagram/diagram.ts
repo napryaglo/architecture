@@ -23,6 +23,7 @@ import { NodeViewModel } from './node-view-model.js';
 import type { DataTemplate } from '../../basic/templates/data-template.js';
 import { AdornerLayer } from '../../visual-engine/index.js';
 import { Figure, resolveEditTarget } from './figure.js';
+import { PositionAnchor } from './position-anchor.js';
 import type { IPortProvider } from './port-providers/port-provider.js';
 import { Group } from './group.js';
 import { ensureToolboxDefaults } from './toolbox/ensure-toolbox-defaults.js';
@@ -211,6 +212,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         Diagram, 'SelectedShapeBaseWidth', 0, MetaData.None);
     public static readonly SelectedShapeBaseHeightKey = MuralBase.RegisterProperty<number>(
         Diagram, 'SelectedShapeBaseHeight', 0, MetaData.None);
+    // Per-shape editor intents mirrored from the selected Figure (two-way, so
+    // the Size & Position inspector reads AND writes them). Unlike the geometry
+    // DPs these are seeded/written by SelectionGeometryMirror as figure state.
+    public static readonly SelectedShapeLockAspectKey = MuralBase.RegisterProperty<boolean>(
+        Diagram, 'SelectedShapeLockAspect', false, MetaData.None | MetaData.BindsTwoWayByDefault);
+    public static readonly SelectedShapeAnchorKey = MuralBase.RegisterProperty<PositionAnchor>(
+        Diagram, 'SelectedShapeAnchor', PositionAnchor.TopLeftCorner, MetaData.None | MetaData.BindsTwoWayByDefault);
 
     // Align commands — RelayCommand-typed DPs. DiagramCommands installs
     // default impls at construction; consumers override by writing their
@@ -643,6 +651,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public set SelectedShapeRotation(v: number) { this.set_property_value(Diagram.SelectedShapeRotationKey, v); }
     public get SelectedShapeBaseWidth(): number { return this.get_property_value(Diagram.SelectedShapeBaseWidthKey); }
     public get SelectedShapeBaseHeight(): number { return this.get_property_value(Diagram.SelectedShapeBaseHeightKey); }
+    public get SelectedShapeLockAspect(): boolean { return this.get_property_value(Diagram.SelectedShapeLockAspectKey); }
+    public set SelectedShapeLockAspect(v: boolean) { this.set_property_value(Diagram.SelectedShapeLockAspectKey, v); }
+    public get SelectedShapeAnchor(): PositionAnchor { return this.get_property_value(Diagram.SelectedShapeAnchorKey); }
+    public set SelectedShapeAnchor(v: PositionAnchor) { this.set_property_value(Diagram.SelectedShapeAnchorKey, v); }
 
     public get AlignLeftCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.AlignLeftCommandKey); }
     public get AlignRightCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.AlignRightCommandKey); }
