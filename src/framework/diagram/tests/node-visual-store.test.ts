@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
+import { Color, Pen, SolidColorBrush } from '../../../visual-engine/index.js';
 import { Figure } from '../figure.js';
 import { NodeVisualStore } from '../node-visual-store.js';
 import { PositionAnchor } from '../position-anchor.js';
@@ -42,6 +43,35 @@ describe('NodeVisualStore', () => {
         assert.equal(f.Left, 5); assert.equal(f.Top, 6);
         assert.equal(f.Width, 70); assert.equal(f.Height, 40);
         assert.equal(f.Rotation, 15);
+    });
+    test('content-tile card fill/stroke: visuals only when SizeToContent, round-tripped, transparent omitted', () => {
+        const store = new NodeVisualStore();
+        // A geometric shape's fill rides its node record, NOT the visuals section.
+        const shape = fig(); shape.Fill = new SolidColorBrush(Color.FromHex('#3b82f6ff'));
+        assert.equal('fill' in store.Read(shape), false);
+
+        // A content tile persists a visible card fill + border...
+        const tile = fig(); tile.SizeToContent = true;
+        tile.Fill   = new SolidColorBrush(Color.FromHex('#3b82f6ff'));
+        tile.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#1e40afff')), 2);
+        const v = store.Read(tile);
+        assert.ok(typeof v.fill === 'string');
+        assert.ok(typeof v.stroke === 'string');
+        assert.equal(v.strokeWidth, 2);
+        // ...restored onto a fresh tile.
+        const g = fig(); g.SizeToContent = true;
+        store.Apply(v, g);
+        assert.equal((g.Fill as SolidColorBrush).Color.ToHex(), (tile.Fill as SolidColorBrush).Color.ToHex());
+        assert.equal((g.Stroke!.Brush as SolidColorBrush).Color.ToHex(), (tile.Stroke!.Brush as SolidColorBrush).Color.ToHex());
+        assert.equal(g.Stroke!.Thickness, 2);
+
+        // A transparent (unstyled) content tile writes nothing.
+        const bare = fig(); bare.SizeToContent = true;
+        bare.Fill   = new SolidColorBrush(Color.FromHex('#00000000'));
+        bare.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#00000000')), 1);
+        const bv = store.Read(bare);
+        assert.equal('fill' in bv, false);
+        assert.equal('stroke' in bv, false);
     });
     test('Seed → Snapshot round-trips the map', () => {
         const s = new NodeVisualStore();

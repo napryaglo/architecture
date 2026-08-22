@@ -146,6 +146,24 @@ export class FormatMirror
         return flattenToLeaves(this._diagram.SelectedItems);
     }
 
+    // Fill / Stroke style the paint SURFACE. A selected leaf that is itself
+    // paintable — a geometric shape Figure carries Fill/Stroke DPs — styles
+    // directly; a content VM (an arch node: no Fill/Stroke of its own) styles its
+    // CONTAINER Figure, the rounded-rect card the Style page edits. The text /
+    // character channels stay on _leaves() (they target the shape's own Text).
+    private _paintTargets(): MuralBase[]
+    {
+        const gen = (this._diagram as unknown as { Generator?: { ContainerFromItem(i: unknown): unknown } }).Generator;
+        const out: MuralBase[] = [];
+        for (const leaf of this._leaves())
+        {
+            if ('Fill' in (leaf as object) || 'Stroke' in (leaf as object)) { out.push(leaf); continue; }
+            const container = gen?.ContainerFromItem(leaf) as MuralBase | undefined;
+            out.push(container ?? leaf);
+        }
+        return out;
+    }
+
     // Selected connectors flattened to IStrokableItem targets. Connectors
     // don't nest (no group analog), so the array is the selection list
     // verbatim. Pulled out as a method to mirror _leaves() — broadcast
@@ -204,11 +222,14 @@ export class FormatMirror
             // mirrors the broadcast preference (figures own Fill, both
             // own Stroke). The hover-halo behavior clears figure
             // selection on connector pick, so the mixed-population case
-            // only arises if a caller bypasses the halo.
+            // only arises if a caller bypasses the halo. Fill/Stroke seed
+            // from the paint SURFACE (a content VM's container Figure), not
+            // the VM leaf itself.
+            const paintTargets = this._paintTargets();
             const firstStrokable: MuralBase | undefined =
-                leaves.length > 0 ? leaves[0] : connectors[0];
-            const firstFill = leaves.length > 0
-                ? (leaves[0] as unknown as Partial<IFillableItem>).Fill
+                paintTargets.length > 0 ? paintTargets[0] : connectors[0];
+            const firstFill = paintTargets.length > 0
+                ? (paintTargets[0] as unknown as Partial<IFillableItem>).Fill
                 : undefined;
             this._diagram.set_property_value(Diagram.SelectionFormatFillKey, firstFill);
             const firstStroke = (firstStrokable as unknown as Partial<IStrokableItem>).Stroke;
@@ -428,11 +449,11 @@ export class FormatMirror
     {
         if (this._seedingFormat) return;
         const brush = this._diagram.SelectionFormatFill;
-        for (const leaf of this._leaves())
+        for (const target of this._paintTargets())
         {
-            if ('Fill' in (leaf as object))
+            if ('Fill' in (target as object))
             {
-                (leaf as unknown as IFillableItem).Fill = brush;
+                (target as unknown as IFillableItem).Fill = brush;
             }
         }
     }
@@ -501,9 +522,9 @@ export class FormatMirror
     private _strokeTargets(): Pen[]
     {
         const out: Pen[] = [];
-        for (const leaf of this._leaves())
+        for (const target of this._paintTargets())
         {
-            const pen = (leaf as unknown as Partial<IStrokableItem>).Stroke;
+            const pen = (target as unknown as Partial<IStrokableItem>).Stroke;
             if (pen !== undefined) out.push(pen);
         }
         for (const conn of this._strokeTargetsFromConnectors())

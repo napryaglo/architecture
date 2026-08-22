@@ -64,7 +64,7 @@ import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js'
 import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
 import { SelectionBoundsAdorner } from '../../basic/index.js';
 import { DiagramSelectionSource } from './behaviors/diagram-selection-source.js';
-import { Brush, Pen, Point, ScaleTransform, Size, TextAlignment } from '../../visual-engine/index.js';
+import { Brush, Color, Pen, Point, ScaleTransform, Size, SolidColorBrush, TextAlignment } from '../../visual-engine/index.js';
 import { ScrollViewer } from '../surfaces/scroll-viewer.js';
 import { type Camera, clampZoom, fitBounds, zoomAtPoint } from './camera.js';
 import { attachZoomPan } from './behaviors/zoom-pan-behavior.js';
@@ -1861,6 +1861,15 @@ export class Diagram extends Selector implements RigidConnectorDragHost
                 // (fired below), not bound off the VM.
                 node.Id            = item.Id;
                 node.SizeToContent = true;
+                // A content tile styles like a rounded-rect card via its own
+                // Fill/Stroke (Format Shape edits the container — see FormatMirror
+                // paint targets). Default both TRANSPARENT so an unstyled tile
+                // reads as a bare icon, yet the Style page still engages (its
+                // editors only blank when BOTH are undefined; a transparent brush
+                // is defined). Per-instance so the mirror's in-place Pen edits
+                // don't leak across tiles.
+                node.Fill   = new SolidColorBrush(Color.FromHex('#00000000'));
+                node.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#00000000')), 1);
                 // A per-instance port topology the VM opts into (duck-typed) —
                 // else the container keeps its default bbox ports.
                 const provider = (item as { PortProvider?: IPortProvider }).PortProvider;

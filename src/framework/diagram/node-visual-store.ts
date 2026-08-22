@@ -1,5 +1,14 @@
+import { Color, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
 import { PositionAnchor } from './position-anchor.js';
+
+// Hex for a solid brush ONLY when it paints something — a transparent brush
+// (an unstyled content tile's default) returns undefined so nothing is written.
+function visibleHex(brush: unknown): string | undefined
+{
+    if (!(brush instanceof SolidColorBrush)) return undefined;
+    return brush.Color.A > 0 ? brush.Color.ToHex() : undefined;
+}
 
 // A node's visual (geometry) record — the presentation half of the two-section
 // serialization format, keyed by node id in the `visuals` section. The base
@@ -21,6 +30,13 @@ export interface NodeVisual
     // load unchanged): lock aspect ratio, and the "From" position anchor.
     lockAspect?:    boolean;
     anchor?:        PositionAnchor;
+    // A content tile's optional background-card style (Format Shape). Geometric
+    // shapes persist their fill/stroke in the node record, so these ride the
+    // `visuals` section only for content tiles (gated on sizeToContent in Read);
+    // an unstyled (transparent) card omits them.
+    fill?:          string;
+    stroke?:        string;
+    strokeWidth?:   number;
 }
 
 // Document-owned `id → NodeVisual` map: the serialization boundary between a
@@ -64,6 +80,15 @@ export class NodeVisualStore
         if (node.UserSized)                  v.userSized     = true;
         if (node.LockAspectRatio)            v.lockAspect    = true;
         if (node.PositionFrom !== PositionAnchor.TopLeftCorner) v.anchor = node.PositionFrom;
+        // Card style — content tiles only (a geometric shape's fill/stroke rides
+        // its node record instead). Omit a transparent (unstyled) card.
+        if (node.SizeToContent)
+        {
+            const fillHex = visibleHex(node.Fill);
+            if (fillHex !== undefined) v.fill = fillHex;
+            const strokeHex = visibleHex(node.Stroke?.Brush);
+            if (strokeHex !== undefined) { v.stroke = strokeHex; v.strokeWidth = node.Stroke!.Thickness; }
+        }
         return v;
     }
 
@@ -81,5 +106,9 @@ export class NodeVisualStore
         if (v.userSized     !== undefined) node.UserSized     = v.userSized;
         if (v.lockAspect    !== undefined) node.LockAspectRatio = v.lockAspect;
         if (v.anchor        !== undefined) node.PositionFrom    = v.anchor;
+        // Restore a content tile's card style (Apply runs after bindContainer's
+        // transparent defaults, so a styled card overrides them).
+        if (v.fill   !== undefined) node.Fill   = new SolidColorBrush(Color.FromHex(v.fill));
+        if (v.stroke !== undefined) node.Stroke = new Pen(new SolidColorBrush(Color.FromHex(v.stroke)), v.strokeWidth ?? 1);
     }
 }

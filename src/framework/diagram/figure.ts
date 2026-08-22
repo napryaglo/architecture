@@ -9,7 +9,7 @@
     type PointerEventArgs,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
-import { type Geometry, type PathGeometry, Point, Pen, RotateTransform } from '../../visual-engine/index.js';
+import { type Geometry, type PathGeometry, Point, Pen, RectangleGeometry, RotateTransform } from '../../visual-engine/index.js';
 import { Canvas } from '../../basic/panels/canvas.js';
 import { Border } from '../../basic/border.js';
 import { ShapeText, TextAutoFit } from './shape-text.js';
@@ -71,6 +71,12 @@ const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width',
 // overhang is font/size/weight dependent, so this is a small fixed cushion that
 // covers the diagram's caption fonts rather than an exact per-string value.
 const LABEL_INK_BLEED = 3;
+
+// Corner radius (DIP) of a content tile's background card. A shapeless
+// SizeToContent container (an arch/content node — no geometric _shape) styles
+// like a small rounded-rect card: it paints its own Fill/Stroke and clips its
+// content to this silhouette, exactly like a geometric shape paints its _shape.
+const CONTENT_TILE_CORNER = 4;
 
 // The default Fill / Stroke brushes for a fresh Figure live in DiagramSettings
 // (DiagramSettings.ShapeDefaultFill / .ShapeDefaultStroke) alongside the other
@@ -722,19 +728,42 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // NOT self-clipped (the raw Clip DP is never set), so a centred stroke straddles
     // the outline exactly as a Shape primitive does. All three fall back to super
     // when there is no shape (a neutral container Figure).
+    // A shapeless content tile (SizeToContent, no geometric _shape) styles like a
+    // rounded-rect card — it paints its Fill/Stroke and clips its content to that
+    // rounded silhouette. Distinguishes an arch/content container from a bare
+    // neutral container and from a TextNode/Callout (template-drawn box, NOT
+    // SizeToContent), so only content tiles gain the card treatment.
+    private _isCardTile(): boolean
+    {
+        return this._shape === undefined && this.SizeToContent;
+    }
+
+    private _cardGeometry(size: Size): Geometry
+    {
+        return new RectangleGeometry(
+            new Rect(0, 0, size.Width, size.Height),
+            CONTENT_TILE_CORNER, CONTENT_TILE_CORNER);
+    }
+
     protected override buildPaintGeometry(size: Size, inset: number): Geometry
     {
-        return this._shape ?? super.buildPaintGeometry(size, inset);
+        if (this._shape !== undefined) return this._shape;
+        if (this._isCardTile())        return this._cardGeometry(size);
+        return super.buildPaintGeometry(size, inset);
     }
 
     protected override buildChildClipGeometry(size: Size): Geometry | undefined
     {
-        return this._shape ?? super.buildChildClipGeometry(size);
+        if (this._shape !== undefined) return this._shape;
+        if (this._isCardTile())        return this._cardGeometry(size);
+        return super.buildChildClipGeometry(size);
     }
 
     protected override buildClipGeometry(size: Size): Geometry
     {
-        return this._shape ?? super.buildClipGeometry(size);
+        if (this._shape !== undefined) return this._shape;
+        if (this._isCardTile())        return this._cardGeometry(size);
+        return super.buildClipGeometry(size);
     }
 
     // Confine picking to the silhouette — the SAME geometry the clip-to-bounds /
@@ -768,7 +797,10 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // inset by half the stroke so a centred pen stays inside the outline.
     protected override RenderOverride(dc: DrawingContext): void
     {
-        if (this._shape === undefined) return;
+        // A geometric shape paints its silhouette; a content tile paints its
+        // rounded-rect card (buildPaintGeometry returns each). A bare neutral
+        // container (neither) paints nothing — no stray rect behind the content.
+        if (this._shape === undefined && !this._isCardTile()) return;
         const fill = this.Fill, stroke = this.Stroke;
         if (fill === undefined && stroke === undefined) return;
         const s = this.RenderSize;
