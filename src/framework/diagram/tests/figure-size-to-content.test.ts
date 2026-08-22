@@ -72,13 +72,22 @@ describe('Figure — SizeToContent', () => {
         return { diagram, surface, container };
     }
 
-    test('a VM container fits its Width/Height to the content', () => {
+    test('a VM container fits its Width/Height to the content plus the stroke reserve', () => {
         const vm = new TileVM();
         const { container } = place(vm);
         assert.ok(container instanceof Figure);
         assert.equal(container.SizeToContent, true, 'a VM container is a content tile');
-        assert.ok(Math.abs(container.Width  - TILE_W) < 1, `container.Width should fit content (${container.Width})`);
-        assert.ok(Math.abs(container.Height - TILE_H) < 1, `container.Height should fit content (${container.Height})`);
+        // The fit reserves the stroke on every side: a neutral container clips its
+        // children to the box inset by the full stroke (buildChildClipGeometry), so
+        // the box must grow by 2×stroke for content to fall INSIDE that clip instead
+        // of being sheared at the edge. Equivalently, the inset clip region
+        // (Width - 2×stroke) then equals the content's natural size.
+        const stroke = container.Stroke?.Thickness ?? 0;
+        assert.ok(stroke > 0, 'a content tile still carries the default stroke');
+        assert.ok(Math.abs(container.Width  - (TILE_W + stroke * 2)) < 1, `container.Width should fit content + stroke (${container.Width})`);
+        assert.ok(Math.abs(container.Height - (TILE_H + stroke * 2)) < 1, `container.Height should fit content + stroke (${container.Height})`);
+        // The clip region (box inset by the stroke) exactly contains the content.
+        assert.ok(Math.abs((container.Width - stroke * 2) - TILE_W) < 1, 'inset clip region fits the content width');
     });
 
     test('UserSized on the container pins the size — auto-fit stops', () => {

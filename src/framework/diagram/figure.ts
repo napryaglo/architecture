@@ -446,11 +446,23 @@ export class Figure extends ContentControl implements ISideEndpointHost
         content.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
         const d = content.DesiredSize;
         if (d.Width <= 0 && d.Height <= 0) return;   // not rendered yet
+        // Reserve the stroke on every side. A neutral container Figure (no _shape)
+        // clips its children through the base buildChildClipGeometry, which insets
+        // the child-clip by the FULL stroke thickness — so content sized to the raw
+        // DesiredSize would sit flush to the box edge and be sheared by that inset
+        // (a label filling the tile lost its last glyph). Growing the box by
+        // 2×stroke lets the (centred) content fall inside the inset clip region,
+        // exactly as Border reserves its BorderThickness. Shaped Figures clip to
+        // the full silhouette (no inset), and their stroke is ~1px, so the reserve
+        // is negligible there.
+        const stroke = this.Stroke?.Thickness ?? 0;
+        const targetW = d.Width  + stroke * 2;
+        const targetH = d.Height + stroke * 2;
         this._fittingContent = true;
         try
         {
-            if (Math.abs(d.Width  - this.Width)  > 0.5) this.Width  = d.Width;
-            if (Math.abs(d.Height - this.Height) > 0.5) this.Height = d.Height;
+            if (Math.abs(targetW - this.Width)  > 0.5) this.Width  = targetW;
+            if (Math.abs(targetH - this.Height) > 0.5) this.Height = targetH;
         }
         finally
         {
