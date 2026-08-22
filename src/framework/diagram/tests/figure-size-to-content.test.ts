@@ -84,10 +84,15 @@ describe('Figure — SizeToContent', () => {
         // (Width - 2×stroke) then equals the content's natural size.
         const stroke = container.Stroke?.Thickness ?? 0;
         assert.ok(stroke > 0, 'a content tile still carries the default stroke');
-        assert.ok(Math.abs(container.Width  - (TILE_W + stroke * 2)) < 1, `container.Width should fit content + stroke (${container.Width})`);
+        // Height reserves exactly the stroke (no vertical ink bleed).
         assert.ok(Math.abs(container.Height - (TILE_H + stroke * 2)) < 1, `container.Height should fit content + stroke (${container.Height})`);
-        // The clip region (box inset by the stroke) exactly contains the content.
-        assert.ok(Math.abs((container.Width - stroke * 2) - TILE_W) < 1, 'inset clip region fits the content width');
+        // Width reserves the stroke PLUS a small horizontal ink-bleed cushion, so
+        // the inset clip region (Width − 2×stroke) covers the content and then some
+        // (glyph ink can overhang the advance). Assert it contains the content and
+        // the cushion stays small, without pinning the exact bleed constant.
+        const clipRegionW = container.Width - stroke * 2;
+        assert.ok(clipRegionW >= TILE_W - 0.5, `inset clip region should cover content width (${clipRegionW} vs ${TILE_W})`);
+        assert.ok(clipRegionW - TILE_W <= 8, `ink-bleed cushion stays small (${clipRegionW - TILE_W})`);
     });
 
     test('UserSized on the container pins the size — auto-fit stops', () => {

@@ -63,6 +63,15 @@ import { PositionAnchor } from './position-anchor.js';
 // Figure DP names whose change should re-resolve the label's {field} tokens.
 const FIELD_SOURCE_NAMES: ReadonlySet<string> = new Set(['Left', 'Top', 'Width', 'Height', 'Id']);
 
+// Extra per-side allowance (DIPs) a content tile reserves for glyph INK that
+// overhangs the measured advance width. Layout measures the advance (the pen
+// step), but a glyph's painted ink can extend a couple of DIPs past it (right
+// side-bearing); the tile's ClipToBounds is built from the advance box, so
+// without this margin the last glyph's ink is shaved. Empirical — the ink
+// overhang is font/size/weight dependent, so this is a small fixed cushion that
+// covers the diagram's caption fonts rather than an exact per-string value.
+const LABEL_INK_BLEED = 3;
+
 // The default Fill / Stroke brushes for a fresh Figure live in DiagramSettings
 // (DiagramSettings.ShapeDefaultFill / .ShapeDefaultStroke) alongside the other
 // tunable diagram constants; stroke width comes from .ShapeStrokeWidth().
@@ -454,9 +463,13 @@ export class Figure extends ContentControl implements ISideEndpointHost
         // 2×stroke lets the (centred) content fall inside the inset clip region,
         // exactly as Border reserves its BorderThickness. Shaped Figures clip to
         // the full silhouette (no inset), and their stroke is ~1px, so the reserve
-        // is negligible there.
+        // is negligible there. On TOP of the stroke, reserve LABEL_INK_BLEED per
+        // side so a glyph whose ink overhangs its advance (the layout measures the
+        // advance, the clip is built from it) isn't shaved at the tile edge — the
+        // residual sliver the stroke reserve alone left. Width only: horizontal ink
+        // overhang is the caret-direction bearing; vertical uses the font line box.
         const stroke = this.Stroke?.Thickness ?? 0;
-        const targetW = d.Width  + stroke * 2;
+        const targetW = d.Width  + stroke * 2 + LABEL_INK_BLEED * 2;
         const targetH = d.Height + stroke * 2;
         this._fittingContent = true;
         try
