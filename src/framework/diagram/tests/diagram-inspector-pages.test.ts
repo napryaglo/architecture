@@ -1,6 +1,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
+import { initTestApp } from '../../../basic/tests/test-app.js';
 import { Diagram } from '../diagram.js';
 import { DiagramInspector } from '../diagram-inspector.js';
 import { ShapeStylePage, SizePositionPage } from '../inspector-pages.js';
@@ -17,6 +18,16 @@ describe('DiagramInspector paging', () => {
         assert.equal(pages[0].Title, 'Style');
         assert.equal(pages[1].Title, 'Size & Position');
     });
+    test('each page resolves its rail icon geometry from the framework dictionary', () => {
+        initTestApp();   // activates Material → the Diagrams dict (with the icon includes)
+        const insp = new DiagramInspector();
+        const [style, size] = [...insp.Pages];
+        // The rail glyphs must resolve — an undefined Icon means a blank tab.
+        assert.ok(style.Icon !== undefined, 'Style page icon resolved');
+        assert.ok(size.Icon !== undefined, 'Size & Position page icon resolved');
+        assert.notEqual(style.Icon, size.Icon, 'the two pages use distinct glyphs');
+    });
+
     test('View propagates to the pages', () => {
         Application.current = null; new Application();
         const insp = new DiagramInspector();

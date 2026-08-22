@@ -9,6 +9,13 @@
 // clause in src/resources/framework.resources.mu.
 
 resources Diagrams {
+    // ── Inspector rail glyphs ──────────────────────────────────────
+    // SVG → Geometry at compile time; the paged inspector's NavigationItem
+    // template paints them via Shape (theme-tinted). Resolved by key in
+    // inspector-pages.ts (InspectorPage.Icon).
+    include "icons/inspector-style.svg" as InspectorStyleIcon
+    include "icons/inspector-size.svg"  as InspectorSizeIcon
+
     // ── Figure: per-item shape host ────────────────────────────────
     //
     // Template = Canvas { PART_Content + PART_LabelHost }. The Figure paints its
@@ -326,23 +333,49 @@ resources Diagrams {
     ItemsPanelTemplate x:key="InspectorRailPanel" {
         StackPanel [ Orientation = Horizontal ]
     }
+    // Icon tab: a theme-tinted glyph in a rounded box (box fills
+    // @SecondaryContainer when selected — the screenshot's boxed icon). The
+    // selected tab also draws a caret that makes the rail's bottom divider peak
+    // up beneath it (PART_NotchFill masks the straight line segment in @Surface;
+    // PART_Notch strokes the ^). Each item draws its own centered caret, so it
+    // always lands under whichever icon is selected — no runtime bounds math.
     Template x:key="InspectorRailItemTemplate" [ TargetType = NavigationItem ] {
-        Border x:name="PART_Outer"
-            [ Fill            = #00000000,
-              Stroke          = Pen [ Brush = #00000000 ],
-              BorderThickness = (0,0,0,2),
-              Padding         = (12,8,12,8) ] {
-            TextBlock x:name="PART_Label"
-                [ Style             = @TitleSmall,
-                  Text              = $Title,
-                  Foreground        = @OnSurfaceVariant,
-                  VerticalAlignment = Center ]
+        Grid {
+            Border x:name="PART_Box"
+                [ Fill                = #00000000,
+                  CornerRadius        = @ShapeSmall,
+                  Padding             = (10,6,10,6),
+                  Margin              = (4,6,4,9),
+                  HorizontalAlignment = Center,
+                  VerticalAlignment   = Center ] {
+                Shape x:name="PART_Icon"
+                    [ Geometry = $Icon,
+                      Fill     = @OnSurfaceVariant,
+                      Width    = 20,
+                      Height   = 20 ]
+            }
+            Path x:name="PART_NotchFill"
+                [ Data                = "M -8,2 L 0,-6 L 8,2 Z",
+                  Fill                = @Surface,
+                  Visibility          = Collapsed,
+                  HorizontalAlignment = Center,
+                  VerticalAlignment   = Bottom,
+                  Margin              = (0,0,0,-2) ]
+            Path x:name="PART_Notch"
+                [ Data                = "M -8,2 L 0,-6 L 8,2",
+                  Stroke              = Pen [ Brush = @OutlineVariant ],
+                  Visibility          = Collapsed,
+                  HorizontalAlignment = Center,
+                  VerticalAlignment   = Bottom,
+                  Margin              = (0,0,0,-2) ]
         }
         when ( IsSelected ) {
-            PART_Outer.Stroke     = Pen [ Brush = @Primary ];
-            PART_Label.Foreground = @Primary;
+            PART_Box.Fill             = @SecondaryContainer;
+            PART_Icon.Fill            = @OnSecondaryContainer;
+            PART_NotchFill.Visibility = Visible;
+            PART_Notch.Visibility     = Visible;
         }
-        when ( IsMouseOver ) { PART_Label.Foreground = @OnSurface; }
+        when ( IsMouseOver ) { PART_Icon.Fill = @OnSurface; }
     }
     Style x:key="InspectorRailItem" [ TargetType = NavigationItem ] {
         Template = @InspectorRailItemTemplate;
