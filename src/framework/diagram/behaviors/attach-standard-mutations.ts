@@ -2,6 +2,7 @@ import type { Diagram } from '../diagram.js';
 import type { CombineRequestedArgs } from '../commands/combine.js';
 import type { DeleteRequestedArgs } from '../commands/delete-ops.js';
 import type { GroupRequestedArgs, UngroupRequestedArgs } from '../commands/group-ops.js';
+import type { WrapRequestedArgs, UnwrapRequestedArgs } from '../commands/container-ops.js';
 import { Application, Point } from '../../../runtime/index.js';
 import type { ItemDroppedArgs } from './canvas-drop-behavior.js';
 import { TOOLBOX_ITEM_FORMAT } from './canvas-drop-behavior.js';
@@ -30,6 +31,12 @@ export interface DiagramMutator
 
     /** Dissolve every group-shaped entry in `items`. */
     Ungroup(items: readonly unknown[]): void;
+
+    /** Wrap the top-level Figures in `items` in a new container node. */
+    WrapInContainer(items: readonly unknown[]): void;
+
+    /** Dissolve every ContainerFigure in `items`, keeping its children. */
+    UnwrapContainer(items: readonly unknown[]): void;
 
     /** Combine `items` via the selected mode. */
     CombineSelection(items: readonly unknown[], mode: GeometryCombineMode): void;
@@ -81,6 +88,8 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
 
     const onGroup    = (args: GroupRequestedArgs):   void => mutator.Group(args.Items);
     const onUngroup  = (args: UngroupRequestedArgs): void => mutator.Ungroup(args.Groups);
+    const onWrap     = (args: WrapRequestedArgs):    void => mutator.WrapInContainer(args.Items);
+    const onUnwrap   = (args: UnwrapRequestedArgs):  void => mutator.UnwrapContainer(args.Containers);
     const onCombine  = (args: CombineRequestedArgs): void => mutator.CombineSelection(args.Items, args.Mode);
     const onDelete   = (args: DeleteRequestedArgs):  void => {
         mutator.DeleteNodes(args.Items);
@@ -123,6 +132,8 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
 
     diagram.AddGroupRequestedListener(onGroup);
     diagram.AddUngroupRequestedListener(onUngroup);
+    diagram.AddWrapRequestedListener(onWrap);
+    diagram.AddUnwrapRequestedListener(onUnwrap);
     diagram.AddCombineRequestedListener(onCombine);
     diagram.AddDeleteRequestedListener(onDelete);
     diagram.AddItemDroppedListener(onDropped);
@@ -131,6 +142,8 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
     return (): void => {
         diagram.RemoveGroupRequestedListener(onGroup);
         diagram.RemoveUngroupRequestedListener(onUngroup);
+        diagram.RemoveWrapRequestedListener(onWrap);
+        diagram.RemoveUnwrapRequestedListener(onUnwrap);
         diagram.RemoveCombineRequestedListener(onCombine);
         diagram.RemoveDeleteRequestedListener(onDelete);
         diagram.RemoveItemDroppedListener(onDropped);

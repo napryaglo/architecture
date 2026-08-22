@@ -10,7 +10,7 @@ import { ToolboxVisualDescriptor } from '../toolbox-visual-descriptor.js';
 import { ShapeVisualResolverKey } from '../shape-visual-resolver.js';
 import type { IToolboxDropFactory, ToolboxDropContext } from '../toolbox-drop-factory.js';
 
-const mutator = { Group(){}, Ungroup(){}, CombineSelection(){}, DeleteNodes(){}, CreateNode(){ return null; } };
+const mutator = { Group(){}, Ungroup(){}, WrapInContainer(){}, UnwrapContainer(){}, CombineSelection(){}, DeleteNodes(){}, CreateNode(){ return null; } };
 
 test('dropping an item id routes through the repo to its factory', () => {
     const prior = Application.current;
