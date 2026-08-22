@@ -1,6 +1,5 @@
 import { MuralBase, Element, Panel } from '../../runtime/index.js';
 import { Point } from '../../visual-engine/index.js';
-import { DiagramSettings } from './diagram-settings.js';
 import { Figure, registerFigureKind } from './figure.js';
 
 // Title-band height + inner padding of a container. The child region begins at
