@@ -74,6 +74,19 @@ export class ContainerPlacement
         host.AddVisualChild(node);
     }
 
+    // Move every realized child of `container` out to the container's own parent
+    // (or root), preserving each child's on-screen position (reparent = MOVE), then
+    // forget the container. Used by unwrap and by container deletion so children are
+    // never destroyed with their box (data-loss guard). No-op-safe if the container
+    // has no realized children.
+    public reHome(container: ContainerFigure): void
+    {
+        const kids: Figure[] = [];
+        for (const n of this._realizedNodes()) if (n.ContainerParent === container) kids.push(n);
+        for (const child of kids) this.reparent(child, container.ParentId);
+        if (container.Id !== undefined) this._containers.delete(container.Id);
+    }
+
     // The container that currently holds `point` (diagram-space), innermost first,
     // excluding `exclude` and any descendant of it (cycle guard). Used by drag-in.
     public containerAt(point: Point, exclude?: Figure): ContainerFigure | undefined

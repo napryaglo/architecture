@@ -715,6 +715,11 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
         for (const item of items)
         {
             if (!(item instanceof Figure || item instanceof Group || item instanceof NodeViewModel)) continue;
+            // A container's children are re-homed to root (or its own parent) BEFORE
+            // the box is removed, so they survive rather than being torn down with
+            // the ChildHost (data-loss guard). Needs the live view (children are
+            // realized visual descendants); the headless sweep below covers the rest.
+            if (item instanceof ContainerFigure) this._boundView?.ContainerPlacement.reHome(item);
             // Detach from parent group bookkeeping first if any.
             if ((item instanceof Figure || item instanceof Group) && item.Parent !== undefined) item.Parent._removeMember(item);
             const idx = this.Nodes.IndexOf(item);
@@ -722,6 +727,20 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
             this.Nodes.RemoveAt(idx);
             removed++;
         }
+        // Headless / unrealized safety net: clear the membership tag on any node
+        // still naming a just-removed container, so no child dangles at a dead
+        // parentId. reHome already cleared realized children via reparent; this is
+        // idempotent for them.
+        const removedContainerIds = new Set<string>();
+        for (const item of items)
+            if (item instanceof ContainerFigure && item.Id !== undefined) removedContainerIds.add(item.Id);
+        if (removedContainerIds.size > 0)
+            for (let i = 0; i < this.Nodes.Count; i++)
+            {
+                const n = this.Nodes.Get(i);
+                if (n instanceof Figure && n.ParentId !== undefined && removedContainerIds.has(n.ParentId))
+                    n.ParentId = undefined;
+            }
         // Cascade: drop any connector whose endpoint references a
         // removed node. Without this, a Figure deletion leaves the
         // connector pointing at a detached Visual.
