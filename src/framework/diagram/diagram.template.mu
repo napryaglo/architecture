@@ -388,7 +388,8 @@ resources Diagrams {
         Border x:name="PART_Border"
             [ Fill            = @Surface,
               Stroke          = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,0,0,1) ] {
+              BorderThickness = (0,0,0,1),
+              Padding = (5) ] {
             ItemsPresenter x:name="PART_ItemsPresenter"
         }
     }
