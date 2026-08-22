@@ -339,46 +339,50 @@ resources Diagrams {
     // up beneath it (PART_NotchFill masks the straight line segment in @Surface;
     // PART_Notch strokes the ^). Each item draws its own centered caret, so it
     // always lands under whichever icon is selected — no runtime bounds math.
+    // Root is a VERTICAL StackPanel so the item sizes to CONTENT height — a Grid
+    // root measures to the available height, which (in the horizontal rail
+    // panel) inflates every item to the whole panel and shoves the page body
+    // off-screen. The notch is the last child, so it sits on the rail's bottom
+    // divider directly beneath the icon; it stays in layout (Hidden, not
+    // Collapsed) when unselected so both tabs keep the same height.
     Template x:key="InspectorRailItemTemplate" [ TargetType = NavigationItem ] {
-        Grid {
+        StackPanel [ Orientation = Vertical, HorizontalAlignment = Center, VerticalAlignment = Top ] {
             Border x:name="PART_Box"
                 [ Fill                = #00000000,
                   CornerRadius        = @ShapeSmall,
                   Padding             = (10,6,10,6),
-                  Margin              = (4,6,4,9),
-                  HorizontalAlignment = Center,
-                  VerticalAlignment   = Center ] {
+                  Margin              = (4,8,4,3),
+                  HorizontalAlignment = Center ] {
                 Shape x:name="PART_Icon"
                     [ Geometry = $Icon,
                       Fill     = @OnSurfaceVariant,
                       Width    = 20,
                       Height   = 20 ]
             }
-            Path x:name="PART_NotchFill"
+            // Filled @Surface triangle masks the straight divider segment; the
+            // @OutlineVariant stroke draws the ^ so the line peaks up here.
+            Path x:name="PART_Notch"
                 [ Data                = "M -8,2 L 0,-6 L 8,2 Z",
                   Fill                = @Surface,
-                  Visibility          = Collapsed,
-                  HorizontalAlignment = Center,
-                  VerticalAlignment   = Bottom,
-                  Margin              = (0,0,0,-2) ]
-            Path x:name="PART_Notch"
-                [ Data                = "M -8,2 L 0,-6 L 8,2",
                   Stroke              = Pen [ Brush = @OutlineVariant ],
-                  Visibility          = Collapsed,
+                  Visibility          = Hidden,
                   HorizontalAlignment = Center,
-                  VerticalAlignment   = Bottom,
-                  Margin              = (0,0,0,-2) ]
+                  Margin              = (0,0,0,-1) ]
         }
         when ( IsSelected ) {
-            PART_Box.Fill             = @SecondaryContainer;
-            PART_Icon.Fill            = @OnSecondaryContainer;
-            PART_NotchFill.Visibility = Visible;
-            PART_Notch.Visibility     = Visible;
+            PART_Box.Fill         = @SecondaryContainer;
+            PART_Icon.Fill        = @OnSecondaryContainer;
+            PART_Notch.Visibility = Visible;
         }
         when ( IsMouseOver ) { PART_Icon.Fill = @OnSurface; }
     }
     Style x:key="InspectorRailItem" [ TargetType = NavigationItem ] {
         Template = @InspectorRailItemTemplate;
+        // Hug content height. Without this the item defaults to Stretch and, in
+        // the horizontal rail StackPanel, claims the full available height as
+        // its desired size — inflating the rail to the whole panel and pushing
+        // the page body off-screen.
+        VerticalAlignment = Top;
     }
     Template x:key="InspectorRailTemplate" [ TargetType = NavigationRail ] {
         Border x:name="PART_Border"
@@ -397,6 +401,7 @@ resources Diagrams {
         DockPanel [ LastChildFill = true ] {
             NavigationRail
                 [ DockPanel.Dock     = Top,
+                  VerticalAlignment  = Top,
                   Style              = @InspectorRail,
                   ItemContainerStyle = @InspectorRailItem,
                   ItemsSource        = $Pages,
