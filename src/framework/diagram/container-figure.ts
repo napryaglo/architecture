@@ -1,4 +1,4 @@
-import { MuralBase, Element, Panel } from '../../runtime/index.js';
+import { MuralBase, Element, MetaData, Panel } from '../../runtime/index.js';
 import { Point } from '../../visual-engine/index.js';
 import { Figure, registerFigureKind } from './figure.js';
 
@@ -21,6 +21,14 @@ export const CONTAINER_DEFAULT_H = 160;
 export class ContainerFigure extends Figure
 {
     static { MuralBase.OverrideMetadata(ContainerFigure, Element.DefaultStyleKeyKey, { default_value: ContainerFigure }); }
+
+    // Transient drag affordance: true while a drag hovers this container as its
+    // drop target. Driven by ContainerPlacement.highlightCandidate; a Style
+    // trigger accents the box. Not persisted (view-only state).
+    public static readonly IsDropCandidateKey = MuralBase.RegisterProperty<boolean>(
+        ContainerFigure, 'IsDropCandidate', false, MetaData.None);
+    public get IsDropCandidate(): boolean { return this.get_property_value(ContainerFigure.IsDropCandidateKey); }
+    public set IsDropCandidate(v: boolean) { this.set_property_value(ContainerFigure.IsDropCandidateKey, v); }
 
     private _childHost: Panel | undefined;
 

@@ -144,6 +144,8 @@ interface ContainerPlacementLike
 {
     reparent(node: Figure, parentId: string | undefined): void;
     containerAt(point: Point, exclude?: Figure): { Id?: string } | undefined;
+    highlightCandidate(point: Point, exclude: Figure): void;
+    clearCandidate(): void;
 }
 function placementOf(selector: unknown): ContainerPlacementLike | undefined
 {
@@ -1141,6 +1143,14 @@ export class Figure extends ContentControl implements ISideEndpointHost
             this._rigidConnectors.Translate(netDx, netDy);
         }
 
+        // Live drop affordance: highlight the container this node would nest into
+        // at its current centre (it was popped to root on pointer-down, so Left/Top
+        // are diagram-space). Commit still happens on drop (OnPointerUp).
+        const dragSelector = Selector.FromContainer<Selector>(
+            this, (v: Visual): v is Selector => v instanceof Selector);
+        placementOf(dragSelector)?.highlightCandidate(
+            new Point(this.Left + this.Width / 2, this.Top + this.Height / 2), this);
+
         // Edge auto-scroll — the SV starts / continues / stops a tick
         // timer based on cursor proximity to its viewport edges. The
         // pulse re-evaluates on every move; the timer keeps scrolling
@@ -1211,6 +1221,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
             const placement = placementOf(dropSelector);
             if (placement !== undefined)
             {
+                placement.clearCandidate();   // drop commits — drop the live affordance
                 const centre = new Point(this.Left + this.Width / 2, this.Top + this.Height / 2);
                 const target = placement.containerAt(centre, this);
                 placement.reparent(this, target?.Id);

@@ -21,7 +21,7 @@ test('shape factory delegates to mutator.CreateNode and returns the node', () =>
     const created: Array<{ kind: string; x: number; y: number }> = [];
     const sentinel = {};
     const mutator = {
-        Group() {}, Ungroup() {}, CombineSelection() {}, DeleteNodes() {},
+        Group() {}, Ungroup() {}, WrapInContainer() {}, UnwrapContainer() {}, CombineSelection() {}, DeleteNodes() {},
         CreateNode(kind: string, x: number, y: number) { created.push({ kind, x, y }); return sentinel; },
     };
     const factory = new ShapeDropFactory();

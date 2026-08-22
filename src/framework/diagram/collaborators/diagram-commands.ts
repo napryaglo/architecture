@@ -24,6 +24,10 @@ import {
     flattenToLeaves,
 } from '../commands/group-ops.js';
 import {
+    wrapTargets,
+    selectedContainers,
+} from '../commands/container-ops.js';
+import {
     GeometryCombineMode,
     isGeometricItem,
     type IGeometricItem,
@@ -61,6 +65,7 @@ export class DiagramCommands
         this._installAlignCommands();
         this._installDistributeCommands();
         this._installGroupCommands();
+        this._installContainerCommands();
         this._installCombineCommands();
         this._installTextFormatCommands();
         diagram.AddSelectionChangedListener(() => this._raiseCanExecuteAll());
@@ -118,6 +123,25 @@ export class DiagramCommands
                 () => this._diagram._fireUngroupRequested({ Groups: selectedTopLevelGroups(this._diagram.SelectedItems) }),
                 canUngroup,
                 { Text: 'Ungroup', Description: 'Dissolve the currently-selected group(s), re-parenting their members to the surrounding scope.' }));
+    }
+
+    private _installContainerCommands(): void
+    {
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+
+        const canWrap   = (): boolean => wrapTargets(this._diagram.SelectedItems).length >= 1;
+        const canUnwrap = (): boolean => selectedContainers(this._diagram.SelectedItems).length >= 1;
+
+        this._install(Diagram.WrapInContainerCommandKey, 'WrapInContainer',
+            new RelayCommand(
+                () => this._diagram._fireWrapRequested({ Items: wrapTargets(this._diagram.SelectedItems) }),
+                canWrap,
+                { Text: 'Wrap in container', Description: 'Enclose the current top-level selection in a new container.' }));
+        this._install(Diagram.UnwrapContainerCommandKey, 'UnwrapContainer',
+            new RelayCommand(
+                () => this._diagram._fireUnwrapRequested({ Containers: selectedContainers(this._diagram.SelectedItems) }),
+                canUnwrap,
+                { Text: 'Unwrap container', Description: 'Dissolve the selected container(s), keeping their contents.' }));
     }
 
     private _installCombineCommands(): void

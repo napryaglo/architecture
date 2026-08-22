@@ -1,7 +1,7 @@
 import { Panel } from '../../../runtime/index.js';
 import { Point } from '../../../visual-engine/index.js';
 import { diagramSpaceRect, toParentSpace } from '../coordinate-space.js';
-import { ContainerFigure } from '../container-figure.js';
+import { ContainerFigure, CONTAINER_PADDING } from '../container-figure.js';
 import { Figure } from '../figure.js';
 import type { Diagram } from '../diagram.js';
 
@@ -72,6 +72,31 @@ export class ContainerPlacement
         node.Left = local.X;
         node.Top  = local.Y;
         host.AddVisualChild(node);
+        this._growToFit(target, node);
+    }
+
+    // Grow (never shrink) `container` so `child`'s just-placed local rect fits
+    // inside the child region with CONTAINER_PADDING to spare. child.Left/Top are
+    // already in container-local space at call time.
+    private _growToFit(container: ContainerFigure, child: Figure): void
+    {
+        const needW = container.ContentOrigin.X + child.Left + child.Width  + CONTAINER_PADDING;
+        const needH = container.ContentOrigin.Y + child.Top  + child.Height + CONTAINER_PADDING;
+        if (needW > container.Width)  container.Width  = needW;
+        if (needH > container.Height) container.Height = needH;
+    }
+
+    // Move every realized child of `container` out to the container's own parent
+    // (or root), preserving each child's on-screen position (reparent = MOVE), then
+    // forget the container. Used by unwrap and by container deletion so children are
+    // never destroyed with their box (data-loss guard). No-op-safe if the container
+    // has no realized children.
+    public reHome(container: ContainerFigure): void
+    {
+        const kids: Figure[] = [];
+        for (const n of this._realizedNodes()) if (n.ContainerParent === container) kids.push(n);
+        for (const child of kids) this.reparent(child, container.ParentId);
+        if (container.Id !== undefined) this._containers.delete(container.Id);
     }
 
     // The container that currently holds `point` (diagram-space), innermost first,
@@ -88,6 +113,28 @@ export class ContainerPlacement
             if (best === undefined || this._isDescendant(c, best)) best = c;
         }
         return best;
+    }
+
+    // ── Drop-candidate highlight (drag affordance) ──────────────────────
+    private _candidate: ContainerFigure | undefined;
+
+    // Highlight the container the given diagram-space point would drop into
+    // (innermost, excluding `exclude` + its descendants), clearing any prior
+    // highlight. Called on each drag move.
+    public highlightCandidate(point: Point, exclude: Figure): void
+    {
+        const next = this.containerAt(point, exclude);
+        if (next === this._candidate) return;
+        if (this._candidate !== undefined) this._candidate.IsDropCandidate = false;
+        this._candidate = next;
+        if (next !== undefined) next.IsDropCandidate = true;
+    }
+
+    // Drop any active candidate highlight (drag ended / cancelled).
+    public clearCandidate(): void
+    {
+        if (this._candidate !== undefined) this._candidate.IsDropCandidate = false;
+        this._candidate = undefined;
     }
 
     private _register(node: Figure): void

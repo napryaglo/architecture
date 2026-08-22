@@ -27,6 +27,9 @@ import {
     type SerializedText,
 } from './node-serializers-default.js';
 import { GeometryCombineMode } from './commands/combine.js';
+import { wrapTargets, selectedContainers, containerGeometryFor } from './commands/container-ops.js';
+import { ContainerFigure } from './container-figure.js';
+import { diagramSpaceRect, toParentSpace } from './coordinate-space.js';
 import type { DiagramMutator } from './behaviors/attach-standard-mutations.js';
 import { Connector } from './connector.js';
 import { waypoint } from './route-waypoint.js';
@@ -712,6 +715,11 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
         for (const item of items)
         {
             if (!(item instanceof Figure || item instanceof Group || item instanceof NodeViewModel)) continue;
+            // A container's children are re-homed to root (or its own parent) BEFORE
+            // the box is removed, so they survive rather than being torn down with
+            // the ChildHost (data-loss guard). Needs the live view (children are
+            // realized visual descendants); the headless sweep below covers the rest.
+            if (item instanceof ContainerFigure) this._boundView?.ContainerPlacement.reHome(item);
             // Detach from parent group bookkeeping first if any.
             if ((item instanceof Figure || item instanceof Group) && item.Parent !== undefined) item.Parent._removeMember(item);
             const idx = this.Nodes.IndexOf(item);
@@ -719,6 +727,20 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
             this.Nodes.RemoveAt(idx);
             removed++;
         }
+        // Headless / unrealized safety net: clear the membership tag on any node
+        // still naming a just-removed container, so no child dangles at a dead
+        // parentId. reHome already cleared realized children via reparent; this is
+        // idempotent for them.
+        const removedContainerIds = new Set<string>();
+        for (const item of items)
+            if (item instanceof ContainerFigure && item.Id !== undefined) removedContainerIds.add(item.Id);
+        if (removedContainerIds.size > 0)
+            for (let i = 0; i < this.Nodes.Count; i++)
+            {
+                const n = this.Nodes.Get(i);
+                if (n instanceof Figure && n.ParentId !== undefined && removedContainerIds.has(n.ParentId))
+                    n.ParentId = undefined;
+            }
         // Cascade: drop any connector whose endpoint references a
         // removed node. Without this, a Figure deletion leaves the
         // connector pointing at a detached Visual.
@@ -870,6 +892,72 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
         }
         for (const sub  of grp.EnumerateSubGroups()) sub.IsSelected = false;
         this.Status = `Grouped ${selection.length} items.`;
+        this._markDirty();
+    }
+
+    /** Wrap the current top-level selection in a new ContainerFigure. Data
+     *  mutation only: create the container sized to enclose the selection, claim
+     *  each node via ParentId, and convert each node's Left/Top to container-local
+     *  so its on-screen position is preserved when the RESTORE pass (placeAll,
+     *  driven by the container's ContainerBound on realize) re-parents it into the
+     *  container's ChildHost. No-op below one target. */
+    public WrapInContainer(items: readonly unknown[]): void
+    {
+        const targets = wrapTargets(items);
+        if (targets.length < 1) return;
+        const box = containerGeometryFor(targets);
+        const container = Figure.fromKind('container', box.left, box.top,
+                                          { width: box.width, height: box.height }) as ContainerFigure;
+        container.Id = 'n' + this._nextId++;
+
+        // Insert behind its future children (min index), like Group.
+        let minIdx = this.Nodes.Count;
+        for (const t of targets) { const i = this.Nodes.IndexOf(t); if (i >= 0 && i < minIdx) minIdx = i; }
+        this.Nodes.Insert(minIdx, container);
+
+        for (const t of targets)
+        {
+            const abs   = diagramSpaceRect(t);                       // current diagram-space top-left
+            const local = toParentSpace(new Point(abs.X, abs.Y), container);
+            t.ParentId = container.Id;
+            t.Left = local.X;
+            t.Top  = local.Y;
+        }
+        container.IsSelected = true;
+        this.Status = `Wrapped ${targets.length} item${targets.length === 1 ? '' : 's'}.`;
+        this._markDirty();
+        // Re-parent now if the container is already realized; otherwise its
+        // ContainerBound (fired on realize) re-runs placeAll and attaches them.
+        this._boundView?.ContainerPlacement.placeAll();
+    }
+
+    /** Dissolve every selected ContainerFigure: re-home each container's children
+     *  out to its own parent/root (preserving screen position — the reHome
+     *  primitive), then remove the container node. Symmetric with Ungroup.
+     *  Children (and their connectors) survive; the container's own connectors
+     *  cascade away with it. No-op when no container is selected. */
+    public UnwrapContainer(items: readonly unknown[]): void
+    {
+        const containers = selectedContainers(items);
+        if (containers.length === 0) return;
+        for (const container of containers)
+        {
+            this._boundView?.ContainerPlacement.reHome(container);
+            const idx = this.Nodes.IndexOf(container);
+            if (idx >= 0) this.Nodes.RemoveAt(idx);
+        }
+        // Headless / unrealized safety net (reHome needs the live view): clear any
+        // child still naming a removed container so no parentId dangles.
+        const removedIds = new Set<string>();
+        for (const c of containers) if (c.Id !== undefined) removedIds.add(c.Id);
+        for (let i = 0; i < this.Nodes.Count; i++)
+        {
+            const n = this.Nodes.Get(i);
+            if (n instanceof Figure && n.ParentId !== undefined && removedIds.has(n.ParentId))
+                n.ParentId = undefined;
+        }
+        this._cascadeRemoveConnectorsFor(containers);
+        this.Status = `Unwrapped ${containers.length} container${containers.length === 1 ? '' : 's'}.`;
         this._markDirty();
     }
 

@@ -42,6 +42,12 @@ import {
     type UngroupRequestedListener,
 } from './commands/group-ops.js';
 import {
+    type WrapRequestedArgs,
+    type UnwrapRequestedArgs,
+    type WrapRequestedListener,
+    type UnwrapRequestedListener,
+} from './commands/container-ops.js';
+import {
     type CombineRequestedArgs,
     type CombineRequestedListener,
 } from './commands/combine.js';
@@ -257,6 +263,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         Diagram, 'GroupCommand',   undefined, MetaData.None);
     public static readonly UngroupCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'UngroupCommand', undefined, MetaData.None);
+    // Container commands — same event-based mutation contract as Group / Ungroup.
+    //   * WrapInContainerCommand — ≥ 1 top-level Figure in SelectedItems
+    //   * UnwrapContainerCommand — ≥ 1 ContainerFigure in SelectedItems
+    public static readonly WrapInContainerCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'WrapInContainerCommand', undefined, MetaData.None);
+    public static readonly UnwrapContainerCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'UnwrapContainerCommand', undefined, MetaData.None);
 
     // Combine commands — one per GeometryCombineMode. Same event-based
     // mutation contract as Group / Ungroup: Execute fires CombineRequested
@@ -668,6 +681,8 @@ export class Diagram extends Selector implements RigidConnectorDragHost
 
     public get GroupCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.GroupCommandKey); }
     public get UngroupCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.UngroupCommandKey); }
+    public get WrapInContainerCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.WrapInContainerCommandKey); }
+    public get UnwrapContainerCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.UnwrapContainerCommandKey); }
 
     public get CombineUnionCommand():     RelayCommand | undefined { return this.get_property_value(Diagram.CombineUnionCommandKey); }
     public get CombineIntersectCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.CombineIntersectCommandKey); }
@@ -861,6 +876,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public AddUngroupRequestedListener   (listener: UngroupRequestedListener): void { this._ungroupRequestedListeners.add(listener); }
     public RemoveUngroupRequestedListener(listener: UngroupRequestedListener): void { this._ungroupRequestedListeners.delete(listener); }
 
+    private readonly _wrapRequestedListeners:   Set<WrapRequestedListener>   = new Set();
+    private readonly _unwrapRequestedListeners: Set<UnwrapRequestedListener> = new Set();
+    public AddWrapRequestedListener   (listener: WrapRequestedListener):   void { this._wrapRequestedListeners.add(listener); }
+    public RemoveWrapRequestedListener(listener: WrapRequestedListener):   void { this._wrapRequestedListeners.delete(listener); }
+    public AddUnwrapRequestedListener   (listener: UnwrapRequestedListener): void { this._unwrapRequestedListeners.add(listener); }
+    public RemoveUnwrapRequestedListener(listener: UnwrapRequestedListener): void { this._unwrapRequestedListeners.delete(listener); }
+
     private readonly _combineRequestedListeners: Set<CombineRequestedListener> = new Set();
     public AddCombineRequestedListener   (listener: CombineRequestedListener): void { this._combineRequestedListeners.add(listener); }
     public RemoveCombineRequestedListener(listener: CombineRequestedListener): void { this._combineRequestedListeners.delete(listener); }
@@ -891,6 +913,18 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public _fireUngroupRequested(args: UngroupRequestedArgs): void
     {
         for (const l of [...this._ungroupRequestedListeners]) l(args);
+    }
+
+    /** @internal */
+    public _fireWrapRequested(args: WrapRequestedArgs): void
+    {
+        for (const l of [...this._wrapRequestedListeners]) l(args);
+    }
+
+    /** @internal */
+    public _fireUnwrapRequested(args: UnwrapRequestedArgs): void
+    {
+        for (const l of [...this._unwrapRequestedListeners]) l(args);
     }
 
     /** @internal */
