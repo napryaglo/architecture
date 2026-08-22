@@ -21,6 +21,19 @@ export interface UnwrapRequestedArgs { readonly Containers: readonly MuralBase[]
 export type WrapRequestedListener   = (args: WrapRequestedArgs)   => void;
 export type UnwrapRequestedListener = (args: UnwrapRequestedArgs) => void;
 
+// Fired by ContainerPlacement whenever a node's container membership changes
+// (drag-nest, wrap, un-nest, re-home). A consumer that mirrors nesting to a
+// model (e.g. the Plexus arch binding) subscribes to write the change back.
+// OldParentId / NewParentId are the container node Ids before / after the move;
+// undefined means "root" (no container).
+export interface NodeReparentedArgs
+{
+    readonly Node:        Figure;
+    readonly OldParentId: string | undefined;
+    readonly NewParentId: string | undefined;
+}
+export type NodeReparentedListener = (args: NodeReparentedArgs) => void;
+
 // The top-level Figures in a selection — the set a wrap encloses. A node already
 // nested in a container (ContainerParent set) is skipped: wrapping re-parents a
 // root node, and mixing frames would corrupt coordinates.

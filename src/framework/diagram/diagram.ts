@@ -48,6 +48,8 @@ import {
     type UnwrapRequestedArgs,
     type WrapRequestedListener,
     type UnwrapRequestedListener,
+    type NodeReparentedArgs,
+    type NodeReparentedListener,
 } from './commands/container-ops.js';
 import {
     type CombineRequestedArgs,
@@ -885,6 +887,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public AddUnwrapRequestedListener   (listener: UnwrapRequestedListener): void { this._unwrapRequestedListeners.add(listener); }
     public RemoveUnwrapRequestedListener(listener: UnwrapRequestedListener): void { this._unwrapRequestedListeners.delete(listener); }
 
+    private readonly _nodeReparentedListeners: Set<NodeReparentedListener> = new Set();
+    public AddNodeReparentedListener   (listener: NodeReparentedListener): void { this._nodeReparentedListeners.add(listener); }
+    public RemoveNodeReparentedListener(listener: NodeReparentedListener): void { this._nodeReparentedListeners.delete(listener); }
+
     private readonly _combineRequestedListeners: Set<CombineRequestedListener> = new Set();
     public AddCombineRequestedListener   (listener: CombineRequestedListener): void { this._combineRequestedListeners.add(listener); }
     public RemoveCombineRequestedListener(listener: CombineRequestedListener): void { this._combineRequestedListeners.delete(listener); }
@@ -927,6 +933,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public _fireUnwrapRequested(args: UnwrapRequestedArgs): void
     {
         for (const l of [...this._unwrapRequestedListeners]) l(args);
+    }
+
+    /** @internal */
+    public _fireNodeReparented(args: NodeReparentedArgs): void
+    {
+        for (const l of [...this._nodeReparentedListeners]) l(args);
     }
 
     /** @internal */
