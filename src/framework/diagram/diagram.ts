@@ -33,6 +33,7 @@ import { Selector } from '../list/selector.js';
 import { DiagramCommands } from './collaborators/diagram-commands.js';
 import { DiagramConnectorsMaterializer } from './collaborators/diagram-connectors-materializer.js';
 import { SelectionBoundsTracker } from './collaborators/selection-bounds-tracker.js';
+import { ContainerPlacement } from './collaborators/container-placement.js';
 import { SelectionReflector } from './collaborators/selection-reflector.js';
 import {
     type GroupRequestedArgs,
@@ -1013,6 +1014,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // the target — e.g. a mixed multi-selection, or a standalone Plexus button).
     private readonly _formatMirror: FormatMirror;
 
+    // Container nesting collaborator: re-parents child Figures into their
+    // container's ChildHost per ParentId. Held so the drag-in/out path and
+    // wrap/unwrap commands can drive reparent() / query containerAt().
+    private readonly _containerPlacement: ContainerPlacement;
+    public get ContainerPlacement(): ContainerPlacement { return this._containerPlacement; }
+
     /** @internal — testing hook for the materialized item → Visual map. */
     public _getConnectorsMaterializerForTesting(): DiagramConnectorsMaterializer { return this._connectorsMaterializer; }
 
@@ -1200,6 +1207,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         this.set_property_value(Diagram.FitCommandKey,            new RelayCommand(() => this.Fit()));
         this.set_property_value(Diagram.FitToSelectionCommandKey, new RelayCommand(() => this.FitToSelection()));
         new SelectionBoundsTracker(this);
+        this._containerPlacement = new ContainerPlacement(this);
         this._formatMirror = new FormatMirror(this);
         new SelectionGeometryMirror(this);
         new SelectionReflector(this);

@@ -22,6 +22,7 @@ import {
 import { Figure } from './figure.js';
 import { TextNode } from './text-node.js';
 import { Callout } from './callout.js';
+import { ContainerFigure } from './container-figure.js';
 import { SHAPE_CATALOG_MAP } from './shape-catalog.js';
 import { registerNodeSerializer } from './node-serialization.js';
 
@@ -242,5 +243,58 @@ registerNodeSerializer({
         // leaderTargetId is read by DiagramDocument._deserialize during the
         // second pass (pendingLeaders).  Nothing to do here.
         return callout;
+    },
+});
+
+// ── 'container' serializer (ContainerFigure) ─────────────────────────
+//
+// A shapeless box that hosts nested nodes. Its title (ShapeText) + Fill/Stroke
+// card ride the node record here; geometry AND the parentId of every node
+// (including a container nested in another) ride the `visuals` section via
+// NodeVisualStore. On load ContainerPlacement re-parents children from parentId,
+// so the flat node list + visuals reconstruct the tree regardless of order.
+// Registered after 'shape' — a ContainerFigure has no silhouette source, so the
+// 'shape' matcher (which requires one) never catches it.
+
+registerNodeSerializer({
+    type: 'container',
+
+    matches(node: unknown): boolean
+    {
+        return node instanceof ContainerFigure;
+    },
+
+    serialize(node: unknown): Record<string, unknown>
+    {
+        const c = node as ContainerFigure;
+        const out: Record<string, unknown> = {};
+        const title = serializeShapeText(c.Text);
+        if (title !== undefined) out.text = title;
+        const fillHex = solidHex(c.Fill);
+        if (fillHex !== undefined) out.fill = fillHex;
+        const stroke = c.Stroke;
+        if (stroke !== undefined)
+        {
+            const strokeHex = solidHex(stroke.Brush);
+            if (strokeHex !== undefined) out.stroke = strokeHex;
+            out.strokeWidth = stroke.Thickness;
+        }
+        return out;
+    },
+
+    deserialize(data: Record<string, unknown>): ContainerFigure
+    {
+        const c = new ContainerFigure();
+        if (data.text !== undefined) applySerializedText(c.Text, data.text as SerializedText);
+        if (typeof data.fill === 'string') c.Fill = new SolidColorBrush(Color.FromHex(data.fill));
+        const strokeHex   = typeof data.stroke      === 'string' ? data.stroke      : undefined;
+        const strokeWidth = typeof data.strokeWidth === 'number' ? data.strokeWidth : undefined;
+        if (strokeHex !== undefined || strokeWidth !== undefined)
+        {
+            const width = strokeWidth ?? c.Stroke?.Thickness ?? 1;
+            const brush = strokeHex !== undefined ? new SolidColorBrush(Color.FromHex(strokeHex)) : c.Stroke?.Brush;
+            c.Stroke = new Pen(brush, width);
+        }
+        return c;
     },
 });

@@ -37,6 +37,9 @@ export interface NodeVisual
     fill?:          string;
     stroke?:        string;
     strokeWidth?:   number;
+    // Container membership: the id of the ContainerFigure this node nests in
+    // (omitted when a root node). Its Left/Top are then parent-relative.
+    parentId?:      string;
 }
 
 // Document-owned `id → NodeVisual` map: the serialization boundary between a
@@ -80,6 +83,7 @@ export class NodeVisualStore
         if (node.UserSized)                  v.userSized     = true;
         if (node.LockAspectRatio)            v.lockAspect    = true;
         if (node.PositionFrom !== PositionAnchor.TopLeftCorner) v.anchor = node.PositionFrom;
+        if (node.ParentId !== undefined) v.parentId = node.ParentId;
         // Card style — content tiles only (a geometric shape's fill/stroke rides
         // its node record instead). Omit a transparent (unstyled) card.
         if (node.SizeToContent)
@@ -106,6 +110,7 @@ export class NodeVisualStore
         if (v.userSized     !== undefined) node.UserSized     = v.userSized;
         if (v.lockAspect    !== undefined) node.LockAspectRatio = v.lockAspect;
         if (v.anchor        !== undefined) node.PositionFrom    = v.anchor;
+        if (v.parentId      !== undefined) node.ParentId        = v.parentId;
         // Restore a content tile's card style (Apply runs after bindContainer's
         // transparent defaults, so a styled card overrides them).
         if (v.fill   !== undefined) node.Fill   = new SolidColorBrush(Color.FromHex(v.fill));

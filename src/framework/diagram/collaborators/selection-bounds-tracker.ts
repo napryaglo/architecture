@@ -1,5 +1,6 @@
 ﻿import { MuralBase } from '../../../runtime/index.js';
 import { findDescriptor, resolveKey } from '../../../runtime/model-internals.js';
+import { diagramSpaceRect, type SpatialNode } from '../coordinate-space.js';
 import type { Diagram } from '../diagram.js';
 
 // Internal collaborator owned by Diagram. Derives SelectionLeft / Top /
@@ -130,11 +131,17 @@ export class SelectionBoundsTracker
         let maxBottom = Number.NEGATIVE_INFINITY;
         for (const item of items)
         {
-            const it = item as unknown as { Left: number; Top: number; Width: number; Height: number };
-            if (it.Left < minLeft) minLeft = it.Left;
-            if (it.Top  < minTop)  minTop  = it.Top;
-            if (it.Left + it.Width  > maxRight)  maxRight  = it.Left + it.Width;
-            if (it.Top  + it.Height > maxBottom) maxBottom = it.Top  + it.Height;
+            const it = item as unknown as { Left: number; Top: number; Width: number; Height: number; ContainerParent?: unknown };
+            // A nested host's Left/Top are container-local; resolve to diagram
+            // space (the adorner layer's coordinate space) so handles land on the
+            // node on screen. Root hosts take the raw rect.
+            const r = it.ContainerParent !== undefined
+                ? diagramSpaceRect(item as unknown as SpatialNode)
+                : { X: it.Left, Y: it.Top, Width: it.Width, Height: it.Height };
+            if (r.X < minLeft) minLeft = r.X;
+            if (r.Y < minTop)  minTop  = r.Y;
+            if (r.X + r.Width  > maxRight)  maxRight  = r.X + r.Width;
+            if (r.Y + r.Height > maxBottom) maxBottom = r.Y + r.Height;
         }
         this._diagram.set_property_value_with_key(Diagram.SelectionLeftKey,   minLeft);
         this._diagram.set_property_value_with_key(Diagram.SelectionTopKey,    minTop);

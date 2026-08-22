@@ -124,6 +124,32 @@ export interface FigureFromSourceOptions extends FigureFromKindOptions
     readonly kind?: string;
 }
 
+// Kind → factory registry for NON-silhouette figure kinds (e.g. 'container',
+// whose factory returns a ContainerFigure). It lets fromKind mint subclass
+// instances without figure.ts importing them — the subclass registers itself on
+// module load, breaking the figure ↔ subclass import cycle. Silhouette shapes
+// stay in SHAPE_CATALOG_MAP and fall through to the plain-Figure path.
+export type FigureKindFactory = (left: number, top: number, options?: FigureFromKindOptions) => Figure;
+const FIGURE_KIND_FACTORIES = new Map<string, FigureKindFactory>();
+export function registerFigureKind(kind: string, factory: FigureKindFactory): void
+{
+    FIGURE_KIND_FACTORIES.set(kind, factory);
+}
+
+// The slice of the enclosing Diagram's ContainerPlacement the drag path needs —
+// duck-typed to avoid the figure → diagram import cycle (same pattern as
+// PositionSnap / RigidConnectorDragHost). `containerAt` returns the container a
+// diagram-space point lands in (excluding the dragged node + its descendants).
+interface ContainerPlacementLike
+{
+    reparent(node: Figure, parentId: string | undefined): void;
+    containerAt(point: Point, exclude?: Figure): { Id?: string } | undefined;
+}
+function placementOf(selector: unknown): ContainerPlacementLike | undefined
+{
+    return (selector as { ContainerPlacement?: ContainerPlacementLike } | undefined)?.ContainerPlacement;
+}
+
 export class Figure extends ContentControl implements ISideEndpointHost
 {
     static {
@@ -250,6 +276,26 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // the field is always a Group instance.
     public Parent: Group | undefined = undefined;
 
+    // Container membership tag: the id of the ContainerFigure this node nests in
+    // (undefined = a root node). Not layout geometry — the ContainerPlacement
+    // collaborator reads it to re-parent this Figure's Visual into that
+    // container's child host, and mirrors it to the live ContainerParent link.
+    // Persisted via NodeVisualStore; a nested node's Left/Top are parent-relative.
+    private _parentId: string | undefined = undefined;
+    public get ParentId(): string | undefined { return this._parentId; }
+    public set ParentId(v: string | undefined) { this._parentId = v; }
+
+    // Live link to the ContainerFigure this node nests in (undefined = root).
+    // Maintained by ContainerPlacement in lock-step with ParentId; read by
+    // diagramSpaceRect to walk the ancestor chain. A plain field, not a DP: it is
+    // view-tree structure the collaborator owns, not bindable content.
+    public ContainerParent: Figure | undefined = undefined;
+
+    // The inset of this node's child host from its own top-left. A plain Figure
+    // hosts no children, so (0,0); ContainerFigure overrides with its title band +
+    // padding. Part of the ContainerLike shape diagramSpaceRect consumes.
+    public get ContentOrigin(): Point { return Point.Zero; }
+
     // ── Static factories ─────────────────────────────────────────────
     //
     // Three construction paths for a self-painting shape node:
@@ -269,6 +315,10 @@ export class Figure extends ContentControl implements ISideEndpointHost
 
     public static fromKind(kind: string, left: number, top: number, options?: FigureFromKindOptions): Figure
     {
+        // Registered non-silhouette kinds (e.g. 'container') mint their own
+        // subclass instance; silhouette shapes fall through to the catalog.
+        const factory = FIGURE_KIND_FACTORIES.get(kind);
+        if (factory !== undefined) return factory(left, top, options);
         const entry = SHAPE_CATALOG_MAP.get(kind);
         if (entry === undefined)
         {
@@ -906,6 +956,10 @@ export class Figure extends ContentControl implements ISideEndpointHost
         // Content-space grab offset via the enclosing Diagram (which IS the
         // Selector). Falls back to screen coords when no coordinate host is in
         // scope (e.g. a bare Figure in a unit test) — identity at zoom 1.
+        // Drag-out prep: if this node is nested, pop it to the root host FIRST so
+        // the whole drag operates in diagram space (its Left/Top become absolute).
+        // On drop, OnPointerUp re-nests it into whatever container it lands in.
+        if (this.ContainerParent !== undefined) placementOf(selector)?.reparent(this, undefined);
         const coord = selector as unknown as { HostToContent?(x: number, y: number): Point } | undefined;
         const grab = coord?.HostToContent?.(args.HostX, args.HostY);
         this._grabOffsetX = (grab?.X ?? args.HostX) - this.Left;
@@ -919,7 +973,10 @@ export class Figure extends ContentControl implements ISideEndpointHost
         {
             for (const c of selector.SelectedContainers)
             {
-                if (c !== this && c instanceof Figure) partners.push(c);
+                // Skip this node's own container-descendants: they are visual
+                // children and already move with it, so shifting them too would
+                // double-move them.
+                if (c !== this && c instanceof Figure && !Figure.isNestedUnder(c, this)) partners.push(c);
             }
         }
         // Group-membership partners — if the bound data exposes a
@@ -973,7 +1030,8 @@ export class Figure extends ContentControl implements ISideEndpointHost
                         ? leaf
                         : selector.Generator.ContainerFromItem(leaf);
                     if (container instanceof Figure && container !== this
-                        && !partners.includes(container))
+                        && !partners.includes(container)
+                        && !Figure.isNestedUnder(container, this))
                     {
                         partners.push(container);
                     }
@@ -1142,6 +1200,22 @@ export class Figure extends ContentControl implements ISideEndpointHost
         this._dragScrollViewer?.StopEdgeAutoScroll();
         this._dragScrollViewer = undefined;
         args.ReleasePointerCapture();
+        if (wasDrag)
+        {
+            // Drag-in/out: the node dragged in diagram space (popped to root on
+            // down). Re-nest it into whichever container its centre now lands in
+            // — or leave it at root when over none. Committing on drop (not
+            // mid-drag) avoids boundary thrash.
+            const dropSelector = Selector.FromContainer<Selector>(
+                this, (v: Visual): v is Selector => v instanceof Selector);
+            const placement = placementOf(dropSelector);
+            if (placement !== undefined)
+            {
+                const centre = new Point(this.Left + this.Width / 2, this.Top + this.Height / 2);
+                const target = placement.containerAt(centre, this);
+                placement.reparent(this, target?.Id);
+            }
+        }
         if (!wasDrag)
         {
             const selector = Selector.FromContainer<Selector>(
@@ -1175,6 +1249,16 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // OnPointerDown to gather group-drag partners for any node whose
     // bound data sits inside a Visio-/PowerPoint-style group hierarchy.
     // Defined as a static helper so the OnPointerDown body stays linear.
+    // True when `node` is nested (directly or transitively) inside `ancestor`
+    // via the ContainerParent chain. Drag-partner collection uses it to skip a
+    // dragged container's own children (they move as visual descendants already).
+    private static isNestedUnder(node: Figure, ancestor: Figure): boolean
+    {
+        for (let c = node.ContainerParent; c !== undefined; c = c.ContainerParent)
+            if (c === ancestor) return true;
+        return false;
+    }
+
     private static collectHierarchicalLeaves(entity: unknown, out: unknown[]): void
     {
         const members = (entity as { Members?: { Count?: number; Get?(i: number): unknown } }).Members;

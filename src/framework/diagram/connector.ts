@@ -23,6 +23,7 @@ import { DataTemplate } from '../../basic/templates/data-template.js';
 import { ShapeText } from './shape-text.js';
 import { FieldKind, resolveFields } from './shape-text-field.js';
 import { nearestTOnPolyline, pointAlongPolyline, polylineLength } from './connector-route.js';
+import { diagramSpaceRect, type SpatialNode } from './coordinate-space.js';
 import { ConnectorEndpoint } from './connector-endpoint.js';
 import { ConnectorCapDataContext } from './caps/connector-cap-data-context.js';
 import { Figure } from './figure.js';
@@ -1626,11 +1627,18 @@ function nodeRect(node: MuralBase | undefined): Rect | undefined
     // Left / Top mutations recompute the route using the *previous*
     // ArrangedRect — connectors would render at the figure's old
     // position until something else triggers a re-arrange.
-    const obj = node as unknown as { Left?: number; Top?: number; Width?: number; Height?: number };
+    const obj = node as unknown as { Left?: number; Top?: number; Width?: number; Height?: number; ContainerParent?: unknown };
     if (typeof obj.Left === 'number' && typeof obj.Top === 'number'
         && typeof obj.Width === 'number' && !Number.isNaN(obj.Width)
         && typeof obj.Height === 'number' && !Number.isNaN(obj.Height))
     {
+        // A nested node's Left/Top are container-local; resolve to absolute
+        // diagram-host space (the space connectors route in) by walking its
+        // container-ancestor chain. Root nodes take the raw rect.
+        if (obj.ContainerParent !== undefined)
+        {
+            return diagramSpaceRect(node as unknown as SpatialNode);
+        }
         return new Rect(obj.Left, obj.Top, obj.Width, obj.Height);
     }
     // Non-Figure item Models without Left / Top fall back to
@@ -1645,6 +1653,9 @@ function nodeRect(node: MuralBase | undefined): Rect | undefined
     }
     return undefined;
 }
+
+/** @internal test-only — the endpoint rect the router reads (diagram-space aware). */
+export function __nodeRectForTesting(node: MuralBase | undefined): Rect | undefined { return nodeRect(node); }
 
 function nodeAsPortHost(node: MuralBase): IPortHost
 {
