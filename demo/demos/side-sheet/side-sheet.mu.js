@@ -20,7 +20,6 @@ export class SideSheetDemo extends ResourceDictionary {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _grid2 = new Grid();
             const _stackPanel3 = new StackPanel();
             _stackPanel3.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);

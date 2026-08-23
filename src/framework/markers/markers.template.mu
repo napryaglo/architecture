@@ -30,18 +30,15 @@ resources Markers {
         Border x:name="PART_Chip"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeSmall,
               Padding         = (5,2,5,2) ] {
             DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_LeadingSlot"
                     [ DockPanel.Dock    = Left,
-                      VerticalAlignment = Center,
-                      BorderThickness   = (0) ]
+                      VerticalAlignment = Center ]
                 Border x:name="PART_TrailingSlot"
                     [ DockPanel.Dock    = Right,
-                      VerticalAlignment = Center,
-                      BorderThickness   = (0) ]
+                      VerticalAlignment = Center ]
                 ContentPresenter [ VerticalAlignment = Center ]
             }
         }
@@ -114,15 +111,13 @@ resources Markers {
         Border x:name="PART_Rule"
             [ Fill          = @OutlineVariant,
               Height              = 1,
-              HorizontalAlignment = Stretch,
-              BorderThickness     = (0) ]
+              HorizontalAlignment = Stretch ]
     }
     Template x:key="DefaultVerticalDivider" [TargetType = Divider] {
         Border x:name="PART_Rule"
             [ Fill        = @OutlineVariant,
               Width             = 1,
-              VerticalAlignment = Stretch,
-              BorderThickness   = (0) ]
+              VerticalAlignment = Stretch ]
     }
     Style [TargetType = Divider] {
         Template = @DefaultHorizontalDivider;
@@ -138,7 +133,6 @@ resources Markers {
         Border x:name="PART_Dot"
             [ Fill      = @Error,
               CornerRadius    = @ShapeFull,
-              BorderThickness = (0),
               Width           = 6,
               Height          = 6 ]
     }
@@ -146,7 +140,6 @@ resources Markers {
         Border x:name="PART_Pill"
             [ Fill      = @Error,
               CornerRadius    = @ShapeFull,
-              BorderThickness = (0),
               Padding         = (@Spacing1,@Spacing0,@Spacing1,@Spacing0),
               MinWidth        = 16,
               Height          = 16 ] {

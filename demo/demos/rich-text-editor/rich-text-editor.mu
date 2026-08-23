@@ -31,8 +31,6 @@ resources RichTextEditorDemo {
                 Border
                     [ DockPanel.Dock = Top,
                       Fill      = @SurfaceContainerLow,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,0,0,1),
                       Padding         = (16,8,16,8) ] {
                     StackPanel [ Orientation = Horizontal ] {
                         Button x:name="BoldBtn"      [ Variant = Tonal ]                    { TextBlock [ Text = "B", FontWeight = Bold, FontSize = 15 ] }
@@ -42,6 +40,10 @@ resources RichTextEditorDemo {
                         Button x:name="OutdentBtn"   [ Variant = Outlined, Margin = (6,0,0,0) ]  { TextBlock [ Text = "Outdent" ] }
                     }
                 }
+                Line
+                    [ DockPanel.Dock = Top,
+                      Orientation    = Horizontal,
+                      Stroke         = (@OutlineVariant, 1) ]
 
                 // ── Editor surface ─────────────────────────────────
                 // The FlowDocument is authored inline; the RichTextBox

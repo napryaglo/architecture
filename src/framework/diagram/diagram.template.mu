@@ -45,16 +45,19 @@ resources Diagrams {
     }
 
     // ── ContainerFigure: a titled box that hosts nested Figures ────────
-    // A shapeless Figure (box drawn by the outer Border's Fill/Stroke, like
-    // TextNode). PART_LabelHost is the title band at the top (Figure's ctor slots
-    // its ShapeText there). PART_ChildContainer is a clipped Canvas below the band
+    // A shapeless Figure that paints its OWN box (rounded-rect card, Fill/Stroke
+    // pen — PaintsCardBox); the template only lays out the title + child region.
+    // PART_LabelHost is the title band at the top (Figure's ctor slots its
+    // ShapeText there). PART_ChildContainer is a clipped Canvas below the band
     // that hosts child Figures as true visual descendants — ContainerPlacement
     // re-parents each child here. The Figure's own ClipToBounds trims children to
     // the box; the inner Canvas's ClipToBounds trims them to the child region.
     // Canvas.Left/Top on the child host == (CONTAINER_PADDING, CONTAINER_TITLE_BAND
-    // + CONTAINER_PADDING) in container-figure.ts (8 and 32).
+    // + CONTAINER_PADDING) in container-figure.ts (8 and 32). PART_Box carries no
+    // Fill/Stroke — the Figure paints the box; it exists only for the
+    // drop-candidate tint overlay (the when-trigger below).
     Template x:key="DefaultContainerFigure" [ TargetType = ContainerFigure ] {
-        Border x:name="PART_Box" [ Fill = $$Fill, Stroke = $$Stroke ] {
+        Border x:name="PART_Box" {
             Canvas {
                 Border x:name="PART_LabelHost" [ Width = $$Width, Height = 24 ]
                 Canvas x:name="PART_ChildContainer"
@@ -77,7 +80,7 @@ resources Diagrams {
     // (CONTAINER_HEADER_BAND); the child region begins at (8, 64) = (CONTAINER_
     // PADDING, CONTAINER_HEADER_BAND + CONTAINER_PADDING), matching ContentOrigin.
     Template x:key="DefaultContentContainerFigure" [ TargetType = ContentContainerFigure ] {
-        Border x:name="PART_Box" [ Fill = $$Fill, Stroke = $$Stroke ] {
+        Border x:name="PART_Box" {
             Canvas {
                 ContentPresenter x:name="PART_Content"
                     [ Canvas.Left = 8, Canvas.Top = 4, Width = $$Width, Height = 56,
@@ -99,30 +102,28 @@ resources Diagrams {
 
     // ── TextNode: a shapeless Figure text box ──────────────────────────
     // TextNode is a Figure, so it renders through its OWN control template
-    // (not a DataTemplate). A Border draws the box (Fill/Stroke bound to the
-    // node's own DPs); PART_LabelHost — a Border — is where Figure's ctor slots
-    // the ShapeText (labelHost.SetChild(this.Text)). Shapeless: the Figure
-    // paints no silhouette, so the box comes entirely from this Border.
+    // (not a DataTemplate). The Figure paints its own box — a rounded-rect card
+    // honouring the Fill/Stroke pen (PaintsCardBox) — so the template is just the
+    // label host: PART_LabelHost (a Border) is where Figure's ctor slots the
+    // ShapeText (labelHost.SetChild(this.Text)).
     Template x:key="DefaultTextNode" [ TargetType = TextNode ] {
-        Border [ Fill = $$Fill, Stroke = $$Stroke ] {
-            Border x:name="PART_LabelHost" [ Width = $$Width, Height = $$Height ]
-        }
+        Border x:name="PART_LabelHost" [ Width = $$Width, Height = $$Height ]
     }
     Style [ TargetType = TextNode ] {
         Template = @DefaultTextNode;
     }
 
     // ── Callout: a TextNode with a template-driven leader line ─────────
-    // The TextNode box (Border + PART_LabelHost) PLUS a leader Shape bound to
-    // the Callout's LeaderGeometry, both inside a Canvas so the leader can draw
-    // OUTSIDE the box to reach the target (Canvas does not clip children). The
-    // leader geometry is in callout-LOCAL coords; IsHitTestVisible=false so it
-    // never swallows pointer events.
+    // The Figure paints its own box (rounded-rect card, Fill/Stroke pen —
+    // PaintsCardBox, inherited from TextNode). The template hosts the label
+    // (PART_LabelHost) PLUS a leader Shape bound to the Callout's LeaderGeometry,
+    // both inside a Canvas so the leader can draw OUTSIDE the box to reach the
+    // target (Canvas does not clip children). The leader geometry is in
+    // callout-LOCAL coords; IsHitTestVisible=false so it never swallows pointer
+    // events.
     Template x:key="DefaultCallout" [ TargetType = Callout ] {
         Canvas {
-            Border [ Fill = $$Fill, Stroke = $$Stroke ] {
-                Border x:name="PART_LabelHost" [ Width = $$Width, Height = $$Height ]
-            }
+            Border x:name="PART_LabelHost" [ Width = $$Width, Height = $$Height ]
             // NOTE: leader stroke colour (#64748b, the NeutralInk token value) is
             // inlined here — the only remaining hardcoded diagram colour. It's
             // .mu-bound (DiagramSettings isn't reachable from markup) and would
@@ -237,12 +238,10 @@ resources Diagrams {
         // Selector to the enclosing Group via the Parent chain).
         Border x:name="PART_Border"
             [ Fill       = #00000000,
-              Stroke      = Pen [ Brush = @Primary ],
-              BorderThickness  = (0),
               Width            = $$Width,
               Height           = $$Height,
               IsHitTestVisible = false ]
-        when ( IsSelected ) { PART_Border.BorderThickness = (1); }
+        when ( IsSelected ) { PART_Border.Stroke = (@Primary, 1); }
     }
     Style [TargetType = Group] {
         Template = @DefaultGroup;
@@ -436,10 +435,14 @@ resources Diagrams {
     Template x:key="InspectorRailTemplate" [ TargetType = NavigationRail ] {
         Border x:name="PART_Border"
             [ Fill            = @Surface,
-              Stroke          = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,0,0,1),
               Padding = (5) ] {
-            ItemsPresenter x:name="PART_ItemsPresenter"
+            DockPanel [ LastChildFill = true ] {
+                Line x:name="PART_Rule"
+                    [ DockPanel.Dock = Bottom,
+                      Orientation    = Horizontal,
+                      Stroke         = (@OutlineVariant, 1) ]
+                ItemsPresenter x:name="PART_ItemsPresenter"
+            }
         }
     }
     Style x:key="InspectorRail" [ TargetType = NavigationRail ] {

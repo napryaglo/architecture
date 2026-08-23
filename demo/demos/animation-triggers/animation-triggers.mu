@@ -22,8 +22,7 @@ resources AnimationTriggersDemo {
     DataTemplate [DataType = AnimationTriggersVM] {
         Border x:root
             [ Fill      = @Surface,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1) ] {
+              Stroke     = Pen [ Brush = @OutlineVariant ] ] {
             // x:root marks this Border as the NameScope owner so the
             // inner `x:name="banner"` / `x:name="bannerBtn"` registrations
             // resolve via FindName at trigger-fire time.

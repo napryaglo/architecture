@@ -45,8 +45,7 @@ text.VerticalAlignment   = VerticalAlignment.Center;
 
 const border = new Border(text);
 border.Fill = new SolidColorBrush(Color.FromHex('#0f172a')); // slate-900
-border.BorderBrush = new SolidColorBrush(Color.FromHex('#38bdf8')); // sky-400
-border.BorderThickness = new Thickness(2);
+border.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#38bdf8')), 2); // sky-400
 border.Padding = new Thickness(28);
 
 target.Content = border;

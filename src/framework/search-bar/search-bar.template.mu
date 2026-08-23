@@ -19,7 +19,6 @@ resources SearchBars {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHigh,
               Stroke     = Pen [ Brush = #00000000 ],
-              BorderThickness = (0),
               CornerRadius    = @ShapeSmall,
               Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2),
               Height          = 56 ] {
@@ -27,12 +26,10 @@ resources SearchBars {
                 Border x:name="PART_LeadingSlot"
                     [ DockPanel.Dock    = Left,
                       VerticalAlignment = Center,
-                      BorderThickness   = (0),
                       Margin            = (0,0,@Spacing2,0) ]
                 Border x:name="PART_TrailingSlot"
                     [ DockPanel.Dock    = Right,
                       VerticalAlignment = Center,
-                      BorderThickness   = (0),
                       Margin            = (@Spacing2,0,0,0) ]
                 ScrollViewer x:name="PART_Scroll" {
                     TextEditorSurface x:name="PART_Editor"

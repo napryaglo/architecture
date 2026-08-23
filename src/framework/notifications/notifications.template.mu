@@ -21,12 +21,10 @@ resources Notifications {
         Border x:name="PART_Track"
             [ Fill      = @SurfaceContainerHighest,
               CornerRadius    = 2,
-              BorderThickness = (0),
               Height          = 4 ] {
             Border x:name="PART_Fill"
                 [ Fill          = @Primary,
                   CornerRadius        = 2,
-                  BorderThickness     = (0),
                   HorizontalAlignment = Left,
                   Height              = 4 ]
         }
@@ -52,7 +50,6 @@ resources Notifications {
     Template x:key="DefaultCircularProgressIndicator" [TargetType = ProgressIndicator] {
         Border x:name="PART_OuterFrame"
             [ Fill      = #00000000,
-              BorderThickness = (0),
               Width           = 40,
               Height          = 40 ] {
             // Two overlapping Arc Visuals — track underneath, fill on
@@ -88,24 +85,27 @@ resources Notifications {
     // @Surface as the resting fill with no border by default; the
     // trailing actions row anchors right.
     Template x:key="DefaultBanner" [TargetType = Banner] {
-        Border x:name="PART_Banner"
-            [ Fill      = @Surface,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,0,0,1),
-              Padding         = (@Spacing4,@Spacing3,@Spacing4,@Spacing3) ] {
-            DockPanel [ LastChildFill = true ] {
-                ContentPresenter
-                    [ DockPanel.Dock    = Left,
-                      Content           = $Leading,
-                      VerticalAlignment = Center,
-                      Margin            = (0,0,@Spacing3,0) ]
-                ContentPresenter
-                    [ DockPanel.Dock    = Right,
-                      Content           = $Actions,
-                      VerticalAlignment = Center,
-                      Margin            = (@Spacing3,0,0,0) ]
-                ContentPresenter [ VerticalAlignment = Center ]
+        StackPanel [ Orientation = Vertical ] {
+            Border x:name="PART_Banner"
+                [ Fill      = @Surface,
+                  Padding         = (@Spacing4,@Spacing3,@Spacing4,@Spacing3) ] {
+                DockPanel [ LastChildFill = true ] {
+                    ContentPresenter
+                        [ DockPanel.Dock    = Left,
+                          Content           = $Leading,
+                          VerticalAlignment = Center,
+                          Margin            = (0,0,@Spacing3,0) ]
+                    ContentPresenter
+                        [ DockPanel.Dock    = Right,
+                          Content           = $Actions,
+                          VerticalAlignment = Center,
+                          Margin            = (@Spacing3,0,0,0) ]
+                    ContentPresenter [ VerticalAlignment = Center ]
+                }
             }
+            // Bottom hairline — was a one-sided (0,0,0,1) border edge; it
+            // is now an oriented Line at the strip's foot.
+            Line [ Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
         }
         // Density — tighten / loosen the strip's inset on the 4dp grid.
         // Banner is a container; its trailing Actions row is slotted
@@ -136,7 +136,6 @@ resources Notifications {
         Border x:name="PART_Snackbar"
             [ Fill      = @InverseSurface,
               Stroke     = Pen [ Brush = #00000000 ],
-              BorderThickness = (0),
               CornerRadius    = @ShapeExtraSmall,
               Effect          = @Elevation3,
               Padding         = (@Spacing4,@Spacing3,@Spacing2,@Spacing3) ] {

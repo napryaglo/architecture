@@ -20,7 +20,6 @@ export class BottomSheetDemo extends ResourceDictionary {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
@@ -43,7 +42,6 @@ export class BottomSheetDemo extends ResourceDictionary {
             _border7.set_property_value(Border.HeightKey, 4);
             _border7.set_property_value(Border.FillKey, DynamicResource(_border7, "OutlineVariant"));
             _border7.set_property_value(Border.CornerRadiusKey, DynamicResource(_border7, "ShapeFull"));
-            _border7.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border7.set_property_value(Border.HorizontalAlignmentKey, HorizontalAlignment.Center);
             _border7.set_property_value(Border.MarginKey, new Thickness(0, 0, 0, 12));
             _stackPanel6.AddChild(_border7);

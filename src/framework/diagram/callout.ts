@@ -1,8 +1,13 @@
 ﻿import { MetaData, MuralBase, type PropertyDescriptor } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { pathGeometryFromSvgD, type PathGeometry, Point } from '../../visual-engine/index.js';
-import { Figure } from './figure.js';
+import { Figure, registerFigureKind } from './figure.js';
 import { TextNode } from './text-node.js';
+
+// Default box for a freshly-dropped callout — a touch larger than a plain
+// TextNode so it reads as a labelled bubble.
+const CALLOUT_DEFAULT_W = 140;
+const CALLOUT_DEFAULT_H = 64;
 
 // ── Target-side geometry a callout leader tracks ────────────────────────
 // The leader endpoint is computed from Left/Top/Width/Height; every node type
@@ -177,3 +182,18 @@ export class Callout extends TextNode
         );
     }
 }
+
+// Register 'callout' so Figure.fromKind('callout', …) (toolbox drop / tile
+// preview) mints a leaderless Callout — the leader is attached later by
+// targeting a node. Runs on module load; importing Callout wires the kind.
+registerFigureKind('callout', (left, top, options) =>
+{
+    const c = new Callout();
+    c.Left   = left;
+    c.Top    = top;
+    c.Width  = options?.width  ?? CALLOUT_DEFAULT_W;
+    c.Height = options?.height ?? CALLOUT_DEFAULT_H;
+    c.BaseWidth  = c.Width;
+    c.BaseHeight = c.Height;
+    return c;
+});

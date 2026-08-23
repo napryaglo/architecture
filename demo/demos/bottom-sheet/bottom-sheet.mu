@@ -19,7 +19,7 @@ import BottomSheetVM from "./bottom-sheet-vm.mjs"
 
 resources BottomSheetDemo {
     DataTemplate [DataType = BottomSheetVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header strip
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
@@ -41,7 +41,6 @@ resources BottomSheetDemo {
                               Height              = 4,
                               Fill          = @OutlineVariant,
                               CornerRadius        = @ShapeFull,
-                              BorderThickness     = (0),
                               HorizontalAlignment = Center,
                               Margin              = (0,0,0,12) ]
                         TextBlock

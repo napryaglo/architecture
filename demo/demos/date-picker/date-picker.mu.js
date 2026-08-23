@@ -19,7 +19,6 @@ export class DatePickerDemo extends ResourceDictionary {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _stackPanel2 = new StackPanel();
             _stackPanel2.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
             _stackPanel2.set_property_value(StackPanel.MarginKey, new Thickness(32, 32, 32, 32));

@@ -10,7 +10,6 @@ import {
     Rect,
     Color,
     Point,
-    Thickness,
 } from '../../runtime/index.js';
 import { Border, Canvas, TextBlock } from '../../basic/index.js';
 import {
@@ -454,8 +453,7 @@ describe('SvgRenderer — ClipToBounds children group', () => {
 
         const border = new Border();
         border.Fill = new SolidColorBrush(Color.FromHex('#ffffff'));
-        border.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#000000')));
-        border.BorderThickness = new Thickness(8);
+        border.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#000000')), 8);
         border.ClipToBounds = true;
         const child = new Border();
         child.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
@@ -482,8 +480,7 @@ describe('SvgRenderer — ClipToBounds children group', () => {
         const renderer = new SvgRenderer(surface, { document });
 
         const border = new Border();
-        border.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#000000')));
-        border.BorderThickness = new Thickness(8);
+        border.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#000000')), 8);
         border.ClipToBounds = true;
         border.SetChild(new Border());
         border.Measure(new Size(100, 100));

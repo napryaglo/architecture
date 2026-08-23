@@ -742,12 +742,12 @@ describe('compile — value emission', () => {
     test('Thickness shape — 1, 2, 4 values', () => {
         const js = emitted(`
             Application{ resources: {
-                Border x:root[Padding=(8), Margin=(4, 6), BorderThickness=(1, 2, 3, 4)]{}
+                Border x:root[Padding=(8), Margin=(4, 6), CornerRadius=(1, 2, 3, 4)]{}
             } }
         `);
         assert.match(js, /new Thickness\(8\)/);
         assert.match(js, /new Thickness\(4, 6, 4, 6\)/);
-        assert.match(js, /new Thickness\(1, 2, 3, 4\)/);
+        assert.match(js, /new CornerRadius\(1, 2, 3, 4\)/);
     });
 
     test('Size literal emits new Size(w, h)', () => {

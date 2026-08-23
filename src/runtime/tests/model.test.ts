@@ -3783,7 +3783,7 @@ describe('Visual layout lifecycle (Measure / Arrange / Render)', () => {
 
     test('Margin combined with Border: a child Visual with Margin sits inside Border insets PLUS its margin', () => {
         // Verifies the layered concerns compose correctly: Border uses
-        // BorderThickness + Padding for the child slot, then the child's
+        // its Stroke pen width + Padding for the child slot, then the child's
         // Margin further insets the rendered area.
         class FixedSize extends Element {
             constructor(private readonly box: Size) { super(); }

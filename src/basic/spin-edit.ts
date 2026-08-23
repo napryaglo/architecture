@@ -130,11 +130,11 @@ export class SpinEdit extends TemplatedControl
         this._upButton   = this.GetTemplateChild('PART_Up')      as ClickableBorder;
         this._downButton = this.GetTemplateChild('PART_Down')    as ClickableBorder;
 
-        // Hide the inner TextBox's own border — the outer PART_Border
-        // is THE visible field outline. TextBox.refreshChrome still
-        // writes Stroke on focus / hover, but a thickness of zero
-        // means those writes paint nothing.
-        this._textBox.InnerBorder.BorderThickness = new Thickness(0);
+        // Hide the inner TextBox's own outline — the outer PART_Border is THE
+        // visible field outline. Clearing Stroke suppresses the inner border's
+        // paint AND its layout reserve (the border width now rides on the Stroke
+        // pen; an undefined pen reserves and paints nothing).
+        this._textBox.InnerBorder.Stroke = undefined;
         // Tighten the inner TextBox's vertical padding. The default
         // (12,8) is sized for a comfortable multi-line editor; in
         // SpinEdit's field-shaped chrome (~32 DIP tall by convention)

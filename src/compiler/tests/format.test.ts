@@ -58,7 +58,7 @@ describe('formatter — invariants across constructs', () =>
         'import with/without source': `import Foo\nimport Bar from "baz"\n`,
         'resources block + key-value': `resources D {\n@Red = #ff0000\n@Pad = (1,2,3,4)\n}\n`,
         'element inline attrs': `resources D {\nBorder [ Fill = @Red, Width = 100 ] { }\n}\n`,
-        'element wrapped attrs (= aligned)': `resources D {\nBorder x:name="X" [ Fill = @Surface, Stroke = @OutlinePen, BorderThickness = (1), CornerRadius = @ShapeExtraSmall, Width = 200 ] { }\n}\n`,
+        'element wrapped attrs (= aligned)': `resources D {\nBorder x:name="X" [ Fill = @Surface, Stroke = @OutlinePen, CornerRadius = @ShapeExtraSmall, Width = 200 ] { }\n}\n`,
         'string body': `resources D {\nTextBox { Hello world }\n}\n`,
         'triggers inline + block + and/or/not': `Style [TargetType=Button] {\nFill = @P;\nwhen ( IsMouseOver ) { Fill = @H; }\nwhen ( IsPressed and not IsEnabled ) { Opacity = 0.5; Fill = @D; }\nwhen ( $Sel or IsFocused ) { Stroke = @BPen; }\n}\n`,
         'value forms': `resources D {\n@A = #0d47a1 << Lighten(0.5)\n@B = $path.sub << Conv\n@C = $Self.(TextBlock.Foreground)\n@D = $service(Token).x\n@E = $$TemplatedName\n@F = @@Dynamic\n@G = <100, 200>\n@H = [1, 2, 3]\n}\n`,

@@ -14,7 +14,6 @@ resources BouncingBallDemo {
         Border x:root
             [ Fill      = @InverseSurface,
               Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (1),
               Width           = 640,
               Height          = 360 ] {
             Canvas x:name="playArea" {

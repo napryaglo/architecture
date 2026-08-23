@@ -1,11 +1,11 @@
 import { RibbonDemoDoc } from "./ribbon-vm.mjs";
-import { Border, Canvas, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Shape, TextBlock } from "@pragmatic-lab/mural/basic";
+import { Border, Canvas, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Line, Orientation, Shape, TextBlock } from "@pragmatic-lab/mural/basic";
 import { FabSize } from "@pragmatic-lab/mural/framework/buttons/fab.js";
 import { Diagram } from "@pragmatic-lab/mural/framework/diagram/diagram.js";
 import { SelectionMode } from "@pragmatic-lab/mural/framework/list/list-box.js";
 import { MenuItem, MenuSeparator, Ribbon, RibbonButton, RibbonDropDownButton, RibbonGroup, RibbonSmallButtonColumn, RibbonSplitButton, RibbonTab, RibbonToggleButton } from "@pragmatic-lab/mural/framework/surface.js";
 import { DataContextBinding, DynamicResource, ElementNameBinding, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { LineSegment, PathFigure, PathGeometry, Pen, Point, QuadraticBezierSegment } from "@pragmatic-lab/mural/visual-engine";
+import { LineSegment, PathFigure, PathGeometry, Point, QuadraticBezierSegment } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_RibbonDemo = Symbol("RibbonDemo.ctor");
@@ -195,18 +195,21 @@ export class RibbonDemo extends ResourceDictionary {
             _ribbonTab28.AddChild(_ribbonGroup37);
             _ribbon5.AddChild(_ribbonTab28);
             _dockPanel4.AddChild(_ribbon5);
-            const _border43 = new Border();
-            _border43.set_property_value(DockPanel.DockKey, Dock.Bottom);
-            _border43.set_property_value(Border.FillKey, DynamicResource(_border43, "SurfaceContainerLow"));
-            _border43.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border43.set_property_value(Border.BorderThicknessKey, new Thickness(0, 1, 0, 0));
-            _border43.set_property_value(Border.PaddingKey, new Thickness(12, 6, 12, 6));
-            const _textBlock44 = new TextBlock();
-            _textBlock44.set_property_value(TextBlock.TextKey, DataContextBinding(_textBlock44, "Status"));
-            _textBlock44.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock44, "OnSurfaceVariant"));
-            _textBlock44.set_property_value(TextBlock.StyleKey, DynamicResource(_textBlock44, "LabelMedium"));
-            _border43.SetChild(_textBlock44);
-            _dockPanel4.AddChild(_border43);
+            const _line43 = new Line();
+            _line43.set_property_value(DockPanel.DockKey, Dock.Bottom);
+            _line43.set_property_value(Line.OrientationKey, Orientation.Horizontal);
+            _line43.set_property_value(Line.StrokeKey, new Thickness(_line43.TryFindResource("OutlineVariant"), 1, _line43.TryFindResource("OutlineVariant"), 1));
+            _dockPanel4.AddChild(_line43);
+            const _border44 = new Border();
+            _border44.set_property_value(DockPanel.DockKey, Dock.Bottom);
+            _border44.set_property_value(Border.FillKey, DynamicResource(_border44, "SurfaceContainerLow"));
+            _border44.set_property_value(Border.PaddingKey, new Thickness(12, 6, 12, 6));
+            const _textBlock45 = new TextBlock();
+            _textBlock45.set_property_value(TextBlock.TextKey, DataContextBinding(_textBlock45, "Status"));
+            _textBlock45.set_property_value(TextBlock.ForegroundKey, DynamicResource(_textBlock45, "OnSurfaceVariant"));
+            _textBlock45.set_property_value(TextBlock.StyleKey, DynamicResource(_textBlock45, "LabelMedium"));
+            _border44.SetChild(_textBlock45);
+            _dockPanel4.AddChild(_border44);
             _diagram3 = new Diagram();
             _diagram3.Name = "canvas";
             _diagram3.set_property_value(Diagram.ItemsSourceKey, DataContextBinding(_diagram3, "Nodes"));

@@ -10,7 +10,7 @@ import DatePickerVM from "./date-picker-vm.mjs"
 
 resources DatePickerDemo {
     DataTemplate [DataType = DatePickerVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             StackPanel [ Orientation = Vertical, Margin = (32,32,32,32) ] {
                 TextBlock
                     [ Text       = "DatePicker — M3 Docked calendar (month paging + day selection)",

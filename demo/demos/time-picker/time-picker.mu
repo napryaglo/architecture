@@ -10,7 +10,7 @@ import TimePickerVM from "./time-picker-vm.mjs"
 
 resources TimePickerDemo {
     DataTemplate [DataType = TimePickerVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             StackPanel [ Orientation = Vertical, Margin = (32,32,32,32) ] {
                 TextBlock
                     [ Text       = "TimePicker — M3 analog clock dial (hour / minute rings + AM/PM)",

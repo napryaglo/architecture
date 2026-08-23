@@ -15,7 +15,6 @@ resources Pickers {
         Border x:name="PART_Root"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeMedium,
               Padding         = (@Spacing3,@Spacing3,@Spacing3,@Spacing3),
               Width           = 306 ] {
@@ -65,7 +64,6 @@ resources Pickers {
         Border x:name="PART_Root"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeMedium,
               Padding         = (@Spacing4,@Spacing4,@Spacing4,@Spacing4) ] {
             StackPanel [ Orientation = Vertical, HorizontalAlignment = Center ] {

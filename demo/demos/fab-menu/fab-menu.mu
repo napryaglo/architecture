@@ -14,7 +14,7 @@ import FabMenuVM from "./fab-menu-vm.mjs"
 
 resources FabMenuDemo {
     DataTemplate [DataType = FabMenuVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
                     TextBlock

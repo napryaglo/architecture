@@ -20,7 +20,7 @@ import TextBoxVM from "./text-box-vm.mjs"
 
 resources TextBoxDemo {
     DataTemplate [DataType = TextBoxVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             // Header + body via a vertical DockPanel so the header gets
             // its natural height and the editor area fills the rest.
             DockPanel {

@@ -18,7 +18,7 @@ import SplitterVM from "./splitter-vm.mjs"
 
 resources SplitterDemo {
     DataTemplate [DataType = SplitterVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header strip.
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
@@ -43,7 +43,7 @@ resources SplitterDemo {
                           FontSize   = 12,
                           FontWeight = Bold,
                           Margin     = (0,8,0,8) ]
-                    Border [ Height = 140, Stroke = Pen [ Brush = @Outline ], BorderThickness = (1) ] {
+                    Border [ Height = 140, Stroke = Pen [ Brush = @Outline ] ] {
                         StackPanel [ Orientation = Horizontal ] {
                             Border [ Width = 200, Height = 138, Fill = #dbeafe ] {
                                 TextBlock
@@ -73,7 +73,7 @@ resources SplitterDemo {
                           FontSize   = 12,
                           FontWeight = Bold,
                           Margin     = (0,24,0,8) ]
-                    Border [ Height = 260, Stroke = Pen [ Brush = @Outline ], BorderThickness = (1) ] {
+                    Border [ Height = 260, Stroke = Pen [ Brush = @Outline ] ] {
                         DockPanel {
                             Border [ DockPanel.Dock = Top, Height = 80, Fill = #dcfce7 ] {
                                 TextBlock

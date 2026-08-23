@@ -46,7 +46,7 @@ resources WordToolboxDemo {
     // — the tile itself fills its 100×100 cell, so the ListBoxItem's
     // selection chrome (PART_Border) aligns with the painted border.
     DataTemplate [DataType = WordVM] {
-        Border [ Stroke = Pen [ Brush = @Outline ], BorderThickness = (1) ] {
+        Border [ Stroke = Pen [ Brush = @Outline ] ] {
             TextBlock
                 [ Text                = $Word,
                   FontSize            = 14,
@@ -80,7 +80,7 @@ resources WordToolboxDemo {
     // Matches the WPF ControlTemplate.Triggers + Trigger.TargetName
     // pattern.
     Template x:key="WordTileItemTemplate" [TargetType = ListBoxItem] {
-        Border x:name="PART_Border" [ BorderThickness = (0), Padding = (3) ] {
+        Border x:name="PART_Border" [ Padding = (3) ] {
             ContentPresenter
         }
         when ( IsSelected ) { PART_Border.Fill = @SecondaryContainer; }
@@ -105,8 +105,7 @@ resources WordToolboxDemo {
     DataTemplate [DataType = WordToolboxVM] {
         Border x:root
             [ Fill      = @SurfaceContainerLow,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1) ] {
+              Stroke     = Pen [ Brush = @OutlineVariant ] ] {
             resources: {
                 // Left-pane drag source. The toolbox is an ItemsControl
                 // whose generated containers are ContentPresenters. An
@@ -160,9 +159,7 @@ resources WordToolboxDemo {
                     // LEFT — toolbox. 100 tiles in a virtualizing
                     // StackPanel inside a ScrollViewer.
                     Border
-                        [ DockPanel.Dock  = Left,
-                          Stroke     = Pen [ Brush = @OutlineVariant ],
-                          BorderThickness = (0,0,1,0) ] {
+                        [ DockPanel.Dock  = Left ] {
                         DockPanel {
                             Border
                                 [ DockPanel.Dock = Top,
@@ -181,11 +178,15 @@ resources WordToolboxDemo {
                             }
                         }
                     }
+                    Line
+                        [ DockPanel.Dock = Left,
+                          Orientation    = Vertical,
+                          Stroke         = (@OutlineVariant, 1) ]
 
                     // RIGHT — listbox. Virtualizing WrapPanel hosting
                     // 2000 tiles. ListReorderBehavior auto-detects
                     // wrap mode from the panel instance.
-                    Border [ Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (0) ] {
+                    Border {
                         DockPanel {
                             Border
                                 [ DockPanel.Dock = Top,

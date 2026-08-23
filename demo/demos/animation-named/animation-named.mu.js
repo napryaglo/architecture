@@ -19,7 +19,6 @@ export class AnimationNamedDemo extends ResourceDictionary {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd2 = _border1.Resources;
             const _act4 = new BeginStoryboardAction((_target) => {
                 const _sb3 = new Storyboard();

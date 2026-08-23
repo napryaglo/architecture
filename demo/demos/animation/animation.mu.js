@@ -21,7 +21,6 @@ export class AnimationDemo extends ResourceDictionary {
             _border12.SetNameScope(new NameScope());
             _border12.set_property_value(Border.FillKey, DynamicResource(_border12, "Surface"));
             _border12.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border12.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel13 = new DockPanel();
             const _border14 = new Border();
             _border14.set_property_value(DockPanel.DockKey, Dock.Top);
@@ -127,7 +126,6 @@ export class AnimationDemo extends ResourceDictionary {
             _border6.Name = "pulseTarget";
             _border6.set_property_value(Border.FillKey, new SolidColorBrush(Color.FromHex('#4caf50')));
             _border6.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Primary"); return _e; })(new Pen()));
-            _border6.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border6.set_property_value(Border.CornerRadiusKey, 4);
             _border6.set_property_value(Border.MarginKey, new Thickness(20, 4, 0, 0));
             _border6.set_property_value(Border.PaddingKey, new Thickness(8));

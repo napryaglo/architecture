@@ -17,7 +17,7 @@ import BottomAppBarVM from "./bottom-app-bar-vm.mjs"
 
 resources BottomAppBarDemo {
     DataTemplate [DataType = BottomAppBarVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header strip
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {

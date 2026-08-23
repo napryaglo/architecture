@@ -38,7 +38,6 @@ function buildInsertionLineTemplate() {
         const { SolidColorBrush } = visualEngineRef;
         const line = new Border();
         line.Fill = new SolidColorBrush(Color.FromHex('#2563eb'));
-        line.BorderThickness = new Thickness(0);
         return line;
     });
 }

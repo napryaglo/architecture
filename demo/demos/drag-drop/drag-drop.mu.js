@@ -29,7 +29,6 @@ export class DragDropDemo extends ResourceDictionary {
             _border5.SetNameScope(new NameScope());
             _border5.set_property_value(Border.FillKey, DynamicResource(_border5, "Surface"));
             _border5.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border5.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd6 = _border5.Resources;
             const _setter7 = new Setter(ListBoxItem, "IsDraggable", true);
             const _setter8 = new Setter(ListBoxItem, "OnDragStart", new SetterFactory((_t) => DataContextBinding(_t, "BeginDragData")));
@@ -73,7 +72,6 @@ export class DragDropDemo extends ResourceDictionary {
             _border17.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Stretch);
             _border17.set_property_value(Border.MarginKey, new Thickness(0, 0, 16, 0));
             _border17.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border17.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel18 = new DockPanel();
             const _textBlock19 = new TextBlock();
             _textBlock19.set_property_value(DockPanel.DockKey, Dock.Top);
@@ -93,7 +91,6 @@ export class DragDropDemo extends ResourceDictionary {
             _border20.set_property_value(Border.WidthKey, 220);
             _border20.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Stretch);
             _border20.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border20.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel21 = new DockPanel();
             const _textBlock22 = new TextBlock();
             _textBlock22.set_property_value(DockPanel.DockKey, Dock.Top);

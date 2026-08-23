@@ -25,7 +25,6 @@ import {
     Point,
     Rect,
     Size,
-    Thickness,
     Visual,
     Color,
 } from '../runtime/index.js';
@@ -163,8 +162,7 @@ export class SelectionBoundsAdorner extends Adorner
         this.IsHitTestVisible = false;
 
         this._bbox = new Border();
-        this._bbox.Stroke           = new Pen(this.ChromeStroke);
-        this._bbox.BorderThickness  = new Thickness(1);
+        this._bbox.Stroke           = new Pen(this.ChromeStroke, 1);
         this._bbox.IsHitTestVisible = false;
         this.AttachVisual(this._bbox);
 
@@ -172,8 +170,7 @@ export class SelectionBoundsAdorner extends Adorner
         {
             const v = new Border();
             v.Fill       = this.ChromeFill;
-            v.Stroke           = new Pen(this.ChromeStroke);
-            v.BorderThickness  = new Thickness(1);
+            v.Stroke           = new Pen(this.ChromeStroke, 1);
             v.Width            = this.HandleSize;
             v.Height           = this.HandleSize;
             v.Cursor           = spec.cursor;

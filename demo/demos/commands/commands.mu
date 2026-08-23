@@ -120,7 +120,7 @@ resources CommandsDemo {
 
     // ── Demo shell ──────────────────────────────────────────────────
     DataTemplate [DataType = CommandsVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header — title + Classic/Ribbon mode toggle
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,10,16,10) ] {
@@ -145,9 +145,9 @@ resources CommandsDemo {
                 // MenuButton strip (above the toolbar)
                 Border
                     [ Fill      = @SurfaceContainerLow,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,0,0,1),
                       Padding         = (8,6,8,6) ] {
+                    DockPanel {
+                    Line [ DockPanel.Dock = Bottom, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
                     StackPanel [ Orientation = Horizontal ] {
                         MenuButton [ Header = "☰  File", Margin = (0,0,8,0) ] {
                             MenuItem
@@ -200,14 +200,15 @@ resources CommandsDemo {
                               Foreground = @OnSurface,
                               Margin     = (12,8,0,0) ]
                     }
+                    }
                 }
 
                 // ToolBar strip
                 Border
                     [ DockPanel.Dock  = Top,
-                      Fill      = @Surface,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,0,0,1) ] {
+                      Fill      = @Surface ] {
+                    DockPanel {
+                    Line [ DockPanel.Dock = Bottom, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
                     ToolBar {
                         ToolBarButton [ Command = $SaveCommand ] {
                             Shape [ Geometry = @save, Width = 16, Height = 16, VerticalAlignment = Center ]
@@ -294,6 +295,7 @@ resources CommandsDemo {
                             ToolBarButton [ Command = $nodes.SetTextPlacementBottomCommand ]      { Shape [ Geometry = @south,                Width = 16, Height = 16, VerticalAlignment = Center ] }
                             ToolBarButton [ Command = $nodes.SetTextPlacementBottomRightCommand ] { Shape [ Geometry = @south_east,           Width = 16, Height = 16, VerticalAlignment = Center ] }
                         }
+                    }
                     }
                 }
 

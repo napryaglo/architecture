@@ -22,7 +22,6 @@ export class ListBoxDemo extends ResourceDictionary {
             _border5.SetNameScope(new NameScope());
             _border5.set_property_value(Border.FillKey, DynamicResource(_border5, "Surface"));
             _border5.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border5.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel6 = new DockPanel();
             const _border7 = new Border();
             _border7.set_property_value(DockPanel.DockKey, Dock.Top);

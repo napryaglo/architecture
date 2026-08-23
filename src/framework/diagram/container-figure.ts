@@ -17,7 +17,10 @@ export const CONTAINER_DEFAULT_H = 160;
 // visual descendants inside PART_ChildContainer (a clipped Canvas below the
 // title band). Being a Figure it keeps geometry, Fill/Stroke styling, the
 // ShapeText title (slotted into PART_LabelHost by Figure's ctor), and connector
-// endpoints; the Figure's own ClipToBounds hard-clips children to the box.
+// endpoints; the Figure's own ClipToBounds hard-clips children to the box. The
+// Figure paints its OWN box (a rounded-rect card honouring the Fill/Stroke pen —
+// PaintsCardBox), so the Format Shape stroke editor takes effect; the template
+// Border only lays out the title + child region and hosts the drop-candidate tint.
 export class ContainerFigure extends Figure
 {
     static { MuralBase.OverrideMetadata(ContainerFigure, Element.DefaultStyleKeyKey, { default_value: ContainerFigure }); }
@@ -48,6 +51,13 @@ export class ContainerFigure extends Figure
     {
         return new Point(CONTAINER_PADDING, CONTAINER_TITLE_BAND + CONTAINER_PADDING);
     }
+
+    // A container draws its box AS the Figure (rounded-rect card honouring the
+    // Fill/Stroke pen), not via a template Border — so the Format Shape stroke
+    // editor takes effect. Independent of SizeToContent (a container opts OUT of
+    // content-fitting but still paints its own box). Inherited by
+    // ContentContainerFigure.
+    protected override get PaintsCardBox(): boolean { return true; }
 }
 
 // Register 'container' so Figure.fromKind('container', …) (toolbox drop / catalog

@@ -21,7 +21,6 @@ export class TreeViewDemo extends ResourceDictionary {
             _border2.SetNameScope(new NameScope());
             _border2.set_property_value(Border.FillKey, DynamicResource(_border2, "Surface"));
             _border2.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border2.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel3 = new DockPanel();
             const _border4 = new Border();
             _border4.set_property_value(DockPanel.DockKey, Dock.Top);

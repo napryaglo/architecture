@@ -54,8 +54,7 @@ resources DragDropExtendedDemo {
     DataTemplate [DataType = DragDropExtendedVM] {
         Border x:root
             [ Fill      = @Surface,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1) ] {
+              Stroke     = Pen [ Brush = @OutlineVariant ] ] {
             resources: {
                 // Per-row drag source — every ItemsControl-generated
                 // container becomes draggable, with the OnDragStart
@@ -113,7 +112,6 @@ resources DragDropExtendedDemo {
                         [ Width           = 320,
                           Height          = 280,
                           Stroke     = Pen [ Brush = @OutlineVariant ],
-                          BorderThickness = (1),
                           Margin          = (0,0,16,0) ] {
                         ScrollViewer x:name="scroll"
                             [ AutoScrollGutter     = 32,
@@ -134,8 +132,7 @@ resources DragDropExtendedDemo {
                     Border
                         [ Width           = 320,
                           Height          = 280,
-                          Stroke     = Pen [ Brush = @Outline ],
-                          BorderThickness = (2),
+                          Stroke     = Pen [ Brush = @Outline, Thickness = 2 ],
                           Fill      = @SurfaceContainerLow ] {
                         DockPanel {
                             Border

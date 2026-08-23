@@ -62,8 +62,7 @@ resources ColorPickerDemo {
                                   Height            = 40,
                                   CornerRadius      = 4,
                                   VerticalAlignment = Bottom,
-                                  Stroke       = Pen [ Brush = @OutlineVariant ],
-                                  BorderThickness   = (1) ]
+                                  Stroke       = Pen [ Brush = @OutlineVariant ] ]
                         }
                         StackPanel [ Orientation = Horizontal, Margin = (0,0,0,16) ] {
                             StackPanel [ Orientation = Vertical, Margin = (0,0,24,0) ] {
@@ -80,8 +79,7 @@ resources ColorPickerDemo {
                                   Height            = 40,
                                   CornerRadius      = 4,
                                   VerticalAlignment = Bottom,
-                                  Stroke       = Pen [ Brush = @OutlineVariant ],
-                                  BorderThickness   = (1) ]
+                                  Stroke       = Pen [ Brush = @OutlineVariant ] ]
                         }
                         StackPanel [ Orientation = Horizontal, Margin = (0,0,0,16) ] {
                             StackPanel [ Orientation = Vertical, Margin = (0,0,24,0) ] {
@@ -98,8 +96,7 @@ resources ColorPickerDemo {
                                   Height            = 40,
                                   CornerRadius      = 4,
                                   VerticalAlignment = Bottom,
-                                  Stroke       = Pen [ Brush = @OutlineVariant ],
-                                  BorderThickness   = (1) ]
+                                  Stroke       = Pen [ Brush = @OutlineVariant ] ]
                         }
                         StackPanel [ Orientation = Horizontal ] {
                             StackPanel [ Orientation = Vertical, Margin = (0,0,24,0) ] {
@@ -116,8 +113,7 @@ resources ColorPickerDemo {
                                   Height            = 40,
                                   CornerRadius      = 4,
                                   VerticalAlignment = Bottom,
-                                  Stroke       = Pen [ Brush = @OutlineVariant ],
-                                  BorderThickness   = (1) ]
+                                  Stroke       = Pen [ Brush = @OutlineVariant ] ]
                         }
                     }
                 }

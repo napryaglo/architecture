@@ -21,7 +21,6 @@ export class TopAppBarDemo extends ResourceDictionary {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "SurfaceContainerLow"));
             _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
@@ -46,7 +45,6 @@ export class TopAppBarDemo extends ResourceDictionary {
             _stackPanel5.AddChild(_textBlock6);
             const _border7 = new Border();
             _border7.set_property_value(Border.FillKey, DynamicResource(_border7, "OutlineVariant"));
-            _border7.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border7.set_property_value(Border.MarginKey, new Thickness(0, 0, 0, 16));
             const _topAppBar8 = new TopAppBar();
             _topAppBar8.set_property_value(TopAppBar.VariantKey, DataContextBinding(_topAppBar8, "SmallVariant"));
@@ -78,7 +76,6 @@ export class TopAppBarDemo extends ResourceDictionary {
             _stackPanel5.AddChild(_textBlock13);
             const _border14 = new Border();
             _border14.set_property_value(Border.FillKey, DynamicResource(_border14, "OutlineVariant"));
-            _border14.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border14.set_property_value(Border.MarginKey, new Thickness(0, 0, 0, 16));
             const _topAppBar15 = new TopAppBar();
             _topAppBar15.set_property_value(TopAppBar.VariantKey, DataContextBinding(_topAppBar15, "CenterAlignedVariant"));
@@ -102,7 +99,6 @@ export class TopAppBarDemo extends ResourceDictionary {
             _stackPanel5.AddChild(_textBlock18);
             const _border19 = new Border();
             _border19.set_property_value(Border.FillKey, DynamicResource(_border19, "OutlineVariant"));
-            _border19.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border19.set_property_value(Border.MarginKey, new Thickness(0, 0, 0, 16));
             const _topAppBar20 = new TopAppBar();
             _topAppBar20.set_property_value(TopAppBar.VariantKey, DataContextBinding(_topAppBar20, "MediumVariant"));
@@ -134,7 +130,6 @@ export class TopAppBarDemo extends ResourceDictionary {
             _stackPanel5.AddChild(_textBlock25);
             const _border26 = new Border();
             _border26.set_property_value(Border.FillKey, DynamicResource(_border26, "OutlineVariant"));
-            _border26.set_property_value(Border.BorderThicknessKey, new Thickness(0));
             _border26.set_property_value(Border.MarginKey, new Thickness(0, 0, 0, 16));
             const _topAppBar27 = new TopAppBar();
             _topAppBar27.set_property_value(TopAppBar.VariantKey, DataContextBinding(_topAppBar27, "LargeVariant"));

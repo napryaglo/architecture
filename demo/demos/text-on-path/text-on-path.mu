@@ -58,9 +58,7 @@ resources TextOnPathDemo {
                 // ── Controls strip ────────────────────────────────
                 Border
                     [ DockPanel.Dock  = Top,
-                      Padding         = (20,12,20,12),
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,0,0,1) ] {
+                      Padding         = (20,12,20,12) ] {
                     StackPanel [ Orientation = Horizontal ] {
                         StackPanel [ Orientation = Vertical, Margin = (0,0,24,0) ] {
                             TextBlock
@@ -150,13 +148,16 @@ resources TextOnPathDemo {
                         }
                     }
                 }
+                Line
+                    [ DockPanel.Dock = Top,
+                      Orientation    = Horizontal,
+                      Stroke         = (@OutlineVariant, 1) ]
 
                 // ── Canvas ────────────────────────────────────────
                 Border [ Fill = @SurfaceContainerLow, Padding = (20,20,20,20) ] {
                     Border
                         [ Fill      = @Surface,
                           Stroke     = Pen [ Brush = @OutlineVariant ],
-                          BorderThickness = (1),
                           Padding         = (0) ] {
                         Canvas x:name="surface" [ Width = 700, Height = 440 ]
                     }

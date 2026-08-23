@@ -69,8 +69,6 @@ resources Shells {
                     Border x:name="PART_CommandHost"
                         [ DockPanel.Dock  = Top,
                           Fill      = @SurfaceContainer,
-                          Stroke     = Pen [ Brush = @OutlineVariant ],
-                          BorderThickness = (0,0,0,1),
                           Padding         = (8,4,8,4) ] {
                         // Command groups fill the bar as ONE ToolBar (each group's
                         // buttons connect into a pill via ToolBar.Position, divided
@@ -79,7 +77,11 @@ resources Shells {
                         // ride a FIXED region docked right — kept OUT of the ToolBar
                         // so an interactive editor never lands in the overflow popup
                         // or gets re-parented by the overflow sync.
+                        //
+                        // Bottom rule: a horizontal Line docked Bottom draws the 1dp
+                        // separator that used to be the Border's (0,0,0,1) bottom edge.
                         DockPanel [ LastChildFill = true ] {
+                            Line [ DockPanel.Dock = Bottom, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
                             // Document save cluster — host-owned Save / Save All,
                             // shown whenever a document is active (VS-style). Icons
                             // are app-supplied (@Save/@SaveAll via DynamicResource);
@@ -466,8 +468,7 @@ resources Shells {
     Template x:key="DefaultShellSideContentPane" [TargetType = ShellSideContentPane] {
         Border
             [ Fill      = $$Fill,
-              Stroke          = $$Stroke,
-              BorderThickness = $$BorderThickness ] {
+              Stroke          = $$Stroke ] {
             Grid {
                 // Star column: the content fills the pane's definite Width (set
                 // on the pane instance in DefaultEditorShell), so capability
@@ -492,10 +493,11 @@ resources Shells {
                 // body (the same delineation the right dock's rail carries).
                 Border x:name="PART_Header"
                     [ Grid.Row       = 0,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,0,0,1),
                       Padding         = (@Spacing3,@Spacing2,@Spacing2,@Spacing2) ] {
                     DockPanel [ LastChildFill = true ] {
+                        // 1dp bottom rule (was the Border's (0,0,0,1) bottom edge):
+                        // a horizontal Line docked Bottom separates header from body.
+                        Line [ DockPanel.Dock = Bottom, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
                         ContentPresenter x:name="PART_Commands"
                             [ DockPanel.Dock    = Right,
                               Content           = $$Commands,

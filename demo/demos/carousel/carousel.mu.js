@@ -43,7 +43,6 @@ export class CarouselDemo extends ResourceDictionary {
             const _border6 = new Border();
             _border6.set_property_value(Border.FillKey, DynamicResource(_border6, "Surface"));
             _border6.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border6.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _stackPanel7 = new StackPanel();
             _stackPanel7.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
             _stackPanel7.set_property_value(StackPanel.MarginKey, new Thickness(32, 32, 32, 32));

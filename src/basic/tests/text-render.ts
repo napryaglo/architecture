@@ -28,8 +28,7 @@ text.VerticalAlignment   = VerticalAlignment.Center;
 
 const border = new Border(text);
 border.Fill      = new SolidColorBrush(Color.FromHex('#1e40af')); // a deep blue
-border.Stroke          = new Pen(new SolidColorBrush(Color.Black));
-border.BorderThickness = new Thickness(3);
+border.Stroke          = new Pen(new SolidColorBrush(Color.Black), 3);
 border.Padding         = new Thickness(20);
 border.HorizontalAlignment = HorizontalAlignment.Stretch;
 border.VerticalAlignment   = VerticalAlignment.Stretch;

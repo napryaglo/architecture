@@ -243,6 +243,7 @@ export { type IToolboxDropFactory, type ToolboxDropContext } from './diagram/too
 export { ShapeToolboxItem } from './diagram/toolbox/shape-toolbox-item.js';
 export { ShapeVisualResolver, ShapeVisualResolverKey } from './diagram/toolbox/shape-visual-resolver.js';
 export { ShapeDropFactory, ShapeDropFactoryKey } from './diagram/toolbox/shape-drop-factory.js';
+export { FigureKindDropFactory, FigureKindDropFactoryKey } from './diagram/toolbox/figure-kind-drop-factory.js';
 export { ensureToolboxDefaults } from './diagram/toolbox/ensure-toolbox-defaults.js';
 export {
     SHAPE_CATALOG,

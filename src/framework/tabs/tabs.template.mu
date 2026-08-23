@@ -22,11 +22,13 @@ resources Tabs {
     }
     Template x:key="DefaultTabControl" [TargetType = TabControl] {
         Border x:name="PART_Border"
-            [ Fill      = @Surface,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,0,0,1) ] {
+            [ Fill      = @Surface ] {
             DockPanel [ LastChildFill = true ] {
                 ItemsPresenter x:name="PART_ItemsPresenter" [ DockPanel.Dock = Top ]
+                // Bottom rule under the tab strip — was Border BorderThickness
+                // (0,0,0,1); now a horizontal oriented Line docked below the
+                // strip so it stretches the full width at 1dp.
+                Line [ DockPanel.Dock = Top, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
                 // The active tab's BODY. SelectedContent (a property of the
                 // templated TabControl) normalises the data-driven vs composed-
                 // markup paths (see TabControl) so a single presenter shows the
@@ -64,19 +66,25 @@ resources Tabs {
     //     tab's title + close button. A header template that leaves its label
     //     Foreground unset inherits the selection ink too.
     Template x:key="DefaultTabItem" [TargetType = TabItem] {
-        Border x:name="PART_Tab"
-            [ Fill      = #00000000,
-              Stroke     = Pen [ Brush = #00000000 ],
-              BorderThickness = (0,0,0,2),
-              Padding         = (@Spacing4,@Spacing1,@Spacing4,@Spacing1),
-              Height          = 40 ] {
-            ContentPresenter x:name="PART_Header"
-                [ Content             = $$Header,
-                  ContentTemplate     = $$HeaderTemplate,
-                  HorizontalAlignment = Center,
-                  VerticalAlignment   = Center ]
+        DockPanel [ LastChildFill = true ] {
+            // Active-indicator underline — was PART_Tab's one-sided bottom
+            // border BorderThickness (0,0,0,2), transparent until IsSelected
+            // flips its stroke to @Primary. Now a 2dp horizontal oriented Line
+            // docked at the tab's bottom edge; the selection trigger below
+            // repaints the Line's stroke brush.
+            Line x:name="PART_Indicator" [ DockPanel.Dock = Bottom, Orientation = Horizontal, Stroke = (#00000000, 2) ]
+            Border x:name="PART_Tab"
+                [ Fill      = #00000000,
+                  Padding         = (@Spacing4,@Spacing1,@Spacing4,@Spacing1),
+                  Height          = 40 ] {
+                ContentPresenter x:name="PART_Header"
+                    [ Content             = $$Header,
+                      ContentTemplate     = $$HeaderTemplate,
+                      HorizontalAlignment = Center,
+                      VerticalAlignment   = Center ]
+            }
         }
-        when ( IsSelected ) { PART_Tab.Stroke = Pen [ Brush = @Primary ]; }
+        when ( IsSelected ) { PART_Indicator.Stroke = (@Primary, 2); }
         when ( IsMouseOver ) { PART_Tab.Fill = @StateHoverOverlay; }
         when ( IsFocused ) { PART_Tab.Fill = @StateFocusOverlay; }
         when ( IsPressed ) { PART_Tab.Fill = @StatePressOverlay; }

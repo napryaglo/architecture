@@ -1,9 +1,9 @@
 import { TextFormatVM } from "./text-format-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
+import { Border, DataTemplate, Dock, DockPanel, Line, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
 import { ColorPicker, FontFamilyPicker, FontSizePicker } from "@pragmatic-lab/mural/framework";
 import { ToggleButton } from "@pragmatic-lab/mural/framework/buttons/toggle-button.js";
 import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontStyle, FontWeight, Pen, TextDecorations } from "@pragmatic-lab/mural/visual-engine";
+import { FontStyle, FontWeight, TextDecorations } from "@pragmatic-lab/mural/visual-engine";
 
 
 const _gate_TextFormatDemo = Symbol("TextFormatDemo.ctor");
@@ -45,8 +45,6 @@ export class TextFormatDemo extends ResourceDictionary {
             const _border8 = new Border();
             _border8.set_property_value(DockPanel.DockKey, Dock.Top);
             _border8.set_property_value(Border.FillKey, DynamicResource(_border8, "SurfaceContainerLow"));
-            _border8.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border8.set_property_value(Border.BorderThicknessKey, new Thickness(0, 0, 0, 1));
             _border8.set_property_value(Border.PaddingKey, new Thickness(16, 10, 16, 10));
             const _stackPanel9 = new StackPanel();
             _stackPanel9.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
@@ -93,8 +91,13 @@ export class TextFormatDemo extends ResourceDictionary {
             _stackPanel9.AddChild(_colorPicker18);
             _border8.SetChild(_stackPanel9);
             _dockPanel3.AddChild(_border8);
-            const _border19 = new Border();
-            _border19.set_property_value(Border.PaddingKey, new Thickness(28, 24, 28, 24));
+            const _line19 = new Line();
+            _line19.set_property_value(DockPanel.DockKey, Dock.Top);
+            _line19.set_property_value(Line.OrientationKey, Orientation.Horizontal);
+            _line19.set_property_value(Line.StrokeKey, new Thickness(_line19.TryFindResource("OutlineVariant"), 1, _line19.TryFindResource("OutlineVariant"), 1));
+            _dockPanel3.AddChild(_line19);
+            const _border20 = new Border();
+            _border20.set_property_value(Border.PaddingKey, new Thickness(28, 24, 28, 24));
             _textBlock1 = new TextBlock();
             _textBlock1.Name = "SamplePara";
             _textBlock1.set_property_value(TextBlock.TextKey, DataContextBinding(_textBlock1, "Sample"));
@@ -102,8 +105,8 @@ export class TextFormatDemo extends ResourceDictionary {
             _textBlock1.set_property_value(TextBlock.FontSizeKey, DataContextBinding(_textBlock1, "FontSize"));
             _textBlock1.set_property_value(TextBlock.TextWrappingKey, TextWrapping.Wrap);
             _textBlock1.set_property_value(TextBlock.VerticalAlignmentKey, VerticalAlignment.Top);
-            _border19.SetChild(_textBlock1);
-            _dockPanel3.AddChild(_border19);
+            _border20.SetChild(_textBlock1);
+            _dockPanel3.AddChild(_border20);
             _border2.SetChild(_dockPanel3);
             return _border2;
         }, TextFormatVM);

@@ -38,12 +38,11 @@ function buildInsertionLineTemplate() {
         // loaded by the time this fires (the platform shell imports
         // them at startup).
         const { Border } = importControls();
-        const { Color, Thickness } = importRuntime();
+        const { Color } = importRuntime();
         const { SolidColorBrush } = importVisualEngine();
         const line = new Border();
         line.Height = 2;
         line.Fill = new SolidColorBrush(Color.FromHex('#2563eb'));
-        line.BorderThickness = new Thickness(0);
         return line;
     });
 }

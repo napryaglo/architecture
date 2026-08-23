@@ -37,7 +37,6 @@ resources Buttons {
     Template x:key="DefaultFilledButton" [TargetType = Button] {
         Border x:name="PART_Border"
             [ Fill           = @Primary,
-              BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @OnPrimary,
               TextBlock.FontFamily = @LabelLargeFont,
@@ -69,7 +68,6 @@ resources Buttons {
     Template x:key="DefaultElevatedButton" [TargetType = Button] {
         Border x:name="PART_Border"
             [ Fill           = @SurfaceContainerLow,
-              BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               Effect               = @ElevationLevel1,
               TextBlock.Foreground = @Primary,
@@ -101,7 +99,6 @@ resources Buttons {
     Template x:key="DefaultTonalButton" [TargetType = Button] {
         Border x:name="PART_Border"
             [ Fill           = @SecondaryContainer,
-              BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @OnSecondaryContainer,
               TextBlock.FontFamily = @LabelLargeFont,
@@ -128,7 +125,6 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Fill           = #00000000,
               Stroke          = Pen [ Brush = @Outline ],
-              BorderThickness      = (1),
               CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @Primary,
               TextBlock.FontFamily = @LabelLargeFont,
@@ -150,7 +146,7 @@ resources Buttons {
         when ( ThemeManager.Pointer = Coarse ) { PART_StateLayer.Padding = (23,13,23,13); }
         // High-contrast a11y — thicker outline so the chrome reads
         // even when the surface tint is muted.
-        when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_Border.Stroke = (@Outline, 2); }
     }
 
     // Text — fully transparent base, no chrome at rest, @Primary text.
@@ -159,7 +155,6 @@ resources Buttons {
     Template x:key="DefaultTextButton" [TargetType = Button] {
         Border x:name="PART_Border"
             [ Fill           = #00000000,
-              BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               TextBlock.Foreground = @Primary,
               TextBlock.FontFamily = @LabelLargeFont,
@@ -214,7 +209,6 @@ resources Buttons {
     Template x:key="DefaultFilledIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
             [ Fill           = @Primary,
-              BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
@@ -238,7 +232,6 @@ resources Buttons {
     Template x:key="DefaultTonalIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
             [ Fill           = @SecondaryContainer,
-              BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
@@ -263,7 +256,6 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Fill           = #00000000,
               Stroke          = Pen [ Brush = @Outline ],
-              BorderThickness      = (1),
               CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
@@ -281,7 +273,7 @@ resources Buttons {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
         }
-        when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_Border.Stroke = (@Outline, 2); }
     }
 
     // Standard — fully transparent at rest, OnSurfaceVariant glyph.
@@ -289,7 +281,6 @@ resources Buttons {
     Template x:key="DefaultStandardIconButton" [TargetType = IconButton] {
         Border x:name="PART_Border"
             [ Fill           = #00000000,
-              BorderThickness      = (0),
               CornerRadius         = $$CornerRadius,
               Width                = 40,
               Height               = 40,
@@ -347,7 +338,6 @@ resources Buttons {
     Template x:key="DefaultFilledIconButtonToggle" [TargetType = IconButtonToggle] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHighest,
-              BorderThickness = (0),
               CornerRadius    = @ShapeFull,
               Width           = 40,
               Height          = 40 ] {
@@ -371,7 +361,6 @@ resources Buttons {
     Template x:key="DefaultTonalIconButtonToggle" [TargetType = IconButtonToggle] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHighest,
-              BorderThickness = (0),
               CornerRadius    = @ShapeFull,
               Width           = 40,
               Height          = 40 ] {
@@ -397,7 +386,6 @@ resources Buttons {
         Border x:name="PART_Border"
             [ Fill      = #00000000,
               Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeFull,
               Width           = 40,
               Height          = 40 ] {
@@ -410,7 +398,7 @@ resources Buttons {
         }
         when ( IsChecked ) {
             PART_Border.Fill = @InverseSurface;
-            PART_Border.BorderThickness = (0);
+            PART_Border.Stroke = (@Outline, 0);
         }
         when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
         when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
@@ -418,7 +406,7 @@ resources Buttons {
             PART_Border.Width = 48;
             PART_Border.Height = 48;
         }
-        when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_Border.Stroke = (@Outline, 2); }
     }
 
     // Standard Toggle — unchecked = transparent / OnSurfaceVariant,
@@ -427,7 +415,6 @@ resources Buttons {
     Template x:key="DefaultStandardIconButtonToggle" [TargetType = IconButtonToggle] {
         Border x:name="PART_Border"
             [ Fill      = #00000000,
-              BorderThickness = (0),
               CornerRadius    = @ShapeFull,
               Width           = 40,
               Height          = 40 ] {
@@ -500,7 +487,6 @@ resources Buttons {
     Template x:key="DefaultFab" [TargetType = FloatingActionButton] {
         Border x:name="PART_Border"
             [ Fill           = @PrimaryContainer,
-              BorderThickness      = (0),
               CornerRadius         = @ShapeLarge,
               MinWidth             = 56,
               MinHeight            = 56,
@@ -539,7 +525,6 @@ resources Buttons {
     Template x:key="DefaultFabSmall" [TargetType = FloatingActionButton] {
         Border x:name="PART_Border"
             [ Fill           = @PrimaryContainer,
-              BorderThickness      = (0),
               CornerRadius         = @ShapeMedium,
               MinWidth             = 40,
               MinHeight            = 40,
@@ -570,7 +555,6 @@ resources Buttons {
     Template x:key="DefaultFabLarge" [TargetType = FloatingActionButton] {
         Border x:name="PART_Border"
             [ Fill           = @PrimaryContainer,
-              BorderThickness      = (0),
               CornerRadius         = @ShapeExtraLarge,
               MinWidth             = 96,
               MinHeight            = 96,
@@ -606,7 +590,6 @@ resources Buttons {
     Template x:key="DefaultFabExtended" [TargetType = FloatingActionButton] {
         Border x:name="PART_Border"
             [ Fill           = @PrimaryContainer,
-              BorderThickness      = (0),
               CornerRadius         = @ShapeLarge,
               MinHeight            = 56,
               Effect               = @ElevationLevel3,

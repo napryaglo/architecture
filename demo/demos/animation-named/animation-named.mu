@@ -29,7 +29,7 @@ import AnimationNamedVM from "./animation-named-vm.mjs"
 
 resources AnimationNamedDemo {
     DataTemplate [DataType = AnimationNamedVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             resources: {
                 Style [TargetType = Button] {
                     on Loaded {

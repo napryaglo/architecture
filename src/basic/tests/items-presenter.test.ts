@@ -53,8 +53,7 @@ describe('ItemsPresenter', () => {
         const template = new ControlTemplate(_tp => {
             const border = new Border();
             border.Fill = new SolidColorBrush(Color.White);
-            border.Stroke = new Pen(new SolidColorBrush(Color.Black));
-            border.BorderThickness = new Thickness(2);
+            border.Stroke = new Pen(new SolidColorBrush(Color.Black), 2);
             const presenter = new ItemsPresenter();
             border.SetChild(presenter);
             return border;

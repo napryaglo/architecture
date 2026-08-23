@@ -2,7 +2,6 @@
     MetaData,
     MuralBase,
     Color,
-    Thickness,
     HorizontalAlignment,
     VerticalAlignment,
     Element, Visual,
@@ -161,8 +160,7 @@ export class DatePicker extends TemplatedControl
             cell.Fill   = selected ? primary : TRANSPARENT;
             if (isToday)
             {
-                cell.Stroke          = new Pen(primary);
-                cell.BorderThickness = new Thickness(1);
+                cell.Stroke = new Pen(primary, 1);
             }
 
             const label = new TextBlock();

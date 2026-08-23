@@ -91,7 +91,6 @@ resources DiagramDemo {
               OnDragStart     = $BeginDragData,
               Fill      = @Surface,
               Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1),
               CornerRadius    = 4,
               Padding         = (4,8,4,8),
               Margin          = (2,0,2,4) ] {
@@ -164,8 +163,7 @@ resources DiagramDemo {
     DataTemplate [DataType = DiagramDocument] {
         Border x:root
             [ Fill      = @Surface,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1) ] {
+              Stroke     = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header strip.
                 Border [ DockPanel.Dock = Top, Height = 44, Fill = @Primary ] {
@@ -204,9 +202,9 @@ resources DiagramDemo {
                 Border
                     [ DockPanel.Dock  = Top,
                       Fill      = @SurfaceContainer,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,0,0,1),
                       Padding         = (8,4,8,4) ] {
+                    DockPanel {
+                    Line [ DockPanel.Dock = Bottom, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
                     ScrollViewer
                         [ HorizontalScrollEnabled = true,
                           VerticalScrollEnabled   = false,
@@ -357,6 +355,7 @@ resources DiagramDemo {
                         }
                     }
                     }
+                    }
                 }
 
                 // Toolbox strip — the framework ToolboxRepository (a Services
@@ -367,10 +366,9 @@ resources DiagramDemo {
                     [ DockPanel.Dock  = Left,
                       Width           = 200,
                       Fill      = @SurfaceContainerLow,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,0,1,0),
                       Padding         = (8) ] {
                     DockPanel {
+                        Line [ DockPanel.Dock = Right, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
                         StackPanel [ DockPanel.Dock = Bottom ] {
                             TextBlock
                                 [ Text       = "Document",
@@ -408,10 +406,9 @@ resources DiagramDemo {
                     [ DockPanel.Dock  = Right,
                       Width           = 320,
                       Fill      = @SurfaceContainerLow,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (1,0,0,0),
                       Padding         = (12) ] {
                     DockPanel {
+                        Line [ DockPanel.Dock = Left, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
                         TextBlock
                             [ DockPanel.Dock = Top,
                               Text           = "Format Shape",

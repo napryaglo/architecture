@@ -4,7 +4,6 @@ import {
     Point,
     Rect,
     Size,
-    Thickness,
     Visual,
 } from '../../../runtime/index.js';
 import { Adorner, Pen, RotateTransform, SolidColorBrush } from '../../../visual-engine/index.js';
@@ -101,8 +100,7 @@ export class TextBlockAdorner extends Adorner
         this.IsHitTestVisible = false;
 
         this._outline = new Border();
-        this._outline.Stroke            = new Pen(this._accent);
-        this._outline.BorderThickness   = new Thickness(1);
+        this._outline.Stroke            = new Pen(this._accent, 1);
         this._outline.IsHitTestVisible  = false;
         this._outline.RenderTransform       = this._outlineRotate;
         this._outline.RenderTransformOrigin = new Point(0.5, 0.5);
@@ -140,8 +138,7 @@ export class TextBlockAdorner extends Adorner
     {
         const b = new Border();
         b.Fill      = fill;
-        b.Stroke          = new Pen(this._accent);
-        b.BorderThickness = new Thickness(1);
+        b.Stroke          = new Pen(this._accent, 1);
         b.Width           = handleSize();
         b.Height          = handleSize();
         b.Cursor          = cursor;

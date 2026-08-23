@@ -19,8 +19,7 @@ resources TopAppBarDemo {
     DataTemplate [DataType = TopAppBarVM] {
         Border
             [ Fill      = @SurfaceContainerLow,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1) ] {
+              Stroke     = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header strip
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
@@ -41,7 +40,6 @@ resources TopAppBarDemo {
                           Margin     = (0,0,0,8) ]
                     Border
                         [ Fill      = @OutlineVariant,
-                          BorderThickness = (0),
                           Margin          = (0,0,0,16) ] {
                         TopAppBar [ Variant = $SmallVariant, Title = "Inbox" ] {
                             IconButton [ Variant = Standard, Command = $SearchCommand ] {
@@ -62,7 +60,6 @@ resources TopAppBarDemo {
                           Margin     = (0,0,0,8) ]
                     Border
                         [ Fill      = @OutlineVariant,
-                          BorderThickness = (0),
                           Margin          = (0,0,0,16) ] {
                         TopAppBar [ Variant = $CenterAlignedVariant, Title = "Settings" ] {
                             IconButton [ Variant = Standard, Command = $MoreCommand ] {
@@ -80,7 +77,6 @@ resources TopAppBarDemo {
                           Margin     = (0,0,0,8) ]
                     Border
                         [ Fill      = @OutlineVariant,
-                          BorderThickness = (0),
                           Margin          = (0,0,0,16) ] {
                         TopAppBar [ Variant = $MediumVariant, Title = "Workspace" ] {
                             IconButton [ Variant = Standard, Command = $SearchCommand ] {
@@ -101,7 +97,6 @@ resources TopAppBarDemo {
                           Margin     = (0,0,0,8) ]
                     Border
                         [ Fill      = @OutlineVariant,
-                          BorderThickness = (0),
                           Margin          = (0,0,0,16) ] {
                         TopAppBar [ Variant = $LargeVariant, Title = "Documents" ] {
                             IconButton [ Variant = Standard, Command = $SearchCommand ] {

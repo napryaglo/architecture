@@ -15,8 +15,20 @@ resources ButtonGroups {
     // template since each segment's corners depend on Position
     // (Single / Start / Middle / End), which SegmentedButton stamps
     // onto each container after items change.
+    // The group owns ONE uniform outer outline + the rounded outer
+    // corners (@ShapeSmall). Individual segments no longer draw their own
+    // 3-sided borders; the shared vertical hairline between adjacent
+    // segments lives on DefaultSegmentedItem as a leading divider Line.
+    // ClipToBounds keeps each segment's square-cornered fill inside the
+    // outer rounded silhouette.
     Template x:key="DefaultSegmentedButton" [TargetType = SegmentedButton] {
-        ItemsPresenter
+        Border x:name="PART_GroupBorder"
+            [ Fill        = #00000000,
+              Stroke      = Pen [ Brush = @Outline ],
+              CornerRadius = @ShapeSmall,
+              ClipToBounds = true ] {
+            ItemsPresenter
+        }
     }
     ItemsPanelTemplate x:key="DefaultSegmentedButtonPanel" {
         StackPanel [ Orientation = Horizontal ]
@@ -27,45 +39,40 @@ resources ButtonGroups {
     }
 
     // ── SegmentedItem: per-segment chrome ────────────────────────────
-    // Corner radius selection: Single rounds all four corners; Start
-    // rounds left only; End rounds right only; Middle stays square.
-    // BorderThickness sheds the right edge on Start / Middle so the
-    // following segment's left edge becomes the visible divider —
-    // the row reads as one continuous outline rather than a stack of
-    // independent boxes.
+    // The group outline + rounded outer corners now live on the
+    // SegmentedButton shell (DefaultSegmentedButton / PART_GroupBorder),
+    // so a segment no longer draws its own 3-sided border. Instead each
+    // segment lays out as [ divider | fill ]: a leading vertical hairline
+    // (PART_Divider) that reads as the shared boundary with the PREVIOUS
+    // segment, plus PART_Border carrying the segment's fill + content. The
+    // divider is collapsed on the first segment (Position = Start / Single)
+    // where the group's own left edge is the boundary. The outer
+    // ClipToBounds rounds the leftmost / rightmost square fills, so
+    // per-segment CornerRadius is unnecessary.
     //
     // Selection chrome: filled with @SecondaryContainer; M3 spec uses
     // the same fill for both single- and multi-select segmented
     // variants. State-layer ladder (hover / focus / press) overlays
     // @SecondaryContainer on the selected case and @Surface otherwise.
     Template x:key="DefaultSegmentedItem" [TargetType = SegmentedItem] {
-        Border x:name="PART_Border"
-            [ Fill      = @Surface,
-              Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (1,1,0,1),
-              CornerRadius    = (0),
-              Padding         = (@Spacing3,@Spacing1,@Spacing3,@Spacing1),
-              Height          = 40 ] {
-            ContentPresenter [ VerticalAlignment = Center, HorizontalAlignment = Center ]
+        StackPanel [ Orientation = Horizontal ] {
+            // Shared boundary with the preceding segment. Vertical Line
+            // stretches to the segment height; cross-axis size = 1dp pen.
+            Line x:name="PART_Divider"
+                [ Orientation = Vertical, Stroke = (@Outline, 1) ]
+            Border x:name="PART_Border"
+                [ Fill      = @Surface,
+                  Padding         = (@Spacing3,@Spacing1,@Spacing3,@Spacing1),
+                  Height          = 40 ] {
+                ContentPresenter [ VerticalAlignment = Center, HorizontalAlignment = Center ]
+            }
         }
 
-        // ── Position triggers — corner / border shape ────────────────
-        when ( Position = Single ) {
-            PART_Border.CornerRadius = @ShapeSmall;
-            PART_Border.BorderThickness = (1,1,1,1);
-        }
-        when ( Position = Start ) {
-            PART_Border.CornerRadius = (@ShapeSmall,0,0,@ShapeSmall);
-            PART_Border.BorderThickness = (1,1,0,1);
-        }
-        when ( Position = Middle ) {
-            PART_Border.CornerRadius = (0);
-            PART_Border.BorderThickness = (1,1,0,1);
-        }
-        when ( Position = End ) {
-            PART_Border.CornerRadius = (0,@ShapeSmall,@ShapeSmall,0);
-            PART_Border.BorderThickness = (1,1,1,1);
-        }
+        // ── Position triggers — first segment has no leading divider
+        // (the group's own left edge is the boundary). Middle / End keep
+        // the divider as the shared hairline with the previous segment.
+        when ( Position = Single ) { PART_Divider.Visibility = Collapsed; }
+        when ( Position = Start ) { PART_Divider.Visibility = Collapsed; }
 
         // ── Selection chrome ────────────────────────────────────────
         when ( IsSelected ) { PART_Border.Fill = @SecondaryContainer; }
@@ -120,16 +127,18 @@ resources ButtonGroups {
             Border x:name="PART_PrimaryButton"
                 [ Fill      = @Primary,
                   CornerRadius    = (@ShapeSmall,0,0,@ShapeSmall),
-                  Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2),
-                  BorderThickness = (0) ] {
+                  Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2) ] {
                 ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
             }
+            // Vertical hairline divider between the primary and chevron
+            // halves — replaces PART_TriggerButton's old left-edge outline
+            // (the former one-sided (1,0,0,0) rule). Stretches to the
+            // capsule height; cross-axis size = the 1dp pen thickness.
+            Line [ Orientation = Vertical, Stroke = (@PrimaryContainer, 1) ]
             Border x:name="PART_TriggerButton"
                 [ Fill      = @Primary,
                   CornerRadius    = (0,@ShapeSmall,@ShapeSmall,0),
-                  Padding         = (@Spacing2,@Spacing2,@Spacing2,@Spacing2),
-                  BorderThickness = (1,0,0,0),
-                  Stroke     = Pen [ Brush = @PrimaryContainer ] ] {
+                  Padding         = (@Spacing2,@Spacing2,@Spacing2,@Spacing2) ] {
                 Shape
                     [ Geometry            = @ChevronDown,
                       Fill                = @OnPrimary,
@@ -195,11 +204,10 @@ resources ButtonGroups {
     // framework uses — no JS-side resource lookups in the demo bootstrap.
     Template x:key="DefaultSplitButtonPopup" [TargetType = SplitButton] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (4) ]
@@ -207,7 +215,7 @@ resources ButtonGroups {
 
         // High-contrast popup chrome — see DefaultMenuButtonPopup for
         // the rationale.
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.Stroke = (@OutlineVariant, 2); }
     }
     Style [TargetType = SplitButton] {
         Template = @DefaultSplitButton;

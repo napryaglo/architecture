@@ -23,7 +23,6 @@ resources ToggleButtonDemo {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeSmall ] {
             // Transparent state-layer over the fill — hover / press tint
             // it at the M3 8% / 12% opacities so the button gives pointer
@@ -63,7 +62,7 @@ resources ToggleButtonDemo {
     }
 
     DataTemplate [DataType = ToggleButtonVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header strip
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
@@ -103,8 +102,7 @@ resources ToggleButtonDemo {
                     Border
                         [ Fill      = @SurfaceContainerLow,
                           Padding         = (12,12,12,12),
-                          Stroke     = Pen [ Brush = @Outline ],
-                          BorderThickness = (1) ] {
+                          Stroke     = Pen [ Brush = @Outline ] ] {
                         StackPanel [ Orientation = Vertical ] {
                             TextBlock
                                 [ Text       = $PreviewText,

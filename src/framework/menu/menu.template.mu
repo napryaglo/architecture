@@ -41,11 +41,10 @@ resources Menus {
     // OverlayLayer when IsOpen flips true.
     Template x:key="DefaultMenuButtonPopup" [TargetType = MenuButton] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (0) ] {
@@ -57,7 +56,7 @@ resources Menus {
         // thicker outlines on every elevated surface when the user has
         // opted into a more-contrast environment. Matches the same
         // pattern Button uses at [basic.resources.mu:171].
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.Stroke = (@OutlineVariant, 2); }
     }
 
     // ── MenuButton: default Style ──────────────────────────────────
@@ -90,11 +89,10 @@ resources Menus {
     // materialises the MenuItem rows.
     Template x:key="DefaultContextMenuPopup" [TargetType = ContextMenu] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (0) ] {
@@ -104,7 +102,7 @@ resources Menus {
 
         // High-contrast popup chrome — see DefaultMenuButtonPopup for
         // the rationale.
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.Stroke = (@OutlineVariant, 2); }
     }
 
     // ── ContextMenu: default Style ─────────────────────────────────
@@ -239,11 +237,10 @@ resources Menus {
     // it can be mounted on the overlay without dual-parent errors.
     Template x:key="DefaultMenuItemSubmenu" [TargetType = MenuItem] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (0) ] {
@@ -253,7 +250,7 @@ resources Menus {
 
         // High-contrast popup chrome — see DefaultMenuButtonPopup for
         // the rationale.
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.Stroke = (@OutlineVariant, 2); }
     }
 
     Style [TargetType = MenuItem] {

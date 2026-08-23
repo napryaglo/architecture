@@ -142,21 +142,18 @@ function wireSwatchHover(
     onPreview?: (over: boolean) => void,
 ): () => void
 {
-    const restStroke    = sw.Stroke;
-    const restThickness = sw.BorderThickness;
+    const restStroke = sw.Stroke;   // the pen carries its own width now
     const accent = (Application.current?.Resources.Resolve('Primary') as Brush | undefined)
         ?? ACCENT_BORDER;
 
     const clear = (): void => {
         sw.Stroke          = restStroke;
-        sw.BorderThickness = restThickness;
         sw.RenderTransform = undefined;
     };
     const onHover = (): void => {
         if (sw.IsMouseOver)
         {
-            sw.Stroke                = new Pen(accent);
-            sw.BorderThickness       = new Thickness(2);
+            sw.Stroke                = new Pen(accent, 2);
             sw.RenderTransformOrigin = new Point(0.5, 0.5);
             sw.RenderTransform       = new ScaleTransform(SWATCH_HOVER_SCALE, SWATCH_HOVER_SCALE);
         }
@@ -637,8 +634,7 @@ export class ColorPicker extends TemplatedControl
                 sw.Width  = w;
                 sw.Height = row === 0 ? 16 : 14;
                 if (row === 0) sw.CornerRadius = 2;
-                sw.Stroke          = new Pen(SWATCH_BORDER);
-                sw.BorderThickness = new Thickness(1);
+                sw.Stroke          = new Pen(SWATCH_BORDER, 1);
                 sw.Margin = new Thickness(0, 0, col === n - 1 ? 0 : gap, 0);
                 sw.Fill = new SolidColorBrush(color);
                 sw.onClick = (): void => { this.commitColor(color); };
@@ -727,8 +723,7 @@ export class ColorPicker extends TemplatedControl
         {
             const row = new ClickableBorder();
             row.CornerRadius    = 4;
-            row.BorderThickness = new Thickness(1);
-            row.Stroke          = new Pen(scheme === current ? ACCENT_BORDER : SWATCH_BORDER);
+            row.Stroke          = new Pen(scheme === current ? ACCENT_BORDER : SWATCH_BORDER, 1);
             row.Padding = new Thickness(4);
             row.Margin  = new Thickness(0, 0, 0, 2);
 
@@ -754,8 +749,7 @@ export class ColorPicker extends TemplatedControl
                 const chip = new Border();
                 chip.Width  = 11;
                 chip.Height = 16;
-                chip.Stroke          = new Pen(SWATCH_BORDER);
-                chip.BorderThickness = new Thickness(1);
+                chip.Stroke          = new Pen(SWATCH_BORDER, 1);
                 chip.Fill = new SolidColorBrush(color);
                 preview.AddChild(chip);
             }
@@ -798,8 +792,7 @@ export class ColorPicker extends TemplatedControl
             sw.Width  = 22;
             sw.Height = 16;
             sw.CornerRadius = 2;
-            sw.Stroke       = new Pen(SWATCH_BORDER);
-            sw.BorderThickness = new Thickness(1);
+            sw.Stroke       = new Pen(SWATCH_BORDER, 1);
             sw.Margin = new Thickness(0, 0, 2, 2);
             const c = Color.FromHex(hex);
             sw.Fill = new SolidColorBrush(c);

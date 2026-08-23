@@ -22,8 +22,7 @@ import { Border } from '../index.js';
 // Build the scene.
 const border = new Border();
 border.Fill      = new SolidColorBrush(Color.Blue);
-border.Stroke          = new Pen(new SolidColorBrush(Color.Black));
-border.BorderThickness = new Thickness(3);
+border.Stroke          = new Pen(new SolidColorBrush(Color.Black), 3);
 border.Width = 100;
 border.Height = 100;
 // Mount it on a 100×100 host-less target. Constructor seeds the

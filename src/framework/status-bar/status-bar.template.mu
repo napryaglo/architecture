@@ -14,10 +14,14 @@ resources StatusBars {
     Template x:key="DefaultStatusBar" [TargetType = StatusBar] {
         Border
             [ Fill      = @SurfaceContainerLow,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,1,0,0),
               Padding         = (4,2,4,2) ] {
-            ItemsPresenter
+            // Top rule — was Border BorderThickness (0,1,0,0); now a
+            // horizontal oriented Line docked Top so it stretches the full
+            // width at 1dp along the bar's top edge.
+            DockPanel [ LastChildFill = true ] {
+                Line [ DockPanel.Dock = Top, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
+                ItemsPresenter
+            }
         }
     }
 

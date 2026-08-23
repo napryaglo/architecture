@@ -1,6 +1,6 @@
 import { BouncingBallVM } from "./bouncing-ball-vm.mjs";
 import { Border, Canvas, DataTemplate, Ellipse } from "@pragmatic-lab/mural/basic";
-import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
+import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary } from "@pragmatic-lab/mural/runtime";
 import { Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
 
 
@@ -24,7 +24,6 @@ export class BouncingBallDemo extends ResourceDictionary {
             _border3.SetNameScope(new NameScope());
             _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "InverseSurface"));
             _border3.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
-            _border3.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border3.set_property_value(Border.WidthKey, 640);
             _border3.set_property_value(Border.HeightKey, 360);
             _canvas2 = new Canvas();

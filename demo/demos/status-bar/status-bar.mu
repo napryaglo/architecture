@@ -21,7 +21,6 @@ resources StatusBarDemo {
         Border
             [ Fill        = @Surface,
               Stroke       = Pen [ Brush = @OutlineVariant ],
-              BorderThickness   = (1),
               CornerRadius      = 4,
               VerticalAlignment = Top,
               Margin            = (16,16,16,16) ] {

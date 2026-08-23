@@ -32,8 +32,6 @@ resources TextFormatDemo {
                 Border
                     [ DockPanel.Dock = Top,
                       Fill      = @SurfaceContainerLow,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,0,0,1),
                       Padding         = (16,10,16,10) ] {
                     StackPanel [ Orientation = Horizontal ] {
                         FontFamilyPicker [ Text = $Family, Width = 190 ]
@@ -54,6 +52,10 @@ resources TextFormatDemo {
                         ColorPicker [ ColorHex = $ColorHex, Margin = (16,0,0,0), VerticalAlignment = Center ]
                     }
                 }
+                Line
+                    [ DockPanel.Dock = Top,
+                      Orientation    = Horizontal,
+                      Stroke         = (@OutlineVariant, 1) ]
 
                 // ── Live sample paragraph ──────────────────────────
                 // Family / FontSize bind straight to the VM; the bridge

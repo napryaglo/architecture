@@ -128,11 +128,13 @@ resources RibbonDemo {
             }
 
             // ── Status line ─────────────────────────────────────────────
+            Line
+                [ DockPanel.Dock = Bottom,
+                  Orientation    = Horizontal,
+                  Stroke         = (@OutlineVariant, 1) ]
             Border
                 [ DockPanel.Dock  = Bottom,
                   Fill      = @SurfaceContainerLow,
-                  Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (0,1,0,0),
                   Padding         = (12,6,12,6) ] {
                 TextBlock [ Text = $Status, Foreground = @OnSurfaceVariant, Style = @LabelMedium ]
             }

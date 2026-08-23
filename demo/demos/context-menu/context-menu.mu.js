@@ -76,7 +76,6 @@ export class ContextMenuDemo extends ResourceDictionary {
             const _border16 = new Border();
             _border16.set_property_value(Border.FillKey, DynamicResource(_border16, "Surface"));
             _border16.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border16.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel17 = new DockPanel();
             const _border18 = new Border();
             _border18.set_property_value(DockPanel.DockKey, Dock.Top);

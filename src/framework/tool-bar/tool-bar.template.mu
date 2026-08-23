@@ -33,7 +33,6 @@ resources ToolBars {
     Template x:key="DefaultToolBarButton" [TargetType = ToolBarButton] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHigh,
-              BorderThickness = (0),
               CornerRadius    = 0 ] {
             // Transparent inner state layer (M3 state-layer model): the
             // resting @SurfaceContainerHigh base stays put and hover / press
@@ -96,7 +95,6 @@ resources ToolBars {
     Template x:key="DefaultToolBarToggleButton" [TargetType = ToolBarToggleButton] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHigh,
-              BorderThickness = (0),
               CornerRadius    = 0 ] {
             // Same transparent state layer as DefaultToolBarButton — hover /
             // press ride a translucent OnSurfaceVariant tint ON TOP of the
@@ -159,8 +157,7 @@ resources ToolBars {
         StackPanel [ Orientation = Horizontal ] {
             Border x:name="PART_Primary"
                 [ Fill      = @SurfaceContainerHigh,
-                  CornerRadius    = (@ShapeSmall,0,0,@ShapeSmall),
-                  BorderThickness = (0) ] {
+                  CornerRadius    = (@ShapeSmall,0,0,@ShapeSmall) ] {
                 Border x:name="PART_PrimaryState"
                     [ Fill   = #00000000,
                       CornerRadius = (@ShapeSmall,0,0,@ShapeSmall),
@@ -170,14 +167,18 @@ resources ToolBars {
             }
             Border x:name="PART_Arrow"
                 [ Fill      = @SurfaceContainerHigh,
-                  CornerRadius    = (0,@ShapeSmall,@ShapeSmall,0),
-                  BorderThickness = (1,0,0,0),
-                  Stroke     = Pen [ Brush = @OutlineVariant ] ] {
-                Border x:name="PART_ArrowState"
-                    [ Fill   = #00000000,
-                      CornerRadius = (0,@ShapeSmall,@ShapeSmall,0),
-                      Padding      = (6,8,8,8) ] {
-                    Shape [ Geometry = @ChevronDown, Fill = @OnSurfaceVariant, Width = 12, Height = 12, VerticalAlignment = Center ]
+                  CornerRadius    = (0,@ShapeSmall,@ShapeSmall,0) ] {
+                // Left divider between the two halves — was Border
+                // BorderThickness (1,0,0,0); now a vertical oriented Line
+                // docked Left so the 1dp rule cues the two hit targets.
+                DockPanel [ LastChildFill = true ] {
+                    Line [ DockPanel.Dock = Left, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
+                    Border x:name="PART_ArrowState"
+                        [ Fill   = #00000000,
+                          CornerRadius = (0,@ShapeSmall,@ShapeSmall,0),
+                          Padding      = (6,8,8,8) ] {
+                        Shape [ Geometry = @ChevronDown, Fill = @OnSurfaceVariant, Width = 12, Height = 12, VerticalAlignment = Center ]
+                    }
                 }
             }
         }
@@ -198,8 +199,7 @@ resources ToolBars {
     Template x:key="DefaultToolBarDropdownTrigger" [TargetType = ToolBarSplitButton] {
         Border x:name="PART_Primary"
             [ Fill      = @SurfaceContainerHigh,
-              CornerRadius    = @ShapeSmall,
-              BorderThickness = (0) ] {
+              CornerRadius    = @ShapeSmall ] {
             Border x:name="PART_PrimaryState"
                 [ Fill   = #00000000,
                   CornerRadius = @ShapeSmall,
@@ -218,18 +218,17 @@ resources ToolBars {
     // primary half; ItemsPresenter renders the MenuItem children.
     Template x:key="DefaultToolBarSplitPopup" [TargetType = ToolBarSplitButton] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (4) ] {
                 ItemsPresenter
             }
         }
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.Stroke = (@OutlineVariant, 2); }
     }
     Style [TargetType = ToolBarSplitButton] {
         Template = @DefaultToolBarSplitPopup;
@@ -278,8 +277,7 @@ resources ToolBars {
     // trigger has a stroke to switch on.
     Template x:key="DefaultToolBar" [TargetType = ToolBar] {
         Border x:name="PART_Border"
-            [ Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (0),
+            [ Stroke     = (@Outline, 0),
               Padding         = (4) ] {
             DockPanel x:name="PART_Layout" [ LastChildFill = true ] {
                 Button x:name="PART_Chevron" [ DockPanel.Dock = Right ] {
@@ -289,7 +287,7 @@ resources ToolBars {
             }
         }
 
-        when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (1); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_Border.Stroke = (@Outline, 1); }
     }
 
     // ── ToolBar: overflow popup ────────────────────────────────────
@@ -300,11 +298,10 @@ resources ToolBars {
     // PART_PopupHost.anchor is wired to the chevron in ToolBar's ctor.
     Template x:key="DefaultToolBarPopup" [TargetType = ToolBar] {
         ToolBarPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   Padding         = (4) ] {
                 ToolBarOverflowItemsControl x:name="PART_PopupList"
             }
@@ -312,7 +309,7 @@ resources ToolBars {
 
         // High-contrast popup chrome — see DefaultMenuButtonPopup for
         // the rationale.
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.Stroke = (@OutlineVariant, 2); }
     }
 
     Style [TargetType = ToolBar] {

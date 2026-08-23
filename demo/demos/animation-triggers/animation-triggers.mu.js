@@ -21,7 +21,6 @@ export class AnimationTriggersDemo extends ResourceDictionary {
             _border3.SetNameScope(new NameScope());
             _border3.set_property_value(Border.FillKey, DynamicResource(_border3, "Surface"));
             _border3.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border3.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd4 = _border3.Resources;
             const _act6 = new BeginStoryboardAction((_target) => {
                 const _sb5 = new Storyboard();

@@ -17,7 +17,7 @@ import ToolBarVM from "./tool-bar-vm.mjs"
 
 resources ToolBarDemo {
     DataTemplate [DataType = ToolBarVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {

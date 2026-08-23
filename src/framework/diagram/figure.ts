@@ -780,15 +780,25 @@ export class Figure extends ContentControl implements ISideEndpointHost
     // NOT self-clipped (the raw Clip DP is never set), so a centred stroke straddles
     // the outline exactly as a Shape primitive does. All three fall back to super
     // when there is no shape (a neutral container Figure).
-    // A shapeless content tile (SizeToContent, no geometric _shape) styles like a
-    // rounded-rect card — it paints its Fill/Stroke and clips its content to that
-    // rounded silhouette. Distinguishes an arch/content container from a bare
-    // neutral container and from a TextNode/Callout (template-drawn box, NOT
-    // SizeToContent), so only content tiles gain the card treatment.
+    // A shapeless box node styles like a rounded-rect card — the FIGURE paints its
+    // Fill/Stroke and clips its content to that rounded silhouette, exactly like a
+    // geometric shape paints its _shape. This is how every box-shaped node (an
+    // arch/content tile, a ContainerFigure, a TextNode/Callout) draws and STYLES
+    // its box: the node itself owns the paint, so the Format Shape Stroke pen
+    // (colour + width) takes effect. A bare neutral Figure opts out (PaintsCardBox
+    // stays false) and paints nothing.
     private _isCardTile(): boolean
     {
-        return this._shape === undefined && this.SizeToContent;
+        return this._shape === undefined && this.PaintsCardBox;
     }
+
+    // Whether a shapeless figure paints its own rounded-rect card box instead of
+    // delegating the box to a template Border. Content tiles (SizeToContent) do;
+    // the box-node subclasses (ContainerFigure/TextNode/Callout) override this to
+    // true so the node — not a Border — draws and styles its box. Kept as a
+    // protected getter (not a DP) since it is a fixed per-type trait, not bindable
+    // state.
+    protected get PaintsCardBox(): boolean { return this.SizeToContent; }
 
     private _cardGeometry(size: Size): Geometry
     {

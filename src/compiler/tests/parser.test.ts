@@ -67,7 +67,7 @@ describe('Parser — elements and attributes', () => {
     });
 
     test('element with multiple named attributes including a tuple value', () => {
-        const el = asElement(firstForm('Border[Fill=#blue, BorderThickness=(3)]'));
+        const el = asElement(firstForm('Border[Fill=#blue, CornerRadius=(3)]'));
         assert.equal(el.attrs.length, 2);
         const second = el.attrs[1]!;
         assert.equal(second.kind, 'named-attr');

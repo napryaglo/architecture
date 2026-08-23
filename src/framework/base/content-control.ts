@@ -2,7 +2,6 @@
     MetaData,
     MuralBase,
     Observable,
-    Thickness,
     Visual,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -35,16 +34,11 @@ export class ContentControl extends Control
         ContentControl, 'Content', undefined, MetaData.Measure);
 
     // Border chrome (WPF Control parity): the default template wraps its
-    // ContentPresenter in a Border whose Fill / Stroke / BorderThickness
-    // TemplateBind to the control. `Fill` and `Stroke` already ride on Visual
-    // (the library-wide Fill/Stroke chrome standard), so only BorderThickness
-    // is declared here. A bare ContentControl leaves them unset (transparent
-    // brush, zero thickness → no visible chrome); a consumer sets Fill / Stroke
-    // / BorderThickness to give the content host a background/outline without a
-    // bespoke template.
-    public static readonly BorderThicknessKey = MuralBase.RegisterProperty<Thickness>(
-        ContentControl, 'BorderThickness', Thickness.Zero,
-        MetaData.Measure | MetaData.Arrange | MetaData.Render);
+    // ContentPresenter in a Border whose Fill / Stroke TemplateBind to the
+    // control. `Fill` and `Stroke` ride on Visual (the library-wide Fill/Stroke
+    // chrome standard), so a bare ContentControl needs no extra chrome DP: a
+    // consumer sets Fill / Stroke (the pen's Thickness being the border width) to
+    // give the content host a background/outline without a bespoke template.
 
     // Reuse the view built for a content object instead of rebuilding it every
     // time that object is presented. DEFAULT ON — the inverse of
@@ -62,9 +56,6 @@ export class ContentControl extends Control
 
     public get ReuseContentViews(): boolean { return this.get_property_value(ContentControl.ReuseContentViewsKey); }
     public set ReuseContentViews(v: boolean) { this.set_property_value(ContentControl.ReuseContentViewsKey, v); }
-
-    public get BorderThickness(): Thickness  { return this.get_property_value(ContentControl.BorderThicknessKey); }
-    public set BorderThickness(v: Thickness) { this.set_property_value(ContentControl.BorderThicknessKey, v); }
 
     // The Visual currently slotted into the presenter. Distinct from
     // Content because Content may be a non-Visual MuralBase — in that case a

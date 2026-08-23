@@ -40,8 +40,7 @@ resources Toggles {
               VerticalAlignment   = Stretch ] {
             Border x:name="PART_Track"
                 [ Fill          = @SurfaceContainerHighest,
-                  Stroke         = Pen [ Brush = @Outline ],
-                  BorderThickness     = (2),
+                  Stroke         = Pen [ Brush = @Outline, Thickness = 2 ],
                   CornerRadius        = @ShapeFull,
                   Width               = 36.4,
                   Height              = 22.4,
@@ -55,7 +54,6 @@ resources Toggles {
                 Border x:name="PART_Thumb"
                     [ Fill          = @Outline,
                       CornerRadius        = @ShapeFull,
-                      BorderThickness     = (0),
                       Width               = 11.2,
                       Height              = 11.2,
                       VerticalAlignment   = Center,
@@ -67,7 +65,7 @@ resources Toggles {
         // and re-anchors to the right edge.
         when ( IsChecked ) {
             PART_Track.Fill = @Primary;
-            PART_Track.Stroke = Pen [ Brush = @Primary ];
+            PART_Track.Stroke = Pen [ Brush = @Primary, Thickness = 2 ];
             PART_Thumb.Fill = @OnPrimary;
             PART_Thumb.Width = 16.8;
             PART_Thumb.Height = 16.8;
@@ -121,8 +119,7 @@ resources Toggles {
               VerticalAlignment   = Stretch ] {
             Border x:name="PART_Box"
                 [ Fill          = #00000000,
-                  Stroke         = Pen [ Brush = @OnSurfaceVariant ],
-                  BorderThickness     = (2),
+                  Stroke         = Pen [ Brush = @OnSurfaceVariant, Thickness = 2 ],
                   CornerRadius        = @ShapeExtraSmall,
                   Width               = 18,
                   Height              = 18,
@@ -141,15 +138,15 @@ resources Toggles {
         // IsChecked — fill the box and reveal the glyph.
         when ( IsChecked ) {
             PART_Box.Fill = @Primary;
-            PART_Box.Stroke = Pen [ Brush = @Primary ];
+            PART_Box.Stroke = Pen [ Brush = @Primary, Thickness = 2 ];
             PART_Mark.Opacity = 1;
         }
         // State-layer ladder. Hover / focus / press tint the box's
         // border (unchecked path) or pump the fill toward a press
         // tint (checked path). Disabled dims the whole control.
-        when ( IsMouseOver ) { PART_Box.Stroke = Pen [ Brush = @OnSurface ]; }
-        when ( IsFocused ) { PART_Box.Stroke = Pen [ Brush = @Primary ]; }
-        when ( IsPressed ) { PART_Box.Stroke = Pen [ Brush = @Primary ]; }
+        when ( IsMouseOver ) { PART_Box.Stroke = Pen [ Brush = @OnSurface, Thickness = 2 ]; }
+        when ( IsFocused ) { PART_Box.Stroke = Pen [ Brush = @Primary, Thickness = 2 ]; }
+        when ( IsPressed ) { PART_Box.Stroke = Pen [ Brush = @Primary, Thickness = 2 ]; }
         when ( IsEnabled = false ) { PART_Box.Opacity = @DisabledContentOpacity; }
     }
     Style [TargetType = Checkbox] {
@@ -185,8 +182,7 @@ resources Toggles {
               VerticalAlignment   = Stretch ] {
             Border x:name="PART_Ring"
                 [ Fill          = #00000000,
-                  Stroke         = Pen [ Brush = @OnSurfaceVariant ],
-                  BorderThickness     = (2),
+                  Stroke         = Pen [ Brush = @OnSurfaceVariant, Thickness = 2 ],
                   CornerRadius        = @ShapeFull,
                   Width               = 20,
                   Height              = 20,
@@ -195,7 +191,6 @@ resources Toggles {
                 Border x:name="PART_Dot"
                     [ Fill          = @Primary,
                       CornerRadius        = @ShapeFull,
-                      BorderThickness     = (0),
                       Width               = 10,
                       Height              = 10,
                       HorizontalAlignment = Center,
@@ -204,12 +199,12 @@ resources Toggles {
             }
         }
         when ( IsChecked ) {
-            PART_Ring.Stroke = Pen [ Brush = @Primary ];
+            PART_Ring.Stroke = Pen [ Brush = @Primary, Thickness = 2 ];
             PART_Dot.Opacity = 1;
         }
-        when ( IsMouseOver ) { PART_Ring.Stroke = Pen [ Brush = @OnSurface ]; }
-        when ( IsFocused ) { PART_Ring.Stroke = Pen [ Brush = @Primary ]; }
-        when ( IsPressed ) { PART_Ring.Stroke = Pen [ Brush = @Primary ]; }
+        when ( IsMouseOver ) { PART_Ring.Stroke = Pen [ Brush = @OnSurface, Thickness = 2 ]; }
+        when ( IsFocused ) { PART_Ring.Stroke = Pen [ Brush = @Primary, Thickness = 2 ]; }
+        when ( IsPressed ) { PART_Ring.Stroke = Pen [ Brush = @Primary, Thickness = 2 ]; }
         when ( IsEnabled = false ) { PART_Ring.Opacity = @DisabledContentOpacity; }
     }
     Style [TargetType = RadioButton] {
@@ -263,8 +258,7 @@ resources Toggles {
                 Border x:name="PART_Ring"
                     [ DockPanel.Dock      = Left,
                       Fill          = #00000000,
-                      Stroke         = Pen [ Brush = @OnSurfaceVariant ],
-                      BorderThickness     = (2),
+                      Stroke         = Pen [ Brush = @OnSurfaceVariant, Thickness = 2 ],
                       CornerRadius        = @ShapeFull,
                       Width               = 20,
                       Height              = 20,
@@ -272,7 +266,6 @@ resources Toggles {
                     Border x:name="PART_Dot"
                         [ Fill          = @Primary,
                           CornerRadius        = @ShapeFull,
-                          BorderThickness     = (0),
                           Width               = 10,
                           Height              = 10,
                           HorizontalAlignment = Center,
@@ -286,7 +279,7 @@ resources Toggles {
         }
         // Selection — light the ring + dot at @Primary.
         when ( IsSelected ) {
-            PART_Ring.Stroke = Pen [ Brush = @Primary ];
+            PART_Ring.Stroke = Pen [ Brush = @Primary, Thickness = 2 ];
             PART_Dot.Opacity = 1;
         }
         // State-layer ladder — overlay the full row (ordered after Selected

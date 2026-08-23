@@ -157,7 +157,6 @@ resources MuralBasic {
             Border x:name="PART_Divider"
                 [ DockPanel.Dock  = Top,
                   Fill      = @OutlineVariant,
-                  BorderThickness = (0),
                   Height          = 1 ]
             Border x:name="PART_ContentHost" [ Padding = (0) ] {
                 ContentPresenter
@@ -185,7 +184,6 @@ resources MuralBasic {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
               Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
             ScrollViewer x:name="PART_Scroll" {
@@ -227,15 +225,24 @@ resources MuralBasic {
     // against its bottom underline. The compiler routes
     // CornerRadius= tuples to `new CornerRadius(...)`.
     Template x:key="DefaultFilledTextBox" [TargetType = TextBox] {
-        Border x:name="PART_Border"
-            [ Fill      = @SurfaceContainerHigh,
-              Stroke     = Pen [ Brush = @OnSurfaceVariant ],
-              BorderThickness = (0,0,0,1),
-              CornerRadius    = (@ShapeExtraSmall,@ShapeExtraSmall,0,0),
-              Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
-            ScrollViewer x:name="PART_Scroll" {
-                TextEditorSurface x:name="PART_Editor"
+        // Filled field + bottom active-indicator rule. The underline
+        // was a one-sided (0,0,0,1) Border edge; it's now an oriented
+        // horizontal Line stacked below the field so it stretches the
+        // field width and measures to the pen thickness. The focus
+        // trigger swaps the Line's Stroke (tint + thickness), matching
+        // the M3 active-indicator pattern.
+        StackPanel x:name="PART_Root" [ Orientation = Vertical ] {
+            Border x:name="PART_Border"
+                [ Fill      = @SurfaceContainerHigh,
+                  CornerRadius    = (@ShapeExtraSmall,@ShapeExtraSmall,0,0),
+                  Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
+                ScrollViewer x:name="PART_Scroll" {
+                    TextEditorSurface x:name="PART_Editor"
+                }
             }
+            Line x:name="PART_Underline"
+                [ Orientation = Horizontal,
+                  Stroke      = (@OnSurfaceVariant, 1) ]
         }
         // Hover lifts the fill toward @SurfaceContainerHighest (M3's
         // hover-state container token); focus thickens the bottom rule
@@ -243,10 +250,9 @@ resources MuralBasic {
         // indicator pattern. Disabled dims the whole row.
         when ( IsMouseOver ) { PART_Border.Fill = @SurfaceContainerHighest; }
         when ( IsFocused ) {
-            PART_Border.Stroke = Pen [ Brush = @Primary ];
-            PART_Border.BorderThickness = (0,0,0,2);
+            PART_Underline.Stroke = (@Primary, 2);
         }
-        when ( IsEnabled = false ) { PART_Border.Opacity = @DisabledContentOpacity; }
+        when ( IsEnabled = false ) { PART_Root.Opacity = @DisabledContentOpacity; }
 
         when ( ThemeManager.Density = Compact ) {
             PART_Border.Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1);
@@ -268,7 +274,6 @@ resources MuralBasic {
     Template x:key="DefaultPlainTextBox" [TargetType = TextBox] {
         Border x:name="PART_Border"
             [ Fill      = #00000000,
-              BorderThickness = (0),
               Padding         = (0) ] {
             ScrollViewer x:name="PART_Scroll" {
                 TextEditorSurface x:name="PART_Editor"
@@ -321,7 +326,6 @@ resources MuralBasic {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall ] {
             // SpinEdit isn't focusable itself; IsEditFocused /
             // IsEditHovered mirror the INNER TextBox's state via DPs
@@ -338,13 +342,10 @@ resources MuralBasic {
                 // density triggers below carry the M3-relevant work.
                 Border x:name="PART_ButtonColumn"
                     [ DockPanel.Dock  = Right,
-                      Width           = 18,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (1,0,0,0) ] {
+                      Width           = 18 ] {
                     StackPanel [ Orientation = Vertical ] {
                         ClickableBorder x:name="PART_Up"
-                            [ BorderThickness = (0),
-                              Padding         = (0,2,0,2),
+                            [ Padding         = (0,2,0,2),
                               Height          = 14 ] {
                             Shape x:name="PART_UpGlyph"
                                 [ Geometry            = @ChevronUp,
@@ -355,8 +356,7 @@ resources MuralBasic {
                                   VerticalAlignment   = Center ]
                         }
                         ClickableBorder x:name="PART_Down"
-                            [ BorderThickness = (0),
-                              Padding         = (0,2,0,2),
+                            [ Padding         = (0,2,0,2),
                               Height          = 14 ] {
                             Shape x:name="PART_DownGlyph"
                                 [ Geometry            = @ChevronDown,
@@ -368,6 +368,14 @@ resources MuralBasic {
                         }
                     }
                 }
+                // Left-edge divider between the value field and the
+                // button column. Docked Right AFTER the column so it
+                // lands on the column's left edge (was the Border's
+                // (1,0,0,0) one-sided border, pre-Stroke-Thickness).
+                Line x:name="PART_ColumnDivider"
+                    [ DockPanel.Dock = Right,
+                      Orientation    = Vertical,
+                      Stroke         = (@OutlineVariant, 1) ]
                 TextBox x:name="PART_TextBox"
             }
         }
@@ -441,16 +449,13 @@ resources MuralBasic {
         SliderLayout x:name="PART_Layout" {
             Border x:name="PART_Track"
                 [ Fill      = @SurfaceContainerHighest,
-                  CornerRadius    = 2,
-                  BorderThickness = (0) ]
+                  CornerRadius    = 2 ]
             Border x:name="PART_Fill"
                 [ Fill      = @Primary,
-                  CornerRadius    = 2,
-                  BorderThickness = (0) ]
+                  CornerRadius    = 2 ]
             Border x:name="PART_Thumb"
                 [ Fill      = @Primary,
-                  CornerRadius    = @ShapeFull,
-                  BorderThickness = (0) ]
+                  CornerRadius    = @ShapeFull ]
         }
         // Thumb state chrome. Hover sources from PART_Thumb's
         // IsMouseOver; focus sources from the templated parent's
@@ -506,12 +511,10 @@ resources MuralBasic {
         ScrollBarLayout x:name="PART_Layout" {
             Border x:name="PART_Track"
                 [ Fill      = @SurfaceContainerLow,
-                  CornerRadius    = @ShapeExtraSmall,
-                  BorderThickness = (0) ]
+                  CornerRadius    = @ShapeExtraSmall ]
             Border x:name="PART_Thumb"
                 [ Fill      = @OutlineVariant,
-                  CornerRadius    = @ShapeExtraSmall,
-                  BorderThickness = (0) ]
+                  CornerRadius    = @ShapeExtraSmall ]
         }
         // Thumb tint: hover → @Outline (slightly darker), drag →
         // @OnSurfaceVariant (darkest). Drag declared LAST so it wins
@@ -548,8 +551,7 @@ resources MuralBasic {
     Template x:key="DefaultThumb" [TargetType = Thumb] {
         Border x:name="PART_Border"
             [ Fill      = @OutlineVariant,
-              CornerRadius    = 2,
-              BorderThickness = (0) ]
+              CornerRadius    = 2 ]
         when ( IsMouseOver ) { PART_Border.Fill = @Outline; }
         when ( IsDragging ) { PART_Border.Fill = @OnSurfaceVariant; }
     }
@@ -566,8 +568,7 @@ resources MuralBasic {
     Template x:key="DefaultGridSplitter" [TargetType = GridSplitter] {
         Border x:name="PART_Border"
             [ Fill      = @OutlineVariant,
-              CornerRadius    = 0,
-              BorderThickness = (0) ]
+              CornerRadius    = 0 ]
     }
     Style [TargetType = GridSplitter] {
         Template = @DefaultGridSplitter;
@@ -593,8 +594,7 @@ resources MuralBasic {
     Template x:key="DefaultSplitter" [TargetType = Splitter] {
         Border x:name="PART_Border"
             [ Fill      = @OutlineVariant,
-              CornerRadius    = 0,
-              BorderThickness = (0) ]
+              CornerRadius    = 0 ]
     }
     Style [TargetType = Splitter] {
         Template = @DefaultSplitter;

@@ -20,7 +20,7 @@ import SpinEditVM from "./spin-edit-vm.mjs"
 
 resources SpinEditDemo {
     DataTemplate [DataType = SpinEditVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header strip
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {

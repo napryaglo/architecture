@@ -73,12 +73,13 @@ describe('Card — variant templates', () => {
         const card = new Card();
         card.Variant = CardVariant.Outlined;
         const root = card.visualChildren[0] as Border;
-        // BorderThickness can be a Thickness instance or a uniform number,
-        // depending on the renderer. Just assert it isn't zero.
-        const t = root.BorderThickness;
-        const isThicknessObj = t !== undefined && typeof t === 'object';
-        const left  = isThicknessObj ? (t as { Left: number }).Left : (t as number);
-        assert.ok(left > 0,
+        // The border width is the Stroke pen's uniform Thickness now — there is
+        // no BorderThickness DP. An outlined card must carry a stroke pen with a
+        // non-zero thickness.
+        const pen = root.Stroke;
+        assert.ok(pen !== undefined,
+            'Outlined card should carry a Stroke pen');
+        assert.ok((pen as { Thickness: number }).Thickness > 0,
             'Outlined card should carry a non-zero border thickness');
         // Outlined carries no resting Effect — the outline is the
         // emphasis cue, not an elevation shadow.

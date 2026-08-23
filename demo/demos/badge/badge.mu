@@ -14,7 +14,7 @@ import BadgeVM from "./badge-vm.mjs"
 
 resources BadgeDemo {
     DataTemplate [DataType = BadgeVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // Header strip
                 Border [ DockPanel.Dock = Top, Fill = @Primary, Padding = (16,12,16,12) ] {
@@ -44,7 +44,6 @@ resources BadgeDemo {
                                       Height          = 40,
                                       Fill      = @SurfaceContainerHighest,
                                       CornerRadius    = @ShapeMedium,
-                                      BorderThickness = (0),
                                       Canvas.Left     = 0,
                                       Canvas.Top      = 8 ]
                                 Badge [ Variant = Dot, Canvas.Left = 36, Canvas.Top = 4 ]
@@ -60,7 +59,6 @@ resources BadgeDemo {
                                       Height          = 40,
                                       Fill      = @SurfaceContainerHighest,
                                       CornerRadius    = @ShapeMedium,
-                                      BorderThickness = (0),
                                       Canvas.Left     = 0,
                                       Canvas.Top      = 8 ]
                                 Badge [ Variant = Numeric, Count = $Count, Canvas.Left = 30, Canvas.Top = 0 ]

@@ -82,7 +82,6 @@ export class ColorPickerDemo extends ResourceDictionary {
             _border2.set_property_value(Border.CornerRadiusKey, 4);
             _border2.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Bottom);
             _border2.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border2.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _stackPanel15.AddChild(_border2);
             _stackPanel14.AddChild(_stackPanel15);
             const _stackPanel19 = new StackPanel();
@@ -109,7 +108,6 @@ export class ColorPickerDemo extends ResourceDictionary {
             _border3.set_property_value(Border.CornerRadiusKey, 4);
             _border3.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Bottom);
             _border3.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border3.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _stackPanel19.AddChild(_border3);
             _stackPanel14.AddChild(_stackPanel19);
             const _stackPanel23 = new StackPanel();
@@ -136,7 +134,6 @@ export class ColorPickerDemo extends ResourceDictionary {
             _border4.set_property_value(Border.CornerRadiusKey, 4);
             _border4.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Bottom);
             _border4.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border4.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _stackPanel23.AddChild(_border4);
             _stackPanel14.AddChild(_stackPanel23);
             const _stackPanel27 = new StackPanel();
@@ -163,7 +160,6 @@ export class ColorPickerDemo extends ResourceDictionary {
             _border5.set_property_value(Border.CornerRadiusKey, 4);
             _border5.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Bottom);
             _border5.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border5.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _stackPanel27.AddChild(_border5);
             _stackPanel14.AddChild(_stackPanel27);
             _border13.SetChild(_stackPanel14);

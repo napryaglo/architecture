@@ -19,7 +19,6 @@ resources Lists {
         ClickableBorder x:name="PART_SelectionBox"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
               // Vertical padding is @Spacing1 (4), NOT @Spacing2 (8): a 32-DIP box
               // holding a ~20-DIP Body-Medium line box only has room for 6 DIP of
@@ -133,11 +132,10 @@ resources Lists {
     // PrepareContainerForItem hooks.
     Template x:key="DefaultComboBoxPopup" [TargetType = ComboBox] {
         ComboBoxPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_Popup"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (@Spacing0,@Spacing1,@Spacing0,@Spacing1) ] {
@@ -149,7 +147,7 @@ resources Lists {
         // thicker outlines on elevated surfaces when the user has opted
         // into a more-contrast environment. Mirrors the menu popup
         // family's PrefersContrast handling.
-        when ( ThemeManager.PrefersContrast = More ) { PART_Popup.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_Popup.Stroke = (@OutlineVariant, 2); }
     }
 
     // ── ComboBoxItem: popup row chrome ──────────────────────────────
@@ -175,7 +173,6 @@ resources Lists {
     // Content carries its own typography role.
     Style [TargetType = ComboBoxItem] {
         Fill = #00000000;
-        BorderThickness = (0);
         Padding = (@Spacing4,@Spacing2,@Spacing4,@Spacing2);
         when ( IsMouseOver ) { Fill = @StateHoverOverlay; }
         when ( IsFocused ) { Fill = @StateFocusOverlay; }
@@ -221,8 +218,7 @@ resources Lists {
     Template x:key="DefaultTreeViewItem" [TargetType = TreeViewItem] {
         StackPanel x:name="PART_OuterStack" [ Orientation = Vertical ] {
             ClickableRow x:name="PART_Row"
-                [ BorderThickness = (0),
-                  Padding         = (@Spacing2,@Spacing1,@Spacing2,@Spacing1),
+                [ Padding         = (@Spacing2,@Spacing1,@Spacing2,@Spacing1),
                   Height          = @ListRowHeightRegular ] {
                 // Anatomy layout: PART_Spacer (depth indent) and the
                 // chevron anchor on the left; PART_TrailingSlot anchors
@@ -232,8 +228,7 @@ resources Lists {
                 DockPanel x:name="PART_RowInner" [ LastChildFill = true ] {
                     Border x:name="PART_Spacer"
                         [ DockPanel.Dock  = Left,
-                          Width           = 0,
-                          BorderThickness = (0) ]
+                          Width           = 0 ]
                     // Chevron column is intrinsic to the tree-row shape
                     // (no M3 spec equivalent — TreeView isn't an M3
                     // component). Width=20 stays inline as a
@@ -241,8 +236,7 @@ resources Lists {
                     // being lifted to a spacing token.
                     ChevronTarget x:name="PART_Chevron"
                         [ DockPanel.Dock  = Left,
-                          Width           = 20,
-                          BorderThickness = (0) ] {
+                          Width           = 20 ] {
                         Shape x:name="PART_ChevronGlyph"
                             [ Geometry          = @ChevronRight,
                               Fill              = @OnSurfaceVariant,
@@ -255,19 +249,17 @@ resources Lists {
                     // the slot collapses when Leading is undefined.
                     Border x:name="PART_LeadingSlot"
                         [ DockPanel.Dock    = Left,
-                          VerticalAlignment = Center,
-                          BorderThickness   = (0) ]
+                          VerticalAlignment = Center ]
                     Border x:name="PART_TrailingSlot"
                         [ DockPanel.Dock    = Right,
-                          VerticalAlignment = Center,
-                          BorderThickness   = (0) ]
+                          VerticalAlignment = Center ]
                     StackPanel [ Orientation = Vertical, VerticalAlignment = Center ] {
                         // Header host — class-managed Border (like the
                         // leading slot). A data template's produced Visual
                         // lands here via SetChild; empty (Size.Zero) on the
                         // string-header path, where PART_Label carries the
                         // text. Exactly one of the two is ever non-empty.
-                        Border x:name="PART_HeaderHost" [ BorderThickness = (0) ]
+                        Border x:name="PART_HeaderHost"
                         TextBlock x:name="PART_Label"
                             [ Foreground = @OnSurface,
                               Style      = @BodyMedium ]
@@ -369,8 +361,7 @@ resources Lists {
     // with the colour ladder above.
     Template x:key="DefaultListBoxItem" [TargetType = ListBoxItem] {
         Border x:name="PART_Border"
-            [ BorderThickness = (0),
-              Padding         = (@Spacing2,@Spacing1,@Spacing2,@Spacing1),
+            [ Padding         = (@Spacing2,@Spacing1,@Spacing2,@Spacing1),
               Height          = @ListRowHeightRegular ] {
             // M3 list-row anatomy: leading slot | headline+supporting | trailing slot.
             // DockPanel — Leading docks left, Trailing right, the
@@ -398,12 +389,10 @@ resources Lists {
             DockPanel [ LastChildFill = true ] {
                 Border x:name="PART_LeadingSlot"
                     [ DockPanel.Dock    = Left,
-                      VerticalAlignment = Center,
-                      BorderThickness   = (0) ]
+                      VerticalAlignment = Center ]
                 Border x:name="PART_TrailingSlot"
                     [ DockPanel.Dock    = Right,
-                      VerticalAlignment = Center,
-                      BorderThickness   = (0) ]
+                      VerticalAlignment = Center ]
                 StackPanel [ Orientation = Vertical, VerticalAlignment = Center ] {
                     ContentPresenter x:name="PART_HeadlineSlot" [ HorizontalAlignment = Stretch ]
                     TextBlock x:name="PART_SupportingText"

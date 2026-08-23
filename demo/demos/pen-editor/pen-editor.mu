@@ -32,11 +32,13 @@ resources PenEditorDemo {
                 }
 
                 // ── Status strip ──────────────────────────────────
+                Line
+                    [ DockPanel.Dock = Bottom,
+                      Orientation    = Horizontal,
+                      Stroke         = (@OutlineVariant, 1) ]
                 Border
                     [ DockPanel.Dock  = Bottom,
                       Fill      = @SurfaceContainerLow,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,1,0,0),
                       Padding         = (20,10,20,10) ] {
                     StackPanel [ Orientation = Horizontal ] {
                         TextBlock
@@ -80,7 +82,6 @@ resources PenEditorDemo {
                               Padding         = (16,16,16,16),
                               Fill      = @SurfaceContainerLow,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               CornerRadius    = 8,
                               Margin          = (0,0,20,0) ] {
                             StackPanel [ Orientation = Vertical ] {
@@ -105,7 +106,6 @@ resources PenEditorDemo {
                               Padding         = (20),
                               Fill      = @SurfaceContainer,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               CornerRadius    = 8 ] {
                             Ellipse [ Width = 480, Height = 380, Stroke = $Pen ]
                         }

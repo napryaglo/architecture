@@ -25,49 +25,46 @@ resources DashboardDemo {
     // setting them).
     Style x:key="DashboardPrimaryCard" [TargetType = Border] {
         Fill = #4caf50;
-        Stroke = Pen [ Brush = #1b5e20 ];
-        BorderThickness = (2);
+        Stroke = (#1b5e20, 2);
         CornerRadius = (8);
         Padding = (16);
         when ( IsMouseOver ) {
             Fill = #66bb6a;
-            BorderThickness = (3);
+            Stroke = (#1b5e20, 3);
         }
         when ( IsPressed ) {
             Fill = #2e7d32;
-            BorderThickness = (4);
+            Stroke = (#1b5e20, 4);
         }
     }
 
     Style x:key="DashboardDangerCard" [TargetType = Border] {
         Fill = #d32f2f;
-        Stroke = Pen [ Brush = #7f0000 ];
-        BorderThickness = (2);
+        Stroke = (#7f0000, 2);
         CornerRadius = (8);
         Padding = (16);
         when ( IsMouseOver ) {
             Fill = #ef5350;
-            BorderThickness = (3);
+            Stroke = (#7f0000, 3);
         }
         when ( IsPressed ) {
             Fill = #b71c1c;
-            BorderThickness = (4);
+            Stroke = (#7f0000, 4);
         }
     }
 
     Style x:key="DashboardPaperCard" [TargetType = Border] {
         Fill = @Surface;
-        Stroke = Pen [ Brush = @OutlineVariant ];
-        BorderThickness = (1);
+        Stroke = (@OutlineVariant, 1);
         CornerRadius = (6);
         Padding = (20);
         when ( IsMouseOver ) {
             Fill = @SurfaceContainerHigh;
-            BorderThickness = (2);
+            Stroke = (@OutlineVariant, 2);
         }
         when ( IsPressed ) {
             Fill = @OutlineVariant;
-            BorderThickness = (3);
+            Stroke = (@OutlineVariant, 3);
         }
     }
 

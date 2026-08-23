@@ -20,7 +20,6 @@ export class StatusBarDemo extends ResourceDictionary {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border1.set_property_value(Border.CornerRadiusKey, 4);
             _border1.set_property_value(Border.VerticalAlignmentKey, VerticalAlignment.Top);
             _border1.set_property_value(Border.MarginKey, new Thickness(16, 16, 16, 16));

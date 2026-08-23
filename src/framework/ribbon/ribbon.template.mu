@@ -110,18 +110,17 @@ resources Ribbons {
     }
     Template x:key="DefaultRibbonDropDownPopup" [TargetType = RibbonDropDownButton] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (0) ] {
                 ItemsPresenter
             }
         }
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.Stroke = (@OutlineVariant, 2); }
     }
     Style [TargetType = RibbonDropDownButton] {
         Template = @DefaultRibbonDropDownPopup;
@@ -146,18 +145,17 @@ resources Ribbons {
     }
     Template x:key="DefaultRibbonSplitPopup" [TargetType = RibbonSplitButton] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (0) ] {
                 ItemsPresenter
             }
         }
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.Stroke = (@OutlineVariant, 2); }
     }
     Style [TargetType = RibbonSplitButton] {
         Template = @DefaultRibbonSplitPopup;
@@ -179,10 +177,13 @@ resources Ribbons {
     // with an optional `↘` launcher in the corner. PART_Launcher's width
     // is toggled by the control based on LaunchCommand presence.
     Template x:key="DefaultRibbonGroup" [TargetType = RibbonGroup] {
-        Border x:name="PART_Border"
-            [ Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,0,1,0),
-              Padding         = (@Spacing2) ] {
+        // Group separator — was PART_Border's one-sided right border
+        // BorderThickness (0,0,1,0). Now a 1dp vertical oriented Line docked
+        // at the group's right edge; the Border keeps only its padding.
+        DockPanel [ LastChildFill = true ] {
+            Line [ DockPanel.Dock = Right, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
+            Border x:name="PART_Border"
+                [ Padding         = (@Spacing2) ] {
             DockPanel [ LastChildFill = true ] {
                 Grid [ DockPanel.Dock = Bottom ] {
                     // Content-height row (the header label + corner
@@ -205,6 +206,7 @@ resources Ribbons {
                 StackPanel [ Orientation = Horizontal, VerticalAlignment = Center ] {
                     ItemsPresenter
                 }
+            }
             }
         }
     }
@@ -232,15 +234,21 @@ resources Ribbons {
     // transparent (stable look). IsCurrent underlines the selected tab
     // with @Primary; hover shows a fainter @Outline underline.
     Template x:key="DefaultRibbonTabHeader" [TargetType = RibbonTabHeader] {
-        Border x:name="PART_Border"
-            [ Fill      = $$AccentBrush,
-              Stroke     = Pen [ Brush = #00000000 ],
-              BorderThickness = (0,0,0,2),
-              Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2) ] {
-            ContentPresenter [ VerticalAlignment = Center ]
+        DockPanel [ LastChildFill = true ] {
+            // Selected/hover underline — was PART_Border's one-sided bottom
+            // border BorderThickness (0,0,0,2), transparent until IsCurrent /
+            // IsMouseOver flipped its stroke. Now a 2dp horizontal oriented
+            // Line docked at the header's bottom edge; the triggers below
+            // repaint the Line's stroke brush.
+            Line x:name="PART_Indicator" [ DockPanel.Dock = Bottom, Orientation = Horizontal, Stroke = (#00000000, 2) ]
+            Border x:name="PART_Border"
+                [ Fill      = $$AccentBrush,
+                  Padding         = (@Spacing4,@Spacing2,@Spacing4,@Spacing2) ] {
+                ContentPresenter [ VerticalAlignment = Center ]
+            }
         }
-        when ( IsMouseOver ) { PART_Border.Stroke = Pen [ Brush = @Outline ]; }
-        when ( IsCurrent ) { PART_Border.Stroke = Pen [ Brush = @Primary ]; }
+        when ( IsMouseOver ) { PART_Indicator.Stroke = (@Outline, 2); }
+        when ( IsCurrent ) { PART_Indicator.Stroke = (@Primary, 2); }
         // Adaptive layout — the tab strip has no Size DP (that's the invoker
         // knob), so it carries the full density + coarse-pointer ladder on
         // its header padding, scaled from the resting (16,8) on the 4dp grid.
@@ -269,7 +277,6 @@ resources Ribbons {
     Template x:key="DefaultRibbonGallery" [TargetType = RibbonGallery] {
         Border
             [ Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
               Padding         = (@Spacing1) ] {
             DockPanel [ LastChildFill = true ] {
@@ -282,18 +289,17 @@ resources Ribbons {
     }
     Template x:key="DefaultRibbonGalleryPopup" [TargetType = RibbonGallery] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupContainer"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (@Spacing2) ] {
                 RibbonGalleryPopupList x:name="PART_PopupList" [ MaxWidth = 320 ]
             }
         }
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupContainer.Stroke = (@OutlineVariant, 2); }
     }
     Style [TargetType = RibbonGallery] {
         Template = @DefaultRibbonGallery;
@@ -307,9 +313,7 @@ resources Ribbons {
     // PART_BodyContainer collapses when IsMinimized.
     Template x:key="DefaultRibbon" [TargetType = Ribbon] {
         Border x:name="PART_Root"
-            [ Fill      = @SurfaceContainerLow,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,0,0,1) ] {
+            [ Fill      = @SurfaceContainerLow ] {
             DockPanel [ LastChildFill = true ] {
                 StackPanel x:name="PART_Qat"
                     [ DockPanel.Dock = Top,
@@ -321,6 +325,10 @@ resources Ribbons {
                     }
                     StackPanel x:name="PART_TabStrip" [ Orientation = Horizontal ]
                 }
+                // Bottom edge rule — was PART_Root's one-sided bottom border
+                // BorderThickness (0,0,0,1); now a 1dp horizontal oriented Line
+                // docked at the ribbon's bottom edge.
+                Line [ DockPanel.Dock = Bottom, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
                 Border x:name="PART_BodyContainer"
                     [ DockPanel.Dock = Top,
                       Fill      = @Surface,

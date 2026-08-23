@@ -18,7 +18,6 @@ export class SplitterDemo extends ResourceDictionary {
             const _border1 = new Border();
             _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
             _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel2 = new DockPanel();
             const _border3 = new Border();
             _border3.set_property_value(DockPanel.DockKey, Dock.Top);
@@ -52,7 +51,6 @@ export class SplitterDemo extends ResourceDictionary {
             const _border9 = new Border();
             _border9.set_property_value(Border.HeightKey, 140);
             _border9.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
-            _border9.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _stackPanel10 = new StackPanel();
             _stackPanel10.set_property_value(StackPanel.OrientationKey, Orientation.Horizontal);
             const _border11 = new Border();
@@ -96,7 +94,6 @@ export class SplitterDemo extends ResourceDictionary {
             const _border17 = new Border();
             _border17.set_property_value(Border.HeightKey, 260);
             _border17.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
-            _border17.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel18 = new DockPanel();
             const _border19 = new Border();
             _border19.set_property_value(DockPanel.DockKey, Dock.Top);

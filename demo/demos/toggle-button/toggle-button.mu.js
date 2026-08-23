@@ -22,7 +22,6 @@ export class ToggleButtonDemo extends ResourceDictionary {
                 _border1.Name = "PART_Border";
                 _border1.set_property_value(Border.FillKey, DynamicResource(_border1, "Surface"));
                 _border1.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
-                _border1.set_property_value(Border.BorderThicknessKey, new Thickness(1));
                 _border1.set_property_value(Border.CornerRadiusKey, DynamicResource(_border1, "ShapeSmall"));
                 _border2 = new Border();
                 _border2.Name = "PART_StateLayer";
@@ -54,7 +53,6 @@ export class ToggleButtonDemo extends ResourceDictionary {
             const _border17 = new Border();
             _border17.set_property_value(Border.FillKey, DynamicResource(_border17, "Surface"));
             _border17.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border17.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _dockPanel18 = new DockPanel();
             const _border19 = new Border();
             _border19.set_property_value(DockPanel.DockKey, Dock.Top);
@@ -104,7 +102,6 @@ export class ToggleButtonDemo extends ResourceDictionary {
             _border29.set_property_value(Border.FillKey, DynamicResource(_border29, "SurfaceContainerLow"));
             _border29.set_property_value(Border.PaddingKey, new Thickness(12, 12, 12, 12));
             _border29.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
-            _border29.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _stackPanel30 = new StackPanel();
             _stackPanel30.set_property_value(StackPanel.OrientationKey, Orientation.Vertical);
             const _textBlock31 = new TextBlock();

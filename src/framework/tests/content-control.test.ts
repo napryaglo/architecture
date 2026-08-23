@@ -1,8 +1,8 @@
 ﻿import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Color, MetaData, MuralBase, Rect, Size, Thickness, Element, Visual, type DrawingContext } from '../../runtime/index.js';
+import { Color, MetaData, MuralBase, Rect, Size, Element, Visual, type DrawingContext } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
-import { SolidColorBrush, FontWeight } from '../../visual-engine/index.js';
+import { Pen, SolidColorBrush, FontWeight } from '../../visual-engine/index.js';
 import { Border, ContentPresenter, ControlTemplate, TemplateBinding, DataTemplate, TextBlock } from '../../basic/index.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
 import { ContentControl } from '@pragmatic-lab/mural/framework';
@@ -353,7 +353,7 @@ describe('ContentControl + ControlTemplate', () => {
         const template = new ControlTemplate(tp => {
             const b = new Border();
             b.set_property_value(resolveKey(b, undefined, 'Fill'), TemplateBinding(tp, 'Background'));
-            b.BorderThickness = new Thickness(1);
+            b.Stroke = new Pen(new SolidColorBrush(Color.Black), 1);
             return b;
         });
 

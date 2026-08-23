@@ -1,6 +1,6 @@
 ﻿import { MuralBase, Element } from '../../runtime/index.js';
 import { Pen } from '../../visual-engine/index.js';
-import { Figure } from './figure.js';
+import { Figure, registerFigureKind } from './figure.js';
 import { TextAutoFit } from './shape-text.js';
 import { DiagramSettings } from './diagram-settings.js';
 
@@ -11,11 +11,12 @@ const TEXT_NODE_DEFAULT_W = 120;
 const TEXT_NODE_DEFAULT_H = 44;
 
 // A text-box node: a *shapeless* Figure (no silhouette `_source`) whose
-// ShapeText grows the box to fit. The box + label are drawn by
-// Style[TargetType=TextNode] (a bordered PART_LabelHost); geometry, GrowShape
-// auto-fit, {field} resolution and in-place edit are all Figure-native. Being
-// shapeless keeps `_getSource()` undefined, so the 'shape' serializer (which
-// requires a source) leaves it to the 'text' serializer.
+// ShapeText grows the box to fit. The Figure paints its OWN box — a rounded-rect
+// card honouring the Fill/Stroke pen (PaintsCardBox); the template just hosts the
+// label in PART_LabelHost. Geometry, GrowShape auto-fit, {field} resolution and
+// in-place edit are all Figure-native. Being shapeless keeps `_getSource()`
+// undefined, so the 'shape' serializer (which requires a source) leaves it to the
+// 'text' serializer.
 export class TextNode extends Figure
 {
     static { MuralBase.OverrideMetadata(TextNode, Element.DefaultStyleKeyKey, { default_value: TextNode }); }
@@ -33,4 +34,23 @@ export class TextNode extends Figure
         this.Width  = TEXT_NODE_DEFAULT_W;
         this.Height = TEXT_NODE_DEFAULT_H;
     }
+
+    // A text box draws its box AS the Figure (rounded-rect card honouring the
+    // Fill/Stroke pen), not via a template Border — so the Format Shape stroke
+    // editor takes effect. Inherited by Callout.
+    protected override get PaintsCardBox(): boolean { return true; }
 }
+
+// Register 'text' so Figure.fromKind('text', …) (toolbox drop / tile preview)
+// mints a TextNode. Runs on module load; importing TextNode wires the kind.
+registerFigureKind('text', (left, top, options) =>
+{
+    const t = new TextNode();
+    t.Left   = left;
+    t.Top    = top;
+    t.Width  = options?.width  ?? TEXT_NODE_DEFAULT_W;
+    t.Height = options?.height ?? TEXT_NODE_DEFAULT_H;
+    t.BaseWidth  = t.Width;
+    t.BaseHeight = t.Height;
+    return t;
+});

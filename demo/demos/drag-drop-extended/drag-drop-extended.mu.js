@@ -59,7 +59,6 @@ export class DragDropExtendedDemo extends ResourceDictionary {
             _border14.SetNameScope(new NameScope());
             _border14.set_property_value(Border.FillKey, DynamicResource(_border14, "Surface"));
             _border14.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border14.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             const _rd15 = _border14.Resources;
             const _setter16 = new Setter(ContentPresenter, "IsDraggable", true);
             const _setter17 = new Setter(ContentPresenter, "OnDragStart", new SetterFactory((_t) => DataContextBinding(_t, "BeginDragData")));
@@ -117,7 +116,6 @@ export class DragDropExtendedDemo extends ResourceDictionary {
             _border29.set_property_value(Border.WidthKey, 320);
             _border29.set_property_value(Border.HeightKey, 280);
             _border29.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "OutlineVariant"); return _e; })(new Pen()));
-            _border29.set_property_value(Border.BorderThicknessKey, new Thickness(1));
             _border29.set_property_value(Border.MarginKey, new Thickness(0, 0, 16, 0));
             _scrollViewer11 = new ScrollViewer();
             _scrollViewer11.Name = "scroll";
@@ -138,8 +136,7 @@ export class DragDropExtendedDemo extends ResourceDictionary {
             const _border31 = new Border();
             _border31.set_property_value(Border.WidthKey, 320);
             _border31.set_property_value(Border.HeightKey, 280);
-            _border31.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); return _e; })(new Pen()));
-            _border31.set_property_value(Border.BorderThicknessKey, new Thickness(2));
+            _border31.set_property_value(Border.StrokeKey, ((_e) => { _e.Brush = DynamicResource(_e, "Outline"); _e.Thickness = 2; return _e; })(new Pen()));
             _border31.set_property_value(Border.FillKey, DynamicResource(_border31, "SurfaceContainerLow"));
             const _dockPanel32 = new DockPanel();
             const _border33 = new Border();

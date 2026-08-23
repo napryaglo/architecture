@@ -25,8 +25,7 @@ resources DragDropDemo {
     DataTemplate [DataType = DragDropVM] {
         Border x:root
             [ Fill      = @Surface,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1) ] {
+              Stroke     = Pen [ Brush = @OutlineVariant ] ] {
             resources: {
                 // ListBoxItem container style — declarative drag source.
                 // Lives in the shell's local resources so the implicit
@@ -78,8 +77,7 @@ resources DragDropDemo {
                         [ Width             = 220,
                           VerticalAlignment = Stretch,
                           Margin            = (0,0,16,0),
-                          Stroke       = Pen [ Brush = @OutlineVariant ],
-                          BorderThickness   = (1) ] {
+                          Stroke       = Pen [ Brush = @OutlineVariant ] ] {
                         DockPanel {
                             TextBlock
                                 [ DockPanel.Dock = Top,
@@ -95,8 +93,7 @@ resources DragDropDemo {
                     Border
                         [ Width             = 220,
                           VerticalAlignment = Stretch,
-                          Stroke       = Pen [ Brush = @OutlineVariant ],
-                          BorderThickness   = (1) ] {
+                          Stroke       = Pen [ Brush = @OutlineVariant ] ] {
                         DockPanel {
                             TextBlock
                                 [ DockPanel.Dock = Top,

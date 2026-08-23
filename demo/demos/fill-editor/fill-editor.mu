@@ -29,11 +29,11 @@ resources FillEditorDemo {
                 // ── Status strip ──────────────────────────────────
                 Border
                     [ DockPanel.Dock  = Bottom,
-                      Fill      = @SurfaceContainerLow,
-                      Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (0,1,0,0),
-                      Padding         = (20,10,20,10) ] {
-                    TextBlock [ Text = $FillSummary, FontSize = 11, Foreground = @OnSurfaceVariant ]
+                      Fill      = @SurfaceContainerLow ] {
+                    DockPanel {
+                    Line [ DockPanel.Dock = Top, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
+                    TextBlock [ Text = $FillSummary, FontSize = 11, Foreground = @OnSurfaceVariant, Margin = (20,10,20,10) ]
+                    }
                 }
 
                 // ── Body ──────────────────────────────────────────
@@ -45,7 +45,6 @@ resources FillEditorDemo {
                               Padding         = (16,16,16,16),
                               Fill      = @SurfaceContainerLow,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               CornerRadius    = 8,
                               Margin          = (0,0,20,0) ] {
                             StackPanel [ Orientation = Vertical ] {
@@ -69,7 +68,6 @@ resources FillEditorDemo {
                               Padding         = (20),
                               Fill      = @SurfaceContainer,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               CornerRadius    = 8 ] {
                             Rectangle
                                 [ Width  = 480,

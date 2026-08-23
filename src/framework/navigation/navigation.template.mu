@@ -139,10 +139,11 @@ resources Navigation {
     Template x:key="DefaultNavigationRail" [TargetType = NavigationRail] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,0,1,0),
               Width           = 80 ] {
             DockPanel [ LastChildFill = true ] {
+                // Right edge rule (was the Border's (0,0,1,0) right edge): a
+                // vertical Line docked Right draws the 1dp rail/body divider.
+                Line [ DockPanel.Dock = Right, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
                 ContentPresenter x:name="PART_HeaderSlot"
                     [ DockPanel.Dock      = Top,
                       HorizontalAlignment = Center,
@@ -175,10 +176,14 @@ resources Navigation {
     Template x:key="DefaultNavigationBar" [TargetType = NavigationBar] {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,1,0,0),
               Height          = 80 ] {
-            ItemsPresenter x:name="PART_ItemsPresenter" [ VerticalAlignment = Center ]
+            // Top edge rule (was the Border's (0,1,0,0) top edge): a horizontal
+            // Line docked Top over the items row. A DockPanel wraps them so the
+            // Line pins to the top and the ItemsPresenter fills the remainder.
+            DockPanel [ LastChildFill = true ] {
+                Line [ DockPanel.Dock = Top, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
+                ItemsPresenter x:name="PART_ItemsPresenter" [ VerticalAlignment = Center ]
+            }
         }
     }
 
@@ -219,10 +224,11 @@ resources Navigation {
     Template x:key="ActivityBarRail" [TargetType = NavigationRail] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHigh,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (0,0,1,0),
               Width           = 48 ] {
             DockPanel [ LastChildFill = true ] {
+                // Right edge rule (was the Border's (0,0,1,0) right edge): a
+                // vertical Line docked Right draws the 1dp activity-bar divider.
+                Line [ DockPanel.Dock = Right, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
                 ItemsControl x:name="PART_HeaderActions"
                     [ DockPanel.Dock     = Top,
                       HorizontalAlignment = Center,

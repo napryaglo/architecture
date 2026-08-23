@@ -17,7 +17,7 @@ resources Surfaces {
     // PART_StateLayer overlay that composites @StateHoverOverlay /
     // @StatePressOverlay on hover / press. All three share the same
     // @ShapeMedium corner radius and the same 16dp content padding;
-    // they differ in Fill, BorderThickness, and resting Effect.
+    // they differ in Fill, Stroke, and resting Effect.
     //
     // Hover behaviour (all variants): elevation bumps one level above
     // the resting value (Filled / Outlined go Level0 → Level1, Elevated
@@ -35,7 +35,6 @@ resources Surfaces {
     Template x:key="DefaultFilledCard" [TargetType = Card] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerHighest,
-              BorderThickness = (0),
               CornerRadius    = @ShapeMedium ] {
             Border x:name="PART_StateLayer"
                 [ Fill   = #00000000,
@@ -61,7 +60,6 @@ resources Surfaces {
     Template x:key="DefaultElevatedCard" [TargetType = Card] {
         Border x:name="PART_Border"
             [ Fill      = @SurfaceContainerLow,
-              BorderThickness = (0),
               CornerRadius    = @ShapeMedium,
               Effect          = @ElevationLevel1 ] {
             Border x:name="PART_StateLayer"
@@ -88,7 +86,6 @@ resources Surfaces {
         Border x:name="PART_Border"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeMedium ] {
             Border x:name="PART_StateLayer"
                 [ Fill   = #00000000,
@@ -102,7 +99,7 @@ resources Surfaces {
             PART_Border.Effect = @ElevationLevel1;
         }
         when ( IsPressed ) { PART_StateLayer.Fill = @StatePressOverlay; }
-        when ( ThemeManager.PrefersContrast = More ) { PART_Border.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_Border.Stroke = (@Outline, 2); }
         // Density — the outlined variant's resting padding is 15 (16 − 1dp
         // border), so the ladder keeps that −1 offset: 11 / 23.
         when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (11,11,11,11); }
@@ -163,7 +160,6 @@ resources Surfaces {
         Border x:name="PART_Pane"
             [ Fill      = @SurfaceContainerLow,
               Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1),
               Padding         = (@Spacing0,@Spacing3,@Spacing0,@Spacing0) ] {
             ContentPresenter
         }
@@ -189,7 +185,6 @@ resources Surfaces {
         Border x:name="PART_Dialog"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = #00000000 ],
-              BorderThickness = (0),
               CornerRadius    = @ShapeExtraLarge,
               Effect          = @Elevation3,
               Padding         = (@Spacing6,@Spacing6,@Spacing6,@Spacing6) ] {
@@ -228,7 +223,6 @@ resources Surfaces {
         Border x:name="PART_Sheet"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = #00000000 ],
-              BorderThickness = (0),
               CornerRadius    = (@ShapeExtraLarge,@ShapeExtraLarge,0,0),
               Effect          = @Elevation1,
               Padding         = (@Spacing4,@Spacing4,@Spacing4,@Spacing4) ] {
@@ -253,37 +247,51 @@ resources Surfaces {
     // Standard variant keeps it docked in-flow.
     Template x:key="DefaultSideSheet" [TargetType = SideSheet] {
         Border x:name="PART_Sheet"
-            [ Fill      = @SurfaceContainerLow,
-              Stroke     = Pen [ Brush = @OutlineVariant ],
-              BorderThickness = (1,0,0,0) ] {
-            Grid {
-                RowDefinitions {
-                    RowDefinition [ Height = GridLength.Auto ]
-                    RowDefinition [ Height = GridLength.Star ]
-                }
-                // Body — first ContentPresenter in the walk = the Content
-                // slot; placed in row 1 (below the header).
-                ContentPresenter
-                    [ Grid.Row = 1,
-                      Margin   = (@Spacing4,@Spacing2,@Spacing4,@Spacing4) ]
-                // Header — title + close, row 0.
-                Border [ Grid.Row = 0, Padding = (@Spacing4,@Spacing3,@Spacing2,@Spacing3) ] {
-                    DockPanel [ LastChildFill = true ] {
-                        IconButton x:name="PART_CloseButton"
-                            [ Variant = Standard, DockPanel.Dock = Right ] {
-                            Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 18, Height = 18 ]
+            [ Fill      = @SurfaceContainerLow ] {
+            // Docked-edge divider — was Border BorderThickness (1,0,0,0) on
+            // the trailing sheet's leading edge, flipped to (0,0,1,0) when
+            // Anchor=Left. Both cases are a 1dp VERTICAL rule on the edge
+            // facing the content interior; modelled here as two docked
+            // vertical Lines, only one shown at a time. Default (trailing /
+            // right-anchored sheet) shows the LEFT rule; Anchor=Left shows
+            // the RIGHT rule.
+            DockPanel [ LastChildFill = true ] {
+                Line x:name="PART_DividerLeft"
+                    [ DockPanel.Dock = Left, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
+                Line x:name="PART_DividerRight"
+                    [ DockPanel.Dock = Right, Orientation = Vertical, Stroke = (@OutlineVariant, 1), Visibility = Collapsed ]
+                Grid {
+                    RowDefinitions {
+                        RowDefinition [ Height = GridLength.Auto ]
+                        RowDefinition [ Height = GridLength.Star ]
+                    }
+                    // Body — first ContentPresenter in the walk = the Content
+                    // slot; placed in row 1 (below the header).
+                    ContentPresenter
+                        [ Grid.Row = 1,
+                          Margin   = (@Spacing4,@Spacing2,@Spacing4,@Spacing4) ]
+                    // Header — title + close, row 0.
+                    Border [ Grid.Row = 0, Padding = (@Spacing4,@Spacing3,@Spacing2,@Spacing3) ] {
+                        DockPanel [ LastChildFill = true ] {
+                            IconButton x:name="PART_CloseButton"
+                                [ Variant = Standard, DockPanel.Dock = Right ] {
+                                Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 18, Height = 18 ]
+                            }
+                            TextBlock x:name="PART_Title"
+                                [ Text              = $$Title,
+                                  Style             = @TitleSmall,
+                                  Foreground        = @OnSurface,
+                                  VerticalAlignment = Center ]
                         }
-                        TextBlock x:name="PART_Title"
-                            [ Text              = $$Title,
-                              Style             = @TitleSmall,
-                              Foreground        = @OnSurface,
-                              VerticalAlignment = Center ]
                     }
                 }
             }
         }
         // Leading-edge variant — flip the divider to the trailing side.
-        when ( Anchor = Left ) { PART_Sheet.BorderThickness = (0,0,1,0); }
+        when ( Anchor = Left ) {
+            PART_DividerLeft.Visibility  = Collapsed;
+            PART_DividerRight.Visibility = Visible;
+        }
     }
     Style [TargetType = SideSheet] {
         Template = @DefaultSideSheet;

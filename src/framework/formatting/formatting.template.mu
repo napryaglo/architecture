@@ -21,7 +21,6 @@ resources Formatting {
         ClickableBorder x:name="PART_SelectionTrigger"
             [ Fill          = @Surface,
               Stroke         = Pen [ Brush = @Outline ],
-              BorderThickness     = (1),
               CornerRadius        = @ShapeExtraSmall,
               HorizontalAlignment = Left,
               Padding             = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
@@ -31,7 +30,6 @@ resources Formatting {
                       Height          = 18,
                       CornerRadius    = 3,
                       Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (1),
                       Margin          = (0,0,@Spacing3,0),
                       Fill      = $$SwatchBrush ]
                 Shape x:name="PART_Chevron"
@@ -90,11 +88,10 @@ resources Formatting {
     // its own resolved Fill colour.
     Template x:key="DefaultColorPickerPopup" [TargetType = ColorPicker] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (0),
@@ -134,7 +131,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #C00000 ]
                         ClickableBorder
@@ -142,7 +138,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #FF0000 ]
                         ClickableBorder
@@ -150,7 +145,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #FFC000 ]
                         ClickableBorder
@@ -158,7 +152,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #FFFF00 ]
                         ClickableBorder
@@ -166,7 +159,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #92D050 ]
                         ClickableBorder
@@ -174,7 +166,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #00B050 ]
                         ClickableBorder
@@ -182,7 +173,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #00B0F0 ]
                         ClickableBorder
@@ -190,7 +180,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #0070C0 ]
                         ClickableBorder
@@ -198,7 +187,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,2,0),
                               Fill      = #002060 ]
                         ClickableBorder
@@ -206,7 +194,6 @@ resources Formatting {
                               Height          = 16,
                               CornerRadius    = 2,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,0,0),
                               Fill      = #7030A0 ]
                     }
@@ -299,7 +286,7 @@ resources Formatting {
             PART_SchemeButton.Fill = @StateHoverOverlay;
         }
         when ( PART_MoreColors.IsMouseOver ) { PART_MoreColors.Fill = @StateHoverOverlay; }
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.Stroke = (@OutlineVariant, 2); }
     }
 
     // ── ColorPicker: More Colors… dialog ───────────────────────────
@@ -312,11 +299,10 @@ resources Formatting {
     // color-picker.ts (PART_HsBox / PART_VRail / PART_RSlider / …).
     Template x:key="DefaultColorPickerMoreColors" [TargetType = ColorPicker] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (10),
@@ -334,7 +320,6 @@ resources Formatting {
                               Height          = 36,
                               CornerRadius    = 4,
                               Stroke     = Pen [ Brush = @OutlineVariant ],
-                              BorderThickness = (1),
                               Margin          = (0,0,8,0),
                               Fill      = $$SwatchBrush ]
                         TextBox x:name="PART_HexInput" [ Width = 220, VerticalAlignment = Center ]
@@ -348,15 +333,13 @@ resources Formatting {
                                 [ Width           = 12,
                                   Height          = 12,
                                   CornerRadius    = 6,
-                                  Stroke     = Pen [ Brush = #ffffff ],
-                                  BorderThickness = (2) ]
+                                  Stroke     = (#ffffff, 2) ]
                         }
                         Canvas x:name="PART_VRail" [ Width = 20, Height = 140, Margin = (12,0,0,0) ] {
                             Border x:name="PART_VRailFill"
                                 [ Width           = 20,
                                   Height          = 140,
-                                  Stroke     = Pen [ Brush = @OutlineVariant ],
-                                  BorderThickness = (1) ]
+                                  Stroke     = Pen [ Brush = @OutlineVariant ] ]
                             Border x:name="PART_VRailCursor"
                                 [ Width      = 26,
                                   Height     = 4,
@@ -449,7 +432,7 @@ resources Formatting {
         }
 
         when ( PART_MoreCancel.IsMouseOver ) { PART_MoreCancel.Fill = @StateHoverOverlay; }
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.Stroke = (@OutlineVariant, 2); }
     }
 
     // ── ColorPicker: scheme gallery (Office "Colors") ──────────────
@@ -459,11 +442,10 @@ resources Formatting {
     // selecting one sets the ColorScheme and returns to the dropdown.
     Template x:key="DefaultColorPickerSchemeGallery" [TargetType = ColorPicker] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (@Spacing2),
@@ -479,7 +461,7 @@ resources Formatting {
             }
         }
 
-        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.BorderThickness = (2); }
+        when ( ThemeManager.PrefersContrast = More ) { PART_PopupBody.Stroke = (@OutlineVariant, 2); }
     }
 
     Style [TargetType = ColorPicker] {
@@ -501,7 +483,6 @@ resources Formatting {
         ClickableBorder x:name="PART_SelectionTrigger"
             [ Fill      = @Surface,
               Stroke     = Pen [ Brush = @Outline ],
-              BorderThickness = (1),
               CornerRadius    = @ShapeExtraSmall,
               Padding         = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
             StackPanel [ Orientation = Horizontal ] {
@@ -510,7 +491,6 @@ resources Formatting {
                       Height          = 18,
                       CornerRadius    = 3,
                       Stroke     = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness = (1),
                       Margin          = (0,0,@Spacing3,0),
                       Fill      = $$PreviewBrush ]
                 TextBlock x:name="PART_VariantLabel"
@@ -573,11 +553,10 @@ resources Formatting {
     // Solid variant popup — embeds a ColorPicker for the colour body.
     Template x:key="DefaultBrushPickerSolid" [TargetType = BrushPicker] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (10),
@@ -637,11 +616,10 @@ resources Formatting {
     // angle (degrees) onto StartPoint/EndPoint in [0,1] bbox coords.
     Template x:key="DefaultBrushPickerLinear" [TargetType = BrushPicker] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (10),
@@ -726,11 +704,10 @@ resources Formatting {
     // Radius in [0..100].
     Template x:key="DefaultBrushPickerRadial" [TargetType = BrushPicker] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (10),
@@ -845,11 +822,10 @@ resources Formatting {
     // map straight through onto PatternBrush.Kind.
     Template x:key="DefaultBrushPickerPattern" [TargetType = BrushPicker] {
         MenuPopupHost x:name="PART_PopupHost" {
-            ClickAwayScrim x:name="PART_Scrim" [ BorderThickness = (0) ]
+            ClickAwayScrim x:name="PART_Scrim"
             Border x:name="PART_PopupBody"
                 [ Fill      = @SurfaceContainerHigh,
                   Stroke     = Pen [ Brush = @OutlineVariant ],
-                  BorderThickness = (1),
                   CornerRadius    = @ShapeExtraSmall,
                   Effect          = @Elevation2,
                   Padding         = (10),
@@ -1211,7 +1187,6 @@ resources Formatting {
                 ClickableBorder x:name="PART_TabNone"
                     [ Fill          = @Surface,
                       Stroke         = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
                       Margin              = (0,0,4,4),
@@ -1225,7 +1200,6 @@ resources Formatting {
                 ClickableBorder x:name="PART_TabSolid"
                     [ Fill          = @Surface,
                       Stroke         = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
                       Margin              = (0,0,4,4),
@@ -1239,7 +1213,6 @@ resources Formatting {
                 ClickableBorder x:name="PART_TabLinear"
                     [ Fill          = @Surface,
                       Stroke         = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
                       Margin              = (0,0,4,4),
@@ -1253,7 +1226,6 @@ resources Formatting {
                 ClickableBorder x:name="PART_TabRadial"
                     [ Fill          = @Surface,
                       Stroke         = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
                       Margin              = (0,0,4,4),
@@ -1267,7 +1239,6 @@ resources Formatting {
                 ClickableBorder x:name="PART_TabPattern"
                     [ Fill          = @Surface,
                       Stroke         = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
                       Margin              = (0,0,4,4),
@@ -1281,7 +1252,6 @@ resources Formatting {
                 ClickableBorder x:name="PART_TabPicture"
                     [ Fill          = @Surface,
                       Stroke         = Pen [ Brush = @OutlineVariant ],
-                      BorderThickness     = (1),
                       CornerRadius        = @ShapeExtraSmall,
                       Padding             = (12,6,12,6),
                       Margin              = (0,0,4,4),

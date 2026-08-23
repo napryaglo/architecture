@@ -22,14 +22,13 @@ import DrawerVM from "./drawer-vm.mjs"
 
 resources DrawerDemo {
     DataTemplate [DataType = DrawerVM] {
-        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ], BorderThickness = (1) ] {
+        Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel {
                 // ── Header bar (Top) ───────────────────────────
                 Border
                     [ DockPanel.Dock  = Top,
                       Height          = 56,
-                      Fill      = @Primary,
-                      BorderThickness = (0,0,0,0) ] {
+                      Fill      = @Primary ] {
                     StackPanel [ Orientation = Horizontal ] {
                         Button [ Width = 44, Command = $ToggleNav ] {
                             TextBlock [ Text = "≡", FontSize = 20 ]
@@ -52,13 +51,14 @@ resources DrawerDemo {
                       RailSize       = 56,
                       IsOpen         = $NavOpen ] {
                     Border
-                        [ Fill      = @SurfaceContainerLow,
-                          BorderThickness = (0,0,1,0),
-                          Stroke     = Pen [ Brush = @OutlineVariant ] ] {
+                        [ Fill      = @SurfaceContainerLow ] {
+                        DockPanel {
+                        Line [ DockPanel.Dock = Right, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
                         StackPanel {
                             TextBlock [ Text = "🏠", FontSize = 18, Margin = (20,16,0,0) ]
                             TextBlock [ Text = "📊", FontSize = 18, Margin = (20,16,0,0) ]
                             TextBlock [ Text = "⚙", FontSize = 18, Margin = (20,16,0,0) ]
+                        }
                         }
                     }
                 }
@@ -73,11 +73,10 @@ resources DrawerDemo {
                       DrawerSize = 320,
                       IsOpen     = $OptionsOpen ] {
                     Border
-                        [ Fill      = @Surface,
-                          BorderThickness = (1,0,0,0),
-                          Stroke     = Pen [ Brush = @OutlineVariant ],
-                          Padding         = (24) ] {
-                        StackPanel {
+                        [ Fill      = @Surface ] {
+                        DockPanel {
+                        Line [ DockPanel.Dock = Left, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
+                        StackPanel [ Margin = (24) ] {
                             TextBlock
                                 [ Text       = "Options",
                                   FontSize   = 20,
@@ -92,6 +91,7 @@ resources DrawerDemo {
                             Button [ Command = $CloseOptions, Margin = (0,24,0,0), Width = 120 ] {
                                 TextBlock [ Text = "Close" ]
                             }
+                        }
                         }
                     }
                 }
