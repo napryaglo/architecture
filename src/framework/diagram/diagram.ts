@@ -1926,13 +1926,23 @@ export class Diagram extends Selector implements RigidConnectorDragHost
                 node.SizeToContent = !(node instanceof ContainerFigure);
                 // A content tile styles like a rounded-rect card via its own
                 // Fill/Stroke (Format Shape edits the container — see FormatMirror
-                // paint targets). Default both TRANSPARENT so an unstyled tile
-                // reads as a bare icon, yet the Style page still engages (its
-                // editors only blank when BOTH are undefined; a transparent brush
-                // is defined). Per-instance so the mirror's in-place Pen edits
-                // don't leak across tiles.
-                node.Fill   = new SolidColorBrush(Color.FromHex('#00000000'));
-                node.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#00000000')), 1);
+                // paint targets). A leaf tile defaults both TRANSPARENT so it reads
+                // as a bare icon, yet the Style page still engages (its editors only
+                // blank when BOTH are undefined; a transparent brush is defined). A
+                // CONTAINER holds children, so it instead defaults to a visible box —
+                // a faint themed surface wash + an outline border — from the tunable
+                // DiagramSettings container tokens; a Format-Shape edit overrides
+                // these. Per-instance so the mirror's in-place Pen edits don't leak.
+                if (node instanceof ContentContainerFigure)
+                {
+                    node.Fill   = DiagramSettings.ContainerDefaultFill();
+                    node.Stroke = new Pen(DiagramSettings.ContainerDefaultStroke(), 1.5);
+                }
+                else
+                {
+                    node.Fill   = new SolidColorBrush(Color.FromHex('#00000000'));
+                    node.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#00000000')), 1);
+                }
                 // A per-instance port topology the VM opts into (duck-typed) —
                 // else the container keeps its default bbox ports.
                 const provider = (item as { PortProvider?: IPortProvider }).PortProvider;
