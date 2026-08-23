@@ -246,11 +246,11 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
       category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#94a3b8')) },
 
     { key: DiagramSettingKey.ContainerDefaultFill, label: 'Container fill',
-      description: 'Faint surface wash of a content (VM-backed) container box, so it reads as a box that holds children. Defaults to a theme SurfaceContainerHigh wash; override to pin a colour.',
-      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#3b82f614')) },
+      description: 'Faint brand wash of a content (VM-backed) container box, so it reads as a box that holds children. Defaults to a theme Primary wash; override to pin a colour.',
+      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#3b82f61c')) },
     { key: DiagramSettingKey.ContainerDefaultStroke, label: 'Container stroke',
-      description: 'Outline of a content (VM-backed) container box. Defaults to the theme OutlineVariant; override to pin a colour.',
-      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#79747e')) },
+      description: 'Outline of a content (VM-backed) container box. Defaults to the theme Outline; override to pin a colour.',
+      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#6b7280')) },
     { key: DiagramSettingKey.ConnectorDefaultStroke, label: 'Default connector stroke',
       description: 'Line colour of a freshly-drawn connector. Defaults to the theme OnSurfaceVariant; override to pin a colour.',
       category: CAT_CONNECTORS, default: new SolidColorBrush(Color.FromHex('#475569')) },
@@ -291,8 +291,8 @@ interface ThemeLink { readonly token: string; readonly alpha?: number; }
 const THEME_LINK: ReadonlyMap<DiagramSettingKey, ThemeLink> = new Map<DiagramSettingKey, ThemeLink>([
     [DiagramSettingKey.ShapeLabelInk,          { token: 'OnSurface' }],
     [DiagramSettingKey.ConnectorDefaultStroke, { token: 'OnSurfaceVariant' }],
-    [DiagramSettingKey.ContainerDefaultFill,   { token: 'SurfaceContainerHighest', alpha: 64 }], // ≈ 25% wash
-    [DiagramSettingKey.ContainerDefaultStroke, { token: 'OutlineVariant' }],
+    [DiagramSettingKey.ContainerDefaultFill,   { token: 'Primary', alpha: 28 }], // ≈ 11% brand wash
+    [DiagramSettingKey.ContainerDefaultStroke, { token: 'Outline' }],
     [DiagramSettingKey.RulerFill,              { token: 'Surface' }],
     [DiagramSettingKey.RulerTickColor,         { token: 'OnSurfaceVariant' }],
     [DiagramSettingKey.RulerHoverFill,         { token: 'Primary', alpha: 41 }], // ≈ 16%
