@@ -302,6 +302,55 @@ describe('SvgRenderer — incremental updates', () => {
     });
 });
 
+describe('SvgRenderer — visual-tree reparent', () => {
+    beforeEach(() => { Application.current = null; });
+
+    // A Visual moved to a NEW visual parent AFTER its first render must have its
+    // outer <g> RELOCATED under the new parent's DOM group — otherwise the SVG
+    // DOM diverges from the visual tree and ancestor transforms stop composing
+    // onto the moved subtree (the diagram-container "children don't follow the
+    // container" bug). Mirrors ContainerPlacement.reparent: RemoveVisualChild
+    // from the old host, AddVisualChild into the new one.
+    test('moving a child to a new visual parent relocates its outer <g> in the DOM', () => {
+        const { document, surface } = makeDom();
+        const renderer = new SvgRenderer(surface, { document });
+
+        const root = new Canvas();
+        const box  = new Canvas();          // stands in for the container's ChildHost
+        Canvas.SetLeft(box, 100); Canvas.SetTop(box, 100);
+        box.Width = 200; box.Height = 200;
+        const leaf = new Border();
+        leaf.Fill = new SolidColorBrush(Color.FromHex('#4caf50'));
+        Canvas.SetLeft(leaf, 10); Canvas.SetTop(leaf, 10);
+        leaf.Width = 20; leaf.Height = 20;
+        root.AddChild(box);
+        root.AddChild(leaf);
+        root.Measure(new Size(400, 400));
+        root.Arrange(new Rect(0, 0, 400, 400));
+        renderer.Render(root, undefined, null, null);
+
+        const outerOf = (v: Visual) => [...surface.querySelectorAll('g.mural-visual')]
+            .find(g => (g as unknown as { [k: symbol]: Visual })[VISUAL_BACKREF] === v)!;
+        const boxOuter  = outerOf(box);
+        const leafOuter = outerOf(leaf);
+
+        // Initially the leaf is a sibling of the box under root — NOT nested.
+        assert.equal(boxOuter.contains(leafOuter), false, 'leaf starts outside the box');
+
+        // Reparent leaf into box (visual-tree move, exactly like ContainerPlacement).
+        root.RemoveVisualChild(leaf);
+        box.AddVisualChild(leaf);
+        root.Measure(new Size(400, 400));
+        root.Arrange(new Rect(0, 0, 400, 400));
+        renderer.Render(root, undefined, null, null);
+
+        // Same outer <g> instance (DOM identity preserved), now a descendant of
+        // the box's outer group so the box's transform composes onto it.
+        assert.equal(outerOf(leaf), leafOuter, 'leaf outer <g> is the same element');
+        assert.equal(boxOuter.contains(leafOuter), true, 'leaf outer <g> moved under the box');
+    });
+});
+
 describe('SvgRenderer — back-ref → hit-test integration', () => {
     beforeEach(() => { Application.current = null; });
 

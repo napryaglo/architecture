@@ -366,6 +366,20 @@ export class SvgRenderer
             // `own` is left detached for now — repaintOwn (called below)
             // inserts it iff the visual emits at least one primitive.
             this.nodes.set(visual, info);
+        }
+
+        // Ensure the outer <g> lives under the CURRENT walk parent. A fresh node
+        // has no DOM parent yet; a Visual reparented in the visual tree AFTER its
+        // first render (e.g. ContainerPlacement re-homing a Figure into a
+        // container's child host) keeps its existing <g> — appendChild RELOCATES
+        // an already-attached element to the new parent. Without this the SVG DOM
+        // diverges from the visual tree and ancestor transforms stop composing
+        // onto the moved subtree, so the subtree renders at its stale position.
+        // (applyChildClip, which runs before the child recursion, already places
+        // a visual's own children into/out of its clip group, so this is a no-op
+        // in that case — the parents already match.)
+        if (info.outer.parentNode !== parentNode)
+        {
             parentNode.appendChild(info.outer);
         }
 
