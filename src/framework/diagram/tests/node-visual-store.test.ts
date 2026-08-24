@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Application } from '../../../runtime/index.js';
 import { Color, Pen, SolidColorBrush } from '../../../visual-engine/index.js';
 import { Figure } from '../figure.js';
+import { NodeViewModel } from '../node-view-model.js';
 import { NodeVisualStore } from '../node-visual-store.js';
 import { PositionAnchor } from '../position-anchor.js';
 
@@ -44,14 +45,15 @@ describe('NodeVisualStore', () => {
         assert.equal(f.Width, 70); assert.equal(f.Height, 40);
         assert.equal(f.Rotation, 15);
     });
-    test('content-tile card fill/stroke: visuals only when SizeToContent, round-tripped, transparent omitted', () => {
+    test('content-tile card fill/stroke: visuals for VM hosts (plain + container), round-tripped, transparent omitted', () => {
         const store = new NodeVisualStore();
-        // A geometric shape's fill rides its node record, NOT the visuals section.
+        const vm = (): NodeViewModel => new NodeViewModel();
+        // A geometric shape (no VM content) — fill rides its node record, NOT visuals.
         const shape = fig(); shape.Fill = new SolidColorBrush(Color.FromHex('#3b82f6ff'));
         assert.equal('fill' in store.Read(shape), false);
 
-        // A content tile persists a visible card fill + border...
-        const tile = fig(); tile.SizeToContent = true;
+        // A content tile (a VM host) persists a visible card fill + border...
+        const tile = fig(); tile.Content = vm();
         tile.Fill   = new SolidColorBrush(Color.FromHex('#3b82f6ff'));
         tile.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#1e40afff')), 2);
         const v = store.Read(tile);
@@ -59,14 +61,20 @@ describe('NodeVisualStore', () => {
         assert.ok(typeof v.stroke === 'string');
         assert.equal(v.strokeWidth, 2);
         // ...restored onto a fresh tile.
-        const g = fig(); g.SizeToContent = true;
+        const g = fig(); g.Content = vm();
         store.Apply(v, g);
         assert.equal((g.Fill as SolidColorBrush).Color.ToHex(), (tile.Fill as SolidColorBrush).Color.ToHex());
         assert.equal((g.Stroke!.Brush as SolidColorBrush).Color.ToHex(), (tile.Stroke!.Brush as SolidColorBrush).Color.ToHex());
         assert.equal(g.Stroke!.Thickness, 2);
 
+        // A CONTAINER content tile sizes to its children (SizeToContent false), yet
+        // its card style still persists — regression: it was gated on SizeToContent.
+        const container = fig(); container.Content = vm(); container.SizeToContent = false;
+        container.Fill = new SolidColorBrush(Color.FromHex('#10b981ff'));
+        assert.ok(typeof store.Read(container).fill === 'string', 'container card fill persists despite SizeToContent=false');
+
         // A transparent (unstyled) content tile writes nothing.
-        const bare = fig(); bare.SizeToContent = true;
+        const bare = fig(); bare.Content = vm();
         bare.Fill   = new SolidColorBrush(Color.FromHex('#00000000'));
         bare.Stroke = new Pen(new SolidColorBrush(Color.FromHex('#00000000')), 1);
         const bv = store.Read(bare);

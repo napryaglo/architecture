@@ -1,5 +1,6 @@
 import { Color, Pen, SolidColorBrush } from '../../visual-engine/index.js';
 import { Figure } from './figure.js';
+import { NodeViewModel } from './node-view-model.js';
 import { PositionAnchor } from './position-anchor.js';
 
 // Hex for a solid brush ONLY when it paints something — a transparent brush
@@ -32,7 +33,7 @@ export interface NodeVisual
     anchor?:        PositionAnchor;
     // A content tile's optional background-card style (Format Shape). Geometric
     // shapes persist their fill/stroke in the node record, so these ride the
-    // `visuals` section only for content tiles (gated on sizeToContent in Read);
+    // `visuals` section only for content tiles (VM hosts — plain OR container);
     // an unstyled (transparent) card omits them.
     fill?:          string;
     stroke?:        string;
@@ -85,8 +86,11 @@ export class NodeVisualStore
         if (node.PositionFrom !== PositionAnchor.TopLeftCorner) v.anchor = node.PositionFrom;
         if (node.ParentId !== undefined) v.parentId = node.ParentId;
         // Card style — content tiles only (a geometric shape's fill/stroke rides
-        // its node record instead). Omit a transparent (unstyled) card.
-        if (node.SizeToContent)
+        // its node record instead). Keyed on being a VM host, NOT SizeToContent: a
+        // CONTAINER content tile (ContentContainerFigure) sizes to its children, so
+        // SizeToContent is false, yet its card fill/stroke still belong here. Omit a
+        // transparent (unstyled) card.
+        if (node.Content instanceof NodeViewModel)
         {
             const fillHex = visibleHex(node.Fill);
             if (fillHex !== undefined) v.fill = fillHex;

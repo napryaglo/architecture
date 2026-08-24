@@ -5,6 +5,7 @@
     MuralBase,
     ObservableCollection,
     type PropertyDescriptor,
+    type PropertyKey,
     RelayCommand,
     ServiceKey,
     type ServiceToken,
@@ -325,11 +326,21 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
     {
         this._containerDirtyTeardown.get(item)?.();
         const onEdited = (): void => this._markDirty();
-        const keys = (['Left', 'Top', 'Width', 'Height', 'Rotation'] as const)
+        // Geometry AND card style live on the container, not the VM — a Format
+        // Shape fill/stroke edit on a content node lands here (mirrors the
+        // Fill/Stroke tracking _wireNodeDirty does for a geometric Figure).
+        const keys = (['Left', 'Top', 'Width', 'Height', 'Rotation', 'Fill', 'Stroke'] as const)
             .map(n => resolveKey(container, undefined, n));
         for (const k of keys) container.AddPropertyChangedListener(k, onEdited);
+        // In-place Stroke-pen tracking, rewired on a Stroke reference swap.
+        let offPen = this._wirePenDirty(container.Stroke, onEdited);
+        const strokeKey = resolveKey(container, undefined, 'Stroke');
+        const rewirePen = (): void => { offPen(); offPen = this._wirePenDirty(container.Stroke, onEdited); };
+        container.AddPropertyChangedListener(strokeKey, rewirePen);
         this._containerDirtyTeardown.set(item, () => {
             for (const k of keys) container.RemovePropertyChangedListener(k, onEdited);
+            container.RemovePropertyChangedListener(strokeKey, rewirePen);
+            offPen();
         });
     }
 
@@ -469,6 +480,13 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
         const keys = names.map(n => resolveKey(node, undefined, n));
         for (const k of keys) node.AddPropertyChangedListener(k, onEdited);
 
+        // A content VM (an arch node) carries no Fill/Stroke/geometry of its own —
+        // its persisted style lives in its own DPs (e.g. the label text style). The
+        // standard keys above find nothing to watch on it, so let a node declare
+        // the extra style keys whose edit should dirty the document.
+        const extraKeys = (node as { DirtyStyleKeys?: () => PropertyKey<unknown>[] }).DirtyStyleKeys?.() ?? [];
+        for (const k of extraKeys) node.AddPropertyChangedListener(k, onEdited);
+
         // In-place Stroke-pen tracking, rewired on a Stroke reference swap.
         const strokeHost = node as { Stroke?: Pen };
         let offPen = this._wirePenDirty(strokeHost.Stroke, onEdited);
@@ -479,6 +497,7 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
 
         return () => {
             for (const k of keys) node.RemovePropertyChangedListener(k, onEdited);
+            for (const k of extraKeys) node.RemovePropertyChangedListener(k, onEdited);
             if (strokeKey !== undefined) node.RemovePropertyChangedListener(strokeKey, rewirePen);
             offPen();
             // Content-VM nodes also carry a container-geometry dirty listener
