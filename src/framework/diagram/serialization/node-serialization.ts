@@ -10,8 +10,8 @@
 // node-serializers-default.ts and are imported by diagram-document.ts for
 // their side-effects.
 
-import type { Figure } from './figure.js';
-import type { NodeViewModel } from './node-view-model.js';
+import type { Figure } from '../figure.js';
+import type { NodeViewModel } from '../node-view-model.js';
 
 // ── Shared type aliases ───────────────────────────────────────────────
 

@@ -1,10 +1,10 @@
-import { FontStyle, FontWeight, TextAlignment, TextDecorations } from '../../visual-engine/index.js';
-import { FlowDocument } from '../../basic/documents/flow-document.js';
-import { Paragraph } from '../../basic/documents/paragraph.js';
-import { Run } from '../../basic/documents/inlines.js';
-import { DocumentParagraphs, ParagraphText } from '../../basic/documents/text-navigation.js';
-import { NormalizeParagraph } from '../../basic/documents/text-editing.js';
-import { Field, FieldKind } from './shape-text-field.js';
+import { FontStyle, FontWeight, TextAlignment, TextDecorations } from '../../../visual-engine/index.js';
+import { FlowDocument } from '../../../basic/documents/flow-document.js';
+import { Paragraph } from '../../../basic/documents/paragraph.js';
+import { Run } from '../../../basic/documents/inlines.js';
+import { DocumentParagraphs, ParagraphText } from '../../../basic/documents/text-navigation.js';
+import { NormalizeParagraph } from '../../../basic/documents/text-editing.js';
+import { Field, FieldKind } from '../shape-text-field.js';
 
 // ─────────────────────────────────────────────────────────────────────
 // ShapeText rich-content bridge (§ diagram-text Slice 4). A ShapeText's

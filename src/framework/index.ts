@@ -205,7 +205,7 @@ export { Figure } from './diagram/figure.js';
 export { PositionAnchor } from './diagram/position-anchor.js';
 export { SizePositionControl } from './diagram/size-position-control.js';
 export { NodeViewModel } from './diagram/node-view-model.js';
-export { NodeVisualStore, type NodeVisual } from './diagram/node-visual-store.js';
+export { NodeVisualStore, type NodeVisual } from './diagram/serialization/node-visual-store.js';
 export { TextNode } from './diagram/text-node.js';
 export { Callout, type ILeaderTarget } from './diagram/callout.js';
 export {
@@ -215,14 +215,14 @@ export {
     type NodeSerializer,
     type NodeBaseRecord,
     type SerializedNodeV2,
-} from './diagram/node-serialization.js';
+} from './diagram/serialization/node-serialization.js';
 export { DiagramSettings, DiagramSettingKey } from './diagram/diagram-settings.js';
 export { ShapeText, TextPlacement, TextAutoFit, isOutsideTextPlacement, computeTextBlockAnchor, type ITextStyleTarget } from './diagram/shape-text.js';
 export {
     serializeFlowDocument, deserializeFlowDocument, cloneFlowDocument,
     flowDocumentToPlainText, flowDocumentFromPlainText, isEffectivelyPlainDocument,
     type SerializedDoc, type SerializedParagraph, type SerializedRun,
-} from './diagram/shape-text-document.js';
+} from './diagram/serialization/shape-text-document.js';
 export { TextBlockAdorner } from './diagram/behaviors/text-block-adorner.js';
 export { pointAlongPolyline, nearestTOnPolyline, polylineLength, type RoutePoint } from './diagram/connector-route.js';
 export {

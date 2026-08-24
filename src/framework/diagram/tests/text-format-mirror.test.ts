@@ -11,7 +11,7 @@ import { CommandManager } from '../../commands/command-manager.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { TextPlacement } from '../shape-text.js';
-import { deserializeFlowDocument } from '../shape-text-document.js';
+import { deserializeFlowDocument } from '../serialization/shape-text-document.js';
 import { SelectionMode } from '../../list/list-box.js';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 

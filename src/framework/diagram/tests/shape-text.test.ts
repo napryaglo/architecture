@@ -16,7 +16,7 @@ import { ShapeText, TextAutoFit, TextPlacement, computeTextBlockAnchor, isOutsid
 import {
     cloneFlowDocument, deserializeFlowDocument, flowDocumentFromPlainText,
     flowDocumentToPlainText, isEffectivelyPlainDocument, serializeFlowDocument,
-} from '../shape-text-document.js';
+} from '../serialization/shape-text-document.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 
 // A rich document: "Hello world" (world bold) + a centred italic second line.

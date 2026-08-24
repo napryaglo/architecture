@@ -177,6 +177,13 @@ export class FillEditor extends TemplatedControl
     // body re-apply so we don't leak handlers on the prior body's
     // ColorPickers / Sliders.
     private _bodyListeners: Array<() => void> = [];
+    // Re-seed closures for the body's controls — one per part, each pushing the
+    // current mirror-DP value into its control. Run at wire time AND after every
+    // external Fill decompose (reseedBody) so the body reflects the CURRENT fill
+    // — e.g. as the diagram selection changes — not just the value present when
+    // the body template was applied. Without this the pickers/sliders were
+    // wired one-way (seed once, listen for user edits) and went stale on reselect.
+    private _bodySeeds: Array<() => void> = [];
     // Tab listeners + opacity listener — installed once at template
     // apply time. Stored separately so a BodyTemplate swap doesn't
     // tear them down.
@@ -236,6 +243,10 @@ export class FillEditor extends TemplatedControl
             this._syncing = true;
             try { this.decomposeFill(newValue as Brush | undefined); }
             finally { this._syncing = false; }
+            // Refresh the live body controls to the freshly decomposed mirror
+            // DPs (decomposeFill may set them after the body was applied, and a
+            // same-variant reselect never re-applies the body at all).
+            this.reseedBody();
             return;
         }
         if (name === 'FillOpacity')
@@ -399,6 +410,7 @@ export class FillEditor extends TemplatedControl
         if (host === undefined) return;
         for (const dispose of this._bodyListeners) dispose();
         this._bodyListeners = [];
+        this._bodySeeds = [];
         host.SetChild(undefined);
         this._bodyRoot = undefined;
         const tpl = this.BodyTemplate;
@@ -408,6 +420,20 @@ export class FillEditor extends TemplatedControl
         host.SetChild(root);
         this._bodyRoot = root;
         this.wireBodyParts();
+    }
+
+    // Push every body control back to its current mirror-DP value. Called after
+    // an external Fill decompose so the swappable body reflects the new fill (a
+    // diagram reselect hands the editor a fresh Fill but never re-applies the
+    // body when the variant is unchanged). Runs under _syncing so each control's
+    // own change listener bails instead of echoing back into the mirror DPs.
+    private reseedBody(): void
+    {
+        if (this._bodySeeds.length === 0) return;
+        const prev = this._syncing;
+        this._syncing = true;
+        try { for (const seed of this._bodySeeds) seed(); }
+        finally { this._syncing = prev; }
     }
 
     private wireBodyParts(): void
@@ -428,9 +454,11 @@ export class FillEditor extends TemplatedControl
         ): void => {
             const cp = find<ColorPicker>(partName);
             if (cp === undefined) return;
+            const seed = (): void => { cp.Color = read(); };
             this._syncing = true;
-            try { cp.Color = read(); }
+            try { seed(); }
             finally { this._syncing = false; }
+            this._bodySeeds.push(seed);
             const handler = (): void => {
                 if (this._syncing) return;
                 this._syncing = true;
@@ -459,9 +487,11 @@ export class FillEditor extends TemplatedControl
         ): void => {
             const s = find<Slider>(partName);
             if (s === undefined) return;
+            const seed = (): void => { s.Value = read(); };
             this._syncing = true;
-            try { s.Value = read(); }
+            try { seed(); }
             finally { this._syncing = false; }
+            this._bodySeeds.push(seed);
             const handler = (): void => {
                 if (this._syncing) return;
                 this._syncing = true;
@@ -490,9 +520,11 @@ export class FillEditor extends TemplatedControl
                 PatternKind.Stripes, PatternKind.Dots, PatternKind.Checker,
                 PatternKind.Grid,    PatternKind.CrossHatch,
             ] as unknown[];
+            const seedKind = (): void => { kindCombo.SelectedItem = this.PatternKind; };
             this._syncing = true;
-            try { kindCombo.SelectedItem = this.PatternKind; }
+            try { seedKind(); }
             finally { this._syncing = false; }
+            this._bodySeeds.push(seedKind);
             const handler = (): void => {
                 if (this._syncing) return;
                 const sel = kindCombo.SelectedItem as PatternKind | undefined;
@@ -512,9 +544,11 @@ export class FillEditor extends TemplatedControl
         const uriBox = find<TextBox>('PART_PictureUri');
         if (uriBox !== undefined)
         {
+            const seedUri = (): void => { uriBox.Text = this.PictureUri; };
             this._syncing = true;
-            try { uriBox.Text = this.PictureUri; }
+            try { seedUri(); }
             finally { this._syncing = false; }
+            this._bodySeeds.push(seedUri);
             const handler = (): void => {
                 if (this._syncing) return;
                 this._syncing = true;
@@ -535,9 +569,11 @@ export class FillEditor extends TemplatedControl
             stretchCombo.Items = [
                 Stretch.None, Stretch.Fill, Stretch.Uniform, Stretch.UniformToFill,
             ] as unknown[];
+            const seedStretch = (): void => { stretchCombo.SelectedItem = this.PictureStretch; };
             this._syncing = true;
-            try { stretchCombo.SelectedItem = this.PictureStretch; }
+            try { seedStretch(); }
             finally { this._syncing = false; }
+            this._bodySeeds.push(seedStretch);
             const handler = (): void => {
                 if (this._syncing) return;
                 const sel = stretchCombo.SelectedItem as Stretch | undefined;

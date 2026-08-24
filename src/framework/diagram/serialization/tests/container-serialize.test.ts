@@ -5,13 +5,13 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Size, Visual } from '../../../runtime/index.js';
-import { Border, Canvas, ItemsPanelTemplate } from '../../../basic/index.js';
-import { initTestApp } from '../../../basic/tests/test-app.js';
-import { Diagram } from '../diagram.js';
-import { Figure } from '../figure.js';
-import { ContainerFigure } from '../container-figure.js';
-import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
+import { Size, Visual } from '../../../../runtime/index.js';
+import { Border, Canvas, ItemsPanelTemplate } from '../../../../basic/index.js';
+import { initTestApp } from '../../../../basic/tests/test-app.js';
+import { Diagram } from '../../diagram.js';
+import { Figure } from '../../figure.js';
+import { ContainerFigure } from '../../container-figure.js';
+import { DiagramDocument, type DiagramStorage } from '../../diagram-document.js';
 import '../node-serializers-default.js';   // side-effect: registers shape/text/callout/container
 
 class MemoryStorage implements DiagramStorage {

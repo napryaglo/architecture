@@ -1,22 +1,18 @@
-import { Color, Pen, SolidColorBrush } from '../../visual-engine/index.js';
-import { Figure } from './figure.js';
-import { NodeViewModel } from './node-view-model.js';
-import { PositionAnchor } from './position-anchor.js';
-
-// Hex for a solid brush ONLY when it paints something — a transparent brush
-// (an unstyled content tile's default) returns undefined so nothing is written.
-function visibleHex(brush: unknown): string | undefined
-{
-    if (!(brush instanceof SolidColorBrush)) return undefined;
-    return brush.Color.A > 0 ? brush.Color.ToHex() : undefined;
-}
+import { Figure } from '../figure.js';
+import { NodeViewModel } from '../node-view-model.js';
+import { PositionAnchor } from '../position-anchor.js';
+import {
+    deserializeBrush, deserializeStroke, isBrushVisible, serializeBrush, serializeStroke,
+    type SerializedBrush, type StrokeFields,
+} from './brush-serialization.js';
 
 // A node's visual (geometry) record — the presentation half of the two-section
 // serialization format, keyed by node id in the `visuals` section. The base
 // four are always present; rotation / scale-baseline / size latches are omitted
 // when at their defaults (rotation 0, base NaN, flags false) so the on-disk
-// shape stays minimal.
-export interface NodeVisual
+// shape stays minimal.  StrokeFields contributes the optional card-outline
+// keys (stroke / strokeWidth / strokeDash / strokeCap / strokeJoin / strokeMiter).
+export interface NodeVisual extends StrokeFields
 {
     left: number;
     top:  number;
@@ -31,13 +27,12 @@ export interface NodeVisual
     // load unchanged): lock aspect ratio, and the "From" position anchor.
     lockAspect?:    boolean;
     anchor?:        PositionAnchor;
-    // A content tile's optional background-card style (Format Shape). Geometric
-    // shapes persist their fill/stroke in the node record, so these ride the
+    // A content tile's optional background-card style (Format Shape), through the
+    // shared brush codec — every fill variant, not just solids. Geometric shapes
+    // persist their fill/stroke in the node record instead, so these ride the
     // `visuals` section only for content tiles (VM hosts — plain OR container);
-    // an unstyled (transparent) card omits them.
-    fill?:          string;
-    stroke?:        string;
-    strokeWidth?:   number;
+    // an unstyled (invisible) card omits them.
+    fill?:          SerializedBrush;
     // Container membership: the id of the ContainerFigure this node nests in
     // (omitted when a root node). Its Left/Top are then parent-relative.
     parentId?:      string;
@@ -92,10 +87,11 @@ export class NodeVisualStore
         // transparent (unstyled) card.
         if (node.Content instanceof NodeViewModel)
         {
-            const fillHex = visibleHex(node.Fill);
-            if (fillHex !== undefined) v.fill = fillHex;
-            const strokeHex = visibleHex(node.Stroke?.Brush);
-            if (strokeHex !== undefined) { v.stroke = strokeHex; v.strokeWidth = node.Stroke!.Thickness; }
+            if (isBrushVisible(node.Fill)) v.fill = serializeBrush(node.Fill);
+            if (node.Stroke !== undefined && isBrushVisible(node.Stroke.Brush))
+            {
+                Object.assign(v, serializeStroke(node.Stroke));
+            }
         }
         return v;
     }
@@ -117,7 +113,8 @@ export class NodeVisualStore
         if (v.parentId      !== undefined) node.ParentId        = v.parentId;
         // Restore a content tile's card style (Apply runs after bindContainer's
         // transparent defaults, so a styled card overrides them).
-        if (v.fill   !== undefined) node.Fill   = new SolidColorBrush(Color.FromHex(v.fill));
-        if (v.stroke !== undefined) node.Stroke = new Pen(new SolidColorBrush(Color.FromHex(v.stroke)), v.strokeWidth ?? 1);
+        if ('fill' in v)   node.Fill = deserializeBrush(v.fill);
+        const pen = deserializeStroke(v);
+        if (pen !== undefined) node.Stroke = pen;
     }
 }

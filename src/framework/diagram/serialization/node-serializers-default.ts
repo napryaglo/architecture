@@ -11,26 +11,48 @@
 // imports this module and may also import individual helpers exported here
 // (serializeShapeText, applySerializedText).
 
-import { type Brush, Color, FontStyle, FontWeight, pathGeometryFromSvgD, pathGeometryToSvgD, Pen, SolidColorBrush, TextAlignment, VerticalAlignment } from '../../visual-engine/index.js';
-import { Point } from '../../runtime/index.js';
-import { TextAutoFit, TextPlacement, type ShapeText } from './shape-text.js';
+import { type Brush, FontStyle, FontWeight, pathGeometryFromSvgD, pathGeometryToSvgD, type Pen, TextAlignment, VerticalAlignment } from '../../../visual-engine/index.js';
+import { Point } from '../../../runtime/index.js';
+import { DiagramSettings } from '../diagram-settings.js';
+import { TextAutoFit, TextPlacement, type ShapeText } from '../shape-text.js';
 import {
     deserializeFlowDocument,
     serializeFlowDocument,
     type SerializedDoc,
 } from './shape-text-document.js';
-import { Figure } from './figure.js';
-import { TextNode } from './text-node.js';
-import { Callout } from './callout.js';
-import { ContainerFigure } from './container-figure.js';
-import { SHAPE_CATALOG_MAP } from './shape-catalog.js';
+import { Figure } from '../figure.js';
+import { TextNode } from '../text-node.js';
+import { Callout } from '../callout.js';
+import { ContainerFigure } from '../container-figure.js';
+import { SHAPE_CATALOG_MAP } from '../shape-catalog.js';
 import { registerNodeSerializer } from './node-serialization.js';
+import {
+    deserializeBrush, deserializeStroke, serializeBrush, serializeStroke,
+    type SerializedBrush, type StrokeFields,
+} from './brush-serialization.js';
 
-// A solid brush's colour as a hex string, or undefined for a non-solid
-// (gradient / image) brush that this serializer doesn't capture.
-function solidHex(brush: Brush | undefined): string | undefined
+// A node whose interior + outline the Format Shape pane edits. Shape and
+// container Figures share this fill/stroke surface, so they share one codec.
+interface Paintable { Fill: Brush | undefined; Stroke: Pen | undefined; }
+
+// Write a node's Fill (every brush variant; null = the explicit "None") plus
+// its Pen stroke (brush + width + dash/caps/join/miter) into a record. Fill is
+// always written so a user's "None" round-trips; a shape's constructed default
+// is a real brush and re-serialises unchanged.
+function writeFillStroke(out: Record<string, unknown>, node: Paintable): void
 {
-    return brush instanceof SolidColorBrush ? brush.Color.ToHex() : undefined;
+    out.fill = serializeBrush(node.Fill);
+    Object.assign(out, serializeStroke(node.Stroke));
+}
+
+// Restore Fill / Stroke over a node's constructed defaults. Only a field the
+// record actually carries is touched: `fill` absent → keep the default;
+// `fill: null` → explicit None (undefined); otherwise the decoded brush.
+function readFillStroke(data: Record<string, unknown>, node: Paintable): void
+{
+    if ('fill' in data) node.Fill = deserializeBrush(data.fill as SerializedBrush);
+    const pen = deserializeStroke(data as StrokeFields);
+    if (pen !== undefined) node.Stroke = pen;
 }
 
 // ── SerializedText — internal type shared between text + callout ──────
@@ -50,6 +72,8 @@ export interface SerializedText
     readonly blockH?:     number;
     readonly vAlign?:     VerticalAlignment;
     readonly autofit?:    TextAutoFit;
+    readonly color?:      SerializedBrush;   // Foreground; omitted at the theme default
+    readonly family?:     string;            // FontFamily source (CSS stack)
     readonly doc?:        SerializedDoc;
 }
 
@@ -67,7 +91,7 @@ export function serializeShapeText(st: ShapeText): SerializedText | undefined
         fontWeight?: FontWeight; fontStyle?: FontStyle; align?: TextAlignment;
         offsetX?: number; offsetY?: number; angle?: number; placement?: TextPlacement;
         blockW?: number; blockH?: number; vAlign?: VerticalAlignment;
-        autofit?: TextAutoFit; doc?: SerializedDoc;
+        autofit?: TextAutoFit; color?: SerializedBrush; family?: string; doc?: SerializedDoc;
     } = { content: st.Content };
     if (st.Document !== undefined)         out.doc        = serializeFlowDocument(st.Document);
     if (st.AutoFit !== TextAutoFit.None)   out.autofit    = st.AutoFit;
@@ -82,6 +106,18 @@ export function serializeShapeText(st: ShapeText): SerializedText | undefined
     if (!Number.isNaN(st.BlockWidth))               out.blockW     = st.BlockWidth;
     if (!Number.isNaN(st.BlockHeight))              out.blockH     = st.BlockHeight;
     if (st.VerticalTextAlignment !== VerticalAlignment.Center) out.vAlign = st.VerticalTextAlignment;
+    // Text colour — omit when it still matches the theme default ink so an
+    // untouched label stays theme-reactive; a user colour is captured.
+    const fg = st.Foreground;
+    if (fg !== undefined)
+    {
+        const hex   = serializeBrush(fg);
+        const dflt  = serializeBrush(DiagramSettings.ShapeLabelInk());
+        if (JSON.stringify(hex) !== JSON.stringify(dflt)) out.color = hex;
+    }
+    // Font family — omit when unset (inherits). Store the full CSS stack.
+    const fam = st.FontFamily;
+    if (fam !== undefined) out.family = typeof fam === 'string' ? fam : fam.Source;
     return out;
 }
 
@@ -103,6 +139,8 @@ export function applySerializedText(st: ShapeText, data: SerializedText): void
     if (data.blockH    !== undefined) st.BlockHeight           = data.blockH;
     if (data.vAlign    !== undefined) st.VerticalTextAlignment = data.vAlign;
     if (data.autofit   !== undefined) st.AutoFit               = data.autofit;
+    if (data.color     !== undefined) st.Foreground            = deserializeBrush(data.color);
+    if (data.family    !== undefined) st.FontFamily            = data.family;
     if (data.doc       !== undefined) st.Document              = deserializeFlowDocument(data.doc);
 }
 
@@ -133,17 +171,14 @@ registerNodeSerializer({
             kind: fig.Kind ?? '',
             d:    source !== undefined ? pathGeometryToSvgD(source) : '',
         };
-        // Persist the user-editable Fill / Stroke (Format Shape pane). Only
-        // solid colours are captured; a gradient / image brush falls back to
-        // the constructed default on reload (documented gap).
-        const fillHex = solidHex(fig.Fill);
-        if (fillHex !== undefined) out.fill = fillHex;
-        const stroke = fig.Stroke;
-        if (stroke !== undefined)
+        // Persist the full Format Shape pane: every fill variant (solid /
+        // gradient / pattern / image / None) + the outline Pen.
+        writeFillStroke(out, fig);
+        // A shape's caption + its text style (Format Shape Text page).
+        if (fig.Text !== undefined)
         {
-            const strokeHex = solidHex(stroke.Brush);
-            if (strokeHex !== undefined) out.stroke = strokeHex;
-            out.strokeWidth = stroke.Thickness;
+            const title = serializeShapeText(fig.Text);
+            if (title !== undefined) out.text = title;
         }
         return out;
     },
@@ -171,14 +206,10 @@ registerNodeSerializer({
         // Restore Fill / Stroke over the constructed defaults. Geometry
         // (position / size / rotation / scale baseline) is applied by the
         // document from the visuals section.
-        if (typeof data.fill === 'string') fig.Fill = new SolidColorBrush(Color.FromHex(data.fill));
-        const strokeHex   = typeof data.stroke      === 'string' ? data.stroke      : undefined;
-        const strokeWidth = typeof data.strokeWidth === 'number' ? data.strokeWidth : undefined;
-        if (strokeHex !== undefined || strokeWidth !== undefined)
+        readFillStroke(data, fig);
+        if (data.text !== undefined && fig.Text !== undefined)
         {
-            const width = strokeWidth ?? fig.Stroke?.Thickness ?? 1;
-            const brush = strokeHex !== undefined ? new SolidColorBrush(Color.FromHex(strokeHex)) : fig.Stroke?.Brush;
-            fig.Stroke = new Pen(brush, width);
+            applySerializedText(fig.Text, data.text as SerializedText);
         }
         return fig;
     },
@@ -270,15 +301,7 @@ registerNodeSerializer({
         const out: Record<string, unknown> = {};
         const title = serializeShapeText(c.Text);
         if (title !== undefined) out.text = title;
-        const fillHex = solidHex(c.Fill);
-        if (fillHex !== undefined) out.fill = fillHex;
-        const stroke = c.Stroke;
-        if (stroke !== undefined)
-        {
-            const strokeHex = solidHex(stroke.Brush);
-            if (strokeHex !== undefined) out.stroke = strokeHex;
-            out.strokeWidth = stroke.Thickness;
-        }
+        writeFillStroke(out, c);
         return out;
     },
 
@@ -286,15 +309,7 @@ registerNodeSerializer({
     {
         const c = new ContainerFigure();
         if (data.text !== undefined) applySerializedText(c.Text, data.text as SerializedText);
-        if (typeof data.fill === 'string') c.Fill = new SolidColorBrush(Color.FromHex(data.fill));
-        const strokeHex   = typeof data.stroke      === 'string' ? data.stroke      : undefined;
-        const strokeWidth = typeof data.strokeWidth === 'number' ? data.strokeWidth : undefined;
-        if (strokeHex !== undefined || strokeWidth !== undefined)
-        {
-            const width = strokeWidth ?? c.Stroke?.Thickness ?? 1;
-            const brush = strokeHex !== undefined ? new SolidColorBrush(Color.FromHex(strokeHex)) : c.Stroke?.Brush;
-            c.Stroke = new Pen(brush, width);
-        }
+        readFillStroke(data, c);
         return c;
     },
 });

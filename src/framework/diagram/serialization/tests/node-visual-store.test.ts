@@ -1,11 +1,11 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application } from '../../../runtime/index.js';
-import { Color, Pen, SolidColorBrush } from '../../../visual-engine/index.js';
-import { Figure } from '../figure.js';
-import { NodeViewModel } from '../node-view-model.js';
+import { Application } from '../../../../runtime/index.js';
+import { Color, GradientStop, LinearGradientBrush, Pen, SolidColorBrush } from '../../../../visual-engine/index.js';
+import { Figure } from '../../figure.js';
+import { NodeViewModel } from '../../node-view-model.js';
 import { NodeVisualStore } from '../node-visual-store.js';
-import { PositionAnchor } from '../position-anchor.js';
+import { PositionAnchor } from '../../position-anchor.js';
 
 function fig(): Figure { Application.current = null; new Application(); return Figure.fromKind('rectangle', 10, 20, { width: 100, height: 50 }); }
 
@@ -80,6 +80,53 @@ describe('NodeVisualStore', () => {
         const bv = store.Read(bare);
         assert.equal('fill' in bv, false);
         assert.equal('stroke' in bv, false);
+    });
+    test('content-tile card fill/stroke: Brush.Opacity folds into the saved alpha', () => {
+        const store = new NodeVisualStore();
+        const vm = (): NodeViewModel => new NodeViewModel();
+
+        // An OPAQUE colour whose transparency rides Brush.Opacity (the Format
+        // Shape "Transparency" slider) — the hex must carry it or it's lost on
+        // save. 255 × 0.5 = 128 → 0x80.
+        const tile = fig(); tile.Content = vm();
+        const fill = new SolidColorBrush(Color.FromHex('#3b82f6')); fill.Opacity = 0.5;
+        tile.Fill = fill;
+        const stroke = new SolidColorBrush(Color.FromHex('#1e40af')); stroke.Opacity = 0.25;
+        tile.Stroke = new Pen(stroke, 2);   // 255 × 0.25 = 64 → 0x40
+        const v = store.Read(tile);
+        assert.equal(v.fill,   '#3b82f680');
+        assert.equal(v.stroke, '#1e40af40');
+        // Round-trips: reload folds the transparency onto Color.A (Opacity 1).
+        const g = fig(); g.Content = vm();
+        store.Apply(v, g);
+        assert.equal((g.Fill   as SolidColorBrush).Color.A, 128);
+        assert.equal((g.Stroke!.Brush as SolidColorBrush).Color.A, 64);
+
+        // Colour alpha AND Brush.Opacity compound: 128 × 0.5 = 64 → 0x40.
+        const both = fig(); both.Content = vm();
+        const b = new SolidColorBrush(Color.FromHex('#3b82f680')); b.Opacity = 0.5;
+        both.Fill = b;
+        assert.equal(store.Read(both).fill, '#3b82f640');
+
+        // Fully faded (Opacity 0) omits the key, like a transparent colour.
+        const faded = fig(); faded.Content = vm();
+        const fb = new SolidColorBrush(Color.FromHex('#3b82f6')); fb.Opacity = 0;
+        faded.Fill = fb;
+        assert.equal('fill' in store.Read(faded), false);
+    });
+    test('content-tile card carries a gradient fill (not just solids)', () => {
+        const store = new NodeVisualStore();
+        const tile = fig(); tile.Content = new NodeViewModel();
+        tile.Fill = new LinearGradientBrush([
+            new GradientStop(Color.FromHex('#ffffff'), 0),
+            new GradientStop(Color.FromHex('#1976d2'), 1),
+        ]);
+        const v = store.Read(tile);
+        assert.equal(typeof v.fill, 'object', 'gradient card serialises as a tagged object');
+        const g = fig(); g.Content = new NodeViewModel();
+        store.Apply(v, g);
+        assert.ok(g.Fill instanceof LinearGradientBrush);
+        assert.equal((g.Fill as LinearGradientBrush).GradientStops.length, 2);
     });
     test('parentId: omitted when unset, captured + round-tripped when set', () => {
         const store = new NodeVisualStore();

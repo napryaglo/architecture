@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { Point, Size, type Geometry } from '../../../visual-engine/index.js';
 import { Figure } from '../figure.js';
 import { DiagramDocument } from '../diagram-document.js';
-import { serializerFor, serializerByType } from '../node-serialization.js';
-import '../node-serializers-default.js';   // side-effect: registers serializers
+import { serializerFor, serializerByType } from '../serialization/node-serialization.js';
+import '../serialization/node-serializers-default.js';   // side-effect: registers serializers
 
 test('CreateNode produces a self-painting Figure shape node', () => {
     const doc = new DiagramDocument();

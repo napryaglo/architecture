@@ -12,7 +12,7 @@ import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { SelectionMode } from '../../list/list-box.js';
 import { initTestApp } from '../../../basic/tests/test-app.js';
-import { deserializeFlowDocument } from '../shape-text-document.js';
+import { deserializeFlowDocument } from '../serialization/shape-text-document.js';
 import { DocumentParagraphs } from '../../../basic/documents/text-navigation.js';
 
 // § diagram-text text style — character formatting (font family / size / colour

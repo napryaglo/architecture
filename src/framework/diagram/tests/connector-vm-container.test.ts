@@ -12,8 +12,8 @@ import { Figure } from '../figure.js';
 import { NodeViewModel } from '../node-view-model.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
-import { registerNodeSerializer } from '../node-serialization.js';
-import '../node-serializers-default.js';
+import { registerNodeSerializer } from '../serialization/node-serialization.js';
+import '../serialization/node-serializers-default.js';
 
 // Stand-in content-VM serializer (Plexus supplies ArchNodeVM in anger).
 const CONN_VM_TYPE = 'connvm';

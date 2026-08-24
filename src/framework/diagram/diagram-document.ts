@@ -16,9 +16,9 @@ import { Figure } from './figure.js';
 import { Group } from './group.js';
 import { NodeViewModel } from './node-view-model.js';
 import { Callout } from './callout.js';
-import { NodeVisualStore, type NodeVisual } from './node-visual-store.js';
+import { NodeVisualStore, type NodeVisual } from './serialization/node-visual-store.js';
 import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
-import { serializerFor, serializerByType } from './node-serialization.js';
+import { serializerFor, serializerByType } from './serialization/node-serialization.js';
 // Importing node-serializers-default.js registers the built-in
 // 'shape' / 'text' / 'callout' serializers as a side effect and
 // also exports the text helpers used by connector serialization.
@@ -26,7 +26,7 @@ import {
     serializeShapeText,
     applySerializedText,
     type SerializedText,
-} from './node-serializers-default.js';
+} from './serialization/node-serializers-default.js';
 import { GeometryCombineMode } from './commands/combine.js';
 import { wrapTargets, selectedContainers, containerGeometryFor } from './commands/container-ops.js';
 import { ContainerFigure } from './container-figure.js';

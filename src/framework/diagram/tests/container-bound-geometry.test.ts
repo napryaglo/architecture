@@ -12,8 +12,8 @@ import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { NodeViewModel } from '../node-view-model.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
-import { registerNodeSerializer } from '../node-serialization.js';
-import '../node-serializers-default.js';   // side-effect: registers shape/text/callout
+import { registerNodeSerializer } from '../serialization/node-serialization.js';
+import '../serialization/node-serializers-default.js';   // side-effect: registers shape/text/callout
 
 // A throwaway content-VM serializer, so Load exercises the REAL path: build the
 // node from the `nodes` section (geometry-free) + seed the store from `visuals`.

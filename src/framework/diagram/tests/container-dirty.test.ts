@@ -12,8 +12,8 @@ import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { NodeViewModel } from '../node-view-model.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
-import { registerNodeSerializer } from '../node-serialization.js';
-import '../node-serializers-default.js';
+import { registerNodeSerializer } from '../serialization/node-serialization.js';
+import '../serialization/node-serializers-default.js';
 
 const VM_TYPE = 'dirtyvm';
 registerNodeSerializer({

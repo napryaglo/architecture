@@ -34,7 +34,7 @@ import {
     flowDocumentFromPlainText,
     flowDocumentToPlainText,
     isEffectivelyPlainDocument,
-} from './shape-text-document.js';
+} from './serialization/shape-text-document.js';
 
 // The block-level text-style surface FormatMirror seeds from and broadcasts to.
 // ShapeText satisfies it (a geometric shape's caption), and a content view-model

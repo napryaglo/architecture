@@ -14,7 +14,7 @@ import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 import { PortSide } from '../port.js';
 import '../routing/straight-router.js';
 import '../routing/orthogonal-router.js';
-import '../node-serializers-default.js';
+import '../serialization/node-serializers-default.js';
 
 class MemoryStorage implements DiagramStorage
 {

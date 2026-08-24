@@ -12,7 +12,7 @@ import {
 } from '../../../runtime/index.js';
 import { Border, ItemsPanelTemplate } from '../../../basic/index.js';
 import { PaginatedCanvas } from '../../../basic/panels/paginated-canvas.js';
-import { flowDocumentFromPlainText } from '../shape-text-document.js';
+import { flowDocumentFromPlainText } from '../serialization/shape-text-document.js';
 import { TextNode } from '../text-node.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';

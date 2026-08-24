@@ -10,7 +10,7 @@ import { ConnectorEndpoint } from '../connector-endpoint.js';
 import { Field, FieldKind, documentWithFields, resolveFields } from '../shape-text-field.js';
 import {
     flowDocumentToPlainText, isEffectivelyPlainDocument, serializeFlowDocument,
-} from '../shape-text-document.js';
+} from '../serialization/shape-text-document.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 
 // § diagram-text Slice 6 — text fields. A Field is an inline whose text is a

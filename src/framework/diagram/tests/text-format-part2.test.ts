@@ -7,7 +7,7 @@ import { RichTextBox } from '../../../basic/rich-text-box.js';
 import { TextPointer } from '../../../basic/documents/text-pointer.js';
 import { DocumentParagraphs } from '../../../basic/documents/text-navigation.js';
 import { Figure } from '../figure.js';
-import { deserializeFlowDocument } from '../shape-text-document.js';
+import { deserializeFlowDocument } from '../serialization/shape-text-document.js';
 
 // § diagram-text Part 2 — edit-mode paragraph alignment. RichTextBox gains
 // SetSelectionAlignment / SelectionAlignment (the editor primitive), and
