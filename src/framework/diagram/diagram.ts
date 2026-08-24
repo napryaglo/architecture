@@ -1930,13 +1930,15 @@ export class Diagram extends Selector implements RigidConnectorDragHost
                 // as a bare icon, yet the Style page still engages (its editors only
                 // blank when BOTH are undefined; a transparent brush is defined). A
                 // CONTAINER holds children, so it instead defaults to a visible box —
-                // a faint themed surface wash + an outline border — from the tunable
-                // DiagramSettings container tokens; a Format-Shape edit overrides
-                // these. Per-instance so the mirror's in-place Pen edits don't leak.
+                // a faint themed surface wash (the tunable container fill token) plus
+                // the SAME default border a geometric shape draws (ShapeDefaultStroke
+                // / ShapeStrokeWidth) so a container's outline matches every other
+                // shape; a Format-Shape edit overrides these. Per-instance so the
+                // mirror's in-place Pen edits don't leak.
                 if (node instanceof ContentContainerFigure)
                 {
                     node.Fill   = DiagramSettings.ContainerDefaultFill();
-                    node.Stroke = new Pen(DiagramSettings.ContainerDefaultStroke(), 1.5);
+                    node.Stroke = new Pen(DiagramSettings.ShapeDefaultStroke(), DiagramSettings.ShapeStrokeWidth());
                 }
                 else
                 {

@@ -20,7 +20,6 @@ export enum DiagramSettingKey
     ShapeDefaultStroke          = 'diagram.shape.defaultStroke',
     ShapeLabelInk               = 'diagram.shape.labelInk',
     ContainerDefaultFill        = 'diagram.container.defaultFill',
-    ContainerDefaultStroke      = 'diagram.container.defaultStroke',
     TextDefaultFontSize         = 'diagram.text.defaultFontSize',
     TextNodeFill                = 'diagram.text.nodeFill',
     TextNodeStroke              = 'diagram.text.nodeStroke',
@@ -246,11 +245,8 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
       category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#94a3b8')) },
 
     { key: DiagramSettingKey.ContainerDefaultFill, label: 'Container fill',
-      description: 'Faint brand wash of a content (VM-backed) container box, so it reads as a box that holds children. Defaults to a theme Primary wash; override to pin a colour.',
+      description: 'Faint brand wash of a content (VM-backed) container box, so it reads as a box that holds children. Defaults to a theme Primary wash; override to pin a colour. Its border reuses the shape default stroke.',
       category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#3b82f61c')) },
-    { key: DiagramSettingKey.ContainerDefaultStroke, label: 'Container stroke',
-      description: 'Outline of a content (VM-backed) container box. Defaults to the theme Outline; override to pin a colour.',
-      category: CAT_SHAPES, default: new SolidColorBrush(Color.FromHex('#6b7280')) },
     { key: DiagramSettingKey.ConnectorDefaultStroke, label: 'Default connector stroke',
       description: 'Line colour of a freshly-drawn connector. Defaults to the theme OnSurfaceVariant; override to pin a colour.',
       category: CAT_CONNECTORS, default: new SolidColorBrush(Color.FromHex('#475569')) },
@@ -292,7 +288,6 @@ const THEME_LINK: ReadonlyMap<DiagramSettingKey, ThemeLink> = new Map<DiagramSet
     [DiagramSettingKey.ShapeLabelInk,          { token: 'OnSurface' }],
     [DiagramSettingKey.ConnectorDefaultStroke, { token: 'OnSurfaceVariant' }],
     [DiagramSettingKey.ContainerDefaultFill,   { token: 'Primary', alpha: 28 }], // ≈ 11% brand wash
-    [DiagramSettingKey.ContainerDefaultStroke, { token: 'Outline' }],
     [DiagramSettingKey.RulerFill,              { token: 'Surface' }],
     [DiagramSettingKey.RulerTickColor,         { token: 'OnSurfaceVariant' }],
     [DiagramSettingKey.RulerHoverFill,         { token: 'Primary', alpha: 41 }], // ≈ 16%
@@ -467,7 +462,6 @@ export class DiagramSettings
     public static TextNodeFill():        SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.TextNodeFill); }
     public static TextNodeStroke():      SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.TextNodeStroke); }
     public static ContainerDefaultFill():   SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ContainerDefaultFill); }
-    public static ContainerDefaultStroke(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ContainerDefaultStroke); }
 
     // ── Connectors ───────────────────────────────────────────────────────
     public static ConnectorStrokeWidth():     number { return DiagramSettings.num(DiagramSettingKey.ConnectorStrokeWidth); }
