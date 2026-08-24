@@ -7,6 +7,8 @@ import { Application, Point } from '../../../runtime/index.js';
 import type { ItemDroppedArgs } from './canvas-drop-behavior.js';
 import { TOOLBOX_ITEM_FORMAT } from './canvas-drop-behavior.js';
 import { ToolboxRepository } from '../toolbox/toolbox-repository.js';
+import { Figure } from '../figure.js';
+import { ContentContainerFigure } from '../content-container-figure.js';
 import type { GeometryCombineMode } from '../commands/combine.js';
 import type { Connector } from '../connector.js';
 import type { ConnectorEndpoint } from '../connector-endpoint.js';
@@ -117,9 +119,20 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
             Position:   new Point(args.Position.X - offset.dx, args.Position.Y - offset.dy),
             Diagram:    diagram,
             Mutator:    mutator,
+            TargetContainer: args.TargetContainer,
         });
         if (node !== null && node !== undefined)
         {
+            // Generic-container adoption (Case 3): a node dropped inside a plain
+            // ContainerFigure is nested into it, visual-only. A model-backed
+            // container (ContentContainerFigure) is NOT adopted here — its host
+            // factory owns validation + the model containment ref.
+            const target = args.TargetContainer;
+            if (node instanceof Figure && target !== undefined
+                && !(target instanceof ContentContainerFigure))
+            {
+                diagram.ContainerPlacement.reparent(node, target.Id);
+            }
             diagram.SelectedItem = node;
         }
     };

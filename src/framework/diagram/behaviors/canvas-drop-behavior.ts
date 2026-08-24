@@ -6,6 +6,7 @@ import {
     type Visual,
 } from '../../../runtime/index.js';
 import type { Diagram } from '../diagram.js';
+import type { ContainerFigure } from '../container-figure.js';
 
 // Promoted from the demo's canvas-drop-behavior.mjs. Wires a Visual
 // to accept drag-drops and translate the cursor host-coordinates into
@@ -48,9 +49,15 @@ export function attachCanvasDropBehavior(receiver: Visual, diagram: Diagram): ()
 
     const onDrop = (args: DragEventArgs): void => {
         if (!args.Data.Has(TOOLBOX_ITEM_FORMAT)) return;
+        const position = localPosition(args);
         diagram._fireItemDropped({
             Data:     args.Data,
-            Position: localPosition(args),
+            Position: position,
+            // The container the drop point lands inside (innermost), if any. Lets
+            // the drop router / factory nest the new node into it — generic
+            // containers adopt freely (mural); a model-backed container is left to
+            // the host factory to validate. Undefined over empty canvas.
+            TargetContainer: diagram.ContainerPlacement.containerAt(position),
         });
     };
 
@@ -68,6 +75,8 @@ export interface ItemDroppedArgs
 {
     readonly Data:     DataObject;
     readonly Position: Point;
+    // The innermost container under the drop point (undefined over empty canvas).
+    readonly TargetContainer?: ContainerFigure;
 }
 
 export type ItemDroppedListener = (args: ItemDroppedArgs) => void;

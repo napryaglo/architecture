@@ -2,6 +2,7 @@ import type { Point } from '../../../runtime/index.js';
 import type { ToolboxVisualDescriptor } from './toolbox-visual-descriptor.js';
 import type { ToolboxItem } from './toolbox-item.js';
 import type { Diagram } from '../diagram.js';
+import type { ContainerFigure } from '../container-figure.js';
 import type { DiagramMutator } from '../behaviors/attach-standard-mutations.js';
 
 // Everything a factory needs to turn a dropped item into a canvas node.
@@ -12,6 +13,10 @@ export interface ToolboxDropContext
     readonly Position:   Point;   // canvas-local top-left (offset already applied)
     readonly Diagram:    Diagram;
     readonly Mutator:    DiagramMutator;
+    // The innermost container under the drop point, if any. A host factory (e.g.
+    // an arch factory) inspects this to validate + nest into a model-backed
+    // container; generic containers are adopted by the router instead.
+    readonly TargetContainer?: ContainerFigure;
 }
 
 // Creates the selectable/movable node, mutating the document through the
