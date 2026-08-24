@@ -36,6 +36,32 @@ import {
     isEffectivelyPlainDocument,
 } from './shape-text-document.js';
 
+// The block-level text-style surface FormatMirror seeds from and broadcasts to.
+// ShapeText satisfies it (a geometric shape's caption), and a content view-model
+// whose label lives outside a ShapeText (an arch node's `$Label` tile) can expose
+// its own `ITextStyleTarget` so the Format Shape Text page reaches that label too
+// — the character/paragraph analogue of FormatMirror's Fill/Stroke paint-target
+// redirect. Apply* mutate the style; Current* read it back for toolbar seeding.
+export interface ITextStyleTarget
+{
+    ApplyFontFamily(family: FontFamily | string): void;
+    ApplyFontSize(size: number): void;
+    ApplyForeground(brush: Brush): void;
+    ApplyBold(on: boolean): void;
+    ApplyItalic(on: boolean): void;
+    ApplyUnderline(on: boolean): void;
+    ApplyStrikethrough(on: boolean): void;
+    ApplyParagraphAlignment(align: TextAlignment): void;
+    CurrentFontFamily(): string;
+    CurrentFontSize(): number;
+    CurrentForeground(): Brush | undefined;
+    CurrentBold(): boolean;
+    CurrentItalic(): boolean;
+    CurrentUnderline(): boolean;
+    CurrentStrikethrough(): boolean;
+    CurrentParagraphAlignment(): TextAlignment;
+}
+
 // ShapeText — a diagram shape's text block, modelled as a first-class
 // sub-control (the Visio "text block"). A Figure / Group / Connector owns
 // one and hosts it in its template; ShapeText renders its own content +
@@ -170,7 +196,7 @@ export enum TextAutoFit
     GrowShape  = 'grow',
 }
 
-export class ShapeText extends Control
+export class ShapeText extends Control implements ITextStyleTarget
 {
     static {
         // Without this, applyDefaultStyle() silently no-ops and the control

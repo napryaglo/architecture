@@ -10,7 +10,7 @@ import { type DataTemplate } from '../../../basic/templates/data-template.js';
 import { CommandManager } from '../../commands/command-manager.js';
 import type { Diagram } from '../diagram.js';
 import type { Connector } from '../connector.js';
-import type { ShapeText, TextPlacement } from '../shape-text.js';
+import type { ShapeText, TextPlacement, ITextStyleTarget } from '../shape-text.js';
 import { flattenToLeaves } from '../commands/group-ops.js';
 
 // Internal collaborator owned by Diagram. Mirrors a single editor-owned
@@ -50,6 +50,12 @@ interface IStrokableItem { Stroke: Pen   | undefined; }
 // ApplyParagraphAlignment / CurrentParagraphAlignment so edit mode targets the
 // caret paragraph; placement is a whole-shape DP.
 interface ITextualItem { Text?: ShapeText; }
+// A content view-model whose label lives outside a ShapeText (an arch node's
+// `$Label` tile) opts into the text/character channels by exposing its own
+// ITextStyleTarget. `_textTargetOf` prefers a leaf's ShapeText and falls back to
+// this — the character/paragraph analogue of the Fill/Stroke paint-target
+// redirect (`_paintTargets`). Block placement stays ShapeText-only.
+interface ITextStyleHost { TextStyle?: ITextStyleTarget; }
 
 // Heterogeneous-typed array of Pen DP keys. Each entry is a
 // `PropertyKey<T>` for a different `T`; the broadcast loops treat them
@@ -146,6 +152,17 @@ export class FormatMirror
         return flattenToLeaves(this._diagram.SelectedItems);
     }
 
+    // The text-style target for a leaf: its own ShapeText (a geometric shape's
+    // caption) or, failing that, a content VM's exposed ITextStyleTarget (an arch
+    // node's `$Label` tile). The character + paragraph-alignment channels route
+    // through this so both populations respond to the Text page. Block placement
+    // stays on `.Text` only — a VM label tile has no inside/outside placement.
+    private _textTargetOf(leaf: MuralBase | undefined): ITextStyleTarget | undefined
+    {
+        if (leaf === undefined) return undefined;
+        return (leaf as ITextualItem).Text ?? (leaf as ITextStyleHost).TextStyle;
+    }
+
     // Fill / Stroke style the paint SURFACE. A selected leaf that is itself
     // paintable — a geometric shape Figure carries Fill/Stroke DPs — styles
     // directly; a content VM (an arch node: no Fill/Stroke of its own) styles its
@@ -207,10 +224,11 @@ export class FormatMirror
             // toolbars show nothing active). Alignment reads the caret
             // paragraph when the shape is being edited (Part 2). Done alongside
             // the cap channel, before the early return, so these stay coherent.
+            const firstTarget = this._textTargetOf(leaves[0]);
             const firstText = (leaves[0] as ITextualItem | undefined)?.Text;
-            this._diagram.set_property_value(Diagram.SelectionTextAlignmentKey, firstText?.CurrentParagraphAlignment());
+            this._diagram.set_property_value(Diagram.SelectionTextAlignmentKey, firstTarget?.CurrentParagraphAlignment());
             this._diagram.set_property_value(Diagram.SelectionTextPlacementKey, firstText?.Placement);
-            this._seedCharFormat(firstText);
+            this._seedCharFormat(firstTarget);
 
             if (leaves.length === 0 && connectors.length === 0)
             {
@@ -275,8 +293,9 @@ export class FormatMirror
         for (const leaf of this._leaves())
         {
             // Routes per mode inside ShapeText: caret paragraph while editing,
-            // every paragraph for rich content, the block default for plain.
-            (leaf as ITextualItem).Text?.ApplyParagraphAlignment(align);
+            // every paragraph for rich content, the block default for plain. A
+            // content VM's label tile aligns at block level via its target.
+            this._textTargetOf(leaf)?.ApplyParagraphAlignment(align);
         }
     }
 
@@ -302,19 +321,19 @@ export class FormatMirror
     // editor caret moves so the toolbars track the caret's formatting.
     private _reseedTextFormat(): void
     {
-        const firstText = (this._leaves()[0] as ITextualItem | undefined)?.Text;
+        const firstTarget = this._textTargetOf(this._leaves()[0]);
         this._seedingFormat = true;
         try
         {
-            this._diagram.SelectionTextAlignment = firstText?.CurrentParagraphAlignment();
-            this._seedCharFormat(firstText);
+            this._diagram.SelectionTextAlignment = firstTarget?.CurrentParagraphAlignment();
+            this._seedCharFormat(firstTarget);
         }
         finally { this._seedingFormat = false; }
     }
 
     // Seed the character-style DPs from a shape's label (the caret run while
     // editing). Caller owns the _seedingFormat gate. undefined shape → defaults.
-    private _seedCharFormat(text: import('../shape-text.js').ShapeText | undefined): void
+    private _seedCharFormat(text: ITextStyleTarget | undefined): void
     {
         const D = this._diagram.constructor as typeof import('../diagram.js').Diagram;
         this._diagram.set_property_value(D.SelectionFontFamilyKey,   text?.CurrentFontFamily() ?? '');
@@ -329,12 +348,12 @@ export class FormatMirror
     // Broadcast a character-style edit onto every selected shape's label. Gated
     // by _seedingFormat so a fresh selection's seed doesn't replay the first
     // shape's style onto the others.
-    private _broadcast(apply: (text: ShapeText, diagram: Diagram) => void): void
+    private _broadcast(apply: (text: ITextStyleTarget, diagram: Diagram) => void): void
     {
         if (this._seedingFormat) return;
         for (const leaf of this._leaves())
         {
-            const text = (leaf as ITextualItem).Text;
+            const text = this._textTargetOf(leaf);
             if (text !== undefined) apply(text, this._diagram);
         }
     }
@@ -358,7 +377,7 @@ export class FormatMirror
     {
         for (const leaf of this._leaves())
         {
-            const text = (leaf as ITextualItem).Text;
+            const text = this._textTargetOf(leaf);
             if (text !== undefined) text.ApplyFontSize(clampFontSize(text.CurrentFontSize() + delta));
         }
         const firstText = (this._leaves()[0] as ITextualItem | undefined)?.Text;
@@ -371,7 +390,7 @@ export class FormatMirror
     private _forceApplyChar<T>(
         key: (D: typeof import('../diagram.js').Diagram) => PropertyKey<T>,
         value: T,
-        apply: (text: ShapeText) => void,
+        apply: (text: ITextStyleTarget) => void,
     ): void
     {
         const D = this._diagram.constructor as typeof import('../diagram.js').Diagram;
@@ -380,7 +399,7 @@ export class FormatMirror
         finally { this._seedingFormat = false; }
         for (const leaf of this._leaves())
         {
-            const text = (leaf as ITextualItem).Text;
+            const text = this._textTargetOf(leaf);
             if (text !== undefined) apply(text);
         }
     }
@@ -413,7 +432,7 @@ export class FormatMirror
         finally { this._seedingFormat = false; }
         for (const leaf of this._leaves())
         {
-            (leaf as ITextualItem).Text?.ApplyParagraphAlignment(align);
+            this._textTargetOf(leaf)?.ApplyParagraphAlignment(align);
         }
     }
 

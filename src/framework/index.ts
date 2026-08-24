@@ -217,7 +217,7 @@ export {
     type SerializedNodeV2,
 } from './diagram/node-serialization.js';
 export { DiagramSettings, DiagramSettingKey } from './diagram/diagram-settings.js';
-export { ShapeText, TextPlacement, TextAutoFit, isOutsideTextPlacement, computeTextBlockAnchor } from './diagram/shape-text.js';
+export { ShapeText, TextPlacement, TextAutoFit, isOutsideTextPlacement, computeTextBlockAnchor, type ITextStyleTarget } from './diagram/shape-text.js';
 export {
     serializeFlowDocument, deserializeFlowDocument, cloneFlowDocument,
     flowDocumentToPlainText, flowDocumentFromPlainText, isEffectivelyPlainDocument,
