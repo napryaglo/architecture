@@ -19,6 +19,8 @@ import { Callout } from './callout.js';
 import { NodeVisualStore, type NodeVisual } from './serialization/node-visual-store.js';
 import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
 import { serializerFor, serializerByType } from './serialization/node-serialization.js';
+import { encodeClipboard, decodeClipboard } from './serialization/clipboard-payload.js';
+import { type ClipboardSink } from '../../basic/index.js';
 // Importing node-serializers-default.js registers the built-in
 // 'shape' / 'text' / 'callout' serializers as a side effect and
 // also exports the text helpers used by connector serialization.
@@ -263,6 +265,13 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
     // the mode on the control, and the control's changes flow back here.
     public static readonly ConnectorsModePinnedKey = MuralBase.RegisterProperty<boolean>(
         DiagramDocument, 'ConnectorsModePinned', false, MetaData.None);
+
+    // Format-painter (Copy Format) mode — mirrors the live view's
+    // FormatPainterActive two-way, so a toolbar ToggleButton binds it as a
+    // single-segment two-way IsChecked (the proven pattern) instead of firing a
+    // canExecute-gated command. Writing it arms/disarms the brush on the control.
+    public static readonly FormatPainterActiveKey = MuralBase.RegisterProperty<boolean>(
+        DiagramDocument, 'FormatPainterActive', false, MetaData.None);
 
     private _nextId = 1;
 
@@ -608,6 +617,8 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
 
     public get ConnectorsModePinned(): boolean  { return this.get_property_value(DiagramDocument.ConnectorsModePinnedKey); }
     public set ConnectorsModePinned(v: boolean) { this.set_property_value(DiagramDocument.ConnectorsModePinnedKey, v); }
+    public get FormatPainterActive(): boolean  { return this.get_property_value(DiagramDocument.FormatPainterActiveKey); }
+    public set FormatPainterActive(v: boolean) { this.set_property_value(DiagramDocument.FormatPainterActiveKey, v); }
 
     // Re-point the view mirror at a new ActiveView: detach the old view's mirrored
     // listeners (font selection + connectors mode), attach the new one's, refresh
@@ -621,6 +632,7 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
             this._mirrorView.RemovePropertyChangedListener(Diagram.SelectionFontSizeKey,     this._onViewMirrorChanged);
             this._mirrorView.RemovePropertyChangedListener(Diagram.SelectionFontColorHexKey, this._onViewMirrorChanged);
             this._mirrorView.RemovePropertyChangedListener(Diagram.ConnectorsModePinnedKey,  this._onViewMirrorChanged);
+            this._mirrorView.RemovePropertyChangedListener(Diagram.FormatPainterActiveKey,   this._onViewMirrorChanged);
         }
         this._mirrorView = view;
         this.set_property_value(DiagramDocument.IncreaseFontSizeCommandKey, view?.IncreaseFontSizeCommand);
@@ -631,6 +643,7 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
             view.AddPropertyChangedListener(Diagram.SelectionFontSizeKey,     this._onViewMirrorChanged);
             view.AddPropertyChangedListener(Diagram.SelectionFontColorHexKey, this._onViewMirrorChanged);
             view.AddPropertyChangedListener(Diagram.ConnectorsModePinnedKey,  this._onViewMirrorChanged);
+            view.AddPropertyChangedListener(Diagram.FormatPainterActiveKey,   this._onViewMirrorChanged);
             this._pullFromView();
         }
     }
@@ -674,6 +687,7 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
             this.FontSize             = view.SelectionFontSize;
             this.FontColorHex         = view.SelectionFontColorHex;
             this.ConnectorsModePinned = view.ConnectorsModePinned;
+            this.FormatPainterActive  = view.FormatPainterActive;
         }
         finally { this._syncingFromView = false; }
     }
@@ -697,6 +711,7 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
             else if (descriptor.Name === 'FontSize')             this._mirrorView.SelectionFontSize     = newValue as number;
             else if (descriptor.Name === 'FontColorHex')         this._mirrorView.SelectionFontColorHex = newValue as string;
             else if (descriptor.Name === 'ConnectorsModePinned') this._mirrorView.ConnectorsModePinned  = newValue as boolean;
+            else if (descriptor.Name === 'FormatPainterActive')  this._mirrorView.FormatPainterActive   = newValue as boolean;
         }
     }
 
@@ -725,6 +740,170 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
     public AddNode(node: NodeViewModel): void
     {
         this.Nodes.Add(node);
+    }
+
+    // ── Figure clipboard (Phase 1: pure figures) ───────────────────────
+    //
+    // Injectable clipboard seam — the OS clipboard by default (so copy in one
+    // document pastes into another window, and it participates in the real
+    // system clipboard). Node-safe: no-ops when navigator.clipboard is absent
+    // (headless tests); tests swap a synchronous fake. Mirrors RichTextBox's
+    // ClipboardSink pattern.
+    public static Clipboard: ClipboardSink = {
+        async Read(): Promise<string>
+        {
+            const nav = (globalThis as { navigator?: { clipboard?: { readText?: () => Promise<string> } } }).navigator;
+            return nav?.clipboard?.readText === undefined ? '' : nav.clipboard.readText();
+        },
+        async Write(text: string): Promise<void>
+        {
+            const nav = (globalThis as { navigator?: { clipboard?: { writeText?: (t: string) => Promise<void> } } }).navigator;
+            if (nav?.clipboard?.writeText !== undefined) await nav.clipboard.writeText(text);
+        },
+    };
+
+    // Cascade state: repeated pastes of the SAME clipboard text step the offset
+    // (+16 each) so duplicates don't stack exactly. A different clipboard text
+    // resets the cascade.
+    private _pasteCascadeText: string | undefined = undefined;
+    private _pasteCascade = 0;
+
+    /**
+     * Snapshot the selected figures (plus any nested descendants) and every
+     * connector wholly within that set onto the clipboard. Writes the tagged
+     * clipboard text via the injectable sink (fire-and-forget). Empty selection
+     * is a no-op — it must not clobber the existing clipboard.
+     */
+    public CopySelection(items: readonly unknown[], _connectors: readonly Connector[]): void
+    {
+        const copied = this._copiedIdSet(items);
+        if (copied.size === 0) return;
+
+        const nodes: SerializedNode[] = [];
+        const visuals: Record<string, NodeVisual> = {};
+        for (let i = 0; i < this.Nodes.Count; i++)
+        {
+            const node = this.Nodes.Get(i)!;
+            const id = (node as { Id?: string }).Id ?? '';
+            if (id === '' || !copied.has(id)) continue;
+            const s = serializerFor(node);
+            if (s === undefined) continue;
+            nodes.push({ id, type: s.type, data: s.serialize(node) });
+            if (node instanceof Figure) visuals[id] = this._visuals.Read(node);
+        }
+        if (nodes.length === 0) return;
+
+        const connectors: SerializedConnector[] = [];
+        for (let i = 0; i < this.Connectors.Count; i++)
+        {
+            const c = this.Connectors.Get(i)!;
+            if (c.Source === undefined || c.Target === undefined) continue;
+            const sId = endpointNodeId(c.Source), tId = endpointNodeId(c.Target);
+            if (sId === undefined || tId === undefined || !copied.has(sId) || !copied.has(tId)) continue;
+            connectors.push(serializeConnectorRecord(c));
+        }
+
+        void DiagramDocument.Clipboard.Write(encodeClipboard({ nodes, visuals, connectors }));
+    }
+
+    /**
+     * Read the clipboard and materialize its figures + connectors as a fresh
+     * copy: new ids, a cascading offset, ParentId + connector endpoints remapped
+     * to the pasted nodes. Foreign / empty clipboard text is a no-op. Async — it
+     * awaits the clipboard read before mutating.
+     */
+    public async PasteClipboard(): Promise<void>
+    {
+        const text = await DiagramDocument.Clipboard.Read();
+        const payload = decodeClipboard(text);
+        if (payload === undefined || payload.nodes.length === 0) return;
+
+        if (text === this._pasteCascadeText) this._pasteCascade += 1;
+        else { this._pasteCascadeText = text; this._pasteCascade = 1; }
+        const delta = 16 * this._pasteCascade;
+
+        // Pass 1: build each node with a fresh id, recording old→new so ParentId
+        // and connector endpoints can remap.
+        const idMap = new Map<string, string>();
+        const byNewId = new Map<string, Figure | NodeViewModel>();
+        const created: { node: Figure | NodeViewModel; oldId: string }[] = [];
+        for (const raw of payload.nodes as SerializedNode[])
+        {
+            const s = serializerByType(raw.type);
+            if (s === undefined) continue;
+            const node = s.deserialize(raw.data ?? {}) as Figure | NodeViewModel;
+            const newId = 'n' + this._nextId++;
+            idMap.set(raw.id, newId);
+            node.Id = newId;
+            byNewId.set(newId, node);
+            created.push({ node, oldId: raw.id });
+        }
+
+        // Pass 2: apply geometry (offset + remapped ParentId), then add.
+        const visuals = payload.visuals as Record<string, NodeVisual>;
+        for (const { node, oldId } of created)
+        {
+            const v = visuals[oldId];
+            if (v !== undefined && node instanceof Figure)
+            {
+                const remapped: NodeVisual = { ...v, left: v.left + delta, top: v.top + delta };
+                if (v.parentId !== undefined)
+                {
+                    const np = idMap.get(v.parentId);
+                    if (np !== undefined) remapped.parentId = np; else delete remapped.parentId;
+                }
+                this._visuals.Apply(remapped, node);
+            }
+            this.Nodes.Add(node);
+        }
+
+        // Pass 3: connectors — remap endpoints to the pasted nodes; drop any
+        // whose node fell outside the paste set.
+        for (const raw of payload.connectors as SerializedConnector[])
+        {
+            const src = remapEndpoint(raw.source, idMap, delta);
+            const tgt = remapEndpoint(raw.target, idMap, delta);
+            if (src === undefined || tgt === undefined) continue;
+            const c = new Connector();
+            if (typeof raw.routingMode === 'string') c.RoutingMode = raw.routingMode;
+            c.Source = rehydrateEndpoint(src, byNewId);
+            c.Target = rehydrateEndpoint(tgt, byNewId);
+            if (raw.waypoints !== undefined && raw.waypoints.length > 0)
+            {
+                c.Waypoints = raw.waypoints.map(p => waypoint(new Point(p.x + delta, p.y + delta), p.userAltered ?? true));
+            }
+            if (raw.text !== undefined) applySerializedText(c.Text, raw.text);
+            if (typeof raw.labelPos === 'number') c.LabelPosition = raw.labelPos;
+            this.Connectors.Add(c);
+        }
+
+        this._markDirty();
+    }
+
+    // Figure ids to copy: the selected figures plus every descendant nested
+    // inside a copied container (transitive via ParentId), so copying a
+    // container brings its contents.
+    private _copiedIdSet(items: readonly unknown[]): Set<string>
+    {
+        const copied = new Set<string>();
+        for (const it of items)
+        {
+            if (it instanceof Figure && it.Id !== undefined && it.Id !== '') copied.add(it.Id);
+        }
+        let changed = true;
+        while (changed)
+        {
+            changed = false;
+            for (let i = 0; i < this.Nodes.Count; i++)
+            {
+                const n = this.Nodes.Get(i)!;
+                if (!(n instanceof Figure)) continue;
+                const id = n.Id;
+                if (id === undefined || id === '' || copied.has(id)) continue;
+                if (n.ParentId !== undefined && copied.has(n.ParentId)) { copied.add(id); changed = true; }
+            }
+        }
+        return copied;
     }
 
     public DeleteNodes(items: readonly unknown[]): void
@@ -1156,20 +1335,8 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
         for (let i = 0; i < this.Connectors.Count; i++)
         {
             const c = this.Connectors.Get(i)!;
-            const src = c.Source, tgt = c.Target;
-            if (src === undefined || tgt === undefined) continue;   // half-set connectors are not persisted
-            const sSrc = serializeEndpoint(src);
-            const sTgt = serializeEndpoint(tgt);
-            connectors.push({
-                source:      sSrc,
-                target:      sTgt,
-                waypoints:   c.Waypoints !== undefined && c.Waypoints.length > 0
-                    ? c.Waypoints.map(w => ({ x: w.point.X, y: w.point.Y, userAltered: w.userAltered }))
-                    : undefined,
-                routingMode: c.RoutingMode,
-                text:        serializeShapeText(c.Text),
-                labelPos:    c.LabelPosition !== 0.5 ? c.LabelPosition : undefined,
-            });
+            if (c.Source === undefined || c.Target === undefined) continue;   // half-set connectors are not persisted
+            connectors.push(serializeConnectorRecord(c));
         }
         const hasMetadata = Object.keys(this._metadata).length > 0;
         return {
@@ -1403,6 +1570,53 @@ function rehydrateEndpoint(
     // The origin fallback: the serialized endpoint had NO nodeId and NO
     // freeX/freeY → it deserializes to (0,0).
     return new ConnectorEndpoint({ FreePoint: new Point(0, 0) });
+}
+
+// Snapshot one connector to its serialized record. Shared by full-document
+// save (_serialize) and clipboard copy so the two never drift. Caller
+// guarantees Source / Target are set.
+function serializeConnectorRecord(c: Connector): SerializedConnector
+{
+    return {
+        source:      serializeEndpoint(c.Source!),
+        target:      serializeEndpoint(c.Target!),
+        waypoints:   c.Waypoints !== undefined && c.Waypoints.length > 0
+            ? c.Waypoints.map(w => ({ x: w.point.X, y: w.point.Y, userAltered: w.userAltered }))
+            : undefined,
+        routingMode: c.RoutingMode,
+        text:        serializeShapeText(c.Text),
+        labelPos:    c.LabelPosition !== 0.5 ? c.LabelPosition : undefined,
+    };
+}
+
+// The node id an endpoint anchors to (a live node's Id, or a preserved
+// UnresolvedNodeId), or undefined for a free-point endpoint. Used by clipboard
+// copy to test whether a connector lies wholly within the copied set.
+function endpointNodeId(ep: ConnectorEndpoint | undefined): string | undefined
+{
+    if (ep === undefined) return undefined;
+    return nodeIdOf(ep.Node) ?? ep.UnresolvedNodeId;
+}
+
+// Remap a serialized endpoint for paste: a node-anchored endpoint re-points to
+// the pasted node's fresh id (undefined → drop the connector, its node wasn't
+// copied); a free-point endpoint shifts by the paste offset.
+function remapEndpoint(
+    ep: SerializedConnectorEndpoint,
+    idMap: ReadonlyMap<string, string>,
+    delta: number,
+): SerializedConnectorEndpoint | undefined
+{
+    if (ep.nodeId !== undefined)
+    {
+        const mapped = idMap.get(ep.nodeId);
+        return mapped === undefined ? undefined : { ...ep, nodeId: mapped };
+    }
+    if (typeof ep.freeX === 'number' && typeof ep.freeY === 'number')
+    {
+        return { ...ep, freeX: ep.freeX + delta, freeY: ep.freeY + delta };
+    }
+    return ep;
 }
 
 function combineModeName(mode: GeometryCombineMode): string

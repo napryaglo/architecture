@@ -1,6 +1,7 @@
 import type { Diagram } from '../diagram.js';
 import type { CombineRequestedArgs } from '../commands/combine.js';
 import type { DeleteRequestedArgs } from '../commands/delete-ops.js';
+import type { CopyRequestedArgs, PasteRequestedArgs } from '../commands/clipboard-ops.js';
 import type { GroupRequestedArgs, UngroupRequestedArgs } from '../commands/group-ops.js';
 import type { WrapRequestedArgs, UnwrapRequestedArgs } from '../commands/container-ops.js';
 import { Application, Point } from '../../../runtime/index.js';
@@ -74,6 +75,16 @@ export interface DiagramMutator
      *  as DeleteConnectors. */
     CreateConnector?(source: ConnectorEndpoint, target: ConnectorEndpoint): Connector | null | undefined;
 
+    /** Snapshot `items` (+ the connectors wholly within them) onto the
+     *  clipboard. Fired by Copy / Cut (Cut also fires Delete). Optional:
+     *  a mutator without clipboard support omits it. */
+    CopySelection?(items: readonly unknown[], connectors: readonly Connector[]): void;
+
+    /** Materialize the clipboard's contents as a fresh copy. Fired by Paste.
+     *  May be async (the OS clipboard read is a Promise); the helper does not
+     *  await it. Optional, same reasoning as CopySelection. */
+    PasteClipboard?(): void | Promise<void>;
+
     /**
      * Half-default-size, subtracted from cursor.x / y to map the cursor
      * onto the new node's TOP-LEFT. Defaults to (40, 40) — half of the
@@ -142,6 +153,8 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
             mutator.CreateConnector(args.Source, args.Target);
         }
     };
+    const onCopy  = (args: CopyRequestedArgs): void => mutator.CopySelection?.(args.Items, args.Connectors);
+    const onPaste = (_args: PasteRequestedArgs): void => { void mutator.PasteClipboard?.(); };
 
     diagram.AddGroupRequestedListener(onGroup);
     diagram.AddUngroupRequestedListener(onUngroup);
@@ -151,6 +164,8 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
     diagram.AddDeleteRequestedListener(onDelete);
     diagram.AddItemDroppedListener(onDropped);
     diagram.AddConnectorCreatedListener(onConnectorCreated);
+    diagram.AddCopyRequestedListener(onCopy);
+    diagram.AddPasteRequestedListener(onPaste);
 
     return (): void => {
         diagram.RemoveGroupRequestedListener(onGroup);
@@ -161,5 +176,7 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
         diagram.RemoveDeleteRequestedListener(onDelete);
         diagram.RemoveItemDroppedListener(onDropped);
         diagram.RemoveConnectorCreatedListener(onConnectorCreated);
+        diagram.RemoveCopyRequestedListener(onCopy);
+        diagram.RemovePasteRequestedListener(onPaste);
     };
 }

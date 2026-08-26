@@ -60,6 +60,12 @@ import {
     type DeleteRequestedListener,
 } from './commands/delete-ops.js';
 import {
+    type CopyRequestedArgs,
+    type CopyRequestedListener,
+    type PasteRequestedArgs,
+    type PasteRequestedListener,
+} from './commands/clipboard-ops.js';
+import {
     attachStandardDiagramMutations,
     type DiagramMutator,
 } from './behaviors/attach-standard-mutations.js';
@@ -105,6 +111,10 @@ import {
     attachConnectorInteractions,
     type ConnectorInteractionsHandlers,
 } from './behaviors/connector-interactions-behavior.js';
+import {
+    attachFormatPainter,
+    type FormatPainterHandlers,
+} from './behaviors/format-painter-behavior.js';
 import { Connector } from './connector.js';
 import { type RouteWaypoint, waypoint, hasPinned } from './route-waypoint.js';
 import type { RigidConnectorDragHost, RigidConnectorDragSession } from './rigid-connector-drag.js';
@@ -349,6 +359,24 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public static readonly DecreaseFontSizeCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'DecreaseFontSizeCommand', undefined, MetaData.None);
 
+    // Copy Format (format painter) — pick up the selected shape's format, then
+    // click shapes to stamp it. Toggles the FormatPainterActive DP; the paint
+    // gestures + capture live in the format-painter behavior (installed in the
+    // ctor). Bound by a ToolBarToggleButton whose IsChecked = $FormatPainterActive.
+    public static readonly CopyFormatCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'CopyFormatCommand', undefined, MetaData.None);
+
+    // Figure clipboard — Copy / Cut / Paste. Copy + Cut snapshot the selection
+    // (Cut also deletes); Paste materializes the clipboard. The commands fire the
+    // CopyRequested / PasteRequested events the consumer's mutator handles;
+    // Ctrl+C / X / V drive the same paths from OnKeyDown.
+    public static readonly CopyCommandKey  = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'CopyCommand', undefined, MetaData.None);
+    public static readonly CutCommandKey   = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'CutCommand', undefined, MetaData.None);
+    public static readonly PasteCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'PasteCommand', undefined, MetaData.None);
+
     // ── Connectors collection + template ──────────────────────────
     //
     // `Connectors` is a parallel collection to ItemsSource. Items in
@@ -435,6 +463,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // reactivity within a mounted behavior.
     public static readonly ConnectorsModePinnedKey = MuralBase.RegisterProperty<boolean>(
         Diagram, 'ConnectorsModePinned', false, MetaData.None);
+
+    // Format-painter mode. True while the Copy Format brush is loaded; a
+    // ToolBarToggleButton binds its IsChecked here. The format-painter behavior
+    // owns the transitions — capturing on true, dropping on false.
+    public static readonly FormatPainterActiveKey = MuralBase.RegisterProperty<boolean>(
+        Diagram, 'FormatPainterActive', false, MetaData.None);
 
     // Drop receiver — when set, Diagram attaches its canvas-drop
     // behavior to this Visual (typically the surrounding Border or
@@ -685,6 +719,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
 
     public get GroupCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.GroupCommandKey); }
     public get UngroupCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.UngroupCommandKey); }
+    public get CopyFormatCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.CopyFormatCommandKey); }
+    public get CopyCommand():  RelayCommand | undefined { return this.get_property_value(Diagram.CopyCommandKey); }
+    public get CutCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.CutCommandKey); }
+    public get PasteCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.PasteCommandKey); }
     public get WrapInContainerCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.WrapInContainerCommandKey); }
     public get UnwrapContainerCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.UnwrapContainerCommandKey); }
 
@@ -783,6 +821,8 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public set ConnectorInteractionsEnabled(v: boolean) { this.set_property_value(Diagram.ConnectorInteractionsEnabledKey, v); }
     public get ConnectorsModePinned():  boolean { return this.get_property_value(Diagram.ConnectorsModePinnedKey); }
     public set ConnectorsModePinned(v: boolean) { this.set_property_value(Diagram.ConnectorsModePinnedKey, v); }
+    public get FormatPainterActive():  boolean { return this.get_property_value(Diagram.FormatPainterActiveKey); }
+    public set FormatPainterActive(v: boolean) { this.set_property_value(Diagram.FormatPainterActiveKey, v); }
     public get ReflectSelectionToItems():  boolean { return this.get_property_value(Diagram.ReflectSelectionToItemsKey); }
     public set ReflectSelectionToItems(v: boolean) { this.set_property_value(Diagram.ReflectSelectionToItemsKey, v); }
     public get DropReceiver():  Visual | undefined { return this.get_property_value(Diagram.DropReceiverKey); }
@@ -907,6 +947,14 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public AddConnectorCreatedListener   (listener: ConnectorCreatedListener): void { this._connectorCreatedListeners.add(listener); }
     public RemoveConnectorCreatedListener(listener: ConnectorCreatedListener): void { this._connectorCreatedListeners.delete(listener); }
 
+    private readonly _copyRequestedListeners: Set<CopyRequestedListener> = new Set();
+    public AddCopyRequestedListener   (listener: CopyRequestedListener): void { this._copyRequestedListeners.add(listener); }
+    public RemoveCopyRequestedListener(listener: CopyRequestedListener): void { this._copyRequestedListeners.delete(listener); }
+
+    private readonly _pasteRequestedListeners: Set<PasteRequestedListener> = new Set();
+    public AddPasteRequestedListener   (listener: PasteRequestedListener): void { this._pasteRequestedListeners.add(listener); }
+    public RemovePasteRequestedListener(listener: PasteRequestedListener): void { this._pasteRequestedListeners.delete(listener); }
+
     // Internal fire helpers — invoked by DiagramCommands when the
     // corresponding RelayCommand's Execute runs. Snapshot-then-iterate
     // so a listener that registers / unregisters mid-fire doesn't
@@ -963,6 +1011,45 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public _fireConnectorCreated(args: ConnectorCreatedArgs): void
     {
         for (const l of [...this._connectorCreatedListeners]) l(args);
+    }
+
+    /** @internal */
+    public _fireCopyRequested(args: CopyRequestedArgs): void
+    {
+        for (const l of [...this._copyRequestedListeners]) l(args);
+    }
+
+    /** @internal */
+    public _firePasteRequested(args: PasteRequestedArgs): void
+    {
+        for (const l of [...this._pasteRequestedListeners]) l(args);
+    }
+
+    // Copy / Cut / Paste intent — invoked by the keyboard shortcuts and the
+    // Copy / Cut / Paste commands. Copy + Cut snapshot the current selection;
+    // Cut additionally fires Delete (the consumer's mutator removes the
+    // originals). Paste asks the consumer to materialize the clipboard.
+    /** @internal */
+    public _requestCopy(): void
+    {
+        if (this.SelectedItems.length === 0 && this.SelectedConnectors.length === 0) return;
+        this._fireCopyRequested({ Items: [...this.SelectedItems], Connectors: [...this.SelectedConnectors] });
+    }
+
+    /** @internal */
+    public _requestCut(): void
+    {
+        if (this.SelectedItems.length === 0 && this.SelectedConnectors.length === 0) return;
+        const items = [...this.SelectedItems];
+        const connectors = [...this.SelectedConnectors];
+        this._fireCopyRequested({ Items: items, Connectors: connectors });
+        this._fireDeleteRequested({ Items: items, Connectors: connectors, Shift: false });
+    }
+
+    /** @internal */
+    public _requestPaste(): void
+    {
+        this._firePasteRequested({});
     }
 
     // Alignment-guides attach state. `_alignmentGuidesDetach` holds the
@@ -1032,6 +1119,15 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public _setPersistentGuidesHandlers(h: PersistentGuidesHandlers | undefined): void
     {
         this._persistentGuidesHandlers = h;
+    }
+
+    // Format-painter preview-pointer + key interceptor — tunnel phase so a paint
+    // click pre-empts the Figure's select-on-click. Installed by attachFormatPainter.
+    private _formatPainterHandlers: FormatPainterHandlers | undefined = undefined;
+    /** @internal — used by attachFormatPainter. Not exposed publicly. */
+    public _setFormatPainterHandlers(h: FormatPainterHandlers | undefined): void
+    {
+        this._formatPainterHandlers = h;
     }
 
     // Drop-receiver / Mutator attach state — detach thunks for whichever
@@ -1257,6 +1353,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         new SelectionBoundsTracker(this);
         this._containerPlacement = new ContainerPlacement(this);
         this._formatMirror = new FormatMirror(this);
+        // Format-painter (Copy Format) — installed for the Diagram's lifetime,
+        // self-gated by the FormatPainterActive DP (no detach needed here).
+        attachFormatPainter(this);
         new SelectionGeometryMirror(this);
         new SelectionReflector(this);
         this._connectorsMaterializer = new DiagramConnectorsMaterializer(this);
@@ -1314,6 +1413,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     protected override OnPreviewPointerDown(args: PointerEventArgs): void
     {
         super.OnPreviewPointerDown(args);
+        // Format-painter first: while the brush is loaded a click stamps + is
+        // consumed here, pre-empting select and the connector interceptor.
+        this._formatPainterHandlers?.OnPreviewPointerDown(args);
+        if (args.Handled) return;
         this._connectorInteractionsHandlers?.OnPreviewPointerDown(args);
         this._alignmentGuidesHandlers?.OnPreviewPointerDown(args);
         this._persistentGuidesHandlers?.OnPreviewPointerDown(args);
@@ -1803,7 +1906,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // selection navigation should the consumer rely on it.
     protected override OnKeyDown(args: KeyEventArgs): void
     {
-        // Persistent-guides first: a selected guide consumes Delete/Backspace
+        // Format-painter Esc: drop the brush before any other key handling.
+        this._formatPainterHandlers?.OnKeyDown(args);
+        if (args.Handled) return;
+        // Persistent-guides next: a selected guide consumes Delete/Backspace
         // before the node-deletion path below sees it.
         this._persistentGuidesHandlers?.OnKeyDown?.(args);
         if (args.Handled) return;
@@ -1853,6 +1959,18 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         {
             const cmd = hasModifier(args.Modifiers, ModifierKeys.Shift) ? this.UngroupCommand : this.GroupCommand;
             if (cmd !== undefined && cmd.CanExecute(undefined)) cmd.Execute(undefined);
+            args.Handled = true;
+            return;
+        }
+        // Ctrl/⌘ + C / X / V — figure clipboard. Copy / Cut no-op on an empty
+        // selection (handled in _requestCopy/_requestCut); Paste always tries
+        // (the consumer no-ops on foreign / empty clipboard text).
+        if ((key === Key.C || key === Key.X || key === Key.V)
+            && (hasModifier(args.Modifiers, ModifierKeys.Control) || hasModifier(args.Modifiers, ModifierKeys.Windows)))
+        {
+            if (key === Key.C)      this._requestCopy();
+            else if (key === Key.X) this._requestCut();
+            else                    this._requestPaste();
             args.Handled = true;
             return;
         }

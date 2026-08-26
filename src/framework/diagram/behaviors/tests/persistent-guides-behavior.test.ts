@@ -1,12 +1,13 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { Application, AlignmentAxis, EdgeKind, Key, Point, Rect, Size, Visual, ObservableCollection, snapRectToGuides } from '../../../../runtime/index.js';
+import { Application, AlignmentAxis, EdgeKind, Key, ModifierKeys, Point, Rect, Size, Visual, ObservableCollection, snapRectToGuides } from '../../../../runtime/index.js';
 import { Border, ItemsPanelTemplate } from '../../../../basic/index.js';
 import { PaginatedCanvas } from '../../../../basic/panels/paginated-canvas.js';
 import { initTestApp } from '../../../../basic/tests/test-app.js';
 import { Diagram } from '../../diagram.js';
 import { Figure } from '../../figure.js';
 import { attachPersistentGuides } from '../persistent-guides-behavior.js';
+import { FORMAT_PAINTER_CURSOR } from '../format-painter-behavior.js';
 
 describe('persistent-guides behavior', () => {
     test('attach installs a composing PositionSnap and detach restores it', () => {
@@ -160,6 +161,20 @@ describe('persistent-guides behavior — live interactions', () => {
         move(diagram, 400, 300, diagram);    // empty canvas, away from bands + guides
         assert.equal(diagram.Cursor, undefined);
         assert.equal(diagram.GuidePreview, undefined);
+    });
+
+    test('while the format painter is armed, guides yield — its cursor survives an idle move', () => {
+        const { diagram, a } = setup();
+        // Select a shape so the format painter arms (and stays armed), which
+        // sets the diagram-wide copy cursor.
+        const container = diagram.Generator.ContainerFromItem(a);
+        diagram.HandleContainerClick(container as unknown as Visual, ModifierKeys.None);
+        diagram.FormatPainterActive = true;
+        assert.equal(diagram.Cursor, FORMAT_PAINTER_CURSOR, 'painter armed → copy cursor');
+        // An idle move over empty canvas — the guides hover would normally
+        // clearHover() here, stomping the painter's cursor. It must yield instead.
+        move(diagram, 400, 300, diagram);
+        assert.equal(diagram.Cursor, FORMAT_PAINTER_CURSOR, 'guides must not clobber the armed paint cursor');
     });
 
     test('the create band tracks the EFFECTIVE visible edge, not raw ScrollX/Y', () => {

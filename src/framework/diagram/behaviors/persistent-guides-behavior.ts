@@ -175,6 +175,14 @@ export function attachPersistentGuides(diagram: Diagram): () => void
     // created / grabbed via the cursor + a faint preview line. Mirrors the
     // onDown zone order so the affordance predicts exactly what a press would do.
     const hover = (args: PointerEventArgs): void => {
+        // A modal canvas tool (the format painter) owns the diagram cursor while
+        // active — yield to it: don't advertise a guide affordance and, crucially,
+        // don't clearHover() (that would stomp the tool's cursor on every move,
+        // reverting it to the default arrow). Clear only our own stale preview.
+        if (diagram.FormatPainterActive) {
+            if (diagram.GuidePreview !== undefined) diagram.GuidePreview = undefined;
+            return;
+        }
         // Over a ruler strip the RulerBar owns its own cursor — leave the canvas clean.
         if (findAncestor(args.Source, RulerBar) !== undefined) { clearHover(); return; }
         const p = contentPoint(args);

@@ -34,6 +34,7 @@ import {
 } from '../commands/combine.js';
 import { TextAlignment } from '../../../visual-engine/index.js';
 import { TextPlacement } from '../shape-text.js';
+import { primaryFormatTarget } from '../behaviors/format-painter-behavior.js';
 
 // Internal collaborator owned by Diagram. Owns the default RelayCommand
 // instances installed onto Diagram's Command DPs at construction time.
@@ -68,6 +69,8 @@ export class DiagramCommands
         this._installContainerCommands();
         this._installCombineCommands();
         this._installTextFormatCommands();
+        this._installCopyFormatCommand();
+        this._installClipboardCommands();
         diagram.AddSelectionChangedListener(() => this._raiseCanExecuteAll());
     }
 
@@ -247,6 +250,43 @@ export class DiagramCommands
         this._install(Diagram.DecreaseFontSizeCommandKey, 'DecreaseFontSize',
             new RelayCommand(() => this._diagram.BumpSelectionFontSize(-1), canText,
                 { Text: 'Decrease Font Size', Description: 'Shrink the selected shape(s) text one point — the selected text while editing.' }));
+    }
+
+    private _installCopyFormatCommand(): void
+    {
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+        // Enabled when a format is available to pick up (a formattable item is
+        // selected), OR the brush is already loaded — so a press can toggle it
+        // back off. Execute flips the mode DP; the format-painter behavior owns
+        // the capture-on-true / drop-on-false transitions.
+        const canCopy = (): boolean =>
+            this._diagram.FormatPainterActive || primaryFormatTarget(this._diagram) !== undefined;
+
+        this._install(Diagram.CopyFormatCommandKey, 'CopyFormat',
+            new RelayCommand(
+                () => { this._diagram.FormatPainterActive = !this._diagram.FormatPainterActive; },
+                canCopy,
+                { Text: 'Copy Format', Description: 'Pick up the selected shape\'s format, then click shapes to apply it. Press Esc to stop.' }));
+    }
+
+    private _installClipboardCommands(): void
+    {
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+        // Copy / Cut need something selected; Paste is always enabled (the OS
+        // clipboard can't be peeked synchronously — the mutator no-ops on
+        // foreign / empty text).
+        const hasSelection = (): boolean =>
+            this._diagram.SelectedItems.length > 0 || this._diagram.SelectedConnectors.length > 0;
+
+        this._install(Diagram.CopyCommandKey, 'Copy',
+            new RelayCommand(() => this._diagram._requestCopy(), hasSelection,
+                { Text: 'Copy', Description: 'Copy the selected shapes to the clipboard.' }));
+        this._install(Diagram.CutCommandKey, 'Cut',
+            new RelayCommand(() => this._diagram._requestCut(), hasSelection,
+                { Text: 'Cut', Description: 'Cut the selected shapes to the clipboard.' }));
+        this._install(Diagram.PasteCommandKey, 'Paste',
+            new RelayCommand(() => this._diagram._requestPaste(), () => true,
+                { Text: 'Paste', Description: 'Paste shapes from the clipboard.' }));
     }
 
     // Selected leaves that carry a label (duck-typed on `.Text`). Groups

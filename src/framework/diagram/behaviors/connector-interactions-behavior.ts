@@ -782,7 +782,7 @@ function wireHandle(handle: Visual, onDown: HandleDownCallback): void
     });
 }
 
-function findFigureAncestor(visual: unknown): Figure | undefined
+export function findFigureAncestor(visual: unknown): Figure | undefined
 {
     let cur = visual as Visual | undefined;
     while (cur !== undefined && cur !== null)
@@ -793,7 +793,7 @@ function findFigureAncestor(visual: unknown): Figure | undefined
     return undefined;
 }
 
-function findConnectorAncestor(visual: unknown): Connector | undefined
+export function findConnectorAncestor(visual: unknown): Connector | undefined
 {
     let cur = visual as Visual | undefined;
     while (cur !== undefined && cur !== null)
