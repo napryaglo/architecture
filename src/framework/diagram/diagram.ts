@@ -955,62 +955,90 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public AddPasteRequestedListener   (listener: PasteRequestedListener): void { this._pasteRequestedListeners.add(listener); }
     public RemovePasteRequestedListener(listener: PasteRequestedListener): void { this._pasteRequestedListeners.delete(listener); }
 
+    // Undo / Redo intent — the consumer's mutator owns the history stack. Fired by
+    // Ctrl+Z / Ctrl+Shift+Z; attach-standard-mutations forwards to mutator.Undo/Redo.
+    private readonly _undoRequestedListeners: Set<() => void> = new Set();
+    public AddUndoRequestedListener   (listener: () => void): void { this._undoRequestedListeners.add(listener); }
+    public RemoveUndoRequestedListener(listener: () => void): void { this._undoRequestedListeners.delete(listener); }
+
+    private readonly _redoRequestedListeners: Set<() => void> = new Set();
+    public AddRedoRequestedListener   (listener: () => void): void { this._redoRequestedListeners.add(listener); }
+    public RemoveRedoRequestedListener(listener: () => void): void { this._redoRequestedListeners.delete(listener); }
+
+    // Edit bracket — routes to the mutator's undo/redo history (set by
+    // attach-standard-mutations). Every MUTATING event dispatch is wrapped so all
+    // its listeners (the standard mutator AND, e.g., the Plexus arch binding) land
+    // in one history transaction. No-op when no bracket is set (e.g. headless).
+    private _editBracket: { begin(label: string): void; end(): void } | undefined;
+    /** @internal — set by attach-standard-mutations from the mutator's history. */
+    public _setEditBracket(b: { begin(label: string): void; end(): void } | undefined): void { this._editBracket = b; }
+    /** @internal — open a history transaction (used by fire helpers + interaction behaviors). */
+    public _beginEdit(label: string): void { this._editBracket?.begin(label); }
+    /** @internal — close the history transaction. */
+    public _endEdit(): void { this._editBracket?.end(); }
+    private _bracketed(label: string, fn: () => void): void
+    {
+        this._beginEdit(label);
+        try { fn(); } finally { this._endEdit(); }
+    }
+
     // Internal fire helpers — invoked by DiagramCommands when the
     // corresponding RelayCommand's Execute runs. Snapshot-then-iterate
     // so a listener that registers / unregisters mid-fire doesn't
-    // mutate the Set under iteration.
+    // mutate the Set under iteration. Mutating dispatches are bracketed
+    // into one history transaction; read-only Copy is not.
     /** @internal */
     public _fireGroupRequested(args: GroupRequestedArgs): void
     {
-        for (const l of [...this._groupRequestedListeners]) l(args);
+        this._bracketed('Group', () => { for (const l of [...this._groupRequestedListeners]) l(args); });
     }
 
     /** @internal */
     public _fireUngroupRequested(args: UngroupRequestedArgs): void
     {
-        for (const l of [...this._ungroupRequestedListeners]) l(args);
+        this._bracketed('Ungroup', () => { for (const l of [...this._ungroupRequestedListeners]) l(args); });
     }
 
     /** @internal */
     public _fireWrapRequested(args: WrapRequestedArgs): void
     {
-        for (const l of [...this._wrapRequestedListeners]) l(args);
+        this._bracketed('Wrap', () => { for (const l of [...this._wrapRequestedListeners]) l(args); });
     }
 
     /** @internal */
     public _fireUnwrapRequested(args: UnwrapRequestedArgs): void
     {
-        for (const l of [...this._unwrapRequestedListeners]) l(args);
+        this._bracketed('Unwrap', () => { for (const l of [...this._unwrapRequestedListeners]) l(args); });
     }
 
     /** @internal */
     public _fireNodeReparented(args: NodeReparentedArgs): void
     {
-        for (const l of [...this._nodeReparentedListeners]) l(args);
+        this._bracketed('Reparent', () => { for (const l of [...this._nodeReparentedListeners]) l(args); });
     }
 
     /** @internal */
     public _fireCombineRequested(args: CombineRequestedArgs): void
     {
-        for (const l of [...this._combineRequestedListeners]) l(args);
+        this._bracketed('Combine', () => { for (const l of [...this._combineRequestedListeners]) l(args); });
     }
 
     /** @internal */
     public _fireItemDropped(args: ItemDroppedArgs): void
     {
-        for (const l of [...this._itemDroppedListeners]) l(args);
+        this._bracketed('Drop', () => { for (const l of [...this._itemDroppedListeners]) l(args); });
     }
 
     /** @internal */
     public _fireDeleteRequested(args: DeleteRequestedArgs): void
     {
-        for (const l of [...this._deleteRequestedListeners]) l(args);
+        this._bracketed('Delete', () => { for (const l of [...this._deleteRequestedListeners]) l(args); });
     }
 
     /** @internal */
     public _fireConnectorCreated(args: ConnectorCreatedArgs): void
     {
-        for (const l of [...this._connectorCreatedListeners]) l(args);
+        this._bracketed('Connect', () => { for (const l of [...this._connectorCreatedListeners]) l(args); });
     }
 
     /** @internal */
@@ -1022,8 +1050,15 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     /** @internal */
     public _firePasteRequested(args: PasteRequestedArgs): void
     {
-        for (const l of [...this._pasteRequestedListeners]) l(args);
+        this._bracketed('Paste', () => { for (const l of [...this._pasteRequestedListeners]) l(args); });
     }
+
+    // Undo / Redo are NOT bracketed — the history runs them under its own
+    // suppression so a restore never records a new transaction.
+    /** @internal */
+    public _requestUndo(): void { for (const l of [...this._undoRequestedListeners]) l(); }
+    /** @internal */
+    public _requestRedo(): void { for (const l of [...this._redoRequestedListeners]) l(); }
 
     // Copy / Cut / Paste intent — invoked by the keyboard shortcuts and the
     // Copy / Cut / Paste commands. Copy + Cut snapshot the current selection;
@@ -1971,6 +2006,16 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             if (key === Key.C)      this._requestCopy();
             else if (key === Key.X) this._requestCut();
             else                    this._requestPaste();
+            args.Handled = true;
+            return;
+        }
+        // Ctrl/⌘ + Z undo, + Shift redo. The consumer's mutator owns the history;
+        // a no-op when nothing is recorded (mutator.Undo/Redo self-guard).
+        if (key === Key.Z
+            && (hasModifier(args.Modifiers, ModifierKeys.Control) || hasModifier(args.Modifiers, ModifierKeys.Windows)))
+        {
+            if (hasModifier(args.Modifiers, ModifierKeys.Shift)) this._requestRedo();
+            else                                                 this._requestUndo();
             args.Handled = true;
             return;
         }

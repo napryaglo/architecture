@@ -17,6 +17,8 @@ import { Group } from './group.js';
 import { NodeViewModel } from './node-view-model.js';
 import { Callout } from './callout.js';
 import { NodeVisualStore, type NodeVisual } from './serialization/node-visual-store.js';
+import { DiagramHistory } from './history/diagram-history.js';
+import { HistoryLayerId } from './history/history-layer.js';
 import { SHAPE_CATALOG_MAP, mergeShapes } from './shape-catalog.js';
 import { serializerFor, serializerByType } from './serialization/node-serialization.js';
 import { encodeClipboard, decodeClipboard } from './serialization/clipboard-payload.js';
@@ -393,6 +395,10 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
         }
     }
 
+    // Per-document undo/redo. Records visual edits (this diagram layer) plus any
+    // externally-registered layers (Plexus registers the TODL model layer).
+    private readonly _history = new DiagramHistory();
+
     constructor(storage?: DiagramStorage)
     {
         super();
@@ -416,7 +422,27 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
             new RelayCommand(() => this.Load(), canPersist,
                 { Text: 'Load',
                   Description: 'Restore the most recently saved canvas.' }));
+
+        // The native diagram layer: snapshot = the v3 serialization, restore =
+        // deserialize. Registered last so every field _serialize reads is set.
+        // Capture is resilient: a mid-mutation transient (e.g. a half-set connector
+        // endpoint during a cascade delete) can make _serialize throw; falling back
+        // to the last good snapshot makes that transaction a no-op instead of
+        // crashing, and the next serializable edit records normally.
+        let lastGood: SerializedDiagram | undefined;
+        this._history.RegisterLayer({
+            Id: HistoryLayerId.Diagram,
+            Capture: () => { try { lastGood = this._serialize(); } catch { /* transient — keep last good */ } return lastGood; },
+            Equals: (a, b) => JSON.stringify(a) === JSON.stringify(b),
+            Restore: (s) => { if (s !== undefined) this._deserialize(s as SerializedDiagram); },
+        });
     }
+
+    // The document's undo/redo history. Consumers register additional layers
+    // (e.g. a model layer) and the diagram's edit brackets drive its transactions.
+    public get History(): DiagramHistory { return this._history; }
+    public Undo(): void { this._history.Undo(); }
+    public Redo(): void { this._history.Redo(); }
 
     // IDocument accessors. Id is stable; Title is settable (a tab strip binds
     // it); IsDirty is read-only to the world — flipped internally by mutations
@@ -432,7 +458,10 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
     // Mark the document as having unsaved edits. Called from every structural
     // mutation; cleared by Save / Load. Private — dirtiness is derived, not set
     // from outside.
-    private _markDirty(): void { this.set_property_value(DiagramDocument.IsDirtyKey, true); }
+    private _markDirty(): void {
+        this.set_property_value(DiagramDocument.IsDirtyKey, true);
+        this._history.NotifyEdited();   // safety net: coalesce any un-bracketed edit
+    }
 
     // Observe the Nodes / Connectors collections so an in-place edit — a route
     // drag (Waypoints), an endpoint reconnect (endpoint.Node / FreePoint), a

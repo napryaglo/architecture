@@ -1066,6 +1066,8 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         if (state.activeGesture === ConnectorGesture.Edit && isGone(editAdorner.ActiveConnector))
         {
             editAdorner.Abort();
+            // Close the history transaction opened in onHandleDown so it doesn't leak.
+            (diagram as unknown as { _endEdit?(): void })._endEdit?.();
             state.activeGesture   = undefined;
             state.activePointerId = undefined;
             state.editKind        = undefined;
@@ -1092,6 +1094,10 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
     // layer → … → Diagram with no Figure to intercept first.
     const onHandleDown = (tag: HandleTag, args: PointerEventArgs): void => {
         if (state.activeGesture !== undefined) return;
+        // One history transaction for the whole connector gesture (create / endpoint
+        // / waypoint / segment drag), closed in onPointerUp. A nested ConnectorCreated
+        // bracket (on Create) joins this one, so a draw is a single undo step.
+        (diagram as unknown as { _beginEdit?(l: string): void })._beginEdit?.('Connector');
         const cursor = localPosition(args, diagram);
         if (tag.kind === 'side')
         {
@@ -1456,6 +1462,9 @@ export function attachConnectorInteractions(diagram: Diagram): () => void
         }
 
         args.ReleasePointerCapture();
+        // Close the gesture's history transaction (opened in onHandleDown). We only
+        // reach here when our gesture was active (guarded on activePointerId above).
+        (diagram as unknown as { _endEdit?(): void })._endEdit?.();
         state.activeGesture   = undefined;
         state.activePointerId = undefined;
         state.editKind        = undefined;

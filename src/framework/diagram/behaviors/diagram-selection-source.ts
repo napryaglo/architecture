@@ -92,6 +92,8 @@ export class DiagramSelectionSource implements SelectionSource
 
     public beginResize(): void
     {
+        // One history transaction for the whole resize drag (closed in endResize).
+        (this._diagram as unknown as { _beginEdit?(l: string): void })._beginEdit?.('Resize');
         const snaps: FigureSnapshot[] = [];
         // Snapshot each selected item's GEOMETRY HOST — the item itself when it
         // carries geometry DPs (geometric-shape Figures / legacy item-authoritative
@@ -181,6 +183,7 @@ export class DiagramSelectionSource implements SelectionSource
     public endResize(): void
     {
         this._snapshot = undefined;
+        (this._diagram as unknown as { _endEdit?(): void })._endEdit?.();
     }
 
     // The MuralBase whose Left/Top/Width/Height describe this item on the canvas:

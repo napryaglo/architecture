@@ -393,6 +393,7 @@ export class Figure extends ContentControl implements ISideEndpointHost
 
     private _dragging:    boolean = false;
     private _moved:       boolean = false;
+    private _editBegun:   boolean = false;   // a history transaction is open for this drag
     private _pressHostX:  number  = 0;
     private _pressHostY:  number  = 0;
     private _grabOffsetX: number  = 0;
@@ -1087,6 +1088,14 @@ export class Figure extends ContentControl implements ISideEndpointHost
             // The gesture is now a drag — snapshot the internal connectors
             // before the first position write clears their waypoints.
             this.beginRigidConnectorDrag();
+            // Open ONE history transaction for the whole drag; closed in
+            // OnPointerUp after any drop-reparent, so a drag-into-container is a
+            // single undo step (the reparent's own bracket nests inside this one).
+            const editHost = Selector.FromContainer<Selector>(
+                this, (v: Visual): v is Selector => v instanceof Selector) as
+                unknown as { _beginEdit?(l: string): void } | undefined;
+            editHost?._beginEdit?.('Move');
+            this._editBegun = true;
         }
         const sv = this._dragScrollViewer;
 
@@ -1259,6 +1268,16 @@ export class Figure extends ContentControl implements ISideEndpointHost
                 parent = (parent as unknown as { Parent?: unknown }).Parent;
             }
             selector?.HandleContainerClick(target, args.Modifiers);
+        }
+        // Close the drag's history transaction LAST — after the drop-reparent
+        // above — so move + reparent collapse into one undo step.
+        if (this._editBegun)
+        {
+            this._editBegun = false;
+            const endHost = Selector.FromContainer<Selector>(
+                this, (v: Visual): v is Selector => v instanceof Selector) as
+                unknown as { _endEdit?(): void } | undefined;
+            endHost?._endEdit?.();
         }
         args.Handled = true;
     }

@@ -85,6 +85,13 @@ export interface DiagramMutator
      *  await it. Optional, same reasoning as CopySelection. */
     PasteClipboard?(): void | Promise<void>;
 
+    /** Undo the last recorded edit. Optional: a mutator without an undo history
+     *  omits it, and the attach helper simply doesn't fire on Ctrl+Z. */
+    Undo?(): void;
+
+    /** Redo the last undone edit. Optional, same reasoning as Undo. */
+    Redo?(): void;
+
     /**
      * Half-default-size, subtracted from cursor.x / y to map the cursor
      * onto the new node's TOP-LEFT. Defaults to (40, 40) — half of the
@@ -155,6 +162,8 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
     };
     const onCopy  = (args: CopyRequestedArgs): void => mutator.CopySelection?.(args.Items, args.Connectors);
     const onPaste = (_args: PasteRequestedArgs): void => { void mutator.PasteClipboard?.(); };
+    const onUndo  = (): void => mutator.Undo?.();
+    const onRedo  = (): void => mutator.Redo?.();
 
     diagram.AddGroupRequestedListener(onGroup);
     diagram.AddUngroupRequestedListener(onUngroup);
@@ -166,8 +175,23 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
     diagram.AddConnectorCreatedListener(onConnectorCreated);
     diagram.AddCopyRequestedListener(onCopy);
     diagram.AddPasteRequestedListener(onPaste);
+    diagram.AddUndoRequestedListener(onUndo);
+    diagram.AddRedoRequestedListener(onRedo);
+
+    // Route the diagram's edit brackets to the mutator's undo/redo history when it
+    // has one (DiagramDocument does). Every mutating event dispatch + gesture then
+    // records as ONE transaction spanning all listeners (mutator + arch binding).
+    const withHistory = mutator as unknown as { History?: { Begin(label: string): void; Commit(): void } };
+    if (withHistory.History !== undefined)
+    {
+        diagram._setEditBracket({
+            begin: (label) => withHistory.History!.Begin(label),
+            end:   () => withHistory.History!.Commit(),
+        });
+    }
 
     return (): void => {
+        diagram._setEditBracket(undefined);
         diagram.RemoveGroupRequestedListener(onGroup);
         diagram.RemoveUngroupRequestedListener(onUngroup);
         diagram.RemoveWrapRequestedListener(onWrap);
@@ -178,5 +202,7 @@ export function attachStandardDiagramMutations(diagram: Diagram, mutator: Diagra
         diagram.RemoveConnectorCreatedListener(onConnectorCreated);
         diagram.RemoveCopyRequestedListener(onCopy);
         diagram.RemovePasteRequestedListener(onPaste);
+        diagram.RemoveUndoRequestedListener(onUndo);
+        diagram.RemoveRedoRequestedListener(onRedo);
     };
 }
