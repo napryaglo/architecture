@@ -72,6 +72,11 @@ export class DiagramHistory {
         if (this.depth > 0) return;
         const changes: LayerChange[] = [];
         for (const l of this.layers) {
+            // Only diff layers we captured a "before" for at Begin. A layer that
+            // registered mid-transaction (e.g. the model layer attaching during an
+            // open safety-net transaction) has no before — skip it here; it records
+            // from the next transaction (its baseline was seeded at registration).
+            if (!this.before.has(l)) continue;
             const before = this.before.get(l);
             const after = l.Capture();
             if (!l.Equals(before, after)) changes.push({ layer: l, before, after });

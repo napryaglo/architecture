@@ -77,6 +77,25 @@ describe('DiagramHistory', () => {
         assert.equal(reconciles, 1, 'Reconcile fired exactly once on undo');
     });
 
+    test('a layer registered mid-transaction is not spuriously recorded', () => {
+        let a = 'a0';
+        let b = 'b0';
+        const h = new DiagramHistory();
+        h.RegisterLayer(cellLayer(HistoryLayerId.Diagram, () => a, (v) => { a = v; }));
+
+        h.Begin('edit');
+        a = 'a1';
+        // A second layer registers WHILE the transaction is open (its "before" was
+        // never captured at Begin) and its value differs from any baseline.
+        h.RegisterLayer(cellLayer(HistoryLayerId.Model, () => b, (v) => { b = v; }));
+        b = 'b1';
+        h.Commit();
+
+        h.Undo();
+        assert.equal(a, 'a0', 'the layer captured at Begin undoes');
+        assert.equal(b, 'b1', 'the mid-transaction layer is left untouched (not wiped)');
+    });
+
     test('NotifyEdited auto-coalesces unbracketed edits within a microtask', () => {
         let cell = 'a';
         const pending: Array<() => void> = [];
