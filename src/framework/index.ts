@@ -198,6 +198,8 @@ export {
     DiagramStorageKey,
     type DiagramStorage,
 } from './diagram/diagram-document.js';
+export { DiagramHistory } from './diagram/history/diagram-history.js';
+export { HistoryLayerId, type IHistoryLayer } from './diagram/history/history-layer.js';
 export { DiagramEditingContext, DiagramCommandId } from './diagram/diagram-command-contexts.js';
 export { DiagramInspector } from './diagram/diagram-inspector.js';
 export { InspectorPage, ShapeStylePage, SizePositionPage } from './diagram/inspector-pages.js';
