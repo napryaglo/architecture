@@ -361,6 +361,11 @@ export class InputManager
         Keyboard.PrimaryDevice._setFocused(visual);
         FocusManager._recordLogicalFocus(visual);
 
+        // IsKeyboardFocusWithin: clear the old focus chain, then set the new one
+        // (shared ancestors resolve true because the set runs after the clear).
+        setKeyboardFocusWithinChain(old, false);
+        setKeyboardFocusWithinChain(visual, true);
+
         if (old !== undefined)
         {
             setIsFocused(old, false);
@@ -766,6 +771,28 @@ function setIsPressed(v: Element, value: boolean): void
 function setIsFocused(v: Element, value: boolean): void
 {
     v._setIsFocused(value);
+}
+
+// A node on a focused element's visual-parent chain. Every real ancestor is an
+// Element (Controls / Panels), but the chain can end at a plain-Visual root, so
+// the setter is optional-guarded.
+interface FocusWithinNode
+{
+    _setIsKeyboardFocusWithin?(value: boolean): void;
+    GetVisualParent(): FocusWithinNode | undefined;
+}
+
+// Flip IsKeyboardFocusWithin along the whole visual-parent chain of `from`.
+// SetFocus clears the old focus chain then sets the new one; shared ancestors
+// end up correctly true (set runs after clear).
+function setKeyboardFocusWithinChain(from: Element | undefined, value: boolean): void
+{
+    let cur: FocusWithinNode | undefined = from as unknown as FocusWithinNode | undefined;
+    while (cur !== undefined)
+    {
+        cur._setIsKeyboardFocusWithin?.(value);
+        cur = cur.GetVisualParent();
+    }
 }
 
 function isFocusable(v: Element): boolean

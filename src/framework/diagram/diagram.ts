@@ -1429,13 +1429,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         }
     }
 
-    // PointerDown anywhere on the Diagram surface takes keyboard focus
-    // so subsequent Delete / Ctrl+G / arrow-key shortcuts route to this
-    // Diagram. No-op when Focusable=false (the Visual.Focus contract).
     protected override OnPointerDown(args: PointerEventArgs): void
     {
         super.OnPointerDown(args);
-        this.Focus();
     }
 
     // Preview-phase pointer overrides delegate to the connector-
@@ -1448,6 +1444,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     protected override OnPreviewPointerDown(args: PointerEventArgs): void
     {
         super.OnPreviewPointerDown(args);
+        // Take keyboard focus on the TUNNEL (preview) phase so it happens for a
+        // click ANYWHERE within the diagram — canvas, node, or connector — before a
+        // descendant Figure can consume the event by setting args.Handled (a bubble
+        // OnPointerDown would miss a node/connector click). Subsequent Delete /
+        // Ctrl+Z / arrow-key shortcuts then route to this Diagram. No-op when
+        // Focusable=false (the Visual.Focus contract).
+        this.Focus();
         // Format-painter first: while the brush is loaded a click stamps + is
         // consumed here, pre-empting select and the connector interceptor.
         this._formatPainterHandlers?.OnPreviewPointerDown(args);

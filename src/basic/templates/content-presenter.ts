@@ -4,6 +4,7 @@
     MuralBase,
     Rect,
     Size,
+    Visibility,
     Visual,
     type DrawingContext,
     type PropertyDescriptor,
@@ -59,6 +60,16 @@ export class ContentPresenter extends Element
     public static readonly ReuseContentViewsKey = MuralBase.RegisterProperty<boolean>(
         ContentPresenter, 'ReuseContentViews', false, MetaData.None);
 
+    // Opt-in: when a new content Visual is slotted, move keyboard focus into it —
+    // to the first focusable descendant (the content's "root control"). OFF by
+    // default so a plain presenter / ItemsControl item container never steals
+    // focus. A document host's content slot turns it on so activating a document
+    // (its view becomes the slotted content) lands focus on its root control (e.g.
+    // a diagram canvas), and the pane reads as focused (IsKeyboardFocusWithin).
+    // Fires on every slot change, including a ReuseContentViews re-activation.
+    public static readonly FocusContentOnActivateKey = MuralBase.RegisterProperty<boolean>(
+        ContentPresenter, 'FocusContentOnActivate', false, MetaData.None);
+
     private _content: Visual | undefined;
     // Per-content view cache, populated only when ReuseContentViews is on.
     // WeakMap so a dropped content object's view is collected with it.
@@ -109,8 +120,22 @@ export class ContentPresenter extends Element
             // template-set styling unresolved. Paired with
             // Element.walk_inherited's visual-tree fallback.
             content._refresh_inheritance_subtree();
+            if (this.FocusContentOnActivate) this.scheduleContentFocus(content);
         }
         this.InvalidateMeasure();
+    }
+
+    // Defer focusing the new content's root control to a microtask: the visual
+    // has just been slotted but isn't attached / first-laid-out yet, and Focus()
+    // needs a mounted target. Re-checks the slot hasn't changed again before
+    // focusing (a rapid re-activation supersedes an in-flight focus).
+    private scheduleContentFocus(root: Visual): void
+    {
+        queueMicrotask(() =>
+        {
+            if (this._content !== root) return;
+            firstFocusable(root)?.Focus();
+        });
     }
 
     // The slotted content is our VISUAL child (visualChildren = [_content]),
@@ -171,6 +196,9 @@ export class ContentPresenter extends Element
 
     public get ReuseContentViews(): boolean { return this.get_property_value(ContentPresenter.ReuseContentViewsKey); }
     public set ReuseContentViews(v: boolean) { this.set_property_value(ContentPresenter.ReuseContentViewsKey, v); }
+
+    public get FocusContentOnActivate(): boolean { return this.get_property_value(ContentPresenter.FocusContentOnActivateKey); }
+    public set FocusContentOnActivate(v: boolean) { this.set_property_value(ContentPresenter.FocusContentOnActivateKey, v); }
 
     protected override OnPropertyChanged(
         descriptor: PropertyDescriptor,
@@ -278,4 +306,19 @@ export class ContentPresenter extends Element
         }
         this.SetContent(undefined);
     }
+}
+
+// The first focusable Visual in `root`'s subtree, pre-order (root first, then
+// visual children left-to-right) — the content's "root control". Skips
+// collapsed subtrees (a collapsed element can't take focus).
+function firstFocusable(root: Visual): Visual | undefined
+{
+    if (root.Visibility === Visibility.Collapsed) return undefined;
+    if (root.Focusable === true) return root;
+    for (const child of root.visualChildren)
+    {
+        const hit = firstFocusable(child);
+        if (hit !== undefined) return hit;
+    }
+    return undefined;
 }

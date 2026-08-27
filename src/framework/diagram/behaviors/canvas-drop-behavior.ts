@@ -49,6 +49,10 @@ export function attachCanvasDropBehavior(receiver: Visual, diagram: Diagram): ()
 
     const onDrop = (args: DragEventArgs): void => {
         if (!args.Data.Has(TOOLBOX_ITEM_FORMAT)) return;
+        // A drop is a diagram interaction — take keyboard focus so the just-dropped
+        // node is immediately editable/deletable via shortcuts. No-op when the
+        // diagram isn't Focusable (the Visual.Focus contract).
+        diagram.Focus();
         const position = localPosition(args);
         diagram._fireItemDropped({
             Data:     args.Data,

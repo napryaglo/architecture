@@ -1504,6 +1504,14 @@ export class Element extends Visual implements ITriggerHost
     // focused target. Read-only; use `Focus()` / `Blur()` to change.
     public static readonly IsFocusedKey   = MuralBase.RegisterReadOnlyProperty<boolean>(Element, 'IsFocused',   false, MetaData.None);
 
+    // IsKeyboardFocusWithin — true when this Element OR any descendant holds
+    // keyboard focus (WPF parity). Maintained by InputManager.SetFocus, which
+    // sets it up the focused element's visual-parent chain and clears it up the
+    // previous one's. Read-only; a container styles its "focus is within me"
+    // state via `when($IsKeyboardFocusWithin)` (e.g. an active-pane affordance).
+    public static readonly IsKeyboardFocusWithinKey = MuralBase.RegisterReadOnlyProperty<boolean>(
+        Element, 'IsKeyboardFocusWithin', false, MetaData.None);
+
     // Drop-target flags. AllowDrop is consumer-set (defaults false so a
     // random Element never accidentally accepts drops); IsDragOver is
     // framework-written and behaves like IsMouseOver — public read, no
@@ -1580,6 +1588,16 @@ export class Element extends Visual implements ITriggerHost
     public _setIsFocused(value: boolean): void
     {
         this.set_property_value_with_key(Element.IsFocusedKey, value);
+    }
+
+    public override get IsKeyboardFocusWithin(): boolean { return this.get_property_value(Element.IsKeyboardFocusWithinKey); }
+
+    /** @internal — InputManager only. Typed writeback for the read-only
+     *  `IsKeyboardFocusWithin` DP — set/cleared along a focused element's
+     *  visual-parent chain on every focus move. */
+    public _setIsKeyboardFocusWithin(value: boolean): void
+    {
+        this.set_property_value_with_key(Element.IsKeyboardFocusWithinKey, value);
     }
 
     // Drop-target opt-in. The InputManager's drag dispatcher walks the

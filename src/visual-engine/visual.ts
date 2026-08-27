@@ -476,6 +476,9 @@ export class Visual extends MuralBase
      *  writes. A real instance is always an Element, so these stubs only
      *  satisfy Visual-typed call sites — they're never the live path. */
     public get IsFocused(): boolean { return false; }
+    // True when this Visual OR a descendant holds keyboard focus (WPF's
+    // IsKeyboardFocusWithin). Stub on plain Visual; Element maintains the real DP.
+    public get IsKeyboardFocusWithin(): boolean { return false; }
     public get AllowDrop(): boolean { return false; }
     public set AllowDrop(_v: boolean) { /* plain Visual: no-op */ }
     public get IsDragOver(): boolean { return false; }
