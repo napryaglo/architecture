@@ -1328,6 +1328,17 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
             }
             this._deserialize(JSON.parse(json) as SerializedDiagram);
             this.set_property_value(DiagramDocument.IsDirtyKey, false);
+            // A freshly loaded document has no undoable past, and its loaded
+            // content is the baseline — not a phantom "added every node" edit the
+            // deserialize's adds would otherwise leave on the safety net (whose
+            // "before" is the empty constructor state until now).
+            this._history.Reset();
+            // Open a settle window over the post-load LAYOUT pass: once the view
+            // mounts, containers size to content and connectors route for the first
+            // time, firing the safety net asynchronously. Those derived-geometry
+            // writes are not edits — swallow them so opening a file leaves a clean,
+            // empty undo stack.
+            this._history.BeginSettle();
             this.Status = `Loaded ${this.Nodes.Count} nodes.`;
         }
         catch (e)
@@ -1339,10 +1350,13 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
     private _serialize(): SerializedDiagram
     {
         const nodes: SerializedNode[] = [];
-        // Rebuild the visual store from the live nodes (all serializable nodes
-        // are Figures that own their geometry). Content → nodes section,
-        // geometry → visuals section, correlated by id.
-        this._visuals.Clear();
+        // Refresh the visual store from the live nodes WITHOUT dropping geometry we
+        // can't currently read. A Clear-then-rebuild loses the stored geometry of a
+        // live-but-unrealized node — one whose container has not bound yet, e.g. a
+        // Capture right after Load, before the view mounts. Instead: a node with a
+        // realized figure updates its stored geometry; a live node with no figure
+        // keeps its pending geometry; and only ids no longer present are evicted.
+        const liveIds = new Set<string>();
         for (let i = 0; i < this.Nodes.Count; i++)
         {
             const node = this.Nodes.Get(i)!;
@@ -1351,19 +1365,25 @@ export class DiagramDocument extends MuralBase implements DiagramMutator, IDocum
             if (s === undefined) continue;
             const id = (node as { Id?: string }).Id ?? '';
             nodes.push({ id, type: s.type, data: s.serialize(node) });
+            if (id !== '') liveIds.add(id);
             // Geometry owner: the node itself when it's a self-painting Figure,
             // else its container Figure (content VMs host geometry on the
-            // container). No container (headless VM edit, no live view) → no
-            // geometry to persist for that node this save.
+            // container). No container (headless VM edit, no live view, or a
+            // pre-mount Capture) → keep whatever geometry is already stored.
             const fig = node instanceof Figure
                 ? node
                 : this.ActiveView?.Generator.ContainerFromItem(node) as Figure | undefined;
             if (fig !== undefined && id !== '') this._visuals.Set(id, this._visuals.Read(fig));
         }
+        // Evict geometry for ids no longer on the canvas (a delete), keeping the
+        // pending geometry of live-but-unrealized nodes.
+        for (const id of Object.keys(this._visuals.Snapshot()))
+            if (!liveIds.has(id)) this._visuals.Remove(id);
         const connectors: SerializedConnector[] = [];
         for (let i = 0; i < this.Connectors.Count; i++)
         {
             const c = this.Connectors.Get(i)!;
+            if (c.IsDerived) continue;                                        // system-projected — re-derived, never persisted/recorded
             if (c.Source === undefined || c.Target === undefined) continue;   // half-set connectors are not persisted
             connectors.push(serializeConnectorRecord(c));
         }

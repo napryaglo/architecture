@@ -2062,7 +2062,15 @@ export class Panel extends Element
     public InsertVisualChild(index: number, child: Visual): void
     {
         this.AttachVisual(child);
-        this._children.Insert(index, child);
+        // Clamp to a valid slot. An ItemsControl syncs children at ITEM indices,
+        // but a host that reparents some containers OUT of this panel — a diagram's
+        // ContentContainerFigure adopts its nested nodes' figures — leaves fewer
+        // visual children than items, so an item's index can exceed the child
+        // count (e.g. restoring/rebuilding a nested diagram). The exact slot of
+        // such an out-of-order insert is irrelevant: the reparenting host re-places
+        // the figure. Append rather than throw.
+        const at = Math.max(0, Math.min(index, this._children.Count));
+        this._children.Insert(at, child);
     }
 
     public RemoveVisualChild(child: Visual): void

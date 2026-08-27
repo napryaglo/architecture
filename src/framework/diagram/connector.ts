@@ -188,6 +188,17 @@ export class Connector extends Shape
     public get TargetCapScale(): number { return this.get_property_value(Connector.TargetCapScaleKey); }
     public set TargetCapScale(v: number) { this.set_property_value(Connector.TargetCapScaleKey, v); }
 
+    // Derived (system-projected) connector: reconstructed from an external source
+    // of truth — a model→diagram binding re-projects it on every reconcile. Such a
+    // connector is EXCLUDED from serialization AND from the undo-history snapshot:
+    // persisting it would duplicate on reload, and recording it would litter history
+    // with projection churn (create / delete / re-route) that the reconcile re-
+    // derives anyway. User-drawn connectors (and a standalone diagram's) default to
+    // false and round-trip normally. Plain field — no view binds it.
+    private _isDerived = false;
+    public get IsDerived(): boolean { return this._isDerived; }
+    public set IsDerived(v: boolean) { this._isDerived = v; }
+
     // The label text block — always present (seeded in the ctor). LabelText
     // is sugar over Text.Content for the common "just caption it" path.
     public get Text(): ShapeText               { return this.get_property_value(Connector.TextKey)!; }

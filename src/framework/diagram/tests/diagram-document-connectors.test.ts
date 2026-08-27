@@ -128,6 +128,26 @@ describe('DiagramDocument — Figure delete cascades to dependent connectors', (
 // ── Save / Load round-trip ───────────────────────────────────────────
 
 describe('DiagramDocument — Save / Load round-trips connectors', () => {
+    test('a derived (system-projected) connector is excluded from serialization', () => {
+        const storage = new MemoryStorage();
+        const doc = newDoc(storage);
+        const a = doc.CreateNode('rectangle', 100, 100)!;
+        const b = doc.CreateNode('ellipse',   300, 100)!;
+        // One user connector + one derived (projection-owned) connector.
+        doc.CreateConnector(new ConnectorEndpoint({ Node: a }), new ConnectorEndpoint({ Node: b }));
+        const derived = doc.CreateConnector(new ConnectorEndpoint({ Node: b }), new ConnectorEndpoint({ Node: a }))!;
+        derived.IsDerived = true;
+        assert.equal(doc.Connectors.Count, 2, 'both live on the canvas');
+
+        doc.Save();
+        const restored = newDoc(storage);
+        restored.Storage = storage;
+        restored.Load();
+        // Only the user connector persisted; the derived one is re-projected by its
+        // owner, never saved — so it does not duplicate on reload.
+        assert.equal(restored.Connectors.Count, 1, 'derived connector not persisted');
+    });
+
     test('node-anchored endpoints rehydrate by node Id', () => {
         const storage = new MemoryStorage();
         const doc = newDoc(storage);

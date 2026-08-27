@@ -1,7 +1,13 @@
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
-import { DiagramDocument } from '../diagram-document.js';
+import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
+
+class MemoryStorage implements DiagramStorage {
+    private readonly _map = new Map<string, string>();
+    public GetItem(key: string): string | null { return this._map.get(key) ?? null; }
+    public SetItem(key: string, value: string): void { this._map.set(key, value); }
+}
 
 // _deserialize rebuilds nodes as fresh instances, so restored state is read back
 // by id from the live collection, never through a pre-undo reference.
@@ -31,6 +37,35 @@ describe('DiagramDocument history — diagram layer round-trip', () => {
 
         doc.Redo();
         assert.equal(nodeById(doc, id)?.Left, 200, 'redo restored Left');
+    });
+
+    test('Load resets history — a loaded diagram is not a phantom undo entry', async () => {
+        // Author + save a diagram.
+        const storage = new MemoryStorage();
+        const src = new DiagramDocument(storage);
+        src.History.Begin('Create');
+        src.CreateNode('rectangle', 10, 10);
+        src.CreateNode('ellipse', 40, 40);
+        src.History.Commit();
+        src.Save();
+
+        // Reopen it: a fresh document loads the saved content. The deserialize's
+        // node adds mark the doc dirty (→ safety net); Load must reset history so
+        // opening the file leaves nothing to undo, not a "added 2 nodes" phantom.
+        const doc = new DiagramDocument(storage);
+        doc.Load();
+        await new Promise((r) => setTimeout(r, 0));   // drain any safety-net microtask
+        assert.equal(doc.Nodes.Count, 2, 'content loaded');
+        assert.equal(doc.History.CanUndo, false, 'opening a file leaves no undo entry');
+
+        // A subsequent edit undoes to the LOADED state (2 nodes), never past it.
+        doc.History.Begin('Move');
+        const n = doc.Nodes.ToArray()[0] as { Left: number };
+        n.Left = 300;
+        doc.History.Commit();
+        doc.Undo();
+        assert.equal(doc.Nodes.Count, 2, 'undo lands on the loaded baseline');
+        assert.equal(doc.History.CanUndo, false);
     });
 
     test('undo restores a deleted node', () => {
