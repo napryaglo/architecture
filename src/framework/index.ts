@@ -198,6 +198,8 @@ export {
     DiagramStorageKey,
     type DiagramStorage,
 } from './diagram/diagram-document.js';
+export type { LayoutPreview, LayoutPreviewNode, LayoutPreviewEdge } from './diagram/layout-preview.js';
+export { LayoutPreviewAdorner } from './diagram/layout/layout-preview-adorner.js';
 export { DiagramHistory } from './diagram/history/diagram-history.js';
 export { HistoryLayerId, type IHistoryLayer } from './diagram/history/history-layer.js';
 export { DiagramEditingContext, DiagramCommandId } from './diagram/diagram-command-contexts.js';

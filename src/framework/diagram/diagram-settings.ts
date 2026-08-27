@@ -56,6 +56,9 @@ export enum DiagramSettingKey
     ChromeConnectorHandle          = 'diagram.chrome.connectorHandle',
     ChromeConnectorSegment         = 'diagram.chrome.connectorSegment',
     ChromeNeutralInk               = 'diagram.chrome.neutralInk',
+    ChromeLayoutPreviewBackdrop    = 'diagram.chrome.layoutPreviewBackdrop',
+    ChromeLayoutPreviewNodeFill    = 'diagram.chrome.layoutPreviewNodeFill',
+    ChromeLayoutPreviewStroke      = 'diagram.chrome.layoutPreviewStroke',
 
     ToolboxTileSize             = 'diagram.toolbox.tileSize',
     ToolboxPreviewFill          = 'diagram.toolbox.previewFill',
@@ -266,6 +269,15 @@ const COLOR_SPECS: readonly DiagramColorSettingSpec[] =
     { key: DiagramSettingKey.ChromeNeutralInk, label: 'Neutral affordance ink',
       description: 'Neutral slate used for the callout leader line and cap-preview glyphs.',
       category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#64748b')) },
+    { key: DiagramSettingKey.ChromeLayoutPreviewBackdrop, label: 'Layout preview backdrop',
+      description: 'Opaque fill the layout-preview overlay paints over the canvas to hide the current diagram. Defaults to the theme Surface.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#ffffff')) },
+    { key: DiagramSettingKey.ChromeLayoutPreviewNodeFill, label: 'Layout preview node fill',
+      description: 'Faint fill of each proposed node block in the layout-preview overlay.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#3b82f63d')) },
+    { key: DiagramSettingKey.ChromeLayoutPreviewStroke, label: 'Layout preview stroke',
+      description: 'Outline of proposed node blocks and the connector lines in the layout-preview overlay.',
+      category: CAT_CHROME, default: new SolidColorBrush(Color.FromHex('#1976d2')) },
 ];
 
 const COLOR_DEFAULTS: ReadonlyMap<DiagramSettingKey, SolidColorBrush> =
@@ -291,6 +303,9 @@ const THEME_LINK: ReadonlyMap<DiagramSettingKey, ThemeLink> = new Map<DiagramSet
     [DiagramSettingKey.RulerFill,              { token: 'Surface' }],
     [DiagramSettingKey.RulerTickColor,         { token: 'OnSurfaceVariant' }],
     [DiagramSettingKey.RulerHoverFill,         { token: 'Primary', alpha: 41 }], // ≈ 16%
+    [DiagramSettingKey.ChromeLayoutPreviewBackdrop, { token: 'Surface' }],       // opaque — hides the live diagram
+    [DiagramSettingKey.ChromeLayoutPreviewNodeFill, { token: 'Primary', alpha: 61 }], // ≈ 24% brand wash
+    [DiagramSettingKey.ChromeLayoutPreviewStroke,   { token: 'Primary' }],
 ]);
 
 // Every catalogued key, numeric + colour — the change-listener wiring binds all.
@@ -497,6 +512,9 @@ export class DiagramSettings
     public static ConnectorHandleColor():  SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeConnectorHandle); }
     public static ConnectorSegmentColor(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeConnectorSegment); }
     public static NeutralInk():            SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeNeutralInk); }
+    public static LayoutPreviewBackdrop(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeLayoutPreviewBackdrop); }
+    public static LayoutPreviewNodeFill(): SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeLayoutPreviewNodeFill); }
+    public static LayoutPreviewStroke():   SolidColorBrush { return DiagramSettings.color(DiagramSettingKey.ChromeLayoutPreviewStroke); }
 
     // ── Toolbox ──────────────────────────────────────────────────────────
     public static ToolboxTileSize():    number          { return DiagramSettings.num(DiagramSettingKey.ToolboxTileSize); }

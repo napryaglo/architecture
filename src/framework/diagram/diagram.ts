@@ -76,6 +76,8 @@ import {
 } from './behaviors/alignment-guides-behavior.js';
 import { attachPersistentGuides, type PersistentGuidesHandlers } from './behaviors/persistent-guides-behavior.js';
 import { PersistentGuidesAdorner } from './guides/persistent-guides-adorner.js';
+import { LayoutPreviewAdorner } from './layout/layout-preview-adorner.js';
+import type { LayoutPreview } from './layout-preview.js';
 import { RulerBar } from './guides/ruler-bar.js';
 import { AlignmentGuidesAdorner } from './behaviors/alignment-guides-adorner.js';
 import { TextBlockAdorner } from './behaviors/text-block-adorner.js';
@@ -426,6 +428,13 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // line. Never persisted (view-only).
     public static readonly GuidePreviewKey = MuralBase.RegisterProperty<GuidePreview | undefined>(
         Diagram, 'GuidePreview', undefined, MetaData.None);
+
+    // A proposed arrangement to preview before committing (e.g. from a layout
+    // inspector), or undefined for none. When set, the LayoutPreviewAdorner paints
+    // an opaque preview of it over the live canvas (a faint block per node + a line
+    // per edge). View-only, never persisted; the consumer clears it on apply/cancel.
+    public static readonly LayoutPreviewKey = MuralBase.RegisterProperty<LayoutPreview | undefined>(
+        Diagram, 'LayoutPreview', undefined, MetaData.None);
 
     // Selection-resize opt-in. Default off. When flipped true, a
     // SelectionBoundsAdorner mounts in the ItemsPanel's AdornerLayer
@@ -805,6 +814,9 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public get Guides(): readonly PersistentGuide[] { return this.get_property_value(Diagram.GuidesKey); }
     public set Guides(v: readonly PersistentGuide[]) { this.set_property_value(Diagram.GuidesKey, v); }
 
+    public get LayoutPreview(): LayoutPreview | undefined { return this.get_property_value(Diagram.LayoutPreviewKey); }
+    public set LayoutPreview(v: LayoutPreview | undefined) { this.set_property_value(Diagram.LayoutPreviewKey, v); }
+
     public get RulersVisible(): boolean { return this.get_property_value(Diagram.RulersVisibleKey); }
     public set RulersVisible(v: boolean) { this.set_property_value(Diagram.RulersVisibleKey, v); }
 
@@ -1103,6 +1115,7 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     // handles the DP flipping before ItemsPanel materializes.
     private _persistentGuidesDetach:  (() => void) | undefined = undefined;
     private _persistentGuidesAdorner: PersistentGuidesAdorner | undefined = undefined;
+    private _layoutPreviewAdorner: LayoutPreviewAdorner | undefined = undefined;
     private _rulerCameraDetach:       (() => void) | undefined = undefined;
 
     // Selection-resize state — adorner instance + the source that
@@ -1570,6 +1583,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             if (newValue === true) this._attachTextBlockAdorner();
             else                   this._detachTextBlockAdorner();
         }
+        else if (descriptor.Name === 'LayoutPreview')
+        {
+            // Mount a fresh overlay when a preview is set/changed, unmount when it
+            // clears. Deferred so the ItemsPanel's AdornerLayer exists.
+            queueMicrotask(() => this._syncLayoutPreviewAdorner());
+        }
         else if (descriptor.Name === 'ConnectorInteractionsEnabled')
         {
             if (newValue === true) this._attachConnectorInteractions();
@@ -1741,6 +1760,30 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         const adorner = new AlignmentGuidesAdorner(panel, this);
         layer.Add(adorner);
         this._alignmentGuidesAdorner = adorner;
+    }
+
+    // Reconcile the layout-preview overlay with Diagram.LayoutPreview: unmount any
+    // existing adorner (a definitive clear + fresh repaint), then mount a new one
+    // when a preview is set. A fresh mount is a first-render — the reliable way to
+    // (re)paint an adorner, since a mounted adorner's RenderOverride is not re-run
+    // by InvalidateVisual/InvalidateArrange. Called deferred so the ItemsPanel's
+    // AdornerLayer exists (a consumer sets LayoutPreview after the diagram laid out).
+    private _syncLayoutPreviewAdorner(): void
+    {
+        if (this._layoutPreviewAdorner !== undefined)
+        {
+            const old = AdornerLayer.GetAdornerLayer(this._layoutPreviewAdorner.AdornedElement);
+            old?.Remove(this._layoutPreviewAdorner);
+            this._layoutPreviewAdorner = undefined;
+        }
+        if (this.LayoutPreview === undefined) return;
+        const panel = this.ItemsPanelInstance;
+        if (panel === undefined) return;
+        const layer = AdornerLayer.GetAdornerLayer(panel);
+        if (layer === undefined) return;
+        const adorner = new LayoutPreviewAdorner(panel, this);
+        layer.Add(adorner);
+        this._layoutPreviewAdorner = adorner;
     }
 
     private _enableRulers(): void
