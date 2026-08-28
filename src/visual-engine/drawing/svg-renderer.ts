@@ -515,10 +515,38 @@ export class SvgRenderer
         // Recurse into children — into the clipped group when present, else the
         // outer <g>. Each child's walk re-uses an existing outer (no DOM move)
         // or creates + inserts under the given parent.
+        // Recurse in visualChildren (paint) order AND reconcile DOM order: each
+        // child's outer <g> is positioned to directly follow the previous child's
+        // outer, so a ZIndex reorder (which reorders visualChildren) repaints in
+        // the new order. insertBefore fires ONLY on a mismatch, so a correctly-
+        // ordered subtree does zero DOM writes. The parent's own hit/own/foreign
+        // nodes precede all child outers and are never moved (they are not
+        // g.mural-visual). walk() has already ensured each child's outer lives
+        // under childParent (relocating reparented nodes), so we only reorder here.
         const childParent = info.children ?? info.outer;
+        let prevOuter: SVGGElement | undefined;
         for (const child of visual.visualChildren)
         {
             this.walk(child, childParent, renderDirty, arrangeDirty, visited);
+            const childInfo = this.nodes.get(child);
+            if (childInfo === undefined) continue;
+            const outer = childInfo.outer;
+            if (outer.parentNode !== childParent)
+            {
+                // Defensive: a child skipped by walk's relocation. Leave it.
+            }
+            else if (prevOuter === undefined)
+            {
+                // Must be the first child-outer under childParent.
+                const firstChildOuter = childParent.querySelector(':scope > g.mural-visual');
+                if (firstChildOuter !== null && firstChildOuter !== outer)
+                    childParent.insertBefore(outer, firstChildOuter);
+            }
+            else if (outer.previousElementSibling !== prevOuter)
+            {
+                childParent.insertBefore(outer, prevOuter.nextSibling);
+            }
+            prevOuter = outer;
         }
     }
 
