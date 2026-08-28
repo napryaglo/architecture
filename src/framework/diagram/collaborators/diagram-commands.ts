@@ -35,6 +35,9 @@ import {
 import { TextAlignment } from '../../../visual-engine/index.js';
 import { TextPlacement } from '../shape-text.js';
 import { primaryFormatTarget } from '../behaviors/format-painter-behavior.js';
+import { Panel } from '../../../runtime/index.js';
+import { Figure } from '../figure.js';
+import { ZOrderMode, reorderZ, type ZAccess } from '../commands/zorder.js';
 
 // Internal collaborator owned by Diagram. Owns the default RelayCommand
 // instances installed onto Diagram's Command DPs at construction time.
@@ -64,6 +67,7 @@ export class DiagramCommands
     {
         this._diagram = diagram;
         this._installAlignCommands();
+        this._installZOrderCommands();
         this._installDistributeCommands();
         this._installGroupCommands();
         this._installContainerCommands();
@@ -94,6 +98,60 @@ export class DiagramCommands
         this._install(Diagram.AlignCenterCommandKey, 'AlignCenter',
             new RelayCommand(() => alignCenter(this._collectSelected()), canAlign,
                 { Text: 'Align Center', Description: 'Center selected shapes horizontally on a shared vertical axis.' }));
+    }
+
+    // Panel.ZIndex accessor over figures — the wrapper for the pure zorder math.
+    private static readonly Z: ZAccess<Figure> = {
+        get: (f) => Panel.GetZIndex(f),
+        set: (f, z) => Panel.SetZIndex(f, z),
+    };
+
+    private _installZOrderCommands(): void
+    {
+        const Diagram = this._diagram.constructor as typeof import('../diagram.js').Diagram;
+        const canReorder = (): boolean => this._selectedFigures().length >= 1;
+
+        this._install(Diagram.BringToFrontCommandKey, 'BringToFront',
+            new RelayCommand(() => this._reorder(ZOrderMode.Front), canReorder,
+                { Text: 'Bring to Front', Description: 'Move the selected shape(s) in front of all others.' }));
+        this._install(Diagram.SendToBackCommandKey, 'SendToBack',
+            new RelayCommand(() => this._reorder(ZOrderMode.Back), canReorder,
+                { Text: 'Send to Back', Description: 'Move the selected shape(s) behind all others.' }));
+        this._install(Diagram.BringForwardCommandKey, 'BringForward',
+            new RelayCommand(() => this._reorder(ZOrderMode.Forward), canReorder,
+                { Text: 'Bring Forward', Description: 'Move the selected shape(s) one step toward the front.' }));
+        this._install(Diagram.SendBackwardCommandKey, 'SendBackward',
+            new RelayCommand(() => this._reorder(ZOrderMode.Backward), canReorder,
+                { Text: 'Send Backward', Description: 'Move the selected shape(s) one step toward the back.' }));
+    }
+
+    // Selected top-level figures (ignore connectors / content nodes / nested members).
+    private _selectedFigures(): Figure[]
+    {
+        return selectedTopLevel(this._diagram.SelectedItems).filter((i): i is Figure => i instanceof Figure);
+    }
+
+    // Group the selection by visual parent (the figures Canvas, or a container's
+    // child host) and reorder each parent's figure children independently, so z
+    // is scoped per parent.
+    private _reorder(mode: ZOrderMode): void
+    {
+        const figs = this._selectedFigures();
+        if (figs.length === 0) return;
+        const byParent = new Map<Panel, Figure[]>();
+        for (const f of figs)
+        {
+            const parent = f.GetVisualParent();
+            if (!(parent instanceof Panel)) continue;
+            let group = byParent.get(parent);
+            if (group === undefined) { group = []; byParent.set(parent, group); }
+            group.push(f);
+        }
+        for (const [parent, selected] of byParent)
+        {
+            const siblings = [...parent.Children].filter((c): c is Figure => c instanceof Figure);
+            reorderZ(mode, selected, siblings, DiagramCommands.Z);
+        }
     }
 
     private _installDistributeCommands(): void

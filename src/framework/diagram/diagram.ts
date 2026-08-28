@@ -258,6 +258,14 @@ export class Diagram extends Selector implements RigidConnectorDragHost
         Diagram, 'AlignMiddleCommand', undefined, MetaData.None);
     public static readonly AlignCenterCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
         Diagram, 'AlignCenterCommand', undefined, MetaData.None);
+    public static readonly BringToFrontCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'BringToFrontCommand', undefined, MetaData.None);
+    public static readonly SendToBackCommandKey   = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SendToBackCommand',   undefined, MetaData.None);
+    public static readonly BringForwardCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'BringForwardCommand', undefined, MetaData.None);
+    public static readonly SendBackwardCommandKey = MuralBase.RegisterProperty<RelayCommand | undefined>(
+        Diagram, 'SendBackwardCommand', undefined, MetaData.None);
 
     // Distribute commands — same shape as the align surface. CanExecute
     // requires ≥ 3 IFigure-shaped selected items (alignment-only fits 2).
@@ -722,6 +730,11 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public get AlignTopCommand():    RelayCommand | undefined { return this.get_property_value(Diagram.AlignTopCommandKey); }
     public get AlignMiddleCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.AlignMiddleCommandKey); }
     public get AlignCenterCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.AlignCenterCommandKey); }
+
+    public get BringToFrontCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.BringToFrontCommandKey); }
+    public get SendToBackCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.SendToBackCommandKey); }
+    public get BringForwardCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.BringForwardCommandKey); }
+    public get SendBackwardCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.SendBackwardCommandKey); }
 
     public get DistributeHorizontalCommand(): RelayCommand | undefined { return this.get_property_value(Diagram.DistributeHorizontalCommandKey); }
     public get DistributeVerticalCommand():   RelayCommand | undefined { return this.get_property_value(Diagram.DistributeVerticalCommandKey); }
