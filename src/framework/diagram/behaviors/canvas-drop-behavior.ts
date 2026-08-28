@@ -7,6 +7,7 @@ import {
 } from '../../../runtime/index.js';
 import type { Diagram } from '../diagram.js';
 import type { ContainerFigure } from '../container-figure.js';
+import { MuralDataFormat, parseUriList, type ExternalDroppedArgs } from '../external-drop.js';
 
 // Promoted from the demo's canvas-drop-behavior.mjs. Wires a Visual
 // to accept drag-drops and translate the cursor host-coordinates into
@@ -42,27 +43,36 @@ export function attachCanvasDropBehavior(receiver: Visual, diagram: Diagram): ()
     const localPosition = (args: DragEventArgs): Point => diagram.HostToContent(args.HostX, args.HostY);
 
     const onDragOver = (args: DragEventArgs): void => {
-        // Accept any drop carrying a toolbox-item payload. Consumers wanting
-        // other formats can wire their own DragOver listener.
-        if (args.Data.Has(TOOLBOX_ITEM_FORMAT)) args.Effect = DragDropEffects.Copy;
+        // Accept toolbox-item payloads AND OS drops (files dragged from the file
+        // manager, links dragged from a browser). Setting Copy shows the affordance.
+        if (args.Data.Has(TOOLBOX_ITEM_FORMAT)
+            || args.Data.Has(MuralDataFormat.Files)
+            || args.Data.Has(MuralDataFormat.UriList))
+            args.Effect = DragDropEffects.Copy;
     };
 
     const onDrop = (args: DragEventArgs): void => {
-        if (!args.Data.Has(TOOLBOX_ITEM_FORMAT)) return;
-        // A drop is a diagram interaction — take keyboard focus so the just-dropped
-        // node is immediately editable/deletable via shortcuts. No-op when the
-        // diagram isn't Focusable (the Visual.Focus contract).
-        diagram.Focus();
         const position = localPosition(args);
-        diagram._fireItemDropped({
-            Data:     args.Data,
-            Position: position,
-            // The container the drop point lands inside (innermost), if any. Lets
-            // the drop router / factory nest the new node into it — generic
-            // containers adopt freely (mural); a model-backed container is left to
-            // the host factory to validate. Undefined over empty canvas.
-            TargetContainer: diagram.ContainerPlacement.containerAt(position),
-        });
+        // The container the drop point lands inside (innermost), if any. Lets
+        // the drop router / factory nest the new node into it — generic
+        // containers adopt freely (mural); a model-backed container is left to
+        // the host factory to validate. Undefined over empty canvas.
+        const container = diagram.ContainerPlacement.containerAt(position);
+
+        if (args.Data.Has(TOOLBOX_ITEM_FORMAT)) {
+            // A drop is a diagram interaction — take keyboard focus so the just-dropped
+            // node is immediately editable/deletable via shortcuts. No-op when the
+            // diagram isn't Focusable (the Visual.Focus contract).
+            diagram.Focus();
+            diagram._fireItemDropped({ Data: args.Data, Position: position, TargetContainer: container });
+            return;
+        }
+
+        // Not a toolbox item — try to interpret it as an OS drop.
+        const external = buildExternalArgs(args.Data, position, container);
+        if (external === undefined) return;
+        diagram.Focus();
+        diagram._fireExternalDropped(external);
     };
 
     receiver.AddRoutedEventListener('DragOver', onDragOver as unknown as (a: unknown) => void);
@@ -73,6 +83,22 @@ export function attachCanvasDropBehavior(receiver: Visual, diagram: Diagram): ()
         receiver.RemoveRoutedEventListener('DragOver', onDragOver as unknown as (a: unknown) => void);
         receiver.RemoveRoutedEventListener('Drop',     onDrop     as unknown as (a: unknown) => void);
     };
+}
+
+// Pull the OS payload (dropped files + dragged URIs) out of a DataObject into
+// ExternalDroppedArgs. Returns undefined when the payload carries neither — the
+// caller then ignores the drop. Extracted from onDrop so it's unit-testable
+// without the routed-event machinery.
+export function buildExternalArgs(
+    data: DataObject, position: Point, container: ContainerFigure | undefined,
+): ExternalDroppedArgs | undefined
+{
+    const fileList = data.Get<FileList>(MuralDataFormat.Files);
+    const uriText  = data.Get<string>(MuralDataFormat.UriList);
+    const files    = fileList !== undefined ? Array.from(fileList) : [];
+    const uris     = uriText !== undefined && uriText.length > 0 ? parseUriList(uriText) : [];
+    if (files.length === 0 && uris.length === 0) return undefined;
+    return { Files: files, Uris: uris, Position: position, TargetContainer: container };
 }
 
 export interface ItemDroppedArgs

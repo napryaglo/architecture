@@ -105,6 +105,9 @@ import {
 } from './behaviors/canvas-drop-behavior.js';
 export { attachCanvasDropBehavior, TOOLBOX_ITEM_FORMAT } from './behaviors/canvas-drop-behavior.js';
 export type { ItemDroppedArgs, ItemDroppedListener } from './behaviors/canvas-drop-behavior.js';
+import type { ExternalDroppedArgs, ExternalDroppedListener } from './external-drop.js';
+export { MuralDataFormat } from './external-drop.js';
+export type { ExternalDroppedArgs, ExternalDroppedListener } from './external-drop.js';
 import type {
     ConnectorCreatedArgs,
     ConnectorCreatedListener,
@@ -964,6 +967,10 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public AddItemDroppedListener   (listener: ItemDroppedListener): void { this._itemDroppedListeners.add(listener); }
     public RemoveItemDroppedListener(listener: ItemDroppedListener): void { this._itemDroppedListeners.delete(listener); }
 
+    private readonly _externalDroppedListeners: Set<ExternalDroppedListener> = new Set();
+    public AddExternalDroppedListener   (listener: ExternalDroppedListener): void { this._externalDroppedListeners.add(listener); }
+    public RemoveExternalDroppedListener(listener: ExternalDroppedListener): void { this._externalDroppedListeners.delete(listener); }
+
     private readonly _deleteRequestedListeners: Set<DeleteRequestedListener> = new Set();
     public AddDeleteRequestedListener   (listener: DeleteRequestedListener): void { this._deleteRequestedListeners.add(listener); }
     public RemoveDeleteRequestedListener(listener: DeleteRequestedListener): void { this._deleteRequestedListeners.delete(listener); }
@@ -1052,6 +1059,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
     public _fireItemDropped(args: ItemDroppedArgs): void
     {
         this._bracketed('Drop', () => { for (const l of [...this._itemDroppedListeners]) l(args); });
+    }
+
+    /** @internal */
+    public _fireExternalDropped(args: ExternalDroppedArgs): void
+    {
+        this._bracketed('Drop', () => { for (const l of [...this._externalDroppedListeners]) l(args); });
     }
 
     /** @internal */
