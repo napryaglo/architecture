@@ -189,9 +189,12 @@ export {
     Diagram,
     attachCanvasDropBehavior,
     TOOLBOX_ITEM_FORMAT,
+    MuralDataFormat,
     type IDiagramViewHost,
     type ItemDroppedArgs,
     type ItemDroppedListener,
+    type ExternalDroppedArgs,
+    type ExternalDroppedListener,
 } from './diagram/diagram.js';
 export {
     DiagramDocument,
