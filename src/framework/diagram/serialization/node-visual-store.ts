@@ -1,3 +1,4 @@
+import { Panel } from '../../../runtime/index.js';
 import { Figure } from '../figure.js';
 import { NodeViewModel } from '../node-view-model.js';
 import { PositionAnchor } from '../position-anchor.js';
@@ -27,6 +28,9 @@ export interface NodeVisual extends StrokeFields
     // load unchanged): lock aspect ratio, and the "From" position anchor.
     lockAspect?:    boolean;
     anchor?:        PositionAnchor;
+    // Paint z-order (Panel.ZIndex). Omitted when 0 so old files and un-reordered
+    // figures serialize unchanged.
+    zIndex?:        number;
     // A content tile's optional background-card style (Format Shape), through the
     // shared brush codec — every fill variant, not just solids. Geometric shapes
     // persist their fill/stroke in the node record instead, so these ride the
@@ -79,6 +83,8 @@ export class NodeVisualStore
         if (node.UserSized)                  v.userSized     = true;
         if (node.LockAspectRatio)            v.lockAspect    = true;
         if (node.PositionFrom !== PositionAnchor.TopLeftCorner) v.anchor = node.PositionFrom;
+        const z = Panel.GetZIndex(node);
+        if (z !== 0) v.zIndex = z;
         if (node.ParentId !== undefined) v.parentId = node.ParentId;
         // Card style — content tiles only (a geometric shape's fill/stroke rides
         // its node record instead). Keyed on being a VM host, NOT SizeToContent: a
@@ -110,6 +116,7 @@ export class NodeVisualStore
         if (v.userSized     !== undefined) node.UserSized     = v.userSized;
         if (v.lockAspect    !== undefined) node.LockAspectRatio = v.lockAspect;
         if (v.anchor        !== undefined) node.PositionFrom    = v.anchor;
+        if (v.zIndex        !== undefined) Panel.SetZIndex(node, v.zIndex);
         if (v.parentId      !== undefined) node.ParentId        = v.parentId;
         // Restore a content tile's card style (Apply runs after bindContainer's
         // transparent defaults, so a styled card overrides them).
