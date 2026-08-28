@@ -2056,6 +2056,19 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             args.Handled = true;
             return;
         }
+        // Ctrl/⌘ + ] / [ — z-order. Shift jumps all the way (front / back); plain
+        // steps one (forward / backward). CanExecute gating no-ops an empty selection.
+        if ((key === Key.Oem6 || key === Key.Oem4)
+            && (hasModifier(args.Modifiers, ModifierKeys.Control) || hasModifier(args.Modifiers, ModifierKeys.Windows)))
+        {
+            const shift = hasModifier(args.Modifiers, ModifierKeys.Shift);
+            const cmd = key === Key.Oem6
+                ? (shift ? this.BringToFrontCommand : this.BringForwardCommand)
+                : (shift ? this.SendToBackCommand   : this.SendBackwardCommand);
+            if (cmd !== undefined && cmd.CanExecute(undefined)) cmd.Execute(undefined);
+            args.Handled = true;
+            return;
+        }
         // Ctrl/⌘ + C / X / V — figure clipboard. Copy / Cut no-op on an empty
         // selection (handled in _requestCopy/_requestCut); Paste always tries
         // (the consumer no-ops on foreign / empty clipboard text).
