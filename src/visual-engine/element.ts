@@ -1991,6 +1991,24 @@ export class Panel extends Element
 {
     private readonly _children: ObservableCollection<Visual> = new ObservableCollection<Visual>();
 
+    // Z-order among a panel's children. Higher paints on top; equal ZIndex
+    // breaks ties by insertion order. Honored by EVERY panel via the sorted
+    // `visualChildren` below. MetaData.None — the reorder invalidation is
+    // bespoke (Panel.SetZIndex notifies the parent, § Task 2), not standard
+    // self-invalidation.
+    public static readonly ZIndexKey = MuralBase.RegisterAttachedProperty<number>(
+        Panel, 'ZIndex', 0, MetaData.None);
+
+    public static GetZIndex(v: Visual): number
+    {
+        return v.get_property_value(Panel.ZIndexKey);
+    }
+
+    public static SetZIndex(v: Visual, value: number): void
+    {
+        v.set_property_value(Panel.ZIndexKey, value);
+    }
+
     // ── Arrange-time layout transitions (§18.3) ──────────────────────
     //
     // A Panel subclass whose arrange decisions should interpolate over
@@ -2015,9 +2033,14 @@ export class Panel extends Element
     private _arrangeState:      Map<Visual, ArrangeChildState> | undefined;
     private _arrangeClockUnsub: (() => void) | undefined;
 
-    // Lazily-materialized snapshot for visualChildren / logicalChildren.
+    // Lazily-materialized snapshot for logicalChildren (insertion order).
     // Invalidated by the subscription wired in the constructor.
     private _childrenSnapshot: readonly Visual[] | undefined;
+
+    // Lazily-materialized ZIndex-sorted snapshot for visualChildren. Distinct
+    // from _childrenSnapshot (insertion order): visual order sorts by ZIndex,
+    // logical order does not (ItemsControl index mapping must stay insertion order).
+    private _visualSnapshot: readonly Visual[] | undefined;
 
     constructor()
     {
@@ -2034,6 +2057,7 @@ export class Panel extends Element
         this._children.Subscribe(() =>
         {
             this._childrenSnapshot = undefined;
+            this._visualSnapshot   = undefined;
             this.InvalidateMeasure();
         });
     }
@@ -2101,7 +2125,7 @@ export class Panel extends Element
     // Children added via AddChild belong to both trees; visual and
     // logical iteration return the same snapshot array. Templated
     // subclasses (Phase 2) override these independently.
-    public override get visualChildren(): readonly Visual[]  { return this.childrenSnapshot(); }
+    public override get visualChildren(): readonly Visual[]  { return this.visualSnapshotSorted(); }
     public override get logicalChildren(): readonly Visual[] { return this.childrenSnapshot(); }
 
     private childrenSnapshot(): readonly Visual[]
@@ -2111,6 +2135,22 @@ export class Panel extends Element
             this._childrenSnapshot = this._children.ToArray();
         }
         return this._childrenSnapshot;
+    }
+
+    // visualChildren order = ZIndex ascending (last painted on top), with the
+    // explicit insertion-index tiebreak keeping the result deterministic
+    // regardless of the engine's sort stability. Default (all ZIndex 0) reduces
+    // to insertion order, so panels that never touch ZIndex are unchanged.
+    private visualSnapshotSorted(): readonly Visual[]
+    {
+        if (this._visualSnapshot === undefined)
+        {
+            this._visualSnapshot = this._children.ToArray()
+                .map((v, i) => ({ v, i, z: Panel.GetZIndex(v) }))
+                .sort((a, b) => (a.z - b.z) || (a.i - b.i))
+                .map(e => e.v);
+        }
+        return this._visualSnapshot;
     }
 
     protected override forEachVisualChild(fn: (child: Visual) => void): void
