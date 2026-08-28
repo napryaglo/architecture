@@ -2007,6 +2007,14 @@ export class Panel extends Element
     public static SetZIndex(v: Visual, value: number): void
     {
         v.set_property_value(Panel.ZIndexKey, value);
+        // Reorder is driven from the setter, not a per-child listener: a listener
+        // would add a ZIndex EVD + subscription to every child of every panel
+        // app-wide. Notifying the parent here costs nothing for children that
+        // never touch Z. A runtime Binding / raw set_property_value to ZIndex will
+        // NOT auto-reorder — the diagram commands and markup both use SetZIndex /
+        // construction-time set, the supported paths.
+        const parent = v.GetVisualParent();
+        if (parent instanceof Panel) parent._invalidateZOrder();
     }
 
     // ── Arrange-time layout transitions (§18.3) ──────────────────────
@@ -2141,6 +2149,14 @@ export class Panel extends Element
     // explicit insertion-index tiebreak keeping the result deterministic
     // regardless of the engine's sort stability. Default (all ZIndex 0) reduces
     // to insertion order, so panels that never touch ZIndex are unchanged.
+    // @internal — drop the sorted snapshot and schedule a render so the walk
+    // re-reads child order. Called by Panel.SetZIndex on this panel's children.
+    public _invalidateZOrder(): void
+    {
+        this._visualSnapshot = undefined;
+        this.InvalidateVisual();
+    }
+
     private visualSnapshotSorted(): readonly Visual[]
     {
         if (this._visualSnapshot === undefined)
