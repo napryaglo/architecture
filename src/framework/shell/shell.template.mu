@@ -59,7 +59,14 @@ resources Shells {
         Border [ Fill = @Surface ] {
             AdornerDecorator {
                 DockPanel [ LastChildFill = true ] {
-                    Border x:name="PART_HeaderHost" [ DockPanel.Dock = Top ]
+                    // Header (app-bar) region — presents the shell's HeaderContent
+                    // (an app title-bar view, a data object + DataTemplate, or a
+                    // string). Unset ⇒ the ContentControl measures to zero and the
+                    // Top dock claims no height, so a shell with no app bar shows no
+                    // empty band (same collapse the empty Border had before).
+                    ContentControl x:name="PART_HeaderHost"
+                        [ DockPanel.Dock = Top,
+                          Content        = $$HeaderContent ]
 
                     // Command toolbar — data-driven. The ToolbarService filters
                     // the app's declared CommandDefinitions by the active
@@ -72,7 +79,7 @@ resources Shells {
                     // @SurfaceContainer band under the header).
                     Border x:name="PART_CommandHost"
                         [ DockPanel.Dock  = Top,
-                          Fill      = @SurfaceContainer,
+                          Fill      = @Surface,
                           Padding         = (8,4,8,4),
                           Visibility      = $service(ContentHostService).ActiveDocument << ToVisibility ] {
                         // Command groups fill the bar as ONE ToolBar (each group's

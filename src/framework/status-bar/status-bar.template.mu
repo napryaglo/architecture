@@ -10,10 +10,11 @@ resources StatusBars {
     // ItemsPanel is a DockPanel with LastChildFill=true so authors can
     // dock left/right cells via `DockPanel.Dock` on each item and put a
     // stretchy middle one last. Chrome is a single Border on top of
-    // @SurfaceContainerLow.
+    // @Surface — the shared app-chrome tone (matches the title bar, activity
+    // rail, and window background for a flat VSCode-style frame).
     Template x:key="DefaultStatusBar" [TargetType = StatusBar] {
         Border
-            [ Fill      = @SurfaceContainerLow,
+            [ Fill      = @Surface,
               Padding         = (4,2,4,2) ] {
             // Top rule — was Border BorderThickness (0,1,0,0); now a
             // horizontal oriented Line docked Top so it stretches the full

@@ -223,7 +223,7 @@ resources Navigation {
     // render nothing, so a shell that contributes no actions shows a bare rail.
     Template x:key="ActivityBarRail" [TargetType = NavigationRail] {
         Border x:name="PART_Border"
-            [ Fill      = @SurfaceContainerHigh,
+            [ Fill      = @Surface,
               Width           = 48 ] {
             DockPanel [ LastChildFill = true ] {
                 // Right edge rule (was the Border's (0,0,1,0) right edge): a

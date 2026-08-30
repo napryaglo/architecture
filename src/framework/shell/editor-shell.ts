@@ -1,4 +1,4 @@
-﻿import { Application, Element, MuralBase } from '../../runtime/index.js';
+﻿import { Application, Element, MetaData, MuralBase } from '../../runtime/index.js';
 import { ShellBase } from './shell.js';
 import { NavigationService } from './services/navigation-service.js';
 import { ContentHostService } from './services/content-host-service.js';
@@ -25,12 +25,24 @@ import { SettingsContributionKey, SettingsLauncherService } from './settings/set
 // in whatever the consumer slots into Content and the VM behind it.
 export class EditorShell extends ShellBase
 {
+    // Header region content — the top app-bar slot (PART_HeaderHost). A free
+    // content slot like the side pane's Commands: carries a Visual (an app's
+    // title-bar view), a data object rendered via a DataTemplate, or a plain
+    // string. Unset leaves the region collapsed (the default template binds its
+    // Visibility to this via ToVisibility), so a shell with no app bar shows no
+    // empty band. Participates in layout + paint.
+    public static readonly HeaderContentKey = MuralBase.RegisterProperty<unknown>(
+        EditorShell, 'HeaderContent', undefined, MetaData.Measure | MetaData.Render);
+
     static
     {
         MuralBase.OverrideMetadata(
             EditorShell, Element.DefaultStyleKeyKey,
             { default_value: EditorShell });
     }
+
+    public get HeaderContent(): unknown { return this.get_property_value(EditorShell.HeaderContentKey); }
+    public set HeaderContent(v: unknown) { this.set_property_value(EditorShell.HeaderContentKey, v); }
 
     constructor()
     {
