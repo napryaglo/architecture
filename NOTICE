@@ -1,0 +1,15 @@
+Mural
+Copyright 2026 Yevhen Napriahlo
+
+This product is licensed under the Apache License, Version 2.0 (see the
+LICENSE file).
+
+This product contains code derived from third-party software under a
+permissive license that is compatible with the Apache License 2.0:
+
+  - Skia (https://skia.googlesource.com/skia) — Copyright (c) 2011 Google Inc. —
+    BSD 3-Clause License. Portions of Skia's C++ pathops source have been
+    ported to TypeScript under src/visual-engine/geometry/pathops/. The
+    original Google copyright headers are preserved in each ported file. The
+    full Skia license text and porting provenance are recorded in the
+    LICENSE-skia file.
