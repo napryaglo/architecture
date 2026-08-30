@@ -1,8 +1,10 @@
 ﻿import {
     ApplicationService,
+    type ICommand,
     MetaData,
     MuralBase,
     ObservableCollection,
+    RelayCommand,
     ServiceBase,
     ServiceKey,
     ServiceProvider,
@@ -30,6 +32,15 @@ export class NavigationDestination extends MuralBase
     public static readonly IconKey = MuralBase.RegisterProperty<Geometry | undefined>(
         NavigationDestination, 'Icon', undefined, MetaData.None);
 
+    // Command invoked when this destination's activity-bar item is CLICKED —
+    // fired on every click, including re-clicking the already-selected item
+    // (which the Selector treats as a no-op selection). The NavigationService
+    // wires it to its click-toggle logic so re-clicking the active icon toggles
+    // the side pane (the VSCode sidebar behaviour). Optional: unset ⇒ a click
+    // just selects, no side effect.
+    public static readonly ActivateCommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
+        NavigationDestination, 'ActivateCommand', undefined, MetaData.None);
+
     // The source capability. A plain readonly field (not a DP): identity that
     // never changes, so it needs no change notification.
     public readonly Capability: Capability;
@@ -44,6 +55,8 @@ export class NavigationDestination extends MuralBase
 
     public get Label(): string { return this.get_property_value(NavigationDestination.LabelKey); }
     public get Icon(): Geometry | undefined { return this.get_property_value(NavigationDestination.IconKey); }
+    public get ActivateCommand(): ICommand | undefined { return this.get_property_value(NavigationDestination.ActivateCommandKey); }
+    public set ActivateCommand(v: ICommand | undefined) { this.set_property_value(NavigationDestination.ActivateCommandKey, v); }
 }
 
 // Backs the shell's Navigation region. Holds the list of destinations
@@ -89,6 +102,22 @@ export class NavigationService extends ServiceBase
         NavigationService, 'FooterActions',
         undefined as unknown as ObservableCollection<RailAction>, MetaData.None);
 
+    // Whether the shell's left side pane (the active capability's panel) is
+    // shown — the VSCode "toggle the sidebar" state. The EditorShell template
+    // binds `PART_SidePane.Visibility` (and its resize Splitter's) to this, so
+    // hiding it collapses the pane out of layout and the content area reclaims
+    // the width. Default true (the pane opens with the shell). Reactive
+    // (MetaData.Render is irrelevant on a service — a plain notifying DP): the
+    // visibility binding re-evaluates on change.
+    public static readonly SidePaneVisibleKey = MuralBase.RegisterProperty<boolean>(
+        NavigationService, 'SidePaneVisible', true, MetaData.None);
+
+    // Flips SidePaneVisible. The side pane's header close (✕) invokes this to
+    // hide; re-invoking (e.g. re-clicking the active activity-bar icon) shows
+    // it again — the two-way "toggle the sidebar" affordance.
+    public static readonly ToggleSidePaneCommandKey = MuralBase.RegisterProperty<ICommand>(
+        NavigationService, 'ToggleSidePaneCommand', undefined as unknown as ICommand, MetaData.None);
+
     constructor(provider: IServiceProvider)
     {
         super(provider);
@@ -97,6 +126,10 @@ export class NavigationService extends ServiceBase
         this.set_property_value(NavigationService.ItemsKey, new ObservableCollection<unknown>());
         this.set_property_value(NavigationService.HeaderActionsKey, new ObservableCollection<RailAction>());
         this.set_property_value(NavigationService.FooterActionsKey, new ObservableCollection<RailAction>());
+        this.set_property_value(
+            NavigationService.ToggleSidePaneCommandKey,
+            new RelayCommand(() => { this.SidePaneVisible = !this.SidePaneVisible; }, undefined,
+                { Text: 'Toggle Panel', Description: 'Show or hide the side panel.' }));
         // Keep ActiveService in lock-step with the selection.
         this.AddPropertyChangedListener(
             NavigationService.SelectedItemKey, () => this.syncActiveService());
@@ -125,6 +158,11 @@ export class NavigationService extends ServiceBase
         return this.get_property_value(NavigationService.FooterActionsKey);
     }
 
+    public get SidePaneVisible(): boolean { return this.get_property_value(NavigationService.SidePaneVisibleKey); }
+    public set SidePaneVisible(v: boolean) { this.set_property_value(NavigationService.SidePaneVisibleKey, v); }
+
+    public get ToggleSidePaneCommand(): ICommand { return this.get_property_value(NavigationService.ToggleSidePaneCommandKey); }
+
     // SelectedItem → ActiveService: find the Capability behind the selected item
     // and resolve the service it names (`Capability.ServiceKey`) from the
     // container. The content host presents that service (rendered by a
@@ -140,6 +178,12 @@ export class NavigationService extends ServiceBase
             ? this.Provider.get(ServiceProvider.tokenFor(key as unknown as Function))
             : undefined;
         this.set_property_value(NavigationService.ActiveServiceKey, service);
+        // Selecting a capability reveals its side pane (the VSCode "click an
+        // activity-bar icon → show the sidebar" reveal). Clicking a DIFFERENT
+        // icon changes SelectedItem and lands here; re-clicking the active icon
+        // is a no-op at the Selector, so that path toggles via
+        // ToggleSidePaneCommand from the item's press trigger instead.
+        this.SidePaneVisible = true;
         // Let the now-active service re-present itself. A content-backing
         // service (DocumentSelectorService) shows through a shared content host
         // that holds the LAST presented item; on a rail switch its own
@@ -165,7 +209,33 @@ export class NavigationService extends ServiceBase
     // the destination. Override to emit a richer destination subclass.
     protected createDestination(capability: Capability): NavigationDestination
     {
-        return new NavigationDestination(capability);
+        const dest = new NavigationDestination(capability);
+        // Wire the click-toggle: clicking an activity-bar item runs this, even
+        // on a re-click of the already-selected item (see onDestinationActivated).
+        dest.ActivateCommand = new RelayCommand(() => this.onDestinationActivated(dest));
+        return dest;
+    }
+
+    // The destination last brought to the foreground by a CLICK — the anchor for
+    // the re-click toggle. Distinct from SelectedItem: re-clicking the active
+    // item leaves SelectedItem unchanged (the Selector no-ops), so this field,
+    // not SelectedItem, is what tells a re-click apart from a switch.
+    private _lastActivated: NavigationDestination | undefined;
+
+    // Called when an activity-bar destination is clicked. Re-clicking the item
+    // already in front toggles the side pane (VSCode "click the active icon to
+    // hide/show the sidebar"); clicking a different item brings it forward and
+    // ensures the pane is shown. Selection itself is handled by the Selector /
+    // syncActiveService; this only owns the visibility toggle.
+    protected onDestinationActivated(dest: NavigationDestination): void
+    {
+        if (dest === this._lastActivated)
+        {
+            this.SidePaneVisible = !this.SidePaneVisible;
+            return;
+        }
+        this._lastActivated  = dest;
+        this.SidePaneVisible = true;
     }
 
     // Opt-in: replace Items with a NavigationDestination per capability across every
@@ -198,7 +268,12 @@ export class NavigationService extends ServiceBase
         // override this (subclass) or clear SelectedItem afterwards.
         if (this.SelectedItem === undefined && this.Items.Count > 0)
         {
-            this.SelectedItem = this.Items.Get(0);
+            const first = this.Items.Get(0);
+            this.SelectedItem = first;
+            // Seed the click-toggle anchor to the auto-selected destination so
+            // the FIRST re-click of the active icon hides the pane (rather than
+            // wasting the first click just establishing the anchor).
+            if (first instanceof NavigationDestination) this._lastActivated = first;
         }
     }
 }

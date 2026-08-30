@@ -121,6 +121,15 @@ export class NavigationItem extends ContentControl
         const sel = Selector.FromContainer<Selector>(
             this, (v: Visual): v is Selector => v instanceof Selector);
         if (sel !== undefined) sel.HandleContainerClick(this, args.Modifiers);
+        // After the Selector settles the selection, let the clicked data item
+        // react to being activated — fired on EVERY click, including a re-click
+        // of the already-selected item (which the Selector treats as a no-op).
+        // The shell's NavigationDestination carries an ActivateCommand for the
+        // VSCode "click the active icon to toggle the sidebar" behaviour; items
+        // without one just select. Duck-typed: NavigationItem stays generic and
+        // doesn't depend on the shell's destination type.
+        const activate = (this.DataContext as { ActivateCommand?: { CanExecute(p?: unknown): boolean; Execute(p?: unknown): void } } | undefined)?.ActivateCommand;
+        if (activate !== undefined && activate.CanExecute(undefined)) activate.Execute(undefined);
     }
 
     protected override OnPointerLeave(_args: PointerEventArgs): void

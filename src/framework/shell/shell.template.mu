@@ -64,12 +64,17 @@ resources Shells {
                     // Command toolbar — data-driven. The ToolbarService filters
                     // the app's declared CommandDefinitions by the active
                     // document's command contexts and dispatches each to that
-                    // document; the strip is empty (and collapses) until an app
-                    // registers commands + a command-target document is active.
+                    // document. The whole strip collapses out of layout when no
+                    // document is active: its content — the host-owned Save
+                    // cluster plus the active document's commands — exists only
+                    // for an active document, so ActiveDocument is the "non-empty"
+                    // signal (an empty bar would otherwise leave a bare
+                    // @SurfaceContainer band under the header).
                     Border x:name="PART_CommandHost"
                         [ DockPanel.Dock  = Top,
                           Fill      = @SurfaceContainer,
-                          Padding         = (8,4,8,4) ] {
+                          Padding         = (8,4,8,4),
+                          Visibility      = $service(ContentHostService).ActiveDocument << ToVisibility ] {
                         // Command groups fill the bar as ONE ToolBar (each group's
                         // buttons connect into a pill via ToolBar.Position, divided
                         // by ToolbarSeparatorItems; overflow collapses into the
@@ -128,18 +133,29 @@ resources Shells {
                     // capability's name; Commands = the active service's
                     // HeaderCommands; Content = the active service, rendered by its
                     // DataTemplate.
+                    // Visibility binds SidePaneVisible (the VSCode "toggle the
+                    // sidebar" state): the header ✕ hides it via CloseCommand
+                    // (= ToggleSidePaneCommand), and selecting any activity-bar
+                    // capability reveals it again. Hidden ⇒ the pane AND its
+                    // resize Splitter collapse out of layout so the content area
+                    // reclaims the width (same shape as the right dock's
+                    // HasPanels collapse).
                     ShellSideContentPane x:name="PART_SidePane"
                         [ DockPanel.Dock = Left,
                           Width          = 240,
+                          Visibility     = $service(NavigationService).SidePaneVisible << ToVisibility,
                           Header         = $service(NavigationService).SelectedItem.Label,
                           Commands       = $service(NavigationService).ActiveService.HeaderCommands,
+                          CloseCommand   = $service(NavigationService).ToggleSidePaneCommand,
                           Content        = $service(NavigationService).ActiveService ]
 
                     // Drag handle to resize the side pane. A Splitter resizes its
                     // PREVIOUS sibling, so docked Left right after the pane it
                     // rewrites the ShellSideContentPane's Width; Orientation
-                    // defaults to Vertical (ew-resize).
-                    Splitter [ DockPanel.Dock = Left, Width = 6 ]
+                    // defaults to Vertical (ew-resize). Collapses with the pane.
+                    Splitter [ DockPanel.Dock = Left,
+                               Width          = 6,
+                               Visibility     = $service(NavigationService).SidePaneVisible << ToVisibility ]
 
                     // Right dock region — presents the PanelDockService, rendered
                     // by DataTemplate[PanelDockService] as a TabControl (agent chat,
@@ -439,6 +455,29 @@ resources Shells {
         when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
     }
 
+    // Compact icon-only MenuButton trigger — the header overflow (…) affordance.
+    // The MenuButton ctor injects the Icon Visual into PART_TriggerStack and
+    // keeps PART_HeaderText synced to the (empty) Header, so this trigger just
+    // supplies the same chrome-less 16×16 hover/press box the CompactHeaderIcon
+    // button uses. PART_Trigger MUST be a Button (MenuButton wires Click on it).
+    Template x:key="CompactHeaderMenuButton" [TargetType = MenuButton] {
+        Button x:name="PART_Trigger" [ Variant = Text ] {
+            Border x:name="PART_Border"
+                [ Fill                 = #00000000,
+                  CornerRadius         = (2),
+                  Width                = 16,
+                  Height               = 16,
+                  TextBlock.Foreground = @OnSurfaceVariant ] {
+                StackPanel x:name="PART_TriggerStack"
+                    [ Orientation        = Horizontal,
+                      HorizontalAlignment = Center,
+                      VerticalAlignment   = Center ] {
+                    TextBlock x:name="PART_HeaderText"
+                }
+            }
+        }
+    }
+
     // ── PanelButton — rounded-rectangle icon button for panel headers ───────
     // The shell-panel affordance (pop-out / collapse / add): an IconButton
     // subclass whose default Style keeps the Standard (chrome-less) fill but
@@ -498,6 +537,28 @@ resources Shells {
                         // 1dp bottom rule (was the Border's (0,0,0,1) bottom edge):
                         // a horizontal Line docked Bottom separates header from body.
                         Line [ DockPanel.Dock = Bottom, Orientation = Horizontal, Stroke = (@OutlineVariant, 1) ]
+                        // VSCode-style header button bar, pinned rightmost (declared
+                        // before PART_Commands so it takes the outer Right edge):
+                        // an overflow menu (…) for future per-panel actions + a
+                        // close (✕) firing CloseCommand (the shell wires it to hide
+                        // the pane). Command is $$CloseCommand — a null command just
+                        // no-ops, so a generic pane without one shows an inert ✕.
+                        StackPanel x:name="PART_HeaderBar"
+                            [ DockPanel.Dock  = Right,
+                              Orientation       = Horizontal,
+                              VerticalAlignment = Center,
+                              Margin            = (@Spacing2,0,0,0) ] {
+                            MenuButton x:name="PART_Overflow"
+                                [ TriggerTemplate = @CompactHeaderMenuButton,
+                                  Icon            = Shape [ Geometry = @MoreHoriz, Fill = @OnSurfaceVariant, Width = 12, Height = 12 ] ]
+                            IconButton x:name="PART_Close"
+                                [ Template          = @CompactHeaderIconButton,
+                                  Command           = $$CloseCommand,
+                                  VerticalAlignment = Center,
+                                  Margin            = (@Spacing1,0,0,0) ] {
+                                Shape [ Geometry = @IconClose, Fill = @OnSurfaceVariant, Width = 12, Height = 12 ]
+                            }
+                        }
                         ContentPresenter x:name="PART_Commands"
                             [ DockPanel.Dock    = Right,
                               Content           = $$Commands,

@@ -1,4 +1,4 @@
-﻿import { Element, MetaData, MuralBase } from '../../runtime/index.js';
+﻿import { Element, type ICommand, MetaData, MuralBase } from '../../runtime/index.js';
 import { HeaderedContentControl } from '../base/headered-content-control.js';
 
 // A titled side pane for the shell's side regions — the VSCode Explorer/panel
@@ -36,6 +36,13 @@ export class ShellSideContentPane extends HeaderedContentControl
     public static readonly CommandsKey = MuralBase.RegisterProperty<unknown>(
         ShellSideContentPane, 'Commands', undefined, MetaData.Measure | MetaData.Render);
 
+    // Optional command the header's close (✕) affordance invokes — the VSCode
+    // panel "close / hide" button. When unset the default template collapses the
+    // close button, so a generic pane (no close semantics) shows no dead ✕; the
+    // shell sets it to NavigationService.ToggleSidePaneCommand to hide the pane.
+    public static readonly CloseCommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
+        ShellSideContentPane, 'CloseCommand', undefined, MetaData.Measure | MetaData.Render);
+
     static
     {
         // Resolve the default Style keyed by this class function — the theme
@@ -54,4 +61,7 @@ export class ShellSideContentPane extends HeaderedContentControl
 
     public get Commands(): unknown { return this.get_property_value(ShellSideContentPane.CommandsKey); }
     public set Commands(v: unknown) { this.set_property_value(ShellSideContentPane.CommandsKey, v); }
+
+    public get CloseCommand(): ICommand | undefined { return this.get_property_value(ShellSideContentPane.CloseCommandKey); }
+    public set CloseCommand(v: ICommand | undefined) { this.set_property_value(ShellSideContentPane.CloseCommandKey, v); }
 }

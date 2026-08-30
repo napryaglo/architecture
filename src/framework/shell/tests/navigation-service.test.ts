@@ -146,3 +146,70 @@ describe('NavigationService.ActiveService', () => {
         assert.equal(nav.ActiveService, layersSvc);
     });
 });
+
+describe('NavigationService side-pane visibility', () => {
+    test('SidePaneVisible defaults to true', () => {
+        const app = new Application();
+        app.Services.register(NavigationService.Key, p => new NavigationService(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+        assert.equal(nav.SidePaneVisible, true);
+    });
+
+    test('ToggleSidePaneCommand flips SidePaneVisible each invocation', () => {
+        const app = new Application();
+        app.Services.register(NavigationService.Key, p => new NavigationService(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+
+        nav.ToggleSidePaneCommand.Execute(undefined);
+        assert.equal(nav.SidePaneVisible, false);
+        nav.ToggleSidePaneCommand.Execute(undefined);
+        assert.equal(nav.SidePaneVisible, true);
+    });
+
+    test('changing SelectedItem forces the pane visible (activity-bar reveal)', () => {
+        const app = new Application();
+        app.Modules.Add(moduleWith(capability('Shapes'), capability('Layers')));
+        app.Services.register(NavigationService.Key, p => new ShellNav(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+
+        // Hide it, then select another destination — selection reveals the pane.
+        nav.ToggleSidePaneCommand.Execute(undefined);
+        assert.equal(nav.SidePaneVisible, false);
+        nav.SelectedItem = nav.Items.Get(1);
+        assert.equal(nav.SidePaneVisible, true);
+    });
+
+    test('re-clicking the active destination toggles the pane (VSCode sidebar)', () => {
+        const app = new Application();
+        app.Modules.Add(moduleWith(capability('Shapes'), capability('Layers')));
+        app.Services.register(NavigationService.Key, p => new ShellNav(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+
+        // Shapes is auto-selected + seeded as the toggle anchor, so the first
+        // click of its icon hides, the next reopens.
+        const shapes = nav.Items.Get(0) as NavigationDestination;
+        assert.equal(nav.SidePaneVisible, true);
+        shapes.ActivateCommand!.Execute(undefined);
+        assert.equal(nav.SidePaneVisible, false);
+        shapes.ActivateCommand!.Execute(undefined);
+        assert.equal(nav.SidePaneVisible, true);
+    });
+
+    test('clicking a different destination reveals without hiding', () => {
+        const app = new Application();
+        app.Modules.Add(moduleWith(capability('Shapes'), capability('Layers')));
+        app.Services.register(NavigationService.Key, p => new ShellNav(p));
+        const nav = app.Services.getRequired(NavigationService.Key);
+
+        // Hide via the header ✕, then click the OTHER icon — it comes forward
+        // and the pane shows (never toggles off on a switch).
+        nav.ToggleSidePaneCommand.Execute(undefined);
+        assert.equal(nav.SidePaneVisible, false);
+        const layers = nav.Items.Get(1) as NavigationDestination;
+        layers.ActivateCommand!.Execute(undefined);
+        assert.equal(nav.SidePaneVisible, true);
+        // A second click on that now-active icon hides it (re-click toggle).
+        layers.ActivateCommand!.Execute(undefined);
+        assert.equal(nav.SidePaneVisible, false);
+    });
+});
