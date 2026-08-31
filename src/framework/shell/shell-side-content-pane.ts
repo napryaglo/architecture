@@ -1,4 +1,4 @@
-﻿import { Element, type ICommand, MetaData, MuralBase } from '../../runtime/index.js';
+﻿import { type CornerRadius, Element, type ICommand, MetaData, MuralBase } from '../../runtime/index.js';
 import { HeaderedContentControl } from '../base/headered-content-control.js';
 
 // A titled side pane for the shell's side regions — the VSCode Explorer/panel
@@ -43,6 +43,15 @@ export class ShellSideContentPane extends HeaderedContentControl
     public static readonly CloseCommandKey = MuralBase.RegisterProperty<ICommand | undefined>(
         ShellSideContentPane, 'CloseCommand', undefined, MetaData.Measure | MetaData.Render);
 
+    // Corner radius for the pane chrome — template-bound onto the outer Border
+    // (which also clips its content to the rounded bounds). Defaults to 0
+    // (square), so existing consumers are unchanged; an app opts into rounded
+    // panels with a Style[TargetType=ShellSideContentPane] { CornerRadius = … }.
+    // Same shape as the Fill DP: a bound knob rather than a hardcoded template
+    // value.
+    public static readonly CornerRadiusKey = MuralBase.RegisterProperty<number | CornerRadius>(
+        ShellSideContentPane, 'CornerRadius', 0, MetaData.Measure | MetaData.Render);
+
     static
     {
         // Resolve the default Style keyed by this class function — the theme
@@ -64,4 +73,7 @@ export class ShellSideContentPane extends HeaderedContentControl
 
     public get CloseCommand(): ICommand | undefined { return this.get_property_value(ShellSideContentPane.CloseCommandKey); }
     public set CloseCommand(v: ICommand | undefined) { this.set_property_value(ShellSideContentPane.CloseCommandKey, v); }
+
+    public get CornerRadius(): number | CornerRadius { return this.get_property_value(ShellSideContentPane.CornerRadiusKey); }
+    public set CornerRadius(v: number | CornerRadius) { this.set_property_value(ShellSideContentPane.CornerRadiusKey, v); }
 }

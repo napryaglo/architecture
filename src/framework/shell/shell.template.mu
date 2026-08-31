@@ -514,7 +514,9 @@ resources Shells {
     Template x:key="DefaultShellSideContentPane" [TargetType = ShellSideContentPane] {
         Border
             [ Fill      = $$Fill,
-              Stroke          = $$Stroke ] {
+              Stroke          = $$Stroke,
+              CornerRadius    = $$CornerRadius,
+              ClipToBounds    = true ] {
             Grid {
                 // Star column: the content fills the pane's definite Width (set
                 // on the pane instance in DefaultEditorShell), so capability
