@@ -34,7 +34,7 @@ import {
     type ElementNode,
 } from '@pragmatic-lab/mural/compiler';
 
-import { Model } from '@pragmatic-lab/mural/runtime';
+import { MuralBase } from '@pragmatic-lab/mural/runtime';
 
 import {
     analyze,
@@ -251,7 +251,7 @@ function topLevel(): CompletionItem[]
 // Completions inside `Style [targettype=X] { … }` — setter LHS, trigger
 // keywords, and the `BasedOn=` meta. The setter slate is built by
 // enumerating DPs registered on the targettype's class (plus its
-// ancestors via prototype-chain walk in Model.EnumerateProperties).
+// ancestors via prototype-chain walk in MuralBase.EnumerateProperties).
 //
 // When the class isn't found in the runtime registry (e.g. the user
 // typed a name we don't recognize, or the runtime modules haven't
@@ -281,10 +281,10 @@ function styleBodyContext(rf: ResourceFormContext): CompletionItem[]
     // type is set (the LSP still wants to offer common props so
     // typing is responsive while the author is still authoring the
     // [targettype=X] header).
-    const klass = rf.targetType !== undefined ? Model.find_class(rf.targetType) : undefined;
+    const klass = rf.targetType !== undefined ? MuralBase.find_class(rf.targetType) : undefined;
     if (klass !== undefined)
     {
-        const props = Model.EnumerateProperties(klass);
+        const props = MuralBase.EnumerateProperties(klass);
         for (const desc of props)
         {
             out.push({
