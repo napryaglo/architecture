@@ -250,6 +250,17 @@ export class ScrollViewer extends ContentControl
         };
         applyAutoHide();
         this.AddPropertyChangedListener(ScrollViewer.IsAutoHideScrollBarsKey, applyAutoHide);
+
+        // VSCode hover-to-show: while the pointer is anywhere over the scroll
+        // region (IsMouseOver is true for the viewer when a descendant is
+        // hovered), reveal the auto-hidden bars and keep them up; on leave they
+        // fade. Value-change activity still reveals them independently.
+        const forwardRegionHover = (): void => {
+            const hovered = this.IsMouseOver;
+            this._vScrollBar?.SetRegionActive(hovered);
+            this._hScrollBar?.SetRegionActive(hovered);
+        };
+        this.AddPropertyChangedListener(Element.IsMouseOverKey, forwardRegionHover);
     }
 
     public get IsAutoHideScrollBars(): boolean { return this.get_property_value(ScrollViewer.IsAutoHideScrollBarsKey); }

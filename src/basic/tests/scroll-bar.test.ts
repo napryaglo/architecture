@@ -239,3 +239,33 @@ describe('InputManager — pointer capture', () => {
         assert.equal(im.GetCapturedVisual(), captor);
     });
 });
+
+describe('ScrollBar — auto-hide region hover', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('an auto-hide bar starts hidden and reveals on region hover', () => {
+        const b = new ScrollBar();
+        b.IsAutoHide = true;
+        assert.equal(b.IsFaded, true, 'auto-hide bar starts faded out');
+        b.SetRegionActive(true);
+        assert.equal(b.IsFaded, false, 'region hover reveals the bar');
+    });
+
+    test('SetRegionActive is idempotent', () => {
+        const b = new ScrollBar();
+        b.IsAutoHide = true;
+        b.SetRegionActive(true);
+        b.SetRegionActive(true);
+        assert.equal(b.IsFaded, false);
+    });
+
+    test('a non-auto-hide bar stays visible and region hover is a no-op', () => {
+        const b = new ScrollBar();
+        // IsAutoHide defaults false → never faded.
+        assert.equal(b.IsFaded, false);
+        b.SetRegionActive(true);
+        assert.equal(b.IsFaded, false);
+        b.SetRegionActive(false);
+        assert.equal(b.IsFaded, false);
+    });
+});

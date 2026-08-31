@@ -143,6 +143,11 @@ export class ScrollBar extends TemplatedControl
     private _idleTimer: ReturnType<typeof setTimeout> | undefined;
     private static readonly AUTO_HIDE_IDLE_MS = 1500;
 
+    // Whether the owning scroll region currently reports pointer hover. While
+    // true the auto-hide bar stays revealed (VSCode-style hover-to-show) even
+    // with no scroll activity; when it clears, the idle timer fades the bar out.
+    private _regionActive = false;
+
     // ValueChanged subscribers. Plain Set so duplicate add is a no-op
     // and remove is precise — same shape as the Closed listener API
     // on Drawer.
@@ -206,9 +211,11 @@ export class ScrollBar extends TemplatedControl
         if (this._idleTimer !== undefined) clearTimeout(this._idleTimer);
         const t = setTimeout(() => {
             this._idleTimer = undefined;
-            // Hover keeps the bar visible even past the idle gap —
-            // re-pulse on the next tick when the pointer leaves.
-            if (this._thumb.IsMouseOver || this.IsDragging)
+            // Hover keeps the bar visible even past the idle gap — either on
+            // the thumb itself, mid-drag, or while the owning scroll region is
+            // hovered (VSCode hover-to-show). Re-pulse; the pointer leaving
+            // clears the flag and the next tick fades it out.
+            if (this._thumb.IsMouseOver || this.IsDragging || this._regionActive)
             {
                 this.pulseActivity();
                 return;
@@ -218,6 +225,19 @@ export class ScrollBar extends TemplatedControl
         // Don't keep the Node test process alive for the 1.5 s tail.
         (t as unknown as { unref?: () => void }).unref?.();
         this._idleTimer = t;
+    }
+
+    /** The owning ScrollViewer reports whether the pointer is over the scroll
+     *  region. While active the auto-hidden bar reveals and stays visible
+     *  (VSCode hover-to-show); when it clears, the pending idle timer fades it
+     *  out after the gap. No-op unless IsAutoHide. */
+    public SetRegionActive(active: boolean): void
+    {
+        if (this._regionActive === active) return;
+        this._regionActive = active;
+        if (this.IsAutoHide && active) this.pulseActivity();
+        // On deactivate the pending idle timer (always live after a pulse) sees
+        // the cleared flag and fades the bar out — no explicit action needed.
     }
 
     private fadeIn(): void
