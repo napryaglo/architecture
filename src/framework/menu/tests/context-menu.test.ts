@@ -7,8 +7,21 @@ import { InputManager } from '../../../framework/index.js';;
 import { HeadlessTarget } from '../../../visual-engine/index.js';
 import { ContextMenu, ContextMenuService } from '../context-menu.js';
 import { MenuItem } from '../menu-strip.js';
+import { DataTemplate } from '../../../basic/index.js';
+import { Visual } from '../../../visual-engine/index.js';
 
 class Root extends Panel {}
+
+class Choice { constructor(public label: string, public cmd: RelayCommand) {} }
+
+// Recursively collect every MenuItem in a visual subtree (the overlay popup).
+function findMenuItems(v: Visual, out: MenuItem[] = []): MenuItem[]
+{
+    if (v instanceof MenuItem) out.push(v);
+    for (const c of (v as unknown as { visualChildren: Visual[] }).visualChildren ?? [])
+        findMenuItems(c, out);
+    return out;
+}
 
 function rightClick(): PointerEventInit
 {
@@ -126,6 +139,97 @@ describe('ContextMenu — attached DP + auto-open', () => {
         im.InjectPointerDown(root, rightClickAt(120, 90));
         target.Flush();
         assert.deepEqual(popupOrigin(cm), { x: 120, y: 90 });
+    });
+
+    test('activating a leaf item runs its command and closes the menu', () => {
+        const target = new HeadlessTarget(400, 300);
+        const root = new Root();
+        target.Content = root;
+
+        const cm = new ContextMenu();
+        let ran = 0;
+        const mi = new MenuItem();
+        mi.Header = 'Delete';
+        mi.Command = new RelayCommand(() => { ran++; });
+        cm.Items = [mi];
+        root.ContextMenu = cm;
+
+        const im = new InputManager();
+        im.InjectPointerDown(root, rightClick());
+        assert.equal(cm.IsOpen, true);
+        target.Flush();
+
+        // Is the item prepared with a close hook?
+        const prepared = (mi as unknown as { _onActivated?: () => void })._onActivated;
+        assert.notEqual(prepared, undefined, '_onActivated should be wired after realize');
+
+        // Activate the leaf → command runs AND menu closes.
+        (mi as unknown as { activate(): void }).activate();
+        assert.equal(ran, 1, 'command ran');
+        assert.equal(cm.IsOpen, false, 'menu should close on activation');
+    });
+
+    test('activating a nested (static) submenu child closes the whole menu', () => {
+        const target = new HeadlessTarget(400, 300);
+        const root = new Root();
+        target.Content = root;
+
+        const cm = new ContextMenu();
+        const parent = new MenuItem(); parent.Header = 'More';
+        const child = new MenuItem(); child.Header = 'Deep';
+        let ran = 0; child.Command = new RelayCommand(() => { ran++; });
+        parent.AddChild(child);   // declarative submenu child
+        cm.AddChild(parent);      // declarative context-menu item
+        root.ContextMenu = cm;
+
+        const im = new InputManager();
+        im.InjectPointerDown(root, rightClick());
+        target.Flush();
+
+        // Open the submenu, then activate the child.
+        (parent as unknown as { activate(): void }).activate();
+        target.Flush();
+        const childHook = (child as unknown as { _onActivated?: () => void })._onActivated;
+        assert.notEqual(childHook, undefined, 'child _onActivated should be wired');
+        (child as unknown as { activate(): void }).activate();
+        assert.equal(ran, 1, 'child command ran');
+        assert.equal(cm.IsOpen, false, 'the whole menu should close');
+    });
+
+    test('a templated (ItemsSource) submenu child closes the whole menu (regression)', () => {
+        const target = new HeadlessTarget(400, 300);
+        const root = new Root();
+        target.Content = root;
+
+        const cm = new ContextMenu();
+        const parent = new MenuItem(); parent.Header = 'Add New';
+        let ran = 0;
+        const choice = new Choice('File', new RelayCommand(() => { ran++; }));
+        parent.ItemsSource  = [choice] as unknown as never;
+        parent.ItemTemplate = new DataTemplate((d) => {
+            const c = d as Choice;
+            const it = new MenuItem(); it.Header = c.label; it.Command = c.cmd; return it;
+        }, Choice);
+        cm.AddChild(parent);
+        root.ContextMenu = cm;
+
+        const im = new InputManager();
+        im.InjectPointerDown(root, rightClick());
+        target.Flush();
+        (parent as unknown as { activate(): void }).activate();   // open the submenu
+        target.Flush();
+
+        // The generated container is a ContentPresenter wrapping the templated
+        // MenuItem — reach it through the parent's generator (the submenu popup is
+        // mounted on a separate overlay, so a walk from `cm` won't find it).
+        const container = (parent as unknown as { Generator: { ContainerFromItem(i: unknown): Visual | undefined } })
+            .Generator.ContainerFromItem(choice);
+        assert.notEqual(container, undefined, 'templated container should be realized');
+        const child = findMenuItems(container as Visual).find((m) => m.Header === 'File');
+        assert.notEqual(child, undefined, 'templated child MenuItem should exist');
+        (child as unknown as { activate(): void }).activate();
+        assert.equal(ran, 1, 'child command ran');
+        assert.equal(cm.IsOpen, false, 'menu should close when a templated child is activated');
     });
 
     test('Right-click on a Visual WITHOUT an attached ContextMenu is a pass-through', () => {

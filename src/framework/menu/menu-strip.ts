@@ -254,6 +254,7 @@ export class MenuItem extends HeaderedItemsControl
         this._scrim          = root.FindName('PART_Scrim')          as ClickAwayScrim;
         this._popupContainer = root.FindName('PART_PopupContainer') as Border;
         this._popupHost.popup = this._popupContainer;
+        this._popupHost.owner = this;
         this._scrim.onClick   = (): void => { this.IsSubmenuOpen = false; };
         this.DetachVisual(this._popupHost);
     }
@@ -534,7 +535,42 @@ export class MenuItem extends HeaderedItemsControl
         // Activated callback still runs before Execute — the popup closes before a
         // Command might steal focus to a dialog; we just snapshot the values first.
         this._onActivated?.();
+        // Fallback: a MenuItem produced by an ItemsSource ItemTemplate lives inside a
+        // ContentPresenter container, so PrepareContainerForItemOverride (which keys
+        // on `container instanceof MenuItem`) never wired its `_onActivated`. Without
+        // this, such an item runs its Command but leaves the menu open. Close through
+        // the popup host that owns us.
+        if (this._onActivated === undefined) this.closeThroughOwner();
         if (cmd !== undefined && cmd.CanExecute(param)) cmd.Execute(param);
+    }
+
+    // Walk up to the MenuPopupHost hosting this item and close the enclosing menu
+    // through its owner. Used only as the activate() fallback above.
+    private closeThroughOwner(): void
+    {
+        let cur: Visual | undefined = this.GetVisualParent();
+        for (let guard = 0; cur !== undefined && guard < 64; guard++)
+        {
+            if (cur instanceof MenuPopupHost)
+            {
+                const owner = cur.owner;
+                if (owner instanceof MenuItem)
+                {
+                    // The owning submenu item's own _onActivated collapses it and
+                    // propagates to the root; if it too is unwired (nested templated
+                    // menus), collapse it and keep walking up from the owner.
+                    if (owner._onActivated !== undefined) { owner._onActivated(); return; }
+                    owner.IsSubmenuOpen = false;
+                    cur = owner.GetVisualParent();
+                    continue;
+                }
+                if (owner instanceof MenuButton) { owner.IsOpen = false; return; }
+                const sink = owner as unknown as { closeFromMenuActivation?: () => void } | undefined;
+                if (sink !== undefined && sink.closeFromMenuActivation !== undefined) { sink.closeFromMenuActivation(); return; }
+                return;
+            }
+            cur = cur.GetVisualParent();
+        }
     }
 
     protected override OnPointerEnter(_args: PointerEventArgs): void
@@ -1031,6 +1067,7 @@ export class MenuButton extends HeaderedItemsControl
         this._scrim          = root.FindName('PART_Scrim')          as ClickAwayScrim;
         this._popupContainer = root.FindName('PART_PopupContainer') as Border;
         this._popupHost.popup  = this._popupContainer;
+        this._popupHost.owner  = this;
         this._scrim.onClick    = (): void => { this.IsOpen = false; };
         // Detach so AttachOverlay won't trip the single-parent check.
         // We claim it back in unmountPopup via reattachPopupTemplate if
@@ -1203,6 +1240,12 @@ export class MenuPopupHost extends Panel
      *  positioned fly-out). Takes precedence over anchor / fixedPoint. */
     public centered = false;
     public popup: Visual | undefined;
+    /** The control that owns this popup (the MenuItem / ContextMenu / MenuButton
+     *  that opened it). The popup is mounted on a separate OverlayLayer, so a
+     *  descendant's visual-parent walk stops here — this back-link lets an activated
+     *  item close the enclosing menu even when its own `_onActivated` was never
+     *  wired (a templated MenuItem inside a ContentPresenter container). */
+    public owner: Visual | undefined;
 
     protected override MeasureOverride(availableSize: Size): Size
     {

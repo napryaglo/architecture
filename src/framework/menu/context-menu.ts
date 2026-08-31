@@ -98,9 +98,15 @@ export class ContextMenu extends ItemsControl
         this._scrim          = host.FindName('PART_Scrim')          as ClickAwayScrim;
         this._popupContainer = host.FindName('PART_PopupContainer') as Border;
         this._popupHost.popup = this._popupContainer;
+        this._popupHost.owner = this;
         this._scrim.onClick   = (): void => { this.IsOpen = false; };
         this._partsBound = true;
     }
+
+    // Close hook invoked (duck-typed) by MenuItem.activate() when an activated leaf
+    // couldn't close through its own `_onActivated` chain — e.g. a templated
+    // (ItemsSource) menu item wrapped in a ContentPresenter container.
+    public closeFromMenuActivation(): void { this.IsOpen = false; }
 
     /** Body items declared in `.mu` (`ContextMenu { MenuItem; … }`) come
      *  in as MenuItem / MenuSeparator Visuals. The base ItemsControl

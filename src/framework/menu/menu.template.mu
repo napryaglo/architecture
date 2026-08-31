@@ -159,7 +159,7 @@ resources Menus {
     // visualChildren[0]. MenuItem's primary ControlTemplate (the one
     // ItemsControl wires) is the submenu popup chrome below.
     Template x:key="DefaultMenuItemRow" [TargetType = MenuItem] {
-        Border x:name="PART_Row" [ Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1) ] {
+        Border x:name="PART_Row" [ Padding = (@Spacing3,@Spacing2,@Spacing3,@Spacing2) ] {
             // A DockPanel (not a horizontal StackPanel) so the chevron and
             // gesture pin to the row's RIGHT edge while the header fills the
             // middle — the M3 / platform convention. In a left-packed stack
@@ -217,7 +217,7 @@ resources Menus {
             PART_Row.Padding = (@Spacing2,@Spacing0,@Spacing2,@Spacing0);
         }
         when ( ThemeManager.Density = Comfortable ) {
-            PART_Row.Padding = (@Spacing2,@Spacing2,@Spacing2,@Spacing2);
+            PART_Row.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
         }
         when ( ThemeManager.Pointer = Coarse ) {
             PART_Row.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
