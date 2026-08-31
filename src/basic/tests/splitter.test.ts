@@ -2,8 +2,9 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, Key, NoModifiers, PointerButton, Rect, Size, Element, Visual, type DrawingContext, type PointerEventInit } from '../../runtime/index.js';
+import { Application, Key, NoModifiers, PointerButton, Rect, Size, Element, Visual, Color, type DrawingContext, type PointerEventInit } from '../../runtime/index.js';
 import { InputManager } from '../../framework/index.js';;
+import { SolidColorBrush } from '../../visual-engine/index.js';
 import { Border } from '../border.js';
 import { DockPanel } from '../panels/dock-panel.js';
 import { Splitter } from '../splitter.js';
@@ -199,5 +200,32 @@ describe('Splitter — keyboard nudges', () => {
         im.InjectKeyDown({ Key: Key.Up, KeyText: 'ArrowUp', Code: 'ArrowUp', Modifiers: NoModifiers, IsRepeat: false });
 
         assert.equal(prev.Width, 100, 'wrong-axis arrow ignored');
+    });
+});
+
+describe('Splitter — RestBrush', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('defaults to undefined', () => {
+        assert.equal(new Splitter().RestBrush, undefined);
+    });
+
+    test('a set RestBrush paints the resting divider (at rest, not hovered)', () => {
+        const s = new Splitter();
+        const brush = new SolidColorBrush(Color.Red);
+        s.RestBrush = brush;
+        // refreshChrome runs on the RestBrush change; at rest the divider fill is
+        // exactly the supplied brush (not the default @OutlineVariant resource).
+        assert.equal(s.Border.Fill, brush);
+    });
+
+    test('clearing RestBrush falls back to the default resting resource', () => {
+        const s = new Splitter();
+        const brush = new SolidColorBrush(Color.Red);
+        s.RestBrush = brush;
+        assert.equal(s.Border.Fill, brush);
+        s.RestBrush = undefined;
+        // Back to a DynamicResource-resolved brush — no longer the red brush.
+        assert.notEqual(s.Border.Fill, brush);
     });
 });

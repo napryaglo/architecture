@@ -78,6 +78,13 @@ export class Splitter extends Thumb
     public static readonly PreviewBrushKey = MuralBase.RegisterProperty<Brush | undefined>(
         Splitter, 'PreviewBrush', undefined, MetaData.None);
 
+    // Resting divider brush. undefined (default) keeps the historic faint
+    // @OutlineVariant line; set it (e.g. to the surrounding chrome colour) to
+    // make the divider blend in at rest while hover/drag still tint it to the
+    // accent. Bind a `@Token` DynamicResource so a theme switch re-tints live.
+    public static readonly RestBrushKey = MuralBase.RegisterProperty<Brush | undefined>(
+        Splitter, 'RestBrush', undefined, MetaData.None);
+
     static {
         MuralBase.OverrideMetadata(Splitter, Element.DefaultStyleKeyKey, { default_value: Splitter });
     }
@@ -116,7 +123,8 @@ export class Splitter extends Thumb
         // DPs on this instance, so route them through the one hook.
         if (descriptor.Name === 'Orientation'
             || descriptor.Name === 'IsMouseOver'
-            || descriptor.Name === 'IsDragging')
+            || descriptor.Name === 'IsDragging'
+            || descriptor.Name === 'RestBrush')
         {
             this.refreshChrome();
         }
@@ -133,6 +141,9 @@ export class Splitter extends Thumb
 
     public get PreviewBrush(): Brush | undefined { return this.get_property_value(Splitter.PreviewBrushKey); }
     public set PreviewBrush(v: Brush | undefined) { this.set_property_value(Splitter.PreviewBrushKey, v); }
+
+    public get RestBrush(): Brush | undefined { return this.get_property_value(Splitter.RestBrushKey); }
+    public set RestBrush(v: Brush | undefined) { this.set_property_value(Splitter.RestBrushKey, v); }
 
     public get ReverseDirection(): boolean { return this.get_property_value(Splitter.ReverseDirectionKey); }
     public set ReverseDirection(v: boolean) { this.set_property_value(Splitter.ReverseDirectionKey, v); }
@@ -164,11 +175,24 @@ export class Splitter extends Thumb
 
         border.MaxWidth  = (vertical  && !active) ? rest : Number.POSITIVE_INFINITY;
         border.MaxHeight = (!vertical && !active) ? rest : Number.POSITIVE_INFINITY;
-        // DynamicResource so a theme switch re-tints live (matches how Thumb
-        // seeds the resting brush).
-        border.set_property_value(
-            resolveKey(border, undefined, 'Fill'),
-            DynamicResource(border, active ? 'Primary' : 'OutlineVariant'));
+        const fillKey = resolveKey(border, undefined, 'Fill');
+        if (active)
+        {
+            // Hover / drag → accent tint. DynamicResource so a theme switch
+            // re-tints live (matches how Thumb seeds the resting brush).
+            border.set_property_value(fillKey, DynamicResource(border, 'Primary'));
+        }
+        else if (this.RestBrush !== undefined)
+        {
+            // Consumer-supplied resting brush (e.g. chrome colour to blend in).
+            // Already a resolved Brush from its own DynamicResource binding, so a
+            // theme switch re-fires OnPropertyChanged(RestBrush) → refreshChrome.
+            border.set_property_value(fillKey, this.RestBrush);
+        }
+        else
+        {
+            border.set_property_value(fillKey, DynamicResource(border, 'OutlineVariant'));
+        }
     }
 
     // ── Drag lifecycle ────────────────────────────────────────────
