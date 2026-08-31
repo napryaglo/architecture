@@ -9,12 +9,16 @@ resources StatusBars {
     // ItemsControl wrapping each item in a StatusBarItem. The default
     // ItemsPanel is a DockPanel with LastChildFill=true so authors can
     // dock left/right cells via `DockPanel.Dock` on each item and put a
-    // stretchy middle one last. Chrome is a single Border on top of
-    // @Surface — the shared app-chrome tone (matches the title bar, activity
-    // rail, and window background for a flat VSCode-style frame).
+    // stretchy middle one last. Chrome is a single Border whose Fill is
+    // TEMPLATE-BOUND to the StatusBar's own Fill DP ($$Fill), defaulted to
+    // @Surface by the Style below — the shared app-chrome tone (matches the
+    // title bar, activity rail, and window background for a flat VSCode-style
+    // frame). Binding it (rather than hardcoding @Surface) lets an app re-tint
+    // the strip via an implicit Style[TargetType=StatusBar] { Fill = … },
+    // same pattern ShellSideContentPane uses for the side pane.
     Template x:key="DefaultStatusBar" [TargetType = StatusBar] {
         Border
-            [ Fill      = @Surface,
+            [ Fill      = $$Fill,
               Padding         = (4,2,4,2) ] {
             // Top rule — was Border BorderThickness (0,1,0,0); now a
             // horizontal oriented Line docked Top so it stretches the full
@@ -37,6 +41,7 @@ resources StatusBars {
     Style [TargetType = StatusBar] {
         Template = @DefaultStatusBar;
         ItemsPanel = @DefaultStatusBarPanel;
+        Fill = @Surface;
     }
 
     // ── StatusBarItem (one cell) ───────────────────────────────────
