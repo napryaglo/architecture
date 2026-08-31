@@ -215,10 +215,10 @@ resources Menus {
         // Comfortable. Matches the same shape ListBoxItem / ComboBox use.
         // Compact still keeps real vertical padding: a menu ROW is a
         // pointer target, and zero-height padding makes the hit area and
-        // the ink cramped even in a compact shell. (12,8) reads as a
+        // the ink cramped even in a compact shell. (8,4) reads as a
         // proper clickable row while staying tighter than Comfortable.
         when ( ThemeManager.Density = Compact ) {
-            PART_Row.Padding = (@Spacing3,@Spacing2,@Spacing3,@Spacing2);
+            PART_Row.Padding = (@Spacing2,@Spacing1,@Spacing2,@Spacing1);
         }
         when ( ThemeManager.Density = Comfortable ) {
             PART_Row.Padding = (@Spacing3,@Spacing3,@Spacing3,@Spacing3);
