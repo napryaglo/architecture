@@ -36,6 +36,17 @@ export enum TextWrapping
     Wrap   = 'Wrap',
 }
 
+// How a single-line (NoWrap) TextBlock handles text wider than its available
+// width. None (default) keeps the historic behaviour — the text overflows /
+// is hard-clipped by the host. CharacterEllipsis truncates the text to the
+// widest character prefix that fits with a trailing '…' appended. Only applies
+// on the NoWrap path with a finite available width; ignored when wrapping.
+export enum TextTrimming
+{
+    None              = 'None',
+    CharacterEllipsis = 'CharacterEllipsis',
+}
+
 // TextAlignment moved to visual-engine (next to FontWeight / TextDecorations)
 // so the documents/ Block tier can share it without importing a Visual.
 // Re-exported here for back-compat with `import { TextAlignment } from
@@ -119,6 +130,11 @@ export class TextBlock extends Element implements InlineHost
     public static readonly TextDecorationsKey = MuralBase.RegisterProperty<TextDecorations>(TextBlock, 'TextDecorations', TextDecorations.None, MetaData.Render | MetaData.Inherits);
     public static readonly ForegroundKey   = MuralBase.RegisterProperty<Brush | undefined>(TextBlock, 'Foreground',   undefined,           MetaData.Render  | MetaData.Inherits);
     public static readonly TextWrappingKey  = MuralBase.RegisterProperty<TextWrapping>( TextBlock, 'TextWrapping',  TextWrapping.NoWrap, MetaData.Measure | MetaData.Render);
+    // TextTrimming — single-line ellipsis. CharacterEllipsis truncates NoWrap
+    // text to the widest '…'-terminated prefix that fits the available width.
+    // Measure | Render: it changes both the stored line (the measured width) and
+    // the painted glyph stream.
+    public static readonly TextTrimmingKey  = MuralBase.RegisterProperty<TextTrimming>( TextBlock, 'TextTrimming',  TextTrimming.None,   MetaData.Measure | MetaData.Render);
     // TextAlignment is render-only — moving the text within the block
     // doesn't change the block's DesiredSize, and the runtime applies
     // the per-line x offset inside RenderOverride.
@@ -259,6 +275,9 @@ export class TextBlock extends Element implements InlineHost
     public get TextWrapping(): TextWrapping { return this.get_property_value(TextBlock.TextWrappingKey); }
     public set TextWrapping(value: TextWrapping) { this.set_property_value(TextBlock.TextWrappingKey, value); }
 
+    public get TextTrimming(): TextTrimming { return this.get_property_value(TextBlock.TextTrimmingKey); }
+    public set TextTrimming(value: TextTrimming) { this.set_property_value(TextBlock.TextTrimmingKey, value); }
+
     public get TextAlignment(): TextAlignment { return this.get_property_value(TextBlock.TextAlignmentKey); }
     public set TextAlignment(value: TextAlignment) { this.set_property_value(TextBlock.TextAlignmentKey, value); }
 
@@ -279,6 +298,36 @@ export class TextBlock extends Element implements InlineHost
     {
         const lh = this.LineHeight;
         return Number.isFinite(lh) && lh > 0 ? lh : measuredHeight;
+    }
+
+    // Widest '…'-terminated character prefix of `text` whose advance fits
+    // `maxWidth`. Binary search over the code-point count (Array.from so a
+    // surrogate pair counts as one glyph). Returns just '…' when not even the
+    // first character fits — never the empty string, so the trim is always
+    // visible. Used only on the NoWrap CharacterEllipsis path.
+    private ellipsize(
+        text: string,
+        maxWidth: number,
+        measure: (s: string) => TextMetrics,
+        advance: (s: string, base: number) => number,
+    ): string
+    {
+        const ELLIPSIS = '…';
+        const chars = Array.from(text);
+        const fits = (n: number): boolean => {
+            const s = chars.slice(0, n).join('') + ELLIPSIS;
+            return advance(s, measure(s).Width) <= maxWidth;
+        };
+        let best = 0;
+        let lo = 0;
+        let hi = chars.length;
+        while (lo <= hi)
+        {
+            const mid = (lo + hi) >> 1;
+            if (fits(mid)) { best = mid; lo = mid + 1; }
+            else { hi = mid - 1; }
+        }
+        return chars.slice(0, best).join('') + ELLIPSIS;
     }
 
     protected override MeasureOverride(availableSize: Size): Size
@@ -353,6 +402,19 @@ export class TextBlock extends Element implements InlineHost
             || !Number.isFinite(availableSize.Width))
         {
             const metrics = measureText(text);
+            // CharacterEllipsis: when the text is wider than a finite available
+            // width, truncate it to the widest '…'-terminated prefix that fits and
+            // measure THAT — so the block sizes to the clamped line and the paint
+            // shows the ellipsis instead of overflowing / hard-clipping.
+            if (this.TextTrimming === TextTrimming.CharacterEllipsis
+                && Number.isFinite(availableSize.Width)
+                && advance(text, metrics.Width) > availableSize.Width)
+            {
+                const trimmed = this.ellipsize(text, availableSize.Width, measureText, advance);
+                const trimmedMetrics = measureText(trimmed);
+                this._lines = [{ text: trimmed, metrics: trimmedMetrics }];
+                return new Size(advance(trimmed, trimmedMetrics.Width), this.effectiveLineHeight(trimmedMetrics.Height));
+            }
             this._lines = [{ text, metrics }];
             // Effective height honours an explicit LineHeight — a 14pt
             // typography token paired with `LineHeight=20` (M3 BodyMedium)

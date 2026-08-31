@@ -21,7 +21,7 @@ import {
     SvgDrawingContext,
 } from '../../visual-engine/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
-import { Border, MeasurementFidelity, TextAlignment, TextBlock, TextWrapping } from '../index.js';
+import { Border, MeasurementFidelity, TextAlignment, TextBlock, TextTrimming, TextWrapping } from '../index.js';
 
 // Captures DrawText calls so tests can assert exactly what TextBlock's
 // RenderOverride emitted (the FormattedText payload and the origin).
@@ -468,5 +468,67 @@ describe('TextBlock MeasurementFidelity', () => {
         assert.equal(
             inner.GetValueSource(resolveKey(inner, undefined, 'MeasurementFidelity')),
             PropertyValueSource.InheritedValue);
+    });
+});
+
+// CharacterEllipsis: a NoWrap block wider than its available width truncates to
+// the widest '…'-terminated prefix that fits. FixedMeasurer(10) makes width =
+// glyphCount × 10 (the '…' counts as one glyph), so truncation is exact.
+describe('TextBlock TextTrimming', () => {
+    const lineText = (t: TextBlock): string =>
+        (t as unknown as { _lines: Array<{ text: string }> })._lines[0]!.text;
+
+    test('defaults to None', () => {
+        assert.equal(new TextBlock().TextTrimming, TextTrimming.None);
+    });
+
+    test('CharacterEllipsis truncates to the widest fitting prefix + ellipsis', () => {
+        const t = new TextBlock('Hello World');       // 11 glyphs → 110px
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer = new FixedMeasurer(10);
+        t.TextTrimming = TextTrimming.CharacterEllipsis;
+        t.Measure(new Size(55, 100));                 // fits 5 glyphs → 'Hell' + '…'
+        assert.equal(lineText(t), 'Hell…');
+        assert.equal(t.DesiredSize.Width, 50);
+    });
+
+    test('no truncation when the text already fits', () => {
+        const t = new TextBlock('Hello World');
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer = new FixedMeasurer(10);
+        t.TextTrimming = TextTrimming.CharacterEllipsis;
+        t.Measure(new Size(200, 100));                // 110 ≤ 200 → unchanged
+        assert.equal(lineText(t), 'Hello World');
+        assert.equal(t.DesiredSize.Width, 110);
+    });
+
+    test('degrades to a lone ellipsis when not even one glyph fits', () => {
+        const t = new TextBlock('Hello World');
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer = new FixedMeasurer(10);
+        t.TextTrimming = TextTrimming.CharacterEllipsis;
+        t.Measure(new Size(5, 100));                  // even '…' (10) exceeds — never empty
+        assert.equal(lineText(t), '…');
+    });
+
+    test('None (default) leaves the overflowing text intact', () => {
+        const t = new TextBlock('Hello World');
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer = new FixedMeasurer(10);
+        t.Measure(new Size(55, 100));                 // wider than 55, but no trimming
+        assert.equal(lineText(t), 'Hello World');
+        assert.equal(t.DesiredSize.Width, 110);
+    });
+
+    test('Wrap takes precedence — trimming is ignored when wrapping', () => {
+        const t = new TextBlock('Hello World');
+        const target = new HeadlessTarget(500, 100, t);
+        target.TextMeasurer = new FixedMeasurer(10);
+        t.TextWrapping = TextWrapping.Wrap;
+        t.TextTrimming = TextTrimming.CharacterEllipsis;
+        t.Measure(new Size(55, 100));
+        const lines = (t as unknown as { _lines: Array<{ text: string }> })._lines;
+        assert.ok(lines.length >= 2, `wrapped to multiple lines (got ${lines.length})`);
+        for (const l of lines) assert.ok(!l.text.includes('…'), `line "${l.text}" has no ellipsis`);
     });
 });
