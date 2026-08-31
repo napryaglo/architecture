@@ -3,10 +3,10 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from './test-app.js';
 
-import { Application, Key, NoModifiers, Panel, PointerButton, Visual, type FocusEventArgs, type KeyEventArgs, type KeyEventInit, type ModifierKeys, type PointerEventInit } from '../../runtime/index.js';
+import { Application, Key, NoModifiers, Panel, Point, Size, PointerButton, Visual, type FocusEventArgs, type KeyEventArgs, type KeyEventInit, type ModifierKeys, type PointerEventInit, type DrawingContext } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { InputManager } from '../../framework/index.js';;
-import { HeadlessTarget } from '../../visual-engine/index.js';
+import { HeadlessTarget, SolidColorBrush, type Brush } from '../../visual-engine/index.js';
 import { TextBox, TextBoxVariant, type ClipboardSink } from '../text-box.js';
 
 function pointer(overrides: Partial<PointerEventInit> = {}): PointerEventInit
@@ -250,6 +250,73 @@ describe('TextBox — SubmitsOnEnter', () => {
         assert.equal(handled, true);
         assert.equal(tb.Text, 'hi\n');
         assert.equal(tb.CaretIndex, 3);
+    });
+});
+
+// Records every DrawText the render pass emits, so a test can assert whether the
+// placeholder string was painted (and with which brush). All other DrawingContext
+// ops are no-ops — the TextBox tree also paints its Border/caret, which we ignore.
+class DrawCapture implements DrawingContext
+{
+    public texts: Array<{ text: string; brush: Brush | undefined }> = [];
+    DrawRectangle():        void {}
+    DrawRoundedRectangle(): void {}
+    DrawGeometry():         void {}
+    DrawImage():            void {}
+    DrawText(t: { Text: string; Foreground: Brush | undefined }): void { this.texts.push({ text: t.Text, brush: t.Foreground }); }
+    PushTransform():        void {}
+    PushClip():             void {}
+    Pop():                  void {}
+}
+
+describe('TextBox — Placeholder', () => {
+    beforeEach(() => { initTestApp(); });
+
+    function renderTexts(tb: TextBox): Array<{ text: string; brush: Brush | undefined }>
+    {
+        const target = new HeadlessTarget(300, 400);
+        target.Content = tb;
+        target.Flush();
+        const dc = new DrawCapture();
+        target.Render(dc);
+        return dc.texts;
+    }
+
+    test('draws the placeholder with PlaceholderBrush when the text is empty', () => {
+        const tb = new TextBox();
+        tb.AcceptsReturn    = true;
+        const brush         = new SolidColorBrush();
+        tb.Placeholder      = 'Ask anything…';
+        tb.PlaceholderBrush = brush;
+
+        const drawn = renderTexts(tb).find((t) => t.text === 'Ask anything…');
+        assert.ok(drawn, 'placeholder text is drawn when the box is empty');
+        assert.equal(drawn!.brush, brush);
+    });
+
+    test('does not draw the placeholder once the text is non-empty', () => {
+        const tb = new TextBox();
+        tb.AcceptsReturn = true;
+        tb.Placeholder   = 'Ask anything…';
+        tb.Text          = 'hello';
+
+        const texts = renderTexts(tb);
+        assert.equal(texts.find((t) => t.text === 'Ask anything…'), undefined);
+        assert.ok(texts.find((t) => t.text === 'hello'), 'the actual text is drawn instead');
+    });
+
+    test('placeholder never affects DesiredSize (render-only)', () => {
+        const withPh = new TextBox();
+        withPh.AcceptsReturn = true;
+        withPh.Placeholder   = 'A very long placeholder string that is quite wide';
+        withPh.Measure(new Size(300, 400));
+
+        const without = new TextBox();
+        without.AcceptsReturn = true;
+        without.Measure(new Size(300, 400));
+
+        assert.equal(withPh.DesiredSize.Width,  without.DesiredSize.Width);
+        assert.equal(withPh.DesiredSize.Height, without.DesiredSize.Height);
     });
 });
 
