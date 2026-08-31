@@ -210,6 +210,49 @@ describe('TextBox — text input', () => {
     });
 });
 
+describe('TextBox — SubmitsOnEnter', () => {
+    beforeEach(() => { initTestApp(); });
+
+    test('plain Return is left unhandled and inserts no newline when SubmitsOnEnter', () => {
+        const { tb, im } = fixture('hi');
+        tb.AcceptsReturn   = true;
+        tb.SubmitsOnEnter  = true;
+        tb.Select(2, 0);
+        im.SetFocus(tb);
+
+        // Return bubbles (unhandled) so an ancestor KeyDown trigger can submit;
+        // no newline is inserted.
+        const handled = im.InjectKeyDown(key(Key.Return));
+        assert.equal(handled, false);
+        assert.equal(tb.Text, 'hi');
+    });
+
+    test('Shift+Return still inserts a newline when SubmitsOnEnter', () => {
+        const { tb, im } = fixture('hi');
+        tb.AcceptsReturn   = true;
+        tb.SubmitsOnEnter  = true;
+        tb.Select(2, 0);
+        im.SetFocus(tb);
+
+        const handled = im.InjectKeyDown(key(Key.Return, { Shift: true }));
+        assert.equal(handled, true);
+        assert.equal(tb.Text, 'hi\n');
+        assert.equal(tb.CaretIndex, 3);
+    });
+
+    test('default (SubmitsOnEnter unset) inserts a newline and handles Return', () => {
+        const { tb, im } = fixture('hi');
+        tb.AcceptsReturn = true;
+        tb.Select(2, 0);
+        im.SetFocus(tb);
+
+        const handled = im.InjectKeyDown(key(Key.Return));
+        assert.equal(handled, true);
+        assert.equal(tb.Text, 'hi\n');
+        assert.equal(tb.CaretIndex, 3);
+    });
+});
+
 describe('TextBox — editing keys', () => {
     beforeEach(() => { initTestApp(); });
 
