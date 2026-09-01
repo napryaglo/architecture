@@ -1,8 +1,8 @@
 import { AnimationNamedVM } from "./animation-named-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { BeginStoryboardAction, DoubleAnimation, DynamicResource, EventTrigger, PauseStoryboardAction, PropertyTrigger, ResourceDictionary, ResumeStoryboardAction, StopStoryboardAction, Storyboard, Style, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { Button } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { BeginStoryboardAction, DoubleAnimation, DynamicResource, EventTrigger, PauseStoryboardAction, PropertyTrigger, ResourceDictionary, ResumeStoryboardAction, StopStoryboardAction, Storyboard, Style, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_AnimationNamedDemo = Symbol("AnimationNamedDemo.ctor");

@@ -9,8 +9,8 @@
 // localStorage, seeds a few Figures, and returns it for the platform
 // to mount.
 
-import { Application } from '@pragmatic-lab/mural/runtime';
-import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextNodeVM, CalloutNodeVM, deserializeFlowDocument, documentWithFields, ensureToolboxDefaults } from '@pragmatic-lab/mural/framework';
+import { Application } from '@pragmatic-tech-ai/mural/runtime';
+import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextNodeVM, CalloutNodeVM, deserializeFlowDocument, documentWithFields, ensureToolboxDefaults } from '@pragmatic-tech-ai/mural/framework';
 import { register } from '../../platform/registry.mjs';
 
 let docInstance;

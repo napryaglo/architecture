@@ -17,7 +17,7 @@
 // the session's OnMove itself) or 8.5 (the behavior wires the adorner
 // internally once InsertionAdornerTemplate is set).
 
-import { DataTemplate } from '@pragmatic-lab/mural/basic';
+import { DataTemplate } from '@pragmatic-tech-ai/mural/basic';
 import { DragDropExtendedVM } from './drag-drop-extended-vm.mjs';
 import { attachOsFileDrop } from './behaviors/os-file-drop-behavior.mjs';
 import { register } from '../../platform/registry.mjs';
@@ -55,9 +55,9 @@ function importControls()      { return (_controls      ??= controlsRef); }
 function importRuntime()       { return (_runtime       ??= runtimeRef); }
 function importVisualEngine()  { return (_visualEngine  ??= visualEngineRef); }
 
-import * as controlsRef from '@pragmatic-lab/mural/basic';
-import * as runtimeRef from '@pragmatic-lab/mural/runtime';
-import * as visualEngineRef from '@pragmatic-lab/mural/visual-engine';
+import * as controlsRef from '@pragmatic-tech-ai/mural/basic';
+import * as runtimeRef from '@pragmatic-tech-ai/mural/runtime';
+import * as visualEngineRef from '@pragmatic-tech-ai/mural/visual-engine';
 
 function attachExtras(view, vm) {
     // 8.5 — install the insertion-line template on the reorder behavior.

@@ -561,7 +561,7 @@ git commit -m "feat(connector): serialize userAltered flag; legacy {x,y} loads a
 
 **Files:**
 - Modify: `Mural/package.json` (version bump), publish to Verdaccio
-- Modify: `Plexus/package.json` (`@pragmatic-lab/mural` floor), `npm install`
+- Modify: `Plexus/package.json` (`@pragmatic-tech-ai/mural` floor), `npm install`
 - Modify: `Plexus/src/renderer/src/modules/diagram/layout/layout-pipeline-service.ts` (clear connector waypoints when a layout runs)
 - Test: `Plexus/src/renderer/src/modules/diagram/layout/tests/layout-pipeline-service.test.ts`
 
@@ -574,7 +574,7 @@ cd Mural && npm version minor && npm publish --registry http://localhost:4873/
 ```
 - [ ] **Step 2: Bump Plexus floor + install**
 ```bash
-cd Plexus && npm pkg set dependencies.@pragmatic-lab/mural="^<new-version>" && npm install
+cd Plexus && npm pkg set dependencies.@pragmatic-tech-ai/mural="^<new-version>" && npm install
 ```
 - [ ] **Step 3: Write the failing test** — assert that running the layout clears each connector's `Waypoints` to `undefined` (read the actual service; the exact method name is `Run`/`Apply` — match the file). Example shape:
 

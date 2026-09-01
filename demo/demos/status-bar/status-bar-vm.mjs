@@ -10,7 +10,7 @@
 // markup-side `$AddItemCommand` etc. resolve via DataContextBinding,
 // which only walks registered DPs on Models. CounterVM uses the same
 // shape for the same reason.
-import { MetaData, MuralBase, RelayCommand, } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase, RelayCommand, } from '@pragmatic-tech-ai/mural/runtime';
 export class StatusBarVM extends MuralBase {
     static StatusTextKey = MuralBase.RegisterProperty(StatusBarVM, 'StatusText', 'Ready', MetaData.None);
     static IsModifiedKey = MuralBase.RegisterProperty(StatusBarVM, 'IsModified', false, MetaData.None);

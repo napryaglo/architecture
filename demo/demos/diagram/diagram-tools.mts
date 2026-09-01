@@ -13,8 +13,8 @@
 // visual-engine types apply to `*-vm.mts` files; this descriptor is the
 // inline-markup data the ToolBars iterate.
 
-import { MetaData, MuralBase, type ICommand } from '@pragmatic-lab/mural/runtime';
-import type { Geometry } from '@pragmatic-lab/mural/visual-engine';
+import { MetaData, MuralBase, type ICommand } from '@pragmatic-tech-ai/mural/runtime';
+import type { Geometry } from '@pragmatic-tech-ai/mural/visual-engine';
 
 export class DiagramTool extends MuralBase
 {

@@ -7,8 +7,8 @@
 // without binding to a Pen-typed property tree. A property-change
 // listener installed on the Pen rebuilds these mirror DPs on every
 // mutation.
-import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
-import { Color, Pen, SolidColorBrush, } from '@pragmatic-lab/mural/visual-engine';
+import { MetaData, MuralBase } from '@pragmatic-tech-ai/mural/runtime';
+import { Color, Pen, SolidColorBrush, } from '@pragmatic-tech-ai/mural/visual-engine';
 export class PenEditorDemoVM extends MuralBase {
     static PenKey = MuralBase.RegisterProperty(PenEditorDemoVM, 'Pen', undefined, MetaData.None);
     static BrushSummaryKey = MuralBase.RegisterProperty(PenEditorDemoVM, 'BrushSummary', '', MetaData.None);

@@ -5,7 +5,7 @@
 // so this VM is intentionally empty — it exists only as the DataType the
 // demo's DataTemplate keys off (the shell resolves the view by class
 // identity via `DataTemplate [DataType = RichTextBlockVM]`).
-import { MuralBase } from '@pragmatic-lab/mural/runtime';
+import { MuralBase } from '@pragmatic-tech-ai/mural/runtime';
 
 export class RichTextBlockVM extends MuralBase
 {

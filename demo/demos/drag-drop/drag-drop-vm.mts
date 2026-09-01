@@ -12,13 +12,13 @@ import {
     DataObject, DragDropEffects,
     MetaData, MuralBase, ObservableCollection,
     type DragStartSpec,
-} from '@pragmatic-lab/mural/runtime';
+} from '@pragmatic-tech-ai/mural/runtime';
 
 // Format key the drag-data payload uses. Receivers query
 // `args.Data.Has(FMT_ITEM)` and `args.Data.Get(FMT_ITEM)` to read
 // the item id back out. Exported so the drop behavior reads the
 // same constant.
-export const FMT_ITEM = '@pragmatic-lab/mural/list-item';
+export const FMT_ITEM = '@pragmatic-tech-ai/mural/list-item';
 
 let _nextId = 1;
 

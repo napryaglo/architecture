@@ -1,9 +1,9 @@
 import { TextFormatVM } from "./text-format-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Line, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { ColorPicker, FontFamilyPicker, FontSizePicker } from "@pragmatic-lab/mural/framework";
-import { ToggleButton } from "@pragmatic-lab/mural/framework/buttons/toggle-button.js";
-import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontStyle, FontWeight, TextDecorations } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Line, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { ColorPicker, FontFamilyPicker, FontSizePicker } from "@pragmatic-tech-ai/mural/framework";
+import { ToggleButton } from "@pragmatic-tech-ai/mural/framework/buttons/toggle-button.js";
+import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { FontStyle, FontWeight, TextDecorations } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_TextFormatDemo = Symbol("TextFormatDemo.ctor");

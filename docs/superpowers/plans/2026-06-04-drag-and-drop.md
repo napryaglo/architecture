@@ -66,8 +66,8 @@ describe('DragDropEffects — flag enum', () => {
 
 describe('DataObject — formats map', () => {
     test('Set / Get round-trips the value verbatim', () => {
-        const d = new DataObject().Set('@pragmatic-lab/mural/node-kind', { kind: 'rect' });
-        assert.deepEqual(d.Get<{ kind: string }>('@pragmatic-lab/mural/node-kind'), { kind: 'rect' });
+        const d = new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', { kind: 'rect' });
+        assert.deepEqual(d.Get<{ kind: string }>('@pragmatic-tech-ai/mural/node-kind'), { kind: 'rect' });
     });
 
     test('Has reports presence', () => {
@@ -84,8 +84,8 @@ describe('DataObject — formats map', () => {
     test('Formats lists every key in insertion order', () => {
         const d = new DataObject()
             .Set('text/plain',     'hi')
-            .Set('@pragmatic-lab/mural/node-kind', 'rect');
-        assert.deepEqual([...d.Formats()], ['text/plain', '@pragmatic-lab/mural/node-kind']);
+            .Set('@pragmatic-tech-ai/mural/node-kind', 'rect');
+        assert.deepEqual([...d.Formats()], ['text/plain', '@pragmatic-tech-ai/mural/node-kind']);
     });
 
     test('Set returns `this` for chaining', () => {
@@ -723,7 +723,7 @@ function makeDummyVisual(): Visual
 describe('DragSession — standalone (no InputManager wiring yet)', () => {
     test('DoDragDrop returns a session carrying Source/Data/AllowedEffects', () => {
         const source = makeDummyVisual();
-        const data   = new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect');
+        const data   = new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', 'rect');
         const session = DragDrop.DoDragDrop(source, data, DragDropEffects.Copy);
         assert.equal(session.Source,          source);
         assert.equal(session.Data,            data);
@@ -1029,7 +1029,7 @@ function makeDropTarget(name: string): Visual & { dragLog: string[] }
         {
             this.dragLog.push(`Over@${args.HostX},${args.HostY}`);
             // Accept the format the toolbox publishes.
-            if (args.Data.Has('@pragmatic-lab/mural/node-kind'))
+            if (args.Data.Has('@pragmatic-tech-ai/mural/node-kind'))
             {
                 args.Effect = DragDropEffects.Copy;
             }
@@ -1048,7 +1048,7 @@ describe('InputManager — drag session lifecycle', () => {
         Application.current = null;
         const im   = new InputManager();
         const src  = makeDummyVisual();
-        const data = new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect');
+        const data = new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', 'rect');
         DragDrop.DoDragDrop(src, data, DragDropEffects.Copy);
         im.PickUpPendingDragSession();
         assert.equal(im.IsDragActive, true);
@@ -1060,7 +1060,7 @@ describe('InputManager — drag session lifecycle', () => {
         const src    = makeDummyVisual();
         const target = makeDropTarget('t');
         target.AllowDrop = true;
-        const data = new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect');
+        const data = new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', 'rect');
         DragDrop.DoDragDrop(src, data, DragDropEffects.Copy);
         im.PickUpPendingDragSession();
 
@@ -1075,7 +1075,7 @@ describe('InputManager — drag session lifecycle', () => {
         const src    = makeDummyVisual();
         const target = makeDropTarget('t');
         target.AllowDrop = true;
-        DragDrop.DoDragDrop(src, new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect'), DragDropEffects.Copy);
+        DragDrop.DoDragDrop(src, new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', 'rect'), DragDropEffects.Copy);
         im.PickUpPendingDragSession();
 
         im.DriveDragMove(target, dragSyntheticInit({ HostX: 5, HostY: 5 }));
@@ -1091,7 +1091,7 @@ describe('InputManager — drag session lifecycle', () => {
         const src    = makeDummyVisual();
         const target = makeDropTarget('t');
         target.AllowDrop = true;
-        const session = DragDrop.DoDragDrop(src, new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect'), DragDropEffects.Copy);
+        const session = DragDrop.DoDragDrop(src, new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', 'rect'), DragDropEffects.Copy);
         im.PickUpPendingDragSession();
 
         im.DriveDragMove(target, dragSyntheticInit({ HostX: 3, HostY: 4 }));
@@ -1137,7 +1137,7 @@ describe('InputManager — drag session lifecycle', () => {
         const src    = makeDummyVisual();
         const target = makeDropTarget('t');
         target.AllowDrop = true;
-        const session = DragDrop.DoDragDrop(src, new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect'), DragDropEffects.Copy);
+        const session = DragDrop.DoDragDrop(src, new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', 'rect'), DragDropEffects.Copy);
         im.PickUpPendingDragSession();
 
         im.DriveDragMove(target, dragSyntheticInit({ HostX: 0, HostY: 0 }));
@@ -1498,7 +1498,7 @@ describe('HtmlTarget — drag ghost overlay (mode A)', () => {
         root.SetChild(source);
         target.Flush();
 
-        const data = new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect');
+        const data = new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', 'rect');
         DragDrop.DoDragDrop(source, data, DragDropEffects.Copy /* opts.preview undefined → mode A */);
         // The HtmlTarget polls for the session on its next pointer event;
         // for the test, drive the host's drag listener path explicitly.
@@ -1779,7 +1779,7 @@ describe('HtmlTarget — drag preview mode C (DataTemplate)', () => {
             return t;
         });
         const data = { kind: 'rect' };
-        const dataObject = new DataObject().Set('@pragmatic-lab/mural/node-kind', data);
+        const dataObject = new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', data);
 
         DragDrop.DoDragDrop(source, dataObject, DragDropEffects.Copy, { preview: template });
         target.OnDragSessionStarted();
@@ -2258,7 +2258,7 @@ describe('Visual.IsDraggable + OnDragStart — declarative latch', () => {
         })();
         v.IsDraggable = true;
         v.OnDragStart = () => ({
-            data:    new DataObject().Set('@pragmatic-lab/mural/node-kind', 'rect'),
+            data:    new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', 'rect'),
             effects: DragDropEffects.Copy,
         });
 
@@ -2529,7 +2529,7 @@ describe('PointerEventArgs.BeginDragDrop', () => {
         v.AddRoutedEventListener('PointerDown', (raw: unknown) => {
             const args = raw as PointerEventArgs;
             session = args.BeginDragDrop(
-                new DataObject().Set('@pragmatic-lab/mural/port', { nodeId: 'n1', side: 0 }),
+                new DataObject().Set('@pragmatic-tech-ai/mural/port', { nodeId: 'n1', side: 0 }),
                 DragDropEffects.Link,
                 { preview: null },
             );
@@ -2574,8 +2574,8 @@ The `DragDrop` / `DragSession` / `DragDropEffects` / `DragDropOptions` types are
 In `src/compiler/symbol-table.ts`, find `DEFAULT_SYMBOLS` (around line 80) and add entries so .mu authors get them in scope:
 
 ```ts
-['DataObject',          '@pragmatic-lab/mural/runtime'],
-['DragDropEffects',     '@pragmatic-lab/mural/runtime'],
+['DataObject',          '@pragmatic-tech-ai/mural/runtime'],
+['DragDropEffects',     '@pragmatic-tech-ai/mural/runtime'],
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -2655,7 +2655,7 @@ In `demo/demos/diagram/diagram-vm.mjs`, add to `ToolboxShapeVM` (find the class 
 // return data — the toolbox is unconditionally draggable.
 tileDragData(source) {
     return {
-        data:    new DataObject().Set('@pragmatic-lab/mural/node-kind', this.Kind),
+        data:    new DataObject().Set('@pragmatic-tech-ai/mural/node-kind', this.Kind),
         effects: DragDropEffects.Copy,
     };
 }
@@ -2664,7 +2664,7 @@ tileDragData(source) {
 Add `DataObject` and `DragDropEffects` to the imports at the top of `diagram-vm.mjs`:
 
 ```js
-import { DataObject, DragDropEffects, /* existing */ } from '@pragmatic-lab/mural/runtime';
+import { DataObject, DragDropEffects, /* existing */ } from '@pragmatic-tech-ai/mural/runtime';
 ```
 
 Add to `NodeVM`:
@@ -2672,7 +2672,7 @@ Add to `NodeVM`:
 ```js
 nodeMoveDragData(source) {
     return {
-        data: new DataObject().Set('@pragmatic-lab/mural/node-move',
+        data: new DataObject().Set('@pragmatic-tech-ai/mural/node-move',
             { nodeId: this.Id, pointerOffsetX: 0, pointerOffsetY: 0 }),
         // Move semantics — receiver mutates X/Y rather than copying.
         effects: DragDropEffects.Move,
@@ -2688,23 +2688,23 @@ In `DiagramVM.OnViewMounted` find the canvas's `PointerDown` / `PointerMove` / `
 
 ```js
 canvas.AddRoutedEventListener('DragOver', (args) => {
-    if (args.Data.Has('@pragmatic-lab/mural/node-kind') || args.Data.Has('@pragmatic-lab/mural/node-move')) {
-        args.Effect = args.Data.Has('@pragmatic-lab/mural/node-kind')
+    if (args.Data.Has('@pragmatic-tech-ai/mural/node-kind') || args.Data.Has('@pragmatic-tech-ai/mural/node-move')) {
+        args.Effect = args.Data.Has('@pragmatic-tech-ai/mural/node-kind')
             ? DragDropEffects.Copy
             : DragDropEffects.Move;
     }
-    // Other formats (e.g. '@pragmatic-lab/mural/port') aren't accepted here.
+    // Other formats (e.g. '@pragmatic-tech-ai/mural/port') aren't accepted here.
 });
 
 canvas.AddRoutedEventListener('Drop', (args) => {
     const local = canvasLocal(args);
-    if (args.Data.Has('@pragmatic-lab/mural/node-kind')) {
-        const kind = args.Data.Get('@pragmatic-lab/mural/node-kind');
+    if (args.Data.Has('@pragmatic-tech-ai/mural/node-kind')) {
+        const kind = args.Data.Get('@pragmatic-tech-ai/mural/node-kind');
         this.addNode(kind, local.x - NODE_W / 2, local.y - NODE_H / 2);
         return;
     }
-    if (args.Data.Has('@pragmatic-lab/mural/node-move')) {
-        const { nodeId } = args.Data.Get('@pragmatic-lab/mural/node-move');
+    if (args.Data.Has('@pragmatic-tech-ai/mural/node-move')) {
+        const { nodeId } = args.Data.Get('@pragmatic-tech-ai/mural/node-move');
         const node = this.Nodes.toArray().find((n) => n.Id === nodeId);
         if (node !== undefined) {
             node.X = local.x - NODE_W / 2;
@@ -2723,7 +2723,7 @@ Find the port's `PointerDown` handler in `DiagramVM`. Replace its body with:
 ```js
 port.AddRoutedEventListener('PointerDown', (args) => {
     const session = args.BeginDragDrop(
-        new DataObject().Set('@pragmatic-lab/mural/port', { nodeId: node.Id, side: i }),
+        new DataObject().Set('@pragmatic-tech-ai/mural/port', { nodeId: node.Id, side: i }),
         DragDropEffects.Link,
         { preview: null },                       // mode B — author renders the line
     );
@@ -2749,12 +2749,12 @@ Add `Drop` handlers on the node containers to accept port wires. After each node
 ```js
 container.AllowDrop = true;
 container.AddRoutedEventListener('DragOver', (args) => {
-    if (args.Data.Has('@pragmatic-lab/mural/port')) {
+    if (args.Data.Has('@pragmatic-tech-ai/mural/port')) {
         args.Effect = DragDropEffects.Link;
     }
 });
 container.AddRoutedEventListener('Drop', (args) => {
-    const { nodeId, side } = args.Data.Get('@pragmatic-lab/mural/port');
+    const { nodeId, side } = args.Data.Get('@pragmatic-tech-ai/mural/port');
     if (nodeId === node.Id) return;            // no self-wiring
     this.addEdge(nodeId, side, node.Id, /* dropSide */ 0);
 });
@@ -2798,17 +2798,17 @@ diagram: retire imperative gesture state machine; use new D&D subsystem
 
 Toolbox tile → canvas: tile DataTemplate is now [IsDraggable=true,
 OnDragStart=$tileDragData]. ToolboxShapeVM.tileDragData builds a
-DataObject with format '@pragmatic-lab/mural/node-kind'. Canvas gets AllowDrop=true
+DataObject with format '@pragmatic-tech-ai/mural/node-kind'. Canvas gets AllowDrop=true
 and handles DragOver/Drop, accepting Copy for that format.
 
 Node-body move: each node DataTemplate is [IsDraggable=true,
-OnDragStart=$nodeMoveDragData]. The canvas accepts '@pragmatic-lab/mural/node-move'
+OnDragStart=$nodeMoveDragData]. The canvas accepts '@pragmatic-tech-ai/mural/node-move'
 with Move effect and mutates node.X/Y on Drop.
 
 Port → port-wire: PointerDown handler now calls
 args.BeginDragDrop(data, Link, {preview: null}), renders the
 rubber-band Line itself, and updates it from session.OnMove(). Other
-node containers handle DragOver/Drop for the '@pragmatic-lab/mural/port' format and
+node containers handle DragOver/Drop for the '@pragmatic-tech-ai/mural/port' format and
 call this.addEdge(...).
 
 The `gesture` state machine + its create/move/connect branches in

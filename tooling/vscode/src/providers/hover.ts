@@ -19,7 +19,7 @@ import { TextDocument } from 'vscode-languageserver-textdocument';
 import {
     DEFAULT_SYMBOLS,
     KEYWORDS,
-} from '@pragmatic-lab/mural/compiler';
+} from '@pragmatic-tech-ai/mural/compiler';
 
 import {
     analyze,
@@ -211,7 +211,7 @@ function formatResource(label: string, dynamic: boolean, def: ResourceDef): stri
 
 function shortModule(mod: string): string
 {
-    return mod.replace('@pragmatic-lab/mural/', '');
+    return mod.replace('@pragmatic-tech-ai/mural/', '');
 }
 
 function mdHover(value: string, range: Range): Hover

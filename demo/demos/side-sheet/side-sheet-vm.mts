@@ -2,7 +2,7 @@
 // SideSheet) drives the overlay; the Open command raises it, while the
 // sheet's own close button / scrim lower it — and, because SideSheet.IsOpen
 // binds TwoWay, the VM stays in sync so Open works again after a dismiss.
-import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
 
 export class SideSheetVM extends MuralBase
 {

@@ -6,7 +6,7 @@
 
 **Architecture:** `Visual` gains a `ClipToBounds` DP (Arrange-metadata), an ownership latch, an arrange-tail `syncClipToBounds` that centralizes the degenerate-size guard, and a protected virtual `buildClipGeometry(size)` (base: a bounds rectangle). `Border` overrides only the hook (its rounded/asymmetric rect) and promotes `CornerRadius` to Arrange-metadata so the clip refreshes on re-arrange. `ScrollViewer`/`ScrollContentPresenter` set `Clip` directly with the flag off and are untouched — the latch protects them.
 
-**Tech Stack:** TypeScript (ESM, strict), `@pragmatic-lab/mural`. Tests: `node:test` + `node:assert/strict`, run via `tsx --conditions=development --test`.
+**Tech Stack:** TypeScript (ESM, strict), `@pragmatic-tech-ai/mural`. Tests: `node:test` + `node:assert/strict`, run via `tsx --conditions=development --test`.
 
 ## Global Constraints
 

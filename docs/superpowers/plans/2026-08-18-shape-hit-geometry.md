@@ -6,7 +6,7 @@
 
 **Architecture:** Add one protected virtual `buildGeometry(size)` to base `Shape` that returns the shape's outline in local render coordinates. `Shape.ArrangeOverride` publishes it as `Visual.HitTestGeometry` (guarded), so picking consults `Geometry.Contains(localPoint)` and the renderer drops the AABB `mural-hit` pad. Catalog shapes override `buildGeometry`; most delegate their `RenderOverride` to it, so geometry has one source.
 
-**Tech Stack:** TypeScript, Mural visual framework (`@pragmatic-lab/mural`). Tests: `node:test` + `node:assert/strict`, run via `npm test`.
+**Tech Stack:** TypeScript, Mural visual framework (`@pragmatic-tech-ai/mural`). Tests: `node:test` + `node:assert/strict`, run via `npm test`.
 
 ## Global Constraints
 

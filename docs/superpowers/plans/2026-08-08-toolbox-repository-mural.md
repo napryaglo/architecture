@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Package `@pragmatic-lab/mural`; a change here needs a version bump + republish before Plexus (Spec B) can consume it. Do not bump/publish in this plan unless asked.
+- Package `@pragmatic-tech-ai/mural`; a change here needs a version bump + republish before Plexus (Spec B) can consume it. Do not bump/publish in this plan unless asked.
 - **Enums, never string-literal unions.** `VisualContext` is a real enum with explicit string values (`Tile = 'tile'`, `Figure = 'figure'`).
 - **Markup-facing DataTypes register** in `src/compiler/symbol-table.ts` (same list `ToolboxShape` is in today).
 - **Every Control has a default Style.** `ToolboxVisualPresenter`'s `Template` is a `ControlTemplate` DP set in a `*.template.mu`; its ctor calls `applyDefaultStyle()`. No `Application.ResolveDefaultResource(stringKey)` / `resolveXxxTemplate` helpers.
@@ -202,7 +202,7 @@ git commit -m "feat(toolbox): descriptor + resolver/factory contracts"
 **Interfaces:**
 - Consumes: `ToolboxVisualDescriptor` (Task 1), `IToolboxDropFactory` (Task 1).
 - Produces:
-  - `const TOOLBOX_ITEM_FORMAT = '@pragmatic-lab/mural/toolbox-item'` (in canvas-drop-behavior.ts).
+  - `const TOOLBOX_ITEM_FORMAT = '@pragmatic-tech-ai/mural/toolbox-item'` (in canvas-drop-behavior.ts).
   - `class ToolboxItem extends Model` with DPs `Id: string`, `Label: string`, `Descriptor: ToolboxVisualDescriptor | undefined`, `BeginDragData: (() => { data: DataObject; effects: DragDropEffects }) | undefined`, and a plain `readonly FactoryKey: ServiceKey<IToolboxDropFactory>`. Ctor `(id, label, descriptor, factoryKey)`.
 
 - [ ] **Step 1: Write the failing test**
@@ -250,7 +250,7 @@ In `canvas-drop-behavior.ts`, add below the existing `TOOLBOX_NODE_KIND_FORMAT` 
 // The single toolbox drag format: the payload carries the dropped item's
 // id. The drop router looks the item up in the ToolboxRepository and calls
 // its factory. Replaces TOOLBOX_NODE_KIND_FORMAT (removed in the cutover).
-export const TOOLBOX_ITEM_FORMAT = '@pragmatic-lab/mural/toolbox-item';
+export const TOOLBOX_ITEM_FORMAT = '@pragmatic-tech-ai/mural/toolbox-item';
 ```
 
 `toolbox-item.ts`:
@@ -1067,7 +1067,7 @@ Run the file. Expected: FAIL — `onDropped` still reads the kind format; `dropp
 - [ ] **Step 3: Cut over the two behavior files**
 
 In `canvas-drop-behavior.ts`:
-- Change `const NODE_KIND_FORMAT = '@pragmatic-lab/mural/node-kind';` and the exported `TOOLBOX_NODE_KIND_FORMAT` to gate on the item format instead. Replace the internal `NODE_KIND_FORMAT` uses in `onDragOver`/`onDrop` with `TOOLBOX_ITEM_FORMAT`. Delete the `TOOLBOX_NODE_KIND_FORMAT` export. Keep the `TOOLBOX_ITEM_FORMAT` export added in Task 2. Final gating:
+- Change `const NODE_KIND_FORMAT = '@pragmatic-tech-ai/mural/node-kind';` and the exported `TOOLBOX_NODE_KIND_FORMAT` to gate on the item format instead. Replace the internal `NODE_KIND_FORMAT` uses in `onDragOver`/`onDrop` with `TOOLBOX_ITEM_FORMAT`. Delete the `TOOLBOX_NODE_KIND_FORMAT` export. Keep the `TOOLBOX_ITEM_FORMAT` export added in Task 2. Final gating:
 ```ts
 const onDragOver = (args: DragEventArgs): void => {
     if (args.Data.Has(TOOLBOX_ITEM_FORMAT)) args.Effect = DragDropEffects.Copy;

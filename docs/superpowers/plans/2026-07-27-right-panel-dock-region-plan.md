@@ -597,7 +597,7 @@ From `Mural/`:
 ```bash
 npm publish
 ```
-Expected: `+ @pragmatic-lab/mural@0.1.44` to `http://localhost:4873/`. `prepublishOnly` runs `clean && build` (tsc) — a clean build is the typecheck gate.
+Expected: `+ @pragmatic-tech-ai/mural@0.1.44` to `http://localhost:4873/`. `prepublishOnly` runs `clean && build` (tsc) — a clean build is the typecheck gate.
 
 - [ ] **Step 3: Commit**
 
@@ -618,16 +618,16 @@ git add package.json && git commit -m "chore(release): mural 0.1.44 (PanelDockSe
 - Modify: `Plexus/src/renderer/src/modules/diagram/diagram.resources.mu`
 
 **Interfaces:**
-- Consumes: `PanelDockService`, `IDockPanel` from `@pragmatic-lab/mural/framework` (0.1.44).
+- Consumes: `PanelDockService`, `IDockPanel` from `@pragmatic-tech-ai/mural/framework` (0.1.44).
 
 - [ ] **Step 1: Install Mural 0.1.44**
 
-In `Plexus/package.json`, set `@pragmatic-lab/mural` to `"^0.1.44"`. From `Plexus/`:
+In `Plexus/package.json`, set `@pragmatic-tech-ai/mural` to `"^0.1.44"`. From `Plexus/`:
 
 ```bash
-npm install @pragmatic-lab/mural@0.1.44
+npm install @pragmatic-tech-ai/mural@0.1.44
 ```
-Confirm: `Get-Content node_modules/@pragmatic-lab/mural/package.json` shows `0.1.44`.
+Confirm: `Get-Content node_modules/@pragmatic-tech-ai/mural/package.json` shows `0.1.44`.
 
 - [ ] **Step 2: Agent chat leaves the left rail**
 
@@ -638,7 +638,7 @@ In `Plexus/src/renderer/src/modules/agent-chat/agent-chat.module.mu`, delete the
 In `Plexus/src/renderer/src/modules/agent-chat/services/agent-service.ts`, add the `IDockPanel` import and constant `Id`/`Title` DPs. Add to the imports:
 
 ```ts
-import type { IDockPanel } from '@pragmatic-lab/mural/framework'
+import type { IDockPanel } from '@pragmatic-tech-ai/mural/framework'
 ```
 
 Change the class declaration to implement it and add the DPs + getters (constant values set in the ctor):
@@ -669,7 +669,7 @@ In `Plexus/src/renderer/src/main.js`:
 Change the framework import to pull `PanelDockService` instead of `InspectorService`:
 
 ```js
-import { ContentHostService, PanelDockService } from '@pragmatic-lab/mural/framework'
+import { ContentHostService, PanelDockService } from '@pragmatic-tech-ai/mural/framework'
 ```
 
 Add the `AgentService` import (top of file, with the other module-service imports):
@@ -696,7 +696,7 @@ Replace the inspector-wiring block (`const inspectors = app.Services.get(Inspect
 
 In `Plexus/src/renderer/src/modules/diagram/behaviors/auto-open-inspector-behavior.ts`:
 
-- Change the import `import { Diagram, DiagramDocument, type InspectorService } from '@pragmatic-lab/mural/framework'` to `… type PanelDockService …`.
+- Change the import `import { Diagram, DiagramDocument, type InspectorService } from '@pragmatic-tech-ai/mural/framework'` to `… type PanelDockService …`.
 - Change the parameter `inspectors: InspectorService` to `dock: PanelDockService`.
 - Change the body call `inspectors.Add(doc.Inspector)` to `dock.Add(doc.Inspector)`.
 

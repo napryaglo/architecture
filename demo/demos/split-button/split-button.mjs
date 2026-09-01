@@ -7,8 +7,8 @@
 // The bootstrap doesn't touch M3 tokens; the framework template owns
 // theme tracking via the same DynamicResource path the rest of the
 // framework uses.
-import { StackPanel, TextBlock, Orientation } from '@pragmatic-lab/mural/basic';
-import { Button, ButtonVariant }              from '@pragmatic-lab/mural/framework';
+import { StackPanel, TextBlock, Orientation } from '@pragmatic-tech-ai/mural/basic';
+import { Button, ButtonVariant }              from '@pragmatic-tech-ai/mural/framework';
 import { SplitButtonVM } from './split-button-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 

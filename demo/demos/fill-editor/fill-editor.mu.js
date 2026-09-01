@@ -1,8 +1,8 @@
 import { FillEditorDemoVM } from "./fill-editor-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Line, Orientation, Rectangle, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { FillEditor } from "@pragmatic-lab/mural/framework";
-import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Line, Orientation, Rectangle, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { FillEditor } from "@pragmatic-tech-ai/mural/framework";
+import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_FillEditorDemo = Symbol("FillEditorDemo.ctor");

@@ -1,8 +1,8 @@
 import { PenEditorDemoVM } from "./pen-editor-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Ellipse, Line, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { PenEditor } from "@pragmatic-lab/mural/framework";
-import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Ellipse, Line, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { PenEditor } from "@pragmatic-tech-ai/mural/framework";
+import { DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_PenEditorDemo = Symbol("PenEditorDemo.ctor");

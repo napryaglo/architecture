@@ -23,11 +23,11 @@ import {
     DataObject, DragDropEffects,
     MetaData, MuralBase, ObservableCollection,
     type DragStartSpec,
-} from '@pragmatic-lab/mural/runtime';
+} from '@pragmatic-tech-ai/mural/runtime';
 import { TOOLBOX_WORDS, buildListBoxSeed } from './word-list.mjs';
 
-export const FMT_FROM_INDEX = '@pragmatic-lab/mural/reorder/from-index';
-export const FMT_WORD_COPY  = '@pragmatic-lab/mural/word/copy';
+export const FMT_FROM_INDEX = '@pragmatic-tech-ai/mural/reorder/from-index';
+export const FMT_WORD_COPY  = '@pragmatic-tech-ai/mural/word/copy';
 
 const LIST_SEED_COUNT = 2000;
 

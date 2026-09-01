@@ -67,8 +67,8 @@ describe('svgToIconJs', () => {
         assert.match(valueJs, /Fill: new Color\(255, 0, 0, 255\)/);
         assert.match(valueJs, /Fill: new Color\(0, 128, 0, 255\)/);
         // IconDefinition imported from basic; Color + geometry from visual-engine.
-        const basic = imports.find(i => i.module === '@pragmatic-lab/mural/basic');
-        const ve    = imports.find(i => i.module === '@pragmatic-lab/mural/visual-engine');
+        const basic = imports.find(i => i.module === '@pragmatic-tech-ai/mural/basic');
+        const ve    = imports.find(i => i.module === '@pragmatic-tech-ai/mural/visual-engine');
         assert.deepEqual([...basic!.names], ['IconDefinition']);
         assert.ok(ve!.names.includes('Color'));
         assert.ok(ve!.names.includes('RectangleGeometry'));

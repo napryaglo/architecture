@@ -6,8 +6,8 @@
 // Color.FromHex — we swallow those so the preview stays at its last
 // good value until a full hex lands.
 
-import { Border } from '@pragmatic-lab/mural/basic';
-import { Color, SolidColorBrush } from '@pragmatic-lab/mural/visual-engine';
+import { Border } from '@pragmatic-tech-ai/mural/basic';
+import { Color, SolidColorBrush } from '@pragmatic-tech-ai/mural/visual-engine';
 
 import { ColorPickerVM } from './color-picker-vm.mjs';
 import { register } from '../../platform/registry.mjs';

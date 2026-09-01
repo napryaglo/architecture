@@ -27,9 +27,9 @@ import {
     ServiceKey,
     type Visual,
     type IServiceProvider,
-} from '@pragmatic-lab/mural/runtime';
-import { DocumentSelectorService } from '@pragmatic-lab/mural/framework/shell/services/document-selector-service.js';
-import { ContentHostService } from '@pragmatic-lab/mural/framework/shell/services/content-host-service.js';
+} from '@pragmatic-tech-ai/mural/runtime';
+import { DocumentSelectorService } from '@pragmatic-tech-ai/mural/framework/shell/services/document-selector-service.js';
+import { ContentHostService } from '@pragmatic-tech-ai/mural/framework/shell/services/content-host-service.js';
 import { allDemos, instantiateDemo, onDemoRegistered, type DemoDefinition } from './registry.mjs';
 
 // Insert `item` into `coll` at the position that keeps it sorted by `cmp`

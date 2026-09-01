@@ -4,7 +4,7 @@
 // boolean and SheetHeight is the height the sheet's Height DP binds to.
 // TogglePosture flips between the peek height and the expanded height so
 // the sheet rises / settles live.
-import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
 
 const PEEK_HEIGHT     = 96;
 const EXPANDED_HEIGHT = 320;

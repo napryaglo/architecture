@@ -30,8 +30,8 @@ import {
 import { parseSvgIcon } from '../basic/svg-icon-parser.js';
 import { CURRENT_COLOR, type IconPaint } from '../basic/icon.js';
 
-const BASIC         = '@pragmatic-lab/mural/basic';
-const VISUAL_ENGINE = '@pragmatic-lab/mural/visual-engine';
+const BASIC         = '@pragmatic-tech-ai/mural/basic';
+const VISUAL_ENGINE = '@pragmatic-tech-ai/mural/visual-engine';
 
 export interface GeometryResourceJs
 {

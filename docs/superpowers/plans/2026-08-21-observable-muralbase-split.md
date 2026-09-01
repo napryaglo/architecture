@@ -27,7 +27,7 @@ its setter (`source[name] = v`). `Visual extends MuralBase`.
 
 ## Global Constraints
 
-- Publish `@pragmatic-lab/mural` **only** to the local Verdaccio registry
+- Publish `@pragmatic-tech-ai/mural` **only** to the local Verdaccio registry
   (`http://localhost:4873`), never public npm, and **only** when the user asks.
   Commit/push only when the user asks. Work happens on branch
   `feat/observable-muralbase-split` (already created).
@@ -421,7 +421,7 @@ rename in Plexus; the split is invisible to Plexus except the identifier.
 - Modify (Plexus): every `extends Model` → `extends MuralBase` and
   `import { Model }` → `import { MuralBase }` (e.g. `NodeViewModel`,
   `DiagramDocument`, `OpenProject`, and all VM subclasses); `package.json`
-  `@pragmatic-lab/mural` version bump.
+  `@pragmatic-tech-ai/mural` version bump.
 - Test: existing Plexus suite (vitest) is the gate.
 
 **Interfaces:**

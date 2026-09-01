@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-19
 **Status:** Approved (design)
-**Repo:** `@pragmatic-lab/mural` (+ downstream `@pragmatic-lab/plexus` rollout)
+**Repo:** `@pragmatic-tech-ai/mural` (+ downstream `@pragmatic-tech-ai/plexus` rollout)
 
 ## Problem
 

@@ -17,7 +17,7 @@
 - Framework templates build to gitignored `build/` via `npm run build:templates`; demos (tracked `.mu.js`) via `npm run build:demos`. After editing `diagram.template.mu`, run `npm run build:templates`.
 - Ports for migrated shapes are **bounding-box for all** (no geometry-specific providers).
 - On-disk `.diagram` record format for `type:'shape'` (`kind`/`d`/`fill`/`stroke`/`strokeWidth`) is **unchanged** — existing files must still load.
-- Commit/publish only when the user asks. Publishing `@pragmatic-lab/mural` targets local Verdaccio only.
+- Commit/publish only when the user asks. Publishing `@pragmatic-tech-ai/mural` targets local Verdaccio only.
 
 ---
 

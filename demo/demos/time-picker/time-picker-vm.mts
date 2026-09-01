@@ -2,7 +2,7 @@
 // TwoWay to the dial; TimeLabel echoes the picked time in 12h form,
 // refreshed from OnPropertyChanged so both direct and binding-driven
 // writes update it.
-import { MuralBase, MetaData, type PropertyDescriptor } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, type PropertyDescriptor } from '@pragmatic-tech-ai/mural/runtime';
 
 export class TimePickerVM extends MuralBase
 {

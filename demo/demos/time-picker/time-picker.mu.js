@@ -1,8 +1,8 @@
 import { TimePickerVM } from "./time-picker-vm.mjs";
-import { Border, DataTemplate, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { TimePicker } from "@pragmatic-lab/mural/framework/pickers/time-picker.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { TimePicker } from "@pragmatic-tech-ai/mural/framework/pickers/time-picker.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_TimePickerDemo = Symbol("TimePickerDemo.ctor");

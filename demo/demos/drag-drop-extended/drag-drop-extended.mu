@@ -1,7 +1,7 @@
 import DragDropExtendedVM from "./drag-drop-extended-vm.mjs"
 import RowVM from "./drag-drop-extended-vm.mjs"
 import DroppedFileVM from "./drag-drop-extended-vm.mjs"
-import ListReorderBehavior from "@pragmatic-lab/mural/basic"
+import ListReorderBehavior from "@pragmatic-tech-ai/mural/basic"
 
 // drag-drop-extended.mu — single-screen demo that exercises every §8
 // follow-up shipped in this branch:
@@ -122,7 +122,7 @@ resources DragDropExtendedDemo {
                                   ItemsPanel  = @ReorderListPanel ] {
                                 .Behaviors: {
                                     ListReorderBehavior x:name="reorder"
-                                        [ FromIndexFormat = "@pragmatic-lab/mural/reorder/from-index" ]
+                                        [ FromIndexFormat = "@pragmatic-tech-ai/mural/reorder/from-index" ]
                                 }
                             }
                         }

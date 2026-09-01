@@ -1,19 +1,19 @@
 import { DiagramTool } from "./diagram-tools.mjs";
-import { Border, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Line, Orientation, PaginatedCanvas, Shape, Splitter, StackPanel, TextAlignment, TextBlock, TextWrapping, UniformGrid } from "@pragmatic-lab/mural/basic";
-import { ColorPicker, FontFamilyPicker, FontSizePicker, ShapeFormatControl, TextPlacement } from "@pragmatic-lab/mural/framework";
-import { ItemsControl } from "@pragmatic-lab/mural/framework/base/items-control.js";
-import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { DiagramDocument } from "@pragmatic-lab/mural/framework/diagram/diagram-document.js";
-import { Diagram } from "@pragmatic-lab/mural/framework/diagram/diagram.js";
-import { ToolboxItem } from "@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-item.js";
-import { ToolboxPage } from "@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-page.js";
-import { ToolboxRepository } from "@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-repository.js";
-import { ToolboxVisualPresenter } from "@pragmatic-lab/mural/framework/diagram/toolbox/toolbox-visual-presenter.js";
-import { SelectionMode } from "@pragmatic-lab/mural/framework/list/list-box.js";
-import { MenuItem, MenuSeparator, ToolBar, ToolBarButton, ToolBarSplitButton, ToolBarToggleButton } from "@pragmatic-lab/mural/framework/surface.js";
-import { ScrollViewer } from "@pragmatic-lab/mural/framework/surfaces/scroll-viewer.js";
-import { DataContextBinding, DynamicResource, ElementNameBinding, HorizontalAlignment, Is, NameScope, ResourceDictionary, ServiceBinding, ServiceProvider, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, LineSegment, PathFigure, PathGeometry, Pen, Point, QuadraticBezierSegment } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, Line, Orientation, PaginatedCanvas, Shape, Splitter, StackPanel, TextAlignment, TextBlock, TextWrapping, UniformGrid } from "@pragmatic-tech-ai/mural/basic";
+import { ColorPicker, FontFamilyPicker, FontSizePicker, ShapeFormatControl, TextPlacement } from "@pragmatic-tech-ai/mural/framework";
+import { ItemsControl } from "@pragmatic-tech-ai/mural/framework/base/items-control.js";
+import { Button } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { DiagramDocument } from "@pragmatic-tech-ai/mural/framework/diagram/diagram-document.js";
+import { Diagram } from "@pragmatic-tech-ai/mural/framework/diagram/diagram.js";
+import { ToolboxItem } from "@pragmatic-tech-ai/mural/framework/diagram/toolbox/toolbox-item.js";
+import { ToolboxPage } from "@pragmatic-tech-ai/mural/framework/diagram/toolbox/toolbox-page.js";
+import { ToolboxRepository } from "@pragmatic-tech-ai/mural/framework/diagram/toolbox/toolbox-repository.js";
+import { ToolboxVisualPresenter } from "@pragmatic-tech-ai/mural/framework/diagram/toolbox/toolbox-visual-presenter.js";
+import { SelectionMode } from "@pragmatic-tech-ai/mural/framework/list/list-box.js";
+import { MenuItem, MenuSeparator, ToolBar, ToolBarButton, ToolBarSplitButton, ToolBarToggleButton } from "@pragmatic-tech-ai/mural/framework/surface.js";
+import { ScrollViewer } from "@pragmatic-tech-ai/mural/framework/surfaces/scroll-viewer.js";
+import { DataContextBinding, DynamicResource, ElementNameBinding, HorizontalAlignment, Is, NameScope, ResourceDictionary, ServiceBinding, ServiceProvider, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, LineSegment, PathFigure, PathGeometry, Pen, Point, QuadraticBezierSegment } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_DiagramDemo = Symbol("DiagramDemo.ctor");

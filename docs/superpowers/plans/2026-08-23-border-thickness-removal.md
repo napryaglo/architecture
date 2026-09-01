@@ -6,13 +6,13 @@
 
 **Architecture:** `Border` keeps Fill + CornerRadius + a uniform `Stroke` pen; its layout reserve is driven by `Stroke.Thickness` (was `BorderThickness`) so uniform migrations are pixel-identical. One-sided edges migrate to the EXISTING `Line` primitive in oriented mode (`Line [ Orientation = Horizontal|Vertical, Stroke = (@token, N) ]`) — its docstring already names this "the separator / rule use case"; no new primitive is built (DRY). Deleting the DP makes every un-migrated `.mu` a compile error, which guides the migration.
 
-**Tech Stack:** TypeScript, Mural WPF-like toolkit (`@pragmatic-lab/mural`), `.mu`/`.template.mu` markup, `.mu` compiler (symbol-table.ts), node:test (`npx tsx --conditions=development --test`), Plexus (Electron renderer, vitest, Verdaccio `http://localhost:4873`).
+**Tech Stack:** TypeScript, Mural WPF-like toolkit (`@pragmatic-tech-ai/mural`), `.mu`/`.template.mu` markup, `.mu` compiler (symbol-table.ts), node:test (`npx tsx --conditions=development --test`), Plexus (Electron renderer, vitest, Verdaccio `http://localhost:4873`).
 
 **Spec:** [docs/superpowers/specs/2026-08-23-border-thickness-removal-design.md](../specs/2026-08-23-border-thickness-removal-design.md)
 
 ## Global Constraints
 
-- **Publish `@pragmatic-lab/*` ONLY to Verdaccio `http://localhost:4873`, NEVER public npm, and ONLY in Phase D (Task 20).** Do not `npm publish` in earlier tasks.
+- **Publish `@pragmatic-tech-ai/*` ONLY to Verdaccio `http://localhost:4873`, NEVER public npm, and ONLY in Phase D (Task 20).** Do not `npm publish` in earlier tasks.
 - **Commit only when the plan step says to** (the human runs the repo; assume commits are allowed per-task but never push unless asked).
 - **Every test file lives in a `tests/` subfolder** next to the code it exercises.
 - **Real enums, never string-literal unions.** Reuse the existing `Orientation` enum (`basic/panels/orientation.ts`); do not invent a new one.
@@ -201,11 +201,11 @@ Each task ends by committing the migrated file(s) with message `refactor(<area>)
 
 ### Task 20: Publish Mural to Verdaccio
 - [ ] From `Mural/`: `npm run build` then `npm publish --registry http://localhost:4873`. (ONLY Verdaccio.)
-- [ ] Verify the tarball published (`npm view @pragmatic-lab/mural@0.23.0 --registry http://localhost:4873`).
+- [ ] Verify the tarball published (`npm view @pragmatic-tech-ai/mural@0.23.0 --registry http://localhost:4873`).
 
 ### Task 21: Bump + reinstall Plexus dep
 **Files:** `Plexus/package.json`.
-- [ ] Set `@pragmatic-lab/mural` to `^0.23.0`; reinstall against Verdaccio (`npm install --registry http://localhost:4873`).
+- [ ] Set `@pragmatic-tech-ai/mural` to `^0.23.0`; reinstall against Verdaccio (`npm install --registry http://localhost:4873`).
 
 ### Task 22: Migrate Plexus `.mu` sources (7 files)
 **Files:** `Plexus/src/renderer/src/modules/{agent-chat,architecture-projects/services,diagram,problems,project-explorer}/*.resources.mu`, `Plexus/src/renderer/src/services/{dock-tabs,document-tabs}/*.resources.mu`. Only 3 one-sided cases (`(0,0,0,1)`×2, `(0,0,0,2)`×1) → an oriented `Line`; the rest uniform → pen.

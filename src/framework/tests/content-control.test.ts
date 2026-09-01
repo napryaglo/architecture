@@ -5,7 +5,7 @@ import { resolveKey } from '../../runtime/model-internals.js';
 import { Pen, SolidColorBrush, FontWeight } from '../../visual-engine/index.js';
 import { Border, ContentPresenter, ControlTemplate, TemplateBinding, DataTemplate, TextBlock } from '../../basic/index.js';
 import { findDataTemplateForType } from '../../basic/templates/data-template.js';
-import { ContentControl } from '@pragmatic-lab/mural/framework';
+import { ContentControl } from '@pragmatic-tech-ai/mural/framework';
 
 // Test-side accessors for Visual's protected parent / templatedParent
 // getters. Production API keeps them encapsulated.

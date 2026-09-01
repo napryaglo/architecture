@@ -6,13 +6,13 @@
 
 **Architecture:** Mirror the existing alignment-guides machinery (behavior + adorner + `PositionSnap` compose + camera projection) and the camera persistence store. Rulers are new `Control` chrome the `Diagram` owns (grabbed via `GetTemplateChild`, fed zoom/offset/extent). A single behavior coordinates all pointer work through the tunnel/preview interceptor pattern. Guides live on a `Diagram.Guides` DP; the Plexus app persists them via a metadata store + observer service, exactly like the camera.
 
-**Tech Stack:** TypeScript, `@pragmatic-lab/mural` framework, `.mu` markup templates, `node:test` (Mural) / vitest (Plexus), Verdaccio local registry.
+**Tech Stack:** TypeScript, `@pragmatic-tech-ai/mural` framework, `.mu` markup templates, `node:test` (Mural) / vitest (Plexus), Verdaccio local registry.
 
 **Spec:** `Mural/docs/superpowers/specs/2026-08-20-persistent-guides-design.md` — read it alongside this plan.
 
 ## Global Constraints
 
-- **Publish target:** `@pragmatic-lab/mural` is published ONLY to local Verdaccio (`http://localhost:4873`), never public npm.
+- **Publish target:** `@pragmatic-tech-ai/mural` is published ONLY to local Verdaccio (`http://localhost:4873`), never public npm.
 - **Commit/push:** Commit as you go per task. Do NOT push either repo; the user pushes on request. Branch already exists: `feat/persistent-guides` (Mural). Create a matching branch in Plexus before its tasks.
 - **Commit message trailer:** end every commit message with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`.
 - **Tests:** every test file lives in a `tests/` subfolder next to its source (both repos).
@@ -1387,12 +1387,12 @@ Bump the minor version in `Mural/package.json` (from the current published `0.12
 - [ ] **Step 2: Publish to Verdaccio**
 
 Run: `cd Mural && npm publish`
-Expected: `prepublishOnly` runs clean + build + `build:demos:ts` (type-checks `demo/**.mts`) and publishes `@pragmatic-lab/mural@0.13.0` to `http://localhost:4873`. If `build:demos:ts` fails on a demo, fix it (do not disable the check).
+Expected: `prepublishOnly` runs clean + build + `build:demos:ts` (type-checks `demo/**.mts`) and publishes `@pragmatic-tech-ai/mural@0.13.0` to `http://localhost:4873`. If `build:demos:ts` fails on a demo, fix it (do not disable the check).
 
 - [ ] **Step 3: Commit the bump**
 
 ```bash
-git add package.json && git commit -m "chore(release): @pragmatic-lab/mural@0.13.0 (persistent ruler guides)"
+git add package.json && git commit -m "chore(release): @pragmatic-tech-ai/mural@0.13.0 (persistent ruler guides)"
 ```
 
 ---
@@ -1407,12 +1407,12 @@ git add package.json && git commit -m "chore(release): @pragmatic-lab/mural@0.13
 
 ```bash
 cd Plexus && git checkout -b feat/persistent-guides
-# bump "@pragmatic-lab/mural" to "^0.13.0" in package.json, then:
+# bump "@pragmatic-tech-ai/mural" to "^0.13.0" in package.json, then:
 npm install
 ```
 
 **Interfaces:**
-- Consumes: `DiagramDocument` (`Metadata`), `PersistentGuide` from `@pragmatic-lab/mural/runtime` (or wherever the barrel exposes it).
+- Consumes: `DiagramDocument` (`Metadata`), `PersistentGuide` from `@pragmatic-tech-ai/mural/runtime` (or wherever the barrel exposes it).
 - Produces:
   - `const DIAGRAM_GUIDES_KEY = 'guides'`
   - `interface DiagramGuidesState { readonly guides: readonly PersistentGuide[] }`
@@ -1424,8 +1424,8 @@ npm install
 ```ts
 // Plexus/src/renderer/src/modules/diagram/persistence/tests/diagram-guides-store.test.ts
 import { test, expect } from 'vitest'
-import { DiagramDocument } from '@pragmatic-lab/mural/framework'
-import { AlignmentAxis, EdgeKind } from '@pragmatic-lab/mural/runtime'
+import { DiagramDocument } from '@pragmatic-tech-ai/mural/framework'
+import { AlignmentAxis, EdgeKind } from '@pragmatic-tech-ai/mural/runtime'
 import { readGuides, writeGuides } from '../diagram-guides-store.js'
 
 test('writeGuides then readGuides round-trips guides (incl. glue) through metadata', () => {
@@ -1460,8 +1460,8 @@ Expected: FAIL — module not found.
 
 ```ts
 // Plexus/src/renderer/src/modules/diagram/persistence/diagram-guides-store.ts
-import type { DiagramDocument } from '@pragmatic-lab/mural/framework'
-import type { PersistentGuide } from '@pragmatic-lab/mural/runtime'
+import type { DiagramDocument } from '@pragmatic-tech-ai/mural/framework'
+import type { PersistentGuide } from '@pragmatic-tech-ai/mural/runtime'
 
 // Persistent ruler guides travel with the .diagram file in the document's opaque
 // metadata (DiagramDocument.Metadata) under this namespaced key, exactly like the
@@ -1525,9 +1525,9 @@ git commit -m "feat(diagram): persistent-guides metadata store + mural@0.13.0 bu
 ```ts
 // Plexus/src/renderer/src/modules/diagram/services/tests/diagram-guides-service.test.ts
 import { test, expect } from 'vitest'
-import { AlignmentAxis } from '@pragmatic-lab/mural/runtime'
+import { AlignmentAxis } from '@pragmatic-tech-ai/mural/runtime'
 import { writeGuides, readGuides } from '../../persistence/diagram-guides-store.js'
-import { DiagramDocument } from '@pragmatic-lab/mural/framework'
+import { DiagramDocument } from '@pragmatic-tech-ai/mural/framework'
 
 // Store-level guarantee the service relies on: hydrate reads what a prior session wrote.
 test('guides persist and re-read from document metadata', () => {
@@ -1547,9 +1547,9 @@ Run: `cd Plexus && npx vitest run src/renderer/src/modules/diagram/services/test
 
 ```ts
 // Plexus/src/renderer/src/modules/diagram/services/diagram-guides-service.ts
-import { ServiceBase, ServiceKey, type IServiceProvider } from '@pragmatic-lab/mural/runtime'
+import { ServiceBase, ServiceKey, type IServiceProvider } from '@pragmatic-tech-ai/mural/runtime'
 import { ContentHostService, Diagram, DiagramDocument,
-    type DocumentsContentHostService, type IDocument } from '@pragmatic-lab/mural/framework'
+    type DocumentsContentHostService, type IDocument } from '@pragmatic-tech-ai/mural/framework'
 import { FileDiagramStorage } from '../persistence/file-diagram-storage.js'
 import { readGuides, writeGuides } from '../persistence/diagram-guides-store.js'
 

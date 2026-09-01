@@ -2,7 +2,7 @@
 
 **Status:** approved design, pre-plan
 **Date:** 2026-08-20
-**Home:** `@pragmatic-lab/mural` (framework), consumed by Plexus via version bump
+**Home:** `@pragmatic-tech-ai/mural` (framework), consumed by Plexus via version bump
 **Sub-project:** 1 of 2. Sub-project 2 (Text Box text-frame model + page) is deferred and out of scope here.
 
 ## Goal
@@ -191,7 +191,7 @@ Unit tests (Node test runner, files under `tests/` next to source):
 
 ## Rollout
 
-- Publish `@pragmatic-lab/mural` to Verdaccio (patch/minor) and bump Plexus. No Plexus
+- Publish `@pragmatic-tech-ai/mural` to Verdaccio (patch/minor) and bump Plexus. No Plexus
   source change expected beyond the version bump (the inspector is registered/opened
   as today; the new pages are framework-provided). Verify Plexus suite green; live
   smoke the paged inspector + Size/Position editing.

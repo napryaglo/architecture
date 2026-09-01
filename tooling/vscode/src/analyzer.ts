@@ -38,7 +38,7 @@ import {
     type Attribute,
     type BodyItem,
     type StructuredBody,
-} from '@pragmatic-lab/mural/compiler';
+} from '@pragmatic-tech-ai/mural/compiler';
 
 export interface ResourceDef
 {

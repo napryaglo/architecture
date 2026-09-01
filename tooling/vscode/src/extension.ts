@@ -30,15 +30,15 @@ export function activate(context: ExtensionContext): void
     };
 
     const clientOptions: LanguageClientOptions = {
-        documentSelector: [{ scheme: 'file', language: '@pragmatic-lab/mural' }],
+        documentSelector: [{ scheme: 'file', language: '@pragmatic-tech-ai/mural' }],
         synchronize: {
-            configurationSection: '@pragmatic-lab/mural',
+            configurationSection: '@pragmatic-tech-ai/mural',
             fileEvents: workspace.createFileSystemWatcher('**/*.mu'),
         },
     };
 
     client = new LanguageClient(
-        '@pragmatic-lab/mural',
+        '@pragmatic-tech-ai/mural',
         'µ-mural language server',
         serverOptions,
         clientOptions,

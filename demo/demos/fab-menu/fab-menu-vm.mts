@@ -8,7 +8,7 @@ import {
     RelayCommand,
     ObservableCollection,
     type Visual,
-} from '@pragmatic-lab/mural/runtime';
+} from '@pragmatic-tech-ai/mural/runtime';
 
 export class FabMenuVM extends MuralBase
 {

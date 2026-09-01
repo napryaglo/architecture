@@ -1,9 +1,9 @@
 import { AnimationsService, ControlsService, DemoGroupService, DemosService, PatternsService, StylesService } from "./demo-group-services.mjs";
-import { DataTemplate } from "@pragmatic-lab/mural/basic";
-import { ListBox } from "@pragmatic-lab/mural/framework/list/list-box.js";
-import { Capability, ShellModule } from "@pragmatic-lab/mural/framework/shell/module.js";
-import { ContentHostService } from "@pragmatic-lab/mural/framework/shell/services/content-host-service.js";
-import { DataContextBinding, DynamicResource, ServiceProvider } from "@pragmatic-lab/mural/runtime";
+import { DataTemplate } from "@pragmatic-tech-ai/mural/basic";
+import { ListBox } from "@pragmatic-tech-ai/mural/framework/list/list-box.js";
+import { Capability, ShellModule } from "@pragmatic-tech-ai/mural/framework/shell/module.js";
+import { ContentHostService } from "@pragmatic-tech-ai/mural/framework/shell/services/content-host-service.js";
+import { DataContextBinding, DynamicResource, ServiceProvider } from "@pragmatic-tech-ai/mural/runtime";
 
 export const DemoPlatformModule = (() => {
     const _shellModule0 = new ShellModule();

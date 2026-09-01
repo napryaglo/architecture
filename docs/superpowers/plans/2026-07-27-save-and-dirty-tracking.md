@@ -14,7 +14,7 @@
 - The framework ships no icons except SVG-include shapes; app icons resolve via `DynamicResource` (empty when absent). `@Save`/`@SaveAll` are Plexus-supplied; `@IconDirtyDot` is framework-supplied.
 - mural tests: `npx tsx --conditions=development --test <file>`. mural template build: `npm run build:templates` (compiles `.mu` → `build/**/*.mu.js`; run before running tests that load templates). Plexus tests: `npx vitest run <file>`. Plexus `.mu`: `npm run compile:mu`. Plexus typecheck: `npm run typecheck`.
 - **Commits are HELD** until the user explicitly asks (standing rule). The "Commit" steps below stage the work; do NOT actually commit unless told — the user batches one squashed commit per repo at the end.
-- After mural changes: bump `Mural/package.json` patch version, `npm publish` (Verdaccio), then `npm install @pragmatic-lab/mural@<new>` in Plexus before Plexus tasks.
+- After mural changes: bump `Mural/package.json` patch version, `npm publish` (Verdaccio), then `npm install @pragmatic-tech-ai/mural@<new>` in Plexus before Plexus tasks.
 
 ---
 
@@ -421,7 +421,7 @@ npm version patch --no-git-tag-version    # 0.1.47 → 0.1.48
 npm publish                                # to Verdaccio (runs clean && build)
 ```
 
-Expected: `+ @pragmatic-lab/mural@0.1.48`.
+Expected: `+ @pragmatic-tech-ai/mural@0.1.48`.
 
 - [ ] **Step 3: Stage (HOLD commit)**
 
@@ -464,10 +464,10 @@ In `Plexus/src/renderer/src/plexus-icons.mu`, after `include "icons/save.svg" as
 - [ ] **Step 3: Install the new mural**
 
 ```bash
-cd Plexus && npm install @pragmatic-lab/mural@0.1.48
+cd Plexus && npm install @pragmatic-tech-ai/mural@0.1.48
 ```
 
-Expected: `changed 1 package`; `require('./node_modules/@pragmatic-lab/mural/package.json').version` === `0.1.48`.
+Expected: `changed 1 package`; `require('./node_modules/@pragmatic-tech-ai/mural/package.json').version` === `0.1.48`.
 
 - [ ] **Step 4: Recompile `.mu` + typecheck**
 
@@ -578,7 +578,7 @@ Expected: FAIL — module `../save-shortcuts.js` not found.
 Create `Plexus/src/renderer/src/services/documents/save-shortcuts.ts`:
 
 ```ts
-import type { ICommand } from '@pragmatic-lab/mural/runtime'
+import type { ICommand } from '@pragmatic-tech-ai/mural/runtime'
 
 // The bits of the document host the shortcuts drive.
 interface SaveCommands {

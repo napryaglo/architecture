@@ -307,7 +307,7 @@ Backward compatibility: no serialized format changes; no public API removed
 
 ## Global constraints
 
-- Publish `@pragmatic-lab/mural` **only** to the local Verdaccio registry, never
+- Publish `@pragmatic-tech-ai/mural` **only** to the local Verdaccio registry, never
   public npm, and **only** when the user asks. Same for commit/push.
 - A fixed set of named string values is a real TypeScript `enum`
   (`PropertyValueSource` already is) — never a string-literal union.

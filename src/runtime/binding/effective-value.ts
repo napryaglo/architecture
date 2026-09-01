@@ -3,12 +3,12 @@ import { isAnimationProhibited, isNotDataBindable } from '../metadata.js';
 import type { MuralBase } from '../model.js';
 import type { PropertyDescriptor } from '../property-descriptor.js';
 import { Validation } from './validation.js';
-import type { PropertyChangeCallback } from '@pragmatic-lab/todl-runtime';
+import type { PropertyChangeCallback } from '@pragmatic-tech-ai/todl-runtime';
 
 // The public change callback now lives with `Observable` in
-// @pragmatic-lab/todl-runtime — its `owner` is typed `Observable`, the common
+// @pragmatic-tech-ai/todl-runtime — its `owner` is typed `Observable`, the common
 // base of a plain Observable source and a MuralBase. Re-exported here so
-// consumers keep importing it from `@pragmatic-lab/mural/runtime`. Treat
+// consumers keep importing it from `@pragmatic-tech-ai/mural/runtime`. Treat
 // `owner` as an opaque notifying identity; it is NOT guaranteed to be a
 // `MuralBase`, so do not reach for the DP surface on it.
 export type { PropertyChangeCallback };

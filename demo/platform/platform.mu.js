@@ -55,11 +55,11 @@ import { DemoVM } from "./demo-group-services.mjs";
 import { DemoPlatformIcons } from "./demo-platform-icons.mu.js";
 import { DemoPlatformModule } from "./demo-platform.module.mu.js";
 import { DemoStorageStore } from "./demo-storage-store.mjs";
-import { DataTemplate, TextBlock } from "@pragmatic-lab/mural/basic";
-import { DiagramStorageKey } from "@pragmatic-lab/mural/framework/diagram/diagram-document.js";
-import { EditorShell } from "@pragmatic-lab/mural/framework/shell/editor-shell.js";
-import { Material, MaterialLight } from "@pragmatic-lab/mural/resources/material";
-import { Application, DataContextBinding, NameScope, ServiceProvider, Thickness } from "@pragmatic-lab/mural/runtime";
+import { DataTemplate, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { DiagramStorageKey } from "@pragmatic-tech-ai/mural/framework/diagram/diagram-document.js";
+import { EditorShell } from "@pragmatic-tech-ai/mural/framework/shell/editor-shell.js";
+import { Material, MaterialLight } from "@pragmatic-tech-ai/mural/resources/material";
+import { Application, DataContextBinding, NameScope, ServiceProvider, Thickness } from "@pragmatic-tech-ai/mural/runtime";
 
 export const app = (() => {
     const _app0 = new Application();

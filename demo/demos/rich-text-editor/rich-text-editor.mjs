@@ -8,8 +8,8 @@
 // (which acts on the editor's persisted selection) and then returns focus
 // to the editor so typing can continue.
 
-import { RelayCommand } from '@pragmatic-lab/mural/runtime';
-import { RichTextBox } from '@pragmatic-lab/mural/basic';
+import { RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
+import { RichTextBox } from '@pragmatic-tech-ai/mural/basic';
 
 import { RichTextEditorVM } from './rich-text-editor-vm.mjs';
 import { register } from '../../platform/registry.mjs';

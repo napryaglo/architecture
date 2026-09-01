@@ -1,9 +1,9 @@
 import { ToolBarVM } from "./tool-bar-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { ToggleButton } from "@pragmatic-lab/mural/framework/buttons/toggle-button.js";
-import { ToolBar, ToolBarButton, ToolBarSeparator } from "@pragmatic-lab/mural/framework/surface.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { ToggleButton } from "@pragmatic-tech-ai/mural/framework/buttons/toggle-button.js";
+import { ToolBar, ToolBarButton, ToolBarSeparator } from "@pragmatic-tech-ai/mural/framework/surface.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_ToolBarDemo = Symbol("ToolBarDemo.ctor");

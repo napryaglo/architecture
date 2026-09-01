@@ -1,8 +1,8 @@
 import { AnimationTriggersVM } from "./animation-triggers-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { BeginStoryboardAction, Color, DoubleAnimation, DynamicResource, EventTrigger, NameScope, PropertyTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { Button } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { BeginStoryboardAction, Color, DoubleAnimation, DynamicResource, EventTrigger, NameScope, PropertyTrigger, ResourceDictionary, Storyboard, Style, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_AnimationTriggersDemo = Symbol("AnimationTriggersDemo.ctor");

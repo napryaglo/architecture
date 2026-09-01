@@ -19,7 +19,7 @@ import { basename, dirname, extname, join } from 'node:path';
 import type { IncludeResolver, IncludeResolution } from '../compiler/compiler.js';
 import { svgToGeometryJs, svgToIconJs } from './svg-geometry.js';
 
-const VISUAL_ENGINE = '@pragmatic-lab/mural/visual-engine';
+const VISUAL_ENGINE = '@pragmatic-tech-ai/mural/visual-engine';
 
 // Raster image extensions → MIME type. A raster include base64-embeds the file
 // into an ImageBrush(BitmapImage(dataURI)) resource (a singleton — see the emit).

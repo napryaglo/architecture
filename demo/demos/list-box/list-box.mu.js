@@ -1,9 +1,9 @@
 import { ListBoxVM } from "./list-box-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { ListBox, ListBoxItem, SelectionMode } from "@pragmatic-lab/mural/framework/list/list-box.js";
-import { DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { Button } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { ListBox, ListBoxItem, SelectionMode } from "@pragmatic-tech-ai/mural/framework/list/list-box.js";
+import { DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_ListBoxDemo = Symbol("ListBoxDemo.ctor");

@@ -33,18 +33,18 @@ describe('compile — application skeleton', () => {
         // sorted too.
         assert.match(
             js,
-            /import \{ Border \} from "@pragmatic-lab\/mural\/basic";/,
+            /import \{ Border \} from "@pragmatic-tech-ai\/mural\/basic";/,
         );
         // x:root materialises a NameScope on the root visual so x:name
         // descendants resolve there; the emitter pulls NameScope into
         // the runtime imports automatically.
         assert.match(
             js,
-            /import \{ Application, Color, NameScope, Thickness \} from "@pragmatic-lab\/mural\/runtime";/,
+            /import \{ Application, Color, NameScope, Thickness \} from "@pragmatic-tech-ai\/mural\/runtime";/,
         );
         assert.match(
             js,
-            /import \{ SolidColorBrush \} from "@pragmatic-lab\/mural\/visual-engine";/,
+            /import \{ SolidColorBrush \} from "@pragmatic-tech-ai\/mural\/visual-engine";/,
         );
     });
 });
@@ -362,7 +362,7 @@ describe('compile — Style BasedOn (BasedOn = @key)', () => {
             /new Style\(Border, \[_setter\d+\], \(\) => Application\.current\?\.Resources\.Resolve\("TitleSmall"\), \[\], \[\]\);/,
         );
         // The thunk references Application — it must be imported from runtime.
-        assert.match(js, /import \{[^}]*\bApplication\b[^}]*\} from "@pragmatic-lab\/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*\bApplication\b[^}]*\} from "@pragmatic-tech-ai\/mural\/runtime"/);
     });
 
     test('no BasedOn keeps basedOn undefined (legacy shape unchanged)', () => {
@@ -491,7 +491,7 @@ describe('compile — DataTemplate triggers', () => {
         // The import header pulls ElementNameBinding from the runtime.
         assert.match(
             js,
-            /import \{[^}]*ElementNameBinding[^}]*\} from "@pragmatic-lab\/mural\/runtime";/,
+            /import \{[^}]*ElementNameBinding[^}]*\} from "@pragmatic-tech-ai\/mural\/runtime";/,
         );
     });
 
@@ -848,7 +848,7 @@ describe('compile — value emission', () => {
         // The enum class also lands in the import header.
         assert.match(
             js,
-            /import \{[^}]*HorizontalAlignment[^}]*\} from "@pragmatic-lab\/mural\/runtime";/,
+            /import \{[^}]*HorizontalAlignment[^}]*\} from "@pragmatic-tech-ai\/mural\/runtime";/,
         );
     });
 
@@ -907,7 +907,7 @@ describe('compile — value emission', () => {
         assert.match(js, /\.Set\("ShapeFull", CornerRadius\.Full\)/);
         assert.match(
             js,
-            /import \{[^}]*CornerRadius[^}]*\} from "@pragmatic-lab\/mural\/runtime";/,
+            /import \{[^}]*CornerRadius[^}]*\} from "@pragmatic-tech-ai\/mural\/runtime";/,
         );
     });
 
@@ -1019,7 +1019,7 @@ describe('compile — ShellModule (module declaration)', () => {
         const js = emitted(src);
         assert.match(
             js,
-            /import \{ Capability, ShellModule \} from "@pragmatic-lab\/mural\/framework\/shell\/module\.js";/,
+            /import \{ Capability, ShellModule \} from "@pragmatic-tech-ai\/mural\/framework\/shell\/module\.js";/,
         );
     });
 });
@@ -1088,7 +1088,7 @@ describe('compile — module NAME form', () => {
                 }
                 Capability[Name="Shapes"]
              }`);
-        assert.match(js, /import \{ SettingDefinition, SettingKind \} from "@pragmatic-lab\/mural\/framework\/shell\/settings\/setting-definition\.js";/);
+        assert.match(js, /import \{ SettingDefinition, SettingKind \} from "@pragmatic-tech-ai\/mural\/framework\/shell\/settings\/setting-definition\.js";/);
         assert.match(js, /const _settingDefinition\d+ = new SettingDefinition\(\);/);
         assert.match(js, /_settingDefinition\d+\.set_property_value\(SettingDefinition\.KeyKey, "diagram\.grid\.snap"\);/);
         assert.match(js, /_settingDefinition\d+\.set_property_value\(SettingDefinition\.KindKey, SettingKind\.Boolean\);/);
@@ -1121,9 +1121,9 @@ describe('compile — result metadata', () => {
 
     test('imports map exposes the modules and symbols', () => {
         const r = compile(`Application{ resources: { Border x:root{} } }`);
-        assert.ok(r.imports.has('@pragmatic-lab/mural/runtime'));
-        assert.ok(r.imports.has('@pragmatic-lab/mural/basic'));
-        assert.equal(r.imports.get('@pragmatic-lab/mural/basic')!.has('Border'), true);
+        assert.ok(r.imports.has('@pragmatic-tech-ai/mural/runtime'));
+        assert.ok(r.imports.has('@pragmatic-tech-ai/mural/basic'));
+        assert.equal(r.imports.get('@pragmatic-tech-ai/mural/basic')!.has('Border'), true);
     });
 });
 
@@ -1315,7 +1315,7 @@ describe('compile — `theme NAME { schemes: [...] defaultScheme: ... tokens { .
         assert.match(js, /ThemeManager\.RegisterTheme\(Material\.instance\)/);
         assert.match(js, /Application\.RegisterDefaultTheme\(Material\)/);
         // Theme + Application imported from runtime.
-        assert.match(js, /import \{[^}]*Theme[^}]*\} from "@pragmatic-lab\/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*Theme[^}]*\} from "@pragmatic-tech-ai\/mural\/runtime"/);
     });
 
     test('theme block without tokens is rejected', () => {
@@ -1369,7 +1369,7 @@ describe('compile — `scheme NAME against THEME { … }` block', () => {
         assert.match(js, /tokens:\s*new Map\(\[/);
         assert.match(js, /\["Primary",/);
         // Scheme imported from the runtime.
-        assert.match(js, /import \{[^}]*Scheme[^}]*\} from "@pragmatic-lab\/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*Scheme[^}]*\} from "@pragmatic-tech-ai\/mural\/runtime"/);
     });
 
     test('`basedOn theme.scheme` emits as a string field', () => {
@@ -1402,7 +1402,7 @@ describe('compile — element-node value form `Ident [Prop = val]`', () => {
         `);
         assert.match(js, /\["Elev",\s*\(\(_e\) => \{\s*_e\.Level = 1;\s*return _e;\s*\}\)\(new MaterialElevationEffect\(\)\)\]/);
         // The class name is registered as an import.
-        assert.match(js, /import \{[^}]*MaterialElevationEffect[^}]*\} from "@pragmatic-lab\/mural\/visual-engine"/);
+        assert.match(js, /import \{[^}]*MaterialElevationEffect[^}]*\} from "@pragmatic-tech-ai\/mural\/visual-engine"/);
     });
 
     test('element value with no attrs emits a bare `new Ident()`', () => {

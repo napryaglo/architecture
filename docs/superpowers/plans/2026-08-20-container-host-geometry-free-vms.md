@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Mural framework only.** Ends by publishing `@pragmatic-lab/mural@0.15.0` to Verdaccio (localhost:4873). Plexus migration is slice #3b (separate) and will be *broken against 0.15.0* until then — that is expected.
+- **Mural framework only.** Ends by publishing `@pragmatic-tech-ai/mural@0.15.0` to Verdaccio (localhost:4873). Plexus migration is slice #3b (separate) and will be *broken against 0.15.0* until then — that is expected.
 - **Ordering (green at each boundary):** put the container-owns-geometry plumbing in first while VMs still carry geometry (T1–T2), then strip VM geometry + delete `SideConnectableNodeVM` last (T3). No task leaves the Mural suite red.
 - **No live per-container write-back.** The store is fed at save (resolve VM node → container, read geometry) and applied at load (Figure nodes directly; VM containers on `ContainerBound`). Live write-back stays a future option; the store already supports it.
 - **Store stays on `DiagramDocument`.** A bare `Diagram` (no document) has no store; its `ContainerBound` simply has no subscriber, so geometry is set another way (directly, in tests). Serialize/deserialize remain on the document (headless-capable).

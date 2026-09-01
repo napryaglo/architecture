@@ -11,6 +11,6 @@
 // text-format RelayCommand DPs); the markup binds each ribbon button to it by
 // ElementName (`$canvas.AlignLeftCommand`, …), so the VM only has to supply
 // the Nodes collection it inherits from DiagramDocument.
-import { DiagramDocument } from '@pragmatic-lab/mural/framework';
+import { DiagramDocument } from '@pragmatic-tech-ai/mural/framework';
 export class RibbonDemoDoc extends DiagramDocument {
 }

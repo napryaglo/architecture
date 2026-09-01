@@ -18,12 +18,12 @@ const stubResolver: IncludeResolver = (path, ctx) => {
                 { key: 'home',   valueJs: 'new PathGeometry([])' },
                 { key: 'search', valueJs: 'new GeometryGroup([])' },
             ],
-            imports: [{ module: '@pragmatic-lab/mural/visual-engine', names: ['PathGeometry', 'GeometryGroup'] }],
+            imports: [{ module: '@pragmatic-tech-ai/mural/visual-engine', names: ['PathGeometry', 'GeometryGroup'] }],
         };
     }
     return {
         entries: [{ key: ctx.key ?? 'home', valueJs: 'new PathGeometry([])' }],
-        imports: [{ module: '@pragmatic-lab/mural/visual-engine', names: ['PathGeometry'] }],
+        imports: [{ module: '@pragmatic-tech-ai/mural/visual-engine', names: ['PathGeometry'] }],
     };
 };
 
@@ -39,7 +39,7 @@ describe('include — emit', () => {
         // The value is bound to a local const (so `@home` can inline it) then Set.
         assert.match(js, /const (\w+) = new PathGeometry\(\[\]\);/);
         assert.match(js, /\.Set\("home", \w+\)/);
-        assert.match(js, /import \{ PathGeometry \} from "@pragmatic-lab\/mural\/visual-engine"/);
+        assert.match(js, /import \{ PathGeometry \} from "@pragmatic-tech-ai\/mural\/visual-engine"/);
     });
 
     test('`as <key>` overrides the resource key', () => {
@@ -69,7 +69,7 @@ describe('include — emit', () => {
         assert.match(js, /\.Set\("home", /);
         assert.match(js, /\.Set\("search", /);
         // Both imported names land in one merged import line.
-        assert.match(js, /import \{ GeometryGroup, PathGeometry \} from "@pragmatic-lab\/mural\/visual-engine"/);
+        assert.match(js, /import \{ GeometryGroup, PathGeometry \} from "@pragmatic-tech-ai\/mural\/visual-engine"/);
     });
 
     test('include coexists with hand-authored entries in the same block', () => {
@@ -101,9 +101,9 @@ describe('include — colored flag threading', () => {
 const singletonResolver: IncludeResolver = (path) => {
     if (path.endsWith('.png'))
         return { entries: [{ key: 'Dot', valueJs: 'new ImageBrush(0)', singleton: true }],
-                 imports: [{ module: '@pragmatic-lab/mural/visual-engine', names: ['ImageBrush'] }] };
+                 imports: [{ module: '@pragmatic-tech-ai/mural/visual-engine', names: ['ImageBrush'] }] };
     return { entries: [{ key: 'home', valueJs: 'new RectangleGeometry(0)' }],
-             imports: [{ module: '@pragmatic-lab/mural/visual-engine', names: ['RectangleGeometry'] }] };
+             imports: [{ module: '@pragmatic-tech-ai/mural/visual-engine', names: ['RectangleGeometry'] }] };
 };
 
 describe('include — singleton hoist', () => {

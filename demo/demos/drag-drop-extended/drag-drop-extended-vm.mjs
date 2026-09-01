@@ -7,12 +7,12 @@
 // view materializes ScrollViewer, ListReorderBehavior, an OS-drop
 // receiver, and the small insertion-line template; the VM holds the
 // items, the dropped-files list, and the status / feedback strings.
-import { DataObject, DragDropEffects, MetaData, MuralBase, ObservableCollection, } from '@pragmatic-lab/mural/runtime';
+import { DataObject, DragDropEffects, MetaData, MuralBase, ObservableCollection, } from '@pragmatic-tech-ai/mural/runtime';
 // Format key for the reorderable row drag payload. The
 // ListReorderBehavior queries this on DragOver / Drop to recognise its
 // own drag source. Exported so the behavior-attachment glue uses the
 // same constant.
-export const FMT_FROM_INDEX = '@pragmatic-lab/mural/reorder/from-index';
+export const FMT_FROM_INDEX = '@pragmatic-tech-ai/mural/reorder/from-index';
 let _nextId = 1;
 export class RowVM extends MuralBase {
     static IdKey = MuralBase.RegisterProperty(RowVM, 'Id', '', MetaData.None);

@@ -126,7 +126,7 @@ export class TextNode extends Figure
 Add the markup symbol in `src/compiler/symbol-table.ts` `DEFAULT_SYMBOLS` (near the existing `TextNodeVM` entry, line ~221):
 
 ```ts
-['TextNode', '@pragmatic-lab/mural/framework/diagram/text-node.js'],
+['TextNode', '@pragmatic-tech-ai/mural/framework/diagram/text-node.js'],
 ```
 
 Add the control template in `src/framework/diagram/diagram.template.mu` — model it on the existing `DataTemplate[DataType=TextNodeVM]` (Border + label host), but as a `Style`/`Template` for the control, using `PART_LabelHost` as a `Border` that `Figure.OnApplyTemplate` fills with `this.Text` (Figure does `labelHost.SetChild(this.Text)`; do NOT bind `Content=$Text`):
@@ -296,7 +296,7 @@ export class Callout extends TextNode {
 Add the symbol in `symbol-table.ts` `DEFAULT_SYMBOLS`:
 
 ```ts
-['Callout', '@pragmatic-lab/mural/framework/diagram/callout.js'],
+['Callout', '@pragmatic-tech-ai/mural/framework/diagram/callout.js'],
 ```
 
 Add the control template in `diagram.template.mu` — the TextNode box plus a leader `Shape` bound to the Callout's `LeaderGeometry` (modeled on the old `DataTemplate[DataType=CalloutNodeVM]`, lines 62-95):

@@ -415,7 +415,7 @@ DataTemplate [DataType = TextNodeVM] {
 }
 ```
     Draw a background (a `Border`/rectangle bound to `$Fill`/`$Stroke`, `$Width`/`$Height`) and a label host bound to `$Text` / `$LabelText`. Reuse the label-host control the Figure template uses for its `PART_LabelHost` so in-place edit (Task C2) can target it.
-  - Register `['TextNodeVM', '@pragmatic-lab/mural/framework/diagram/text-node-vm.js']` in `symbol-table.ts`; export from `src/framework/index.ts`.
+  - Register `['TextNodeVM', '@pragmatic-tech-ai/mural/framework/diagram/text-node-vm.js']` in `symbol-table.ts`; export from `src/framework/index.ts`.
 
 - [ ] **Step 4: Run, verify PASS** — unit + render test green; `npm test` (pretest builds `.mu`) green; `npm run typecheck` clean.
 

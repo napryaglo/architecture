@@ -18,10 +18,10 @@
 //                                    is the dragged Word string.
 // The reorder behavior keys off the first format; a sibling drop
 // receiver attached in the bootstrap handles the second.
-import { DataObject, DragDropEffects, MetaData, MuralBase, ObservableCollection, } from '@pragmatic-lab/mural/runtime';
+import { DataObject, DragDropEffects, MetaData, MuralBase, ObservableCollection, } from '@pragmatic-tech-ai/mural/runtime';
 import { TOOLBOX_WORDS, buildListBoxSeed } from './word-list.mjs';
-export const FMT_FROM_INDEX = '@pragmatic-lab/mural/reorder/from-index';
-export const FMT_WORD_COPY = '@pragmatic-lab/mural/word/copy';
+export const FMT_FROM_INDEX = '@pragmatic-tech-ai/mural/reorder/from-index';
+export const FMT_WORD_COPY = '@pragmatic-tech-ai/mural/word/copy';
 const LIST_SEED_COUNT = 2000;
 export class WordVM extends MuralBase {
     static WordKey = MuralBase.RegisterProperty(WordVM, 'Word', '', MetaData.None);

@@ -1,9 +1,9 @@
 import { BottomSheetVM } from "./bottom-sheet-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Button, ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { BottomSheet } from "@pragmatic-lab/mural/framework/surfaces/bottom-sheet.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { Button, ButtonVariant } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { BottomSheet } from "@pragmatic-tech-ai/mural/framework/surfaces/bottom-sheet.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_BottomSheetDemo = Symbol("BottomSheetDemo.ctor");

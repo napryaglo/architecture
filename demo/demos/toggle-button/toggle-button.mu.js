@@ -1,8 +1,8 @@
 import { ToggleButtonVM } from "./toggle-button-vm.mjs";
-import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock } from "@pragmatic-lab/mural/basic";
-import { ToggleButton } from "@pragmatic-lab/mural/framework/buttons/toggle-button.js";
-import { Color, DataContextBinding, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontStyle, FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { Border, ContentPresenter, ControlTemplate, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplatePropertyTrigger, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { ToggleButton } from "@pragmatic-tech-ai/mural/framework/buttons/toggle-button.js";
+import { Color, DataContextBinding, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontStyle, FontWeight, Pen, SolidColorBrush } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_ToggleButtonDemo = Symbol("ToggleButtonDemo.ctor");

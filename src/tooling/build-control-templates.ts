@@ -128,15 +128,15 @@ function formatDts(out: CompileResult): string
             if (s === undefined) { s = new Set(); importsByModule.set(mod, s); }
             s.add(sym);
         };
-        ensureType('ResourceDictionary', '@pragmatic-lab/mural/runtime');
+        ensureType('ResourceDictionary', '@pragmatic-tech-ai/mural/runtime');
         if (themeNames.size > 0)
         {
-            ensureType('TokenCatalog', '@pragmatic-lab/mural/runtime');
-            ensureType('Theme', '@pragmatic-lab/mural/runtime');
+            ensureType('TokenCatalog', '@pragmatic-tech-ai/mural/runtime');
+            ensureType('Theme', '@pragmatic-tech-ai/mural/runtime');
         }
         if (schemeNames.length > 0)
         {
-            ensureType('Scheme', '@pragmatic-lab/mural/runtime');
+            ensureType('Scheme', '@pragmatic-tech-ai/mural/runtime');
         }
         for (const t of accessorTypes)
         {
@@ -223,13 +223,13 @@ function formatDts(out: CompileResult): string
     if (out.kind === 'application')
     {
         return (
-            `import type { Application } from '@pragmatic-lab/mural/runtime';\n` +
+            `import type { Application } from '@pragmatic-tech-ai/mural/runtime';\n` +
             `export declare const app: Application;\n`
         );
     }
     // Fragment / legacy ResourceDictionary root.
     return (
-        `import type { ResourceDictionary } from '@pragmatic-lab/mural/runtime';\n` +
+        `import type { ResourceDictionary } from '@pragmatic-tech-ai/mural/runtime';\n` +
         `export function create(): ResourceDictionary;\n`
     );
 }

@@ -3,7 +3,7 @@
 // per-tick integration runs from the bootstrap subscribing to the
 // animation clock (Rule 5: VMs don't touch host globals — the clock is
 // the framework's injectable service, the bootstrap does the wiring).
-import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase } from '@pragmatic-tech-ai/mural/runtime';
 // Fixed playfield, in CSS pixels. The view's Border is sized to match;
 // the VM's collision logic is the source of truth.
 const BOUNDS_W = 640;

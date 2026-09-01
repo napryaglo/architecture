@@ -2,7 +2,7 @@
 // view binds to a ColorPicker each — surface, accent, ink. The .mu
 // pipes those into preview swatches so the user can see the picked
 // colour ride live.
-import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase } from '@pragmatic-tech-ai/mural/runtime';
 export class ColorPickerVM extends MuralBase {
     static SurfaceHexKey = MuralBase.RegisterProperty(ColorPickerVM, 'SurfaceHex', '#bbdefb', MetaData.None);
     static AccentHexKey = MuralBase.RegisterProperty(ColorPickerVM, 'AccentHex', '#ec407a', MetaData.None);

@@ -1,9 +1,9 @@
 import { DrawerVM } from "./drawer-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Line, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { Drawer, DrawerVariant } from "@pragmatic-lab/mural/framework/surfaces/drawer.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Line, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { Button } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { Drawer, DrawerVariant } from "@pragmatic-tech-ai/mural/framework/surfaces/drawer.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_DrawerDemo = Symbol("DrawerDemo.ctor");

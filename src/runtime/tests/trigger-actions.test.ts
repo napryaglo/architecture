@@ -11,7 +11,7 @@ import {
     Storyboard,
     StoryboardState,
 } from '../index.js';
-import { Button } from '@pragmatic-lab/mural/framework';
+import { Button } from '@pragmatic-tech-ai/mural/framework';
 
 function freshClock(): ManualClock
 {

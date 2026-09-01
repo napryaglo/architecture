@@ -400,7 +400,7 @@ Built-ins self-register on module load under the names from
 Consumers register custom routers by name:
 
 ```ts
-import { RouterRegistry } from '@pragmatic-lab/mural/framework/diagram';
+import { RouterRegistry } from '@pragmatic-tech-ai/mural/framework/diagram';
 RouterRegistry.register('elbowed', new ElbowedRouter());
 // then in markup: Connector [..., RoutingMode="elbowed"]
 ```

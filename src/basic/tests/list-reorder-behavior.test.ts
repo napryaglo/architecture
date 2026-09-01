@@ -47,7 +47,7 @@ function buildItemsControl(items: readonly unknown[]): { ic: ItemsControl; rows:
     return { ic, rows, coll };
 }
 
-function dropArgs(hostY: number, fromIndex: number, format = '@pragmatic-lab/mural/reorder/from-index'): DragEventArgs
+function dropArgs(hostY: number, fromIndex: number, format = '@pragmatic-tech-ai/mural/reorder/from-index'): DragEventArgs
 {
     const data = new DataObject().Set(format, fromIndex);
     return new DragEventArgs('Drop', new StubRow(), {
@@ -115,7 +115,7 @@ describe('ListReorderBehavior — receiver-side drop logic', () => {
         ic.AddBehavior(new ListReorderBehavior());
         const args = new DragEventArgs('DragOver', new StubRow(), {
             HostX: 0, HostY: 5,
-            Data: new DataObject().Set('@pragmatic-lab/mural/reorder/from-index', 0),
+            Data: new DataObject().Set('@pragmatic-tech-ai/mural/reorder/from-index', 0),
             AllowedEffects: DragDropEffects.Move,
             Modifiers: NoModifiers,
         });
@@ -167,7 +167,7 @@ describe('ListReorderBehavior — VirtualizingWrapPanel with spacing', () => {
     function dropAt(hostX: number, hostY: number, fromIndex: number): DragEventArgs {
         return new DragEventArgs('Drop', new StubRow(), {
             HostX: hostX, HostY: hostY,
-            Data: new DataObject().Set('@pragmatic-lab/mural/reorder/from-index', fromIndex),
+            Data: new DataObject().Set('@pragmatic-tech-ai/mural/reorder/from-index', fromIndex),
             AllowedEffects: DragDropEffects.Move,
             Modifiers: NoModifiers,
         });
@@ -247,7 +247,7 @@ describe('ListReorderBehavior — VirtualizingWrapPanel with spacing', () => {
         // insertion at col 1 → index = 1.
         const session = new DragSession(undefined, new DataObject(), DragDropEffects.Move);
         const data = session.Data;
-        data.Set('@pragmatic-lab/mural/reorder/from-index', 5);
+        data.Set('@pragmatic-tech-ai/mural/reorder/from-index', 5);
         ic.FireRoutedListeners('DragOver', new DragEventArgs('DragOver', new StubRow(), {
             HostX: 120, HostY: 50,
             Data: data,
@@ -304,7 +304,7 @@ describe('ListReorderBehavior — insertion-line adorner (8.5)', () => {
 
     function dragOverArgs(hostY: number, session: DragSession): DragEventArgs {
         const data = session.Data;
-        data.Set('@pragmatic-lab/mural/reorder/from-index', 0);
+        data.Set('@pragmatic-tech-ai/mural/reorder/from-index', 0);
         return new DragEventArgs('DragOver', new StubRow(), {
             HostX: 0, HostY: hostY,
             Data: data,

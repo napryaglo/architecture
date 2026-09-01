@@ -8,10 +8,10 @@
 // x:name attributes from the freshly-rendered view inside
 // OnViewMounted. CollectionView subscription + toggle state live on
 // the VM so the demo data and behavior travel with the model.
-import { MuralBase } from '@pragmatic-lab/mural/runtime';
-import { SortDescription, SortDirection, TextBlock } from '@pragmatic-lab/mural/basic';
-import { Button } from '@pragmatic-lab/mural/framework';
-import { ListBox, ListBoxItem, } from '@pragmatic-lab/mural/framework';
+import { MuralBase } from '@pragmatic-tech-ai/mural/runtime';
+import { SortDescription, SortDirection, TextBlock } from '@pragmatic-tech-ai/mural/basic';
+import { Button } from '@pragmatic-tech-ai/mural/framework';
+import { ListBox, ListBoxItem, } from '@pragmatic-tech-ai/mural/framework';
 const PEOPLE = [
     { name: 'Alice', role: 'eng' },
     { name: 'Bob', role: 'sales' },

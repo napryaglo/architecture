@@ -11,7 +11,7 @@
 // changeable to pause-on-deactivate if needed; the current behaviour
 // makes the demo entertaining when you navigate away briefly.
 
-import { AnimationManager } from '@pragmatic-lab/mural/runtime';
+import { AnimationManager } from '@pragmatic-tech-ai/mural/runtime';
 import { BouncingBallVM } from './bouncing-ball-vm.mjs';
 import { register } from '../../platform/registry.mjs';
 

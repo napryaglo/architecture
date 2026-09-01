@@ -1,10 +1,10 @@
 import { IconButtonVM } from "./icon-button-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, Shape, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { IconButtonToggle } from "@pragmatic-lab/mural/framework/buttons/icon-button-toggle.js";
-import { IconButton } from "@pragmatic-lab/mural/framework/buttons/icon-button.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, LineSegment, PathFigure, PathGeometry, Pen, Point, QuadraticBezierSegment } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, Shape, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { ButtonVariant } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { IconButtonToggle } from "@pragmatic-tech-ai/mural/framework/buttons/icon-button-toggle.js";
+import { IconButton } from "@pragmatic-tech-ai/mural/framework/buttons/icon-button.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, LineSegment, PathFigure, PathGeometry, Pen, Point, QuadraticBezierSegment } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_IconButtonDemo = Symbol("IconButtonDemo.ctor");

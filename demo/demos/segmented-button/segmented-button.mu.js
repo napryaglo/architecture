@@ -1,9 +1,9 @@
 import { SegmentedButtonVM } from "./segmented-button-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { SegmentedButton } from "@pragmatic-lab/mural/framework/button-groups/segmented-button.js";
-import { SelectionMode } from "@pragmatic-lab/mural/framework/list/list-box.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { SegmentedButton } from "@pragmatic-tech-ai/mural/framework/button-groups/segmented-button.js";
+import { SelectionMode } from "@pragmatic-tech-ai/mural/framework/list/list-box.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_SegmentedButtonDemo = Symbol("SegmentedButtonDemo.ctor");

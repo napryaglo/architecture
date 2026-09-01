@@ -6,7 +6,7 @@
 // behaviour maps these primitives onto the sample paragraph. The editors
 // bind two-way to these DPs; the paragraph binds Family / FontSize
 // directly and gets weight / style / underline / colour from the bridge.
-import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase } from '@pragmatic-tech-ai/mural/runtime';
 export class TextFormatVM extends MuralBase {
     static FamilyKey = MuralBase.RegisterProperty(TextFormatVM, 'Family', 'Georgia', MetaData.None);
     static FontSizeKey = MuralBase.RegisterProperty(TextFormatVM, 'FontSize', 20, MetaData.None);

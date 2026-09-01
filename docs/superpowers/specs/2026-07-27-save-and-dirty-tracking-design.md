@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-27
 **Status:** ✅ Finished (Approved; pending spec review)
-**Spans:** `@pragmatic-lab/mural` (framework core) + Plexus (app wiring)
+**Spans:** `@pragmatic-tech-ai/mural` (framework core) + Plexus (app wiring)
 
 ## Goal
 

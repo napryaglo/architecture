@@ -2,7 +2,7 @@
 // shared IsActive flag both indicators bind to, plus a Toggle command
 // (with a label that flips Pause ↔ Resume) so the viewer can watch the
 // M3 spinner start and stop on the shared animation clock.
-import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
 export class LoadingIndicatorVM extends MuralBase {
     static IsActiveKey = MuralBase.RegisterProperty(LoadingIndicatorVM, 'IsActive', true, MetaData.None);
     static ToggleLabelKey = MuralBase.RegisterProperty(LoadingIndicatorVM, 'ToggleLabel', 'Pause', MetaData.None);

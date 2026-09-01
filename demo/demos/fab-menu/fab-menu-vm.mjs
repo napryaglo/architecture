@@ -2,7 +2,7 @@
 // counts so the user can verify each mini-FAB in the popup fires
 // through to a command target, and the FAB-toggle state for the
 // read-out.
-import { MuralBase, MetaData, RelayCommand, } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand, } from '@pragmatic-tech-ai/mural/runtime';
 export class FabMenuVM extends MuralBase {
     static IsOpenKey = MuralBase.RegisterProperty(FabMenuVM, 'IsOpen', false, MetaData.None);
     static ItemsKey = MuralBase.RegisterProperty(FabMenuVM, 'Items', null, MetaData.None);

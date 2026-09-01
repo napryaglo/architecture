@@ -161,7 +161,7 @@ compiler; your own modifier is the same shape, pulled into a `.mu` file with an
 
 ```ts
 // my-mods.mts
-import { Color, type ValueConverter } from '@pragmatic-lab/mural/runtime';
+import { Color, type ValueConverter } from '@pragmatic-tech-ai/mural/runtime';
 
 // A modifier: (args) => ValueConverter. Operate in the Color domain; the
 // `colorOp`-style brush unwrap/rewrap is up to you (or reuse the pattern).
@@ -194,9 +194,9 @@ built-ins are all factories, so they always take parens.
 Everything inline-markup does is available imperatively:
 
 ```ts
-import { Color } from '@pragmatic-lab/mural/runtime';
-import { SolidColorBrush } from '@pragmatic-lab/mural/visual-engine';
-import { Lighten, Mix } from '@pragmatic-lab/mural/runtime';
+import { Color } from '@pragmatic-tech-ai/mural/runtime';
+import { SolidColorBrush } from '@pragmatic-tech-ai/mural/visual-engine';
+import { Lighten, Mix } from '@pragmatic-tech-ai/mural/runtime';
 
 const base    = Color.FromHex('#0d47a1');
 const lighter = Color.Lerp(base, Color.White, 0.5).WithAlpha(base.A);

@@ -4,7 +4,7 @@
 //   * MenuActionCommand + MenuActionTaken — fired by each menu-item
 //     click in the dropdown
 //   * IsOpen — bound to SplitButton.IsOpen for the readout
-import { MuralBase, MetaData, RelayCommand, } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand, } from '@pragmatic-tech-ai/mural/runtime';
 export class SplitButtonVM extends MuralBase {
     static SendCountKey = MuralBase.RegisterProperty(SplitButtonVM, 'SendCount', 0, MetaData.None);
     static MenuActionTakenKey = MuralBase.RegisterProperty(SplitButtonVM, 'MenuActionTaken', '—', MetaData.None);

@@ -110,7 +110,7 @@ export class ContentContainerFigure extends ContainerFigure
 
 (The ctor is inherited from `ContainerFigure` — it already calls `super()` → `applyDefaultStyle()` and caches `GetTemplateChild('PART_ChildContainer')`. Because `DefaultStyleKeyKey` resolves to `ContentContainerFigure`, the new template below is applied, so `PART_ChildContainer` resolves from it.)
 
-- [ ] **Step 4: Register the TargetType** in `src/compiler/symbol-table.ts` — add an entry mapping `'ContentContainerFigure'` to `'@pragmatic-lab/mural/framework/diagram/content-container-figure.js'`, mirroring the existing `ContainerFigure` entry (grep `ContainerFigure` in that file and copy its line shape).
+- [ ] **Step 4: Register the TargetType** in `src/compiler/symbol-table.ts` — add an entry mapping `'ContentContainerFigure'` to `'@pragmatic-tech-ai/mural/framework/diagram/content-container-figure.js'`, mirroring the existing `ContainerFigure` entry (grep `ContainerFigure` in that file and copy its line shape).
 
 - [ ] **Step 5: Add the template** to `diagram.template.mu` after the `ContainerFigure` Style block (`:71`). Header hosts `PART_Content`; child region sits below at `CONTAINER_PADDING`, `CONTAINER_HEADER_BAND + CONTAINER_PADDING` = `(8, 64)`:
 

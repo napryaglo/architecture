@@ -387,12 +387,12 @@ npm version patch --no-git-tag-version   # 0.9.8 -> 0.9.9
 git add package.json package-lock.json
 git commit -m "chore(mural): bump to 0.9.9 (Fill/Stroke chrome standard)"
 npm publish
-npm view @pragmatic-lab/mural version --registry http://localhost:4873/   # expect 0.9.9
+npm view @pragmatic-tech-ai/mural version --registry http://localhost:4873/   # expect 0.9.9
 ```
 
 - [ ] **Step 2: Bump Plexus + migrate its consumers**
 
-In Plexus: `npm install @pragmatic-lab/mural@0.9.9 --save`. Then apply the same recipes to Plexus's `BorderBrush`/`BorderPen` sites:
+In Plexus: `npm install @pragmatic-tech-ai/mural@0.9.9 --save`. Then apply the same recipes to Plexus's `BorderBrush`/`BorderPen` sites:
 `grep -rEn "BorderBrush|BorderPen" src --include=*.mu --include=*.ts --include=*.mts` (from Plexus root), migrate each (Brush → `Stroke = Pen [ Brush = … ]`; trigger writes → `.Stroke = Pen [...]`; TS writes → `new Pen(brush)`), then `npm run compile:mu`.
 
 - [ ] **Step 3: Verify Plexus**

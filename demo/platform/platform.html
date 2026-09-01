@@ -51,15 +51,15 @@
     <script type="importmap">
     {
         "imports": {
-            "@pragmatic-lab/mural/runtime":        "../../dist/runtime/index.js",
-            "@pragmatic-lab/mural/runtime/":       "../../dist/runtime/",
-            "@pragmatic-lab/mural/basic":          "../../dist/basic/index.js",
-            "@pragmatic-lab/mural/basic/":         "../../dist/basic/",
-            "@pragmatic-lab/mural/framework":           "../../dist/framework/index.js",
-            "@pragmatic-lab/mural/framework/":          "../../dist/framework/",
-            "@pragmatic-lab/mural/resources/material":  "../../dist/resources/material/index.js",
-            "@pragmatic-lab/mural/visual-engine":  "../../dist/visual-engine/index.js",
-            "@pragmatic-lab/mural/visual-engine/": "../../dist/visual-engine/",
+            "@pragmatic-tech-ai/mural/runtime":        "../../dist/runtime/index.js",
+            "@pragmatic-tech-ai/mural/runtime/":       "../../dist/runtime/",
+            "@pragmatic-tech-ai/mural/basic":          "../../dist/basic/index.js",
+            "@pragmatic-tech-ai/mural/basic/":         "../../dist/basic/",
+            "@pragmatic-tech-ai/mural/framework":           "../../dist/framework/index.js",
+            "@pragmatic-tech-ai/mural/framework/":          "../../dist/framework/",
+            "@pragmatic-tech-ai/mural/resources/material":  "../../dist/resources/material/index.js",
+            "@pragmatic-tech-ai/mural/visual-engine":  "../../dist/visual-engine/index.js",
+            "@pragmatic-tech-ai/mural/visual-engine/": "../../dist/visual-engine/",
             "opentype.js":                             "../opentype-shim.mjs"
         }
     }
@@ -142,7 +142,7 @@
         import '../demos/carousel/carousel.mjs';
 
         import { app }                                 from './platform.mu.js';
-        import { HtmlTarget }                          from '@pragmatic-lab/mural/visual-engine';
+        import { HtmlTarget }                          from '@pragmatic-tech-ai/mural/visual-engine';
         // Service + resource composition is authored in platform.mu (backlog
         // § 27): the persistence backend (DemoStorageStore → DiagramStorageKey)
         // is registered in its `.services:` block, and every demo dictionary is
@@ -154,12 +154,12 @@
         // `data-theme="dark"` so the host page body chrome flips in
         // lockstep with Material.
         import { ThemeManager, Density }
-            from '@pragmatic-lab/mural/runtime';
+            from '@pragmatic-tech-ai/mural/runtime';
         // Material scheme classes for the OS-preference wiring below.
         // Passed as class refs (no string proxies); Application.initialize
         // resolves each to its name for ThemeManager.
         import { Material, MaterialLight, MaterialDark }
-            from '@pragmatic-lab/mural/resources/material';
+            from '@pragmatic-tech-ai/mural/resources/material';
 
         // Wire OS prefers-color-scheme into the active scheme at app
         // startup. The platform.mu IIFE already ran `app.initialize`

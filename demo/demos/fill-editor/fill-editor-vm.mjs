@@ -2,8 +2,8 @@
 // view binds the preview Shape's Fill to the same brush so user
 // gestures repaint live. Mirror Pen DP + the previous demo's pattern
 // for a static stroke around the preview shape.
-import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
-import { Color, Pen, SolidColorBrush, } from '@pragmatic-lab/mural/visual-engine';
+import { MetaData, MuralBase } from '@pragmatic-tech-ai/mural/runtime';
+import { Color, Pen, SolidColorBrush, } from '@pragmatic-tech-ai/mural/visual-engine';
 export class FillEditorDemoVM extends MuralBase {
     static FillKey = MuralBase.RegisterProperty(FillEditorDemoVM, 'Fill', undefined, MetaData.None);
     static OutlinePenKey = MuralBase.RegisterProperty(FillEditorDemoVM, 'OutlinePen', undefined, MetaData.None);

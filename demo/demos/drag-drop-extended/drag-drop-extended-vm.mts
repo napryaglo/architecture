@@ -12,13 +12,13 @@ import {
     DataObject, DragDropEffects,
     MetaData, MuralBase, ObservableCollection,
     type DragStartSpec,
-} from '@pragmatic-lab/mural/runtime';
+} from '@pragmatic-tech-ai/mural/runtime';
 
 // Format key for the reorderable row drag payload. The
 // ListReorderBehavior queries this on DragOver / Drop to recognise its
 // own drag source. Exported so the behavior-attachment glue uses the
 // same constant.
-export const FMT_FROM_INDEX = '@pragmatic-lab/mural/reorder/from-index';
+export const FMT_FROM_INDEX = '@pragmatic-tech-ai/mural/reorder/from-index';
 
 let _nextId = 1;
 

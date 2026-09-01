@@ -1,9 +1,9 @@
 import { DragDropExtendedVM, DroppedFileVM, RowVM } from "./drag-drop-extended-vm.mjs";
-import { Border, ContentPresenter, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, ListReorderBehavior, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { ItemsControl } from "@pragmatic-lab/mural/framework/base/items-control.js";
-import { ScrollViewer } from "@pragmatic-lab/mural/framework/surfaces/scroll-viewer.js";
-import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { Border, ContentPresenter, DataTemplate, Dock, DockPanel, ItemsPanelTemplate, ListReorderBehavior, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { ItemsControl } from "@pragmatic-tech-ai/mural/framework/base/items-control.js";
+import { ScrollViewer } from "@pragmatic-tech-ai/mural/framework/surfaces/scroll-viewer.js";
+import { Color, DataContextBinding, DynamicResource, NameScope, ResourceDictionary, Setter, SetterFactory, Style, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_DragDropExtendedDemo = Symbol("DragDropExtendedDemo.ctor");
@@ -128,7 +128,7 @@ export class DragDropExtendedDemo extends ResourceDictionary {
             _itemsControl12.set_property_value(ItemsControl.ItemsPanelKey, _tmpl0);
             const _listReorderBehavior30 = new ListReorderBehavior();
             _listReorderBehavior30.Name = "reorder";
-            _listReorderBehavior30.set_property_value(ListReorderBehavior.FromIndexFormatKey, "@pragmatic-lab/mural/reorder/from-index");
+            _listReorderBehavior30.set_property_value(ListReorderBehavior.FromIndexFormatKey, "@pragmatic-tech-ai/mural/reorder/from-index");
             _itemsControl12.AddBehavior(_listReorderBehavior30);
             _scrollViewer11.Content = _itemsControl12;
             _border29.SetChild(_scrollViewer11);

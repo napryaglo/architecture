@@ -46,7 +46,7 @@ describe('makeGlyphResolver', () => {
         assert.equal(res.entries[0]!.key, 'home');
         assert.match(res.entries[0]!.valueJs, /^new PathGeometry\(\[new PathFigure\(/);
         const imp = res.imports![0]!;
-        assert.equal(imp.module, '@pragmatic-lab/mural/visual-engine');
+        assert.equal(imp.module, '@pragmatic-tech-ai/mural/visual-engine');
         assert.ok(imp.names.includes('PathGeometry'));
         assert.ok(imp.names.includes('PathFigure'));
         assert.ok(imp.names.includes('LineSegment'));

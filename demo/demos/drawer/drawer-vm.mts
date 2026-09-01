@@ -10,8 +10,8 @@
 // initiative) reflects back into the VM's OptionsOpen flag. Without
 // this round-trip the next OpenOptions invocation would do nothing —
 // IsOpen would still bind to `true` from the VM's perspective.
-import { MetaData, MuralBase, RelayCommand, type ICommand, type Visual } from '@pragmatic-lab/mural/runtime';
-import { Drawer, DrawerVariant } from '@pragmatic-lab/mural/framework';
+import { MetaData, MuralBase, RelayCommand, type ICommand, type Visual } from '@pragmatic-tech-ai/mural/runtime';
+import { Drawer, DrawerVariant } from '@pragmatic-tech-ai/mural/framework';
 
 export class DrawerVM extends MuralBase
 {

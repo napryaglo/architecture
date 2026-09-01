@@ -35,7 +35,7 @@ describe('makeIncludeResolver — colored vs monochrome', () => {
             { include: makeIncludeResolver(dir) }).js;
         assert.match(js, /const _inc\d+ = new RectangleGeometry\(/);
         assert.match(js, /\.Set\("home", _inc\d+\)/);
-        assert.match(js, /from "@pragmatic-lab\/mural\/visual-engine"/);
+        assert.match(js, /from "@pragmatic-tech-ai\/mural\/visual-engine"/);
         assert.doesNotMatch(js, /IconDefinition/);
     });
 
@@ -46,7 +46,7 @@ describe('makeIncludeResolver — colored vs monochrome', () => {
         assert.match(js, /const _inc\d+ = new IconDefinition\(24, 24, \[/);
         assert.match(js, /\.Set\("logo", _inc\d+\)/);
         assert.match(js, /Fill: new Color\(255, 0, 0, 255\)/);
-        assert.match(js, /import \{ IconDefinition \} from "@pragmatic-lab\/mural\/basic"/);
+        assert.match(js, /import \{ IconDefinition \} from "@pragmatic-tech-ai\/mural\/basic"/);
         assert.match(js, /Color/);   // Color imported from visual-engine
     });
 });
@@ -60,7 +60,7 @@ describe('makeIncludeResolver — raster', () => {
         // A raster include is a singleton: hoisted to a module-scope const.
         assert.match(js, /const _single\d+ = new ImageBrush\(new BitmapImage\("data:image\/png;base64,/);
         assert.match(js, /\.Set\("Dot", _single\d+\)/);
-        assert.match(js, /import \{[^}]*\} from "@pragmatic-lab\/mural\/visual-engine"/);
+        assert.match(js, /import \{[^}]*\} from "@pragmatic-tech-ai\/mural\/visual-engine"/);
         assert.ok(js.includes('BitmapImage') && js.includes('ImageBrush'));
     });
 

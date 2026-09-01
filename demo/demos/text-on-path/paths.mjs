@@ -5,8 +5,8 @@
 // All paths share the same world coordinate system (origin at
 // top-left, +Y down) so the surface renderer can paint them in
 // place. Builders return a fresh PathGeometry — callers cache.
-import { Point, Size } from '@pragmatic-lab/mural/runtime';
-import { ArcSegment, LineSegment, pathGeometryFromSvgD, PathFigure, PathGeometry, SweepDirection, } from '@pragmatic-lab/mural/visual-engine';
+import { Point, Size } from '@pragmatic-tech-ai/mural/runtime';
+import { ArcSegment, LineSegment, pathGeometryFromSvgD, PathFigure, PathGeometry, SweepDirection, } from '@pragmatic-tech-ai/mural/visual-engine';
 // ── 1. Sine wave (three peaks) ───────────────────────────────────────
 //
 // Pure quadratic-Bezier cosine approximation: alternate quads above

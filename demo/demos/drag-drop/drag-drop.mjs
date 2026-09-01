@@ -3,7 +3,7 @@
 // methods; the .mu wires drag-source declaratively via IsDraggable +
 // OnDragStart; this file is the glue.
 
-import { ListBox } from '@pragmatic-lab/mural/framework';
+import { ListBox } from '@pragmatic-tech-ai/mural/framework';
 import { DragDropVM } from './drag-drop-vm.mjs';
 import { attachListBoxDrop } from './behaviors/listbox-drop-behavior.mjs';
 import { register } from '../../platform/registry.mjs';

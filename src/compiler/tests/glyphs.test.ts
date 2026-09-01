@@ -19,7 +19,7 @@ const stubResolver: GlyphResolver = (font, entries) => {
     lastCall = { font, entries };
     return {
         entries: entries.map(e => ({ key: e.key, valueJs: 'new PathGeometry([])' })),
-        imports: [{ module: '@pragmatic-lab/mural/visual-engine', names: ['PathGeometry'] }],
+        imports: [{ module: '@pragmatic-tech-ai/mural/visual-engine', names: ['PathGeometry'] }],
     };
 };
 
@@ -40,7 +40,7 @@ describe('glyphs — emit', () => {
         ]);
         assert.match(js, /\.Set\("home", new PathGeometry\(\[\]\)\)/);
         assert.match(js, /\.Set\("search", new PathGeometry\(\[\]\)\)/);
-        assert.match(js, /import \{ PathGeometry \} from "@pragmatic-lab\/mural\/visual-engine"/);
+        assert.match(js, /import \{ PathGeometry \} from "@pragmatic-tech-ai\/mural\/visual-engine"/);
     });
 
     test('`key = "<cp>"` → resolver entry with codepoint (no name); \\u decoded', () => {

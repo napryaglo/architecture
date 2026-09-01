@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { initTestApp } from '../../basic/tests/test-app.js';
 import { MuralBase, type Visual } from '../../runtime/index.js';
 import { Border, ContentPresenter, ControlTemplate, DataTemplate, TextBlock } from '../../basic/index.js';
-import { ContentControl } from '@pragmatic-lab/mural/framework';
+import { ContentControl } from '@pragmatic-tech-ai/mural/framework';
 
 // ContentControl reuses the view it built for a content object instead of
 // rebuilding it every time that object is presented — DEFAULT-ON (the opposite

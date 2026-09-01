@@ -9,7 +9,7 @@
 //   * Status       — diagnostic line shown in the chrome.
 //   * Paths        — read-only ObservableCollection<{ Key, Label }> for
 //                    the picker.
-import { MetaData, MuralBase, ObservableCollection, RelayCommand, } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase, ObservableCollection, RelayCommand, } from '@pragmatic-tech-ai/mural/runtime';
 import { PATHS } from './paths.mjs';
 // Each picker row exposes Key + Label as DPs so the binding pipeline
 // can read them through the standard property path syntax in the .mu.

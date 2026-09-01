@@ -1,9 +1,9 @@
 import { StatusBarVM } from "./status-bar-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { StatusBar, StatusBarItem, StatusBarSeparator } from "@pragmatic-lab/mural/framework/surface.js";
-import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { Button } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { StatusBar, StatusBarItem, StatusBarSeparator } from "@pragmatic-tech-ai/mural/framework/surface.js";
+import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_StatusBarDemo = Symbol("StatusBarDemo.ctor");

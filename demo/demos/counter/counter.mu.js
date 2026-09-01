@@ -1,9 +1,9 @@
 import { CounterVM } from "./counter-vm.mjs";
-import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Button } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { ComboBox } from "@pragmatic-lab/mural/framework/list/combo-box.js";
-import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { Button } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { ComboBox } from "@pragmatic-tech-ai/mural/framework/list/combo-box.js";
+import { DataContextBinding, DynamicResource, MultiBinding, ResourceDictionary } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_CounterDemo = Symbol("CounterDemo.ctor");

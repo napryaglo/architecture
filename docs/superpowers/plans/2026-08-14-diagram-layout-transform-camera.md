@@ -11,7 +11,7 @@
 ## Global Constraints
 
 - **Test location:** every test file lives in a `tests/` subfolder next to its source.
-- **Framework-importing tests** run with `npm test` (or `npx tsx --conditions=development --test --test-force-exit "src/**/*.test.ts"`). The `--conditions=development` flag is MANDATORY for any test importing `@pragmatic-lab/mural/framework`. Pure value tests (`camera.test.ts`) do not need it.
+- **Framework-importing tests** run with `npm test` (or `npx tsx --conditions=development --test --test-force-exit "src/**/*.test.ts"`). The `--conditions=development` flag is MANDATORY for any test importing `@pragmatic-tech-ai/mural/framework`. Pure value tests (`camera.test.ts`) do not need it.
 - **Enums over string-literal unions** (per CLAUDE.md) — no new string-literal union types.
 - **No secrets / `.npmrc` committed.** Publish mural only to local Verdaccio.
 - **Camera type:** `Camera = { zoom: number; offsetX: number; offsetY: number }` (offset = scroll offset, ≥ 0). Replaces `{ zoom, panX, panY }`.
@@ -725,7 +725,7 @@ git commit -m "chore: bump 0.9.0 — LayoutTransform diagram camera + scrollbars
 - [ ] **Step 5: Publish to local Verdaccio** (for SP5)
 
 Run: `npm publish` (registry is the local Verdaccio per project config — do NOT publish to npmjs; do NOT commit `.npmrc`).
-Expected: `+ @pragmatic-lab/mural@0.9.0`.
+Expected: `+ @pragmatic-tech-ai/mural@0.9.0`.
 
 - [ ] **Step 6: Finish the branch** — use superpowers:finishing-a-development-branch (verify tests green, present merge options).
 

@@ -3,7 +3,7 @@
 // RelayCommand every action button invokes with its own label, so the
 // BottomAppBar's Actions row + FloatingAction slot are visibly live
 // without a command-per-button.
-import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
 export class BottomAppBarVM extends MuralBase {
     static LastActionKey = MuralBase.RegisterProperty(BottomAppBarVM, 'LastAction', '—', MetaData.None);
     static TapKey = MuralBase.RegisterProperty(BottomAppBarVM, 'Tap', null, MetaData.None);

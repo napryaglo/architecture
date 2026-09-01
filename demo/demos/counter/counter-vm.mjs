@@ -2,7 +2,7 @@
 // (counter.mu) declares a DataTemplate parameterized by this type;
 // ContentControl auto-resolves the template by matching
 // CounterVM.constructor.name against the template's DataType.
-import { MetaData, MuralBase, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase, RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
 export class CounterVM extends MuralBase {
     static CountKey = MuralBase.RegisterProperty(CounterVM, 'Count', 0, MetaData.None);
     static StepKey = MuralBase.RegisterProperty(CounterVM, 'Step', 1, MetaData.None);

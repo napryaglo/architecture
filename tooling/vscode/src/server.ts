@@ -10,9 +10,9 @@
 // list the DPs available for any target type referenced from .mu
 // sources — without this import the registry is empty when the user
 // first opens a .mu file.
-import '@pragmatic-lab/mural/runtime';
-import '@pragmatic-lab/mural/basic';
-import '@pragmatic-lab/mural/visual-engine';
+import '@pragmatic-tech-ai/mural/runtime';
+import '@pragmatic-tech-ai/mural/basic';
+import '@pragmatic-tech-ai/mural/visual-engine';
 //
 // Lifecycle:
 //   1. The client sends `initialize` — we declare our capabilities.

@@ -1,7 +1,7 @@
 // CardVM — backs the card demo. One RelayCommand per variant button so
 // the dynamic-binding chain is visible end-to-end and the cards' action
 // row has a real handler attached.
-import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
 export class CardVM extends MuralBase {
     static FilledActionsKey = MuralBase.RegisterProperty(CardVM, 'FilledActions', 0, MetaData.None);
     static ElevatedActionsKey = MuralBase.RegisterProperty(CardVM, 'ElevatedActions', 0, MetaData.None);

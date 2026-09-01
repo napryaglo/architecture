@@ -5,7 +5,7 @@
 //
 // Pure markup-trigger forms live in the sibling demos
 // (animation-declarative, animation-named, animation-triggers).
-import { MuralBase } from '@pragmatic-lab/mural/runtime';
+import { MuralBase } from '@pragmatic-tech-ai/mural/runtime';
 import {
     Color,
     DoubleAnimation,
@@ -18,8 +18,8 @@ import {
     cubicBezier,
     type AnimationTimeline,
     type Visual,
-} from '@pragmatic-lab/mural/runtime';
-import { SolidColorBrushAnimation } from '@pragmatic-lab/mural/visual-engine';
+} from '@pragmatic-tech-ai/mural/runtime';
+import { SolidColorBrushAnimation } from '@pragmatic-tech-ai/mural/visual-engine';
 
 // Narrow structural views of the named elements this showcase reaches
 // through FindName. The base Visual type doesn't surface the concrete

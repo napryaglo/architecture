@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-18
 **Status:** Approved (design)
-**Repo:** `@pragmatic-lab/mural`
+**Repo:** `@pragmatic-tech-ai/mural`
 **Supersedes:** [2026-08-18-clip-children-on-visual-design.md](2026-08-18-clip-children-on-visual-design.md)
 (ClipChildren is folded in here)
 

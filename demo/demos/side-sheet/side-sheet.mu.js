@@ -1,9 +1,9 @@
 import { SideSheetVM } from "./side-sheet-vm.mjs";
-import { Border, DataTemplate, Dock, Grid, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Button, ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { SideSheet, SideSheetVariant } from "@pragmatic-lab/mural/framework/surfaces/side-sheet.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, Grid, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { Button, ButtonVariant } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { SideSheet, SideSheetVariant } from "@pragmatic-tech-ai/mural/framework/surfaces/side-sheet.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_SideSheetDemo = Symbol("SideSheetDemo.ctor");

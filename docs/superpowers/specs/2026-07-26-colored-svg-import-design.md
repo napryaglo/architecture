@@ -106,8 +106,8 @@ Implementation:
     default). Also adds `Color`.
   - `undefined` (SVG `fill="none"`) → `undefined` (no import).
 - Assemble `imports`:
-  - `@pragmatic-lab/mural/basic` → `['IconDefinition']`.
-  - `@pragmatic-lab/mural/visual-engine` → the geometry names collected by
+  - `@pragmatic-tech-ai/mural/basic` → `['IconDefinition']`.
+  - `@pragmatic-tech-ai/mural/visual-engine` → the geometry names collected by
     `emitGeometry` plus `Color` (if any paint emitted one), sorted.
 
 `Color` has public readonly `R/G/B/A` and a `(R,G,B,A=255)` constructor
@@ -208,7 +208,7 @@ property named `colored` elsewhere.
 - **`src/compiler/tests/include.test.ts`**
   - compiling `include colored "logo.svg"` with a stub resolver emits
     `rd.Set("logo", new IconDefinition(...))` and adds the `IconDefinition`
-    import from `@pragmatic-lab/mural/basic`.
+    import from `@pragmatic-tech-ai/mural/basic`.
 - **`src/basic/tests/icon.test.ts`**
   - one assertion: an `Icon` with a colored `IconDefinition` and
     `Recolor=false` paints distinct per-shape brushes (captured via the

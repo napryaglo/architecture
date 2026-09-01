@@ -8,7 +8,7 @@ import {
     DiagnosticSeverity,
 } from 'vscode-languageserver/node.js';
 
-import type { EmitError, SourceSpan } from '@pragmatic-lab/mural/compiler';
+import type { EmitError, SourceSpan } from '@pragmatic-tech-ai/mural/compiler';
 
 import type { DocAnalysis } from '../analyzer.js';
 

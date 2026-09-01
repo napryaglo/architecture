@@ -11,7 +11,7 @@ import {
     Style,
     type ICommand,
 } from '../index.js';
-import { Button } from '@pragmatic-lab/mural/framework';
+import { Button } from '@pragmatic-tech-ai/mural/framework';
 
 describe('InvokeCommandAction', () => {
     beforeEach(() => { Application.current = null; });

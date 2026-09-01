@@ -6,7 +6,7 @@
 // DataTemplate `when ($IsToggled)` trigger swaps the Fill in the
 // view. No brushes / geometry live here — those are view concerns (MVVM:
 // no Color / Brush / Geometry in a VM).
-import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase } from '@pragmatic-tech-ai/mural/runtime';
 
 export class HitTestVM extends MuralBase
 {

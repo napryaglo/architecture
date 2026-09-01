@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-04
 **Status:** ✅ Finished (Approved design; implementation merged)
-**Package:** Mural (`@pragmatic-lab/mural`), consumed by Plexus via Verdaccio
+**Package:** Mural (`@pragmatic-tech-ai/mural`), consumed by Plexus via Verdaccio
 
 ## Problem
 
@@ -284,5 +284,5 @@ that counts fan-outs), all under `tests/` subfolders:
 ## Rollout
 
 Mural: implement + test → `npm run build` green → publish to Verdaccio
-(bump minor) → Plexus bumps the `@pragmatic-lab/mural` floor. No Plexus
+(bump minor) → Plexus bumps the `@pragmatic-tech-ai/mural` floor. No Plexus
 behavior change in this spec; the Libraries wiring is a follow-up.

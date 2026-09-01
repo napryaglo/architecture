@@ -157,7 +157,7 @@ is unchanged.
   has `instanceof Figure` back-compat branches
   (arch-diagram-binding, viewpoint-scope-reconcile), so this is a type shift, not
   a rewrite.
-- Rollout: publish a new `@pragmatic-lab/mural` to Verdaccio, bump Plexus, run
+- Rollout: publish a new `@pragmatic-tech-ai/mural` to Verdaccio, bump Plexus, run
   the Plexus suite, live-smoke a standalone diagram with geometric shapes.
 
 ## Back-compat / file format

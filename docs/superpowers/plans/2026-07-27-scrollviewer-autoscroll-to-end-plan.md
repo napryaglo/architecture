@@ -26,7 +26,7 @@
 - **`Mural/src/framework/tests/scroll-viewer.test.ts`** (modify) — a new `describe` block covering snap / sticky-release / sticky-resume / default-off.
 - **`Mural/package.json`** (modify) — patch version bump for the republish.
 - **`Plexus/src/renderer/src/modules/agent-chat/agent-chat.resources.mu`** (modify) — add `AutoScrollToEnd = true` to the transcript ScrollViewer.
-- **`Plexus/package.json`** (modify) — bump `@pragmatic-lab/mural` to the new version.
+- **`Plexus/package.json`** (modify) — bump `@pragmatic-tech-ai/mural` to the new version.
 
 ---
 
@@ -224,17 +224,17 @@ From `Mural/`:
 npm publish
 ```
 
-`prepublishOnly` runs `npm run clean && npm run build` first. Expected: `+ @pragmatic-lab/mural@0.1.43` published to `http://localhost:4873/`.
+`prepublishOnly` runs `npm run clean && npm run build` first. Expected: `+ @pragmatic-tech-ai/mural@0.1.43` published to `http://localhost:4873/`.
 
 - [ ] **Step 3: Bump + install the new Mural in Plexus**
 
-In `Plexus/package.json`, change the `@pragmatic-lab/mural` dependency to `"^0.1.43"`. Then from `Plexus/`:
+In `Plexus/package.json`, change the `@pragmatic-tech-ai/mural` dependency to `"^0.1.43"`. Then from `Plexus/`:
 
 ```bash
-npm install @pragmatic-lab/mural@0.1.43
+npm install @pragmatic-tech-ai/mural@0.1.43
 ```
 
-Expected: `node_modules/@pragmatic-lab/mural` is `0.1.43` (confirm: `node -p "require('@pragmatic-lab/mural/package.json').version"` → `0.1.43`).
+Expected: `node_modules/@pragmatic-tech-ai/mural` is `0.1.43` (confirm: `node -p "require('@pragmatic-tech-ai/mural/package.json').version"` → `0.1.43`).
 
 - [ ] **Step 4: Turn on auto-scroll in the chat markup**
 

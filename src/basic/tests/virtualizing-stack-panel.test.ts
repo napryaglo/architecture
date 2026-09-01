@@ -10,7 +10,7 @@ import {
     type DrawingContext,
 } from '../../runtime/index.js';
 import { DataTemplate, Orientation, VirtualizingStackPanel } from '../index.js';
-import { ItemsControl } from '@pragmatic-lab/mural/framework';
+import { ItemsControl } from '@pragmatic-tech-ai/mural/framework';
 
 class Leaf extends Element
 {

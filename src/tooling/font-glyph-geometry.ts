@@ -22,7 +22,7 @@ import type { GlyphResolver, IncludeResolution } from '../compiler/compiler.js';
 import { glyphOutlineToGeometry } from '../visual-engine/index.js';
 import { geometryToJs } from './svg-geometry.js';
 
-const VISUAL_ENGINE = '@pragmatic-lab/mural/visual-engine';
+const VISUAL_ENGINE = '@pragmatic-tech-ai/mural/visual-engine';
 
 export function makeGlyphResolver(baseDir: string): GlyphResolver
 {

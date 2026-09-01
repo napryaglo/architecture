@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-17
 **Status:** Approved (design)
-**Repo:** `@pragmatic-lab/mural`
+**Repo:** `@pragmatic-tech-ai/mural`
 
 ## Problem
 

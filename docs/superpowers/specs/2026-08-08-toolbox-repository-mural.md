@@ -1,7 +1,7 @@
 # Toolbox Repository (mural framework) — Design
 
 **Date:** 2026-08-08
-**Repo:** Mural (`@pragmatic-lab/mural`)
+**Repo:** Mural (`@pragmatic-tech-ai/mural`)
 **Status:** Design approved; ready for implementation plan.
 
 This is **Spec A** of a two-spec effort to unify toolbox elements and their
@@ -42,7 +42,7 @@ same repository.
 
 ## Global Constraints
 
-- Package: `@pragmatic-lab/mural`. Consumed by Plexus from Verdaccio
+- Package: `@pragmatic-tech-ai/mural`. Consumed by Plexus from Verdaccio
   (`http://localhost:4873/`); a framework change here means a version bump +
   republish before Spec B can consume it.
 - **Enums, never string-literal unions** (mural CLAUDE.md). `VisualContext` is
@@ -211,7 +211,7 @@ A bare mural diagram gets a working Shapes palette with zero app wiring.
 
 ### 5. Drag & drop — single payload format
 
-- **`TOOLBOX_ITEM_FORMAT`** (`'@pragmatic-lab/mural/toolbox-item'`) replaces
+- **`TOOLBOX_ITEM_FORMAT`** (`'@pragmatic-tech-ai/mural/toolbox-item'`) replaces
   `TOOLBOX_NODE_KIND_FORMAT` outright. The drag payload carries the item id.
 - `canvas-drop-behavior` gates `DragOver`/`Drop` on `TOOLBOX_ITEM_FORMAT`
   instead of the deleted kind format.

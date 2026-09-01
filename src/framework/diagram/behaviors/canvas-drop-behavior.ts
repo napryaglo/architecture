@@ -116,4 +116,4 @@ export type ItemDroppedListener = (args: ItemDroppedArgs) => void;
 // DragOver/Drop on the presence of this key; payloads without it are
 // ignored. The drop router (attach-standard-mutations) looks the item up in
 // the ToolboxRepository and calls its factory.
-export const TOOLBOX_ITEM_FORMAT = '@pragmatic-lab/mural/toolbox-item';
+export const TOOLBOX_ITEM_FORMAT = '@pragmatic-tech-ai/mural/toolbox-item';

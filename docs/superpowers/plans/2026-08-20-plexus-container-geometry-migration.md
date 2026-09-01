@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Two repos.** T1 is mural (`c:\Users\Eugene\Projects\architecture-agent\Mural`, branch `feat/container-owned-geometry`), ending with **publish `@pragmatic-lab/mural@0.16.0` to Verdaccio (localhost:4873) — confirm the registry before publishing; never public npm**. T2–T6 are Plexus (`c:\Users\Eugene\Projects\architecture-agent\Plexus`), consuming `^0.16.0` from Verdaccio. Plexus is the app — it is NOT published.
+- **Two repos.** T1 is mural (`c:\Users\Eugene\Projects\architecture-agent\Mural`, branch `feat/container-owned-geometry`), ending with **publish `@pragmatic-tech-ai/mural@0.16.0` to Verdaccio (localhost:4873) — confirm the registry before publishing; never public npm**. T2–T6 are Plexus (`c:\Users\Eugene\Projects\architecture-agent\Plexus`), consuming `^0.16.0` from Verdaccio. Plexus is the app — it is NOT published.
 - **Publish only on the user's go** (mural 0.16.0 is the one publish here).
 - **Tests in `tests/` subfolders; enums over string unions.**
 - Mural test runner: `npx tsx --conditions=development --test --test-force-exit <files>`. Plexus tests: `npm test` (vitest) or `npx vitest run <file>`.
@@ -30,7 +30,7 @@
 - `architecture-projects/services/arch-node-serializer.ts` — geometry-free.
 - `architecture-projects/services/arch-instance-drop-factory.ts`, `arch-model-instance-drop-factory.ts`, `arch-scenario-drop-factory.ts` — store geometry via `SetNodeVisual`.
 - `diagram/layout/diagram-graph-adapter.ts` + `diagram/layout/layout-pipeline-service.ts` — resolve containers for VM nodes.
-- `package.json` — `@pragmatic-lab/mural: ^0.16.0`.
+- `package.json` — `@pragmatic-tech-ai/mural: ^0.16.0`.
 - Tests: the 7 files listed in section F of the inventory.
 
 ---
@@ -92,7 +92,7 @@ In `index.ts`, add `export { NodeVisualStore, type NodeVisual } from './diagram/
 ### Task 2: Plexus — bump mural ^0.16.0; reparent `ArchNodeVM`, strip geometry
 
 **Files:**
-- Modify: `Plexus/package.json` (`@pragmatic-lab/mural: ^0.16.0`), then install from Verdaccio.
+- Modify: `Plexus/package.json` (`@pragmatic-tech-ai/mural: ^0.16.0`), then install from Verdaccio.
 - Modify: `Plexus/src/renderer/src/modules/architecture-projects/services/arch-node-vm.ts`
 - Update test: `.../services/tests/arch-node-vm.test.ts`; delete/rewrite `.../tests/arch-node-vm-side-host.test.ts` (the side-endpoint host is the container now, not the VM).
 
@@ -100,7 +100,7 @@ In `index.ts`, add `export { NodeVisualStore, type NodeVisual } from './diagram/
 - Consumes: mural `NodeViewModel` (Id + Parent only), 0.16.0.
 - Produces: `ArchNodeVM extends NodeViewModel` with content DPs only (`Label`, `Descriptor`, `IconSize`, `Concept`, `HasWiki`, `EntityId`), no geometry.
 
-- [ ] **Step 1: Bump + install** — set `^0.16.0` in package.json; `cd Plexus && npm install @pragmatic-lab/mural@0.16.0 --registry http://localhost:4873/` (or `npm install` if the range resolves). Confirm `node -p "require('@pragmatic-lab/mural/package.json').version"` is 0.16.0.
+- [ ] **Step 1: Bump + install** — set `^0.16.0` in package.json; `cd Plexus && npm install @pragmatic-tech-ai/mural@0.16.0 --registry http://localhost:4873/` (or `npm install` if the range resolves). Confirm `node -p "require('@pragmatic-tech-ai/mural/package.json').version"` is 0.16.0.
 
 - [ ] **Step 2: Update the tests to the new model (failing)** — `arch-node-vm.test.ts`: drop the default-Width/Height assertions; assert `Label/Concept/IconSize` round-trip and that geometry props are absent. `arch-node-vm-side-host.test.ts`: this asserted the VM is a side-endpoint host (GetSideSlot/Ports) — that role moved to the container Figure. Delete the file (covered by mural's `m4-vm-ports` on the Figure host), or rewrite to assert `ArchNodeVM` is NOT a host (no `GetSideSlot`).
 
@@ -167,7 +167,7 @@ doc.SetNodeVisual(vm.Id, { left: X, top: Y, w: 72, h: 56 });
 context.Mutator.AddNode(vm);
 ```
 
-(`arch-scenario-drop-factory` loops planned nodes: `doc.SetNodeVisual(nd.id, { left: nd.left, top: nd.top, w: 72, h: 56 })`.) Use the 72×56 tile default the old ctor carried. Import `DiagramDocument` + `type NodeVisual` from `@pragmatic-lab/mural/framework` as needed.
+(`arch-scenario-drop-factory` loops planned nodes: `doc.SetNodeVisual(nd.id, { left: nd.left, top: nd.top, w: 72, h: 56 })`.) Use the 72×56 tile default the old ctor carried. Import `DiagramDocument` + `type NodeVisual` from `@pragmatic-tech-ai/mural/framework` as needed.
 
 - [ ] **Step 4: Run the updated tests + typecheck.**
 

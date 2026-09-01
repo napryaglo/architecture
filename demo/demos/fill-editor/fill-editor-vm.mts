@@ -3,13 +3,13 @@
 // gestures repaint live. Mirror Pen DP + the previous demo's pattern
 // for a static stroke around the preview shape.
 
-import { MetaData, MuralBase } from '@pragmatic-lab/mural/runtime';
+import { MetaData, MuralBase } from '@pragmatic-tech-ai/mural/runtime';
 import {
     Color,
     Pen,
     SolidColorBrush,
     type Brush,
-} from '@pragmatic-lab/mural/visual-engine';
+} from '@pragmatic-tech-ai/mural/visual-engine';
 
 export class FillEditorDemoVM extends MuralBase
 {

@@ -1,10 +1,10 @@
 import { CarouselCard, CarouselVM } from "./carousel-vm.mjs";
-import { Border, DataTemplate, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { Carousel } from "@pragmatic-lab/mural/framework/carousel/carousel.js";
-import { Card } from "@pragmatic-lab/mural/framework/surfaces/card.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { ButtonVariant } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { Carousel } from "@pragmatic-tech-ai/mural/framework/carousel/carousel.js";
+import { Card } from "@pragmatic-tech-ai/mural/framework/surfaces/card.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_CarouselDemo = Symbol("CarouselDemo.ctor");

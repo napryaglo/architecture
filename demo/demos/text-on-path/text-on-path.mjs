@@ -19,14 +19,14 @@
 // the scales the demo operates on and recomputing fits the
 // "everything else is bound, watch what happens" feel of the demo.
 
-import { FontManager } from '@pragmatic-lab/mural/runtime';
-import { Canvas } from '@pragmatic-lab/mural/basic';
+import { FontManager } from '@pragmatic-tech-ai/mural/runtime';
+import { Canvas } from '@pragmatic-tech-ai/mural/basic';
 import {
     Color,
     FontMetricsMeasurer,
     SolidColorBrush,
     textOnPath,
-} from '@pragmatic-lab/mural/visual-engine';
+} from '@pragmatic-tech-ai/mural/visual-engine';
 
 import { TextOnPathVM } from './text-on-path-vm.mjs';
 import { GeometryView } from './geometry-view.mjs';

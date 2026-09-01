@@ -21,8 +21,8 @@ describe('compile — InputBindings / CommandBindings markup authoring', () => {
         assert.match(js, /\.Modifiers = ModifierKeys\.Control;/);
         assert.match(js, /\.InputBindings\.push\(/);
         // Symbols pulled in from the right modules.
-        assert.match(js, /import \{[^}]*KeyBinding[^}]*\} from "@pragmatic-lab\/mural\/framework\/commands\/input-binding\.js"/);
-        assert.match(js, /import \{[^}]*\bKey\b[^}]*\} from "@pragmatic-lab\/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*KeyBinding[^}]*\} from "@pragmatic-tech-ai\/mural\/framework\/commands\/input-binding\.js"/);
+        assert.match(js, /import \{[^}]*\bKey\b[^}]*\} from "@pragmatic-tech-ai\/mural\/runtime"/);
     });
 
     test('MouseBinding[Gesture=…] resolves the MouseAction enum', () => {

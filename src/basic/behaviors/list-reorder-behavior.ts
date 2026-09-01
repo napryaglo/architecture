@@ -66,7 +66,7 @@ import { WrapPanel } from '../panels/wrap-panel.js';
 export class ListReorderBehavior extends Behavior
 {
     public static readonly FromIndexFormatKey = MuralBase.RegisterProperty<string>(
-        ListReorderBehavior, 'FromIndexFormat', '@pragmatic-lab/mural/reorder/from-index', MetaData.None);
+        ListReorderBehavior, 'FromIndexFormat', '@pragmatic-tech-ai/mural/reorder/from-index', MetaData.None);
 
     // DataTemplate that renders the insertion indicator. When set,
     // the behavior materializes the template on the first DragOver of

@@ -1,8 +1,8 @@
 import { ShapesVM } from "./shapes-vm.mjs";
-import { Arch, Arrow, Boom, Border, Bun, Burst, Clamshell, DataTemplate, Diamond, EightLeafClover, Ellipse, Fan, Flower, FourLeafClover, FourSidedCookie, Gem, Ghostish, Heart, NineSidedCookie, Orientation, Pentagon, Pill, PixelCircle, PixelTriangle, Puffy, PuffyDiamond, Semicircle, SevenSidedCookie, SixSidedCookie, Slanted, SoftBoom, SoftBurst, Squircle, StackPanel, Sunny, TextBlock, TextWrapping, Triangle, TwelveSidedCookie, UniformGrid, VerySunny } from "@pragmatic-lab/mural/basic";
-import { ScrollViewer } from "@pragmatic-lab/mural/framework/surfaces/scroll-viewer.js";
-import { DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { Arch, Arrow, Boom, Border, Bun, Burst, Clamshell, DataTemplate, Diamond, EightLeafClover, Ellipse, Fan, Flower, FourLeafClover, FourSidedCookie, Gem, Ghostish, Heart, NineSidedCookie, Orientation, Pentagon, Pill, PixelCircle, PixelTriangle, Puffy, PuffyDiamond, Semicircle, SevenSidedCookie, SixSidedCookie, Slanted, SoftBoom, SoftBurst, Squircle, StackPanel, Sunny, TextBlock, TextWrapping, Triangle, TwelveSidedCookie, UniformGrid, VerySunny } from "@pragmatic-tech-ai/mural/basic";
+import { ScrollViewer } from "@pragmatic-tech-ai/mural/framework/surfaces/scroll-viewer.js";
+import { DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_ShapesDemo = Symbol("ShapesDemo.ctor");

@@ -4,7 +4,7 @@
 
 **Goal:** Turn the diagram inspector into a multipage view (horizontal `NavigationRail`) whose page 1 is the existing shape-style control and page 2 is a PowerPoint-style Size & Position editor bound to the selected shape.
 
-**Architecture:** All in `@pragmatic-lab/mural` framework. `Figure` gains `Rotation` + `BaseWidth/BaseHeight` DPs (rotation applied as a `RenderTransform` `RotateTransform`; both persisted in the shape serializer's `data` payload). A `SelectionGeometryMirror` collaborator on `Diagram` mirrors the single selected `Figure`'s geometry into writable `SelectedShape*` DPs (seed on selection/geometry change, write-back on edit). A new `SizePositionControl` holds the anchor/scale/lock conversions. `DiagramInspector` becomes a paged container (`Pages` + `SelectedPage`) rendered by a horizontally-restyled `NavigationRail` + `ContentPresenter`, with a `DataTemplate` per page-model type.
+**Architecture:** All in `@pragmatic-tech-ai/mural` framework. `Figure` gains `Rotation` + `BaseWidth/BaseHeight` DPs (rotation applied as a `RenderTransform` `RotateTransform`; both persisted in the shape serializer's `data` payload). A `SelectionGeometryMirror` collaborator on `Diagram` mirrors the single selected `Figure`'s geometry into writable `SelectedShape*` DPs (seed on selection/geometry change, write-back on edit). A new `SizePositionControl` holds the anchor/scale/lock conversions. `DiagramInspector` becomes a paged container (`Pages` + `SelectedPage`) rendered by a horizontally-restyled `NavigationRail` + `ContentPresenter`, with a `DataTemplate` per page-model type.
 
 **Tech Stack:** TypeScript, Mural WPF-style framework (DPs via `Model.RegisterProperty`), `.template.mu` markup compiled by `npm run build:templates`, `node:test` runner via `tsx`.
 
@@ -318,7 +318,7 @@ export enum PositionAnchor
 In `symbol-table.ts`, add to the entries list (next to `['Orientation', …]`):
 
 ```ts
-    ['PositionAnchor', '@pragmatic-lab/mural/framework/diagram/position-anchor.js'],
+    ['PositionAnchor', '@pragmatic-tech-ai/mural/framework/diagram/position-anchor.js'],
 ```
 
 and to `ENUM_MEMBERS` (next to `['Orientation', …]`):
@@ -782,7 +782,7 @@ export class SizePositionControl extends TemplatedControl
 Register in `symbol-table.ts` `DEFAULT_SYMBOLS`/entries:
 
 ```ts
-    ['SizePositionControl', '@pragmatic-lab/mural/framework/diagram/size-position-control.js'],
+    ['SizePositionControl', '@pragmatic-tech-ai/mural/framework/diagram/size-position-control.js'],
 ```
 
 Export from `framework/index.ts`:
@@ -1155,13 +1155,13 @@ Expected: exit 0; suite green.
 npm version minor -m "chore: release mural %s (paged inspector + size/position)"
 npm publish     # publishConfig registry = http://localhost:4873
 ```
-Expected: `+ @pragmatic-lab/mural@<new>` to `http://localhost:4873`.
+Expected: `+ @pragmatic-tech-ai/mural@<new>` to `http://localhost:4873`.
 
 - [ ] **Step 3: Bump Plexus + run its suite**
 
 ```bash
 cd ../Plexus
-npm install @pragmatic-lab/mural@<new> --save --registry http://localhost:4873/
+npm install @pragmatic-tech-ai/mural@<new> --save --registry http://localhost:4873/
 npm test
 ```
 Expected: Plexus suite green (the inspector is framework-provided; no Plexus source change expected).
@@ -1177,7 +1177,7 @@ Then launch (Playwright/Electron per the project debug recipe), open `test_arch`
 
 ```bash
 git add package.json package-lock.json
-git commit -m "chore: bump @pragmatic-lab/mural <new> (paged inspector + size/position)
+git commit -m "chore: bump @pragmatic-tech-ai/mural <new> (paged inspector + size/position)
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 ```

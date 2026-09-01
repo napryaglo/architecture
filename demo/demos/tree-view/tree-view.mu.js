@@ -1,8 +1,8 @@
 import { TreeViewVM } from "./tree-view-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { TreeView, TreeViewItem } from "@pragmatic-lab/mural/framework/list/tree-view.js";
-import { DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { TreeView, TreeViewItem } from "@pragmatic-tech-ai/mural/framework/list/tree-view.js";
+import { DynamicResource, NameScope, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_TreeViewDemo = Symbol("TreeViewDemo.ctor");

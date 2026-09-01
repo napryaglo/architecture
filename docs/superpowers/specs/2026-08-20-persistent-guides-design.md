@@ -1,7 +1,7 @@
 # Persistent Ruler Guides — Design
 
 **Date:** 2026-08-20
-**Repos:** `@pragmatic-lab/mural` (framework: rulers, guide model, adorner, snap+glue) and Plexus (app: persistence, enablement)
+**Repos:** `@pragmatic-tech-ai/mural` (framework: rulers, guide model, adorner, snap+glue) and Plexus (app: persistence, enablement)
 **Status:** approved for spec → implementation plan
 
 ## Goal

@@ -15,7 +15,7 @@
 - Commit messages end with `Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>`; author with a heredoc, never backticks.
 - Run from the Mural repo root: `c:\Users\Eugene\Projects\architecture-agent\Mural`. Prefix Bash commands with `cd /c/Users/Eugene/Projects/architecture-agent/Mural &&` when the cwd may have reset.
 - Mural test command: `npm test` (node:test). Typecheck: `npm run typecheck` (or `npx tsc --noEmit` — confirm the script name in package.json before first use).
-- The emitted `ImageBrush`/`BitmapImage` come from `@pragmatic-lab/mural/visual-engine` (constant `VISUAL_ENGINE` already in `include-resolver.ts`).
+- The emitted `ImageBrush`/`BitmapImage` come from `@pragmatic-tech-ai/mural/visual-engine` (constant `VISUAL_ENGINE` already in `include-resolver.ts`).
 - Deterministic emit: stable key + declaration order (no `Date.now()`/`Math.random()`).
 - Mural `main` currently has two unrelated uncommitted changes (`src/compiler/format.ts`, `src/basic/tests/rich-text-box-editor.test.ts`) that are NOT part of this work — do not stage or revert them; commit only files this plan names.
 
@@ -28,7 +28,7 @@
 - **Modify** `src/compiler/ast.ts` — `IncludeForm` gains `single: boolean`.
 - **Modify** `src/compiler/parser.ts` — `parseIncludeForm` reads a leading `x:single` modifier.
 - **Tests**: `src/tooling/tests/include-resolver.test.ts` (raster → ImageBrush), `src/compiler/tests/include.test.ts` (singleton hoist + `x:single`), and a parser test for `IncludeForm.single` (in `src/compiler/tests/` — colocate with existing include/parse tests).
-- **Modify** `Plexus/package.json` — bump `@pragmatic-lab/mural` to the newly published version (Task 5).
+- **Modify** `Plexus/package.json` — bump `@pragmatic-tech-ai/mural` to the newly published version (Task 5).
 
 ---
 
@@ -39,7 +39,7 @@
 - Test: `src/tooling/tests/include-resolver.test.ts`
 
 **Interfaces:**
-- Produces: `makeIncludeResolver(dir)` now handles raster extensions, returning an entry whose `valueJs` is `new ImageBrush(new BitmapImage("data:<mime>;base64,<b64>"))` and importing `ImageBrush`, `BitmapImage` from `@pragmatic-lab/mural/visual-engine`.
+- Produces: `makeIncludeResolver(dir)` now handles raster extensions, returning an entry whose `valueJs` is `new ImageBrush(new BitmapImage("data:<mime>;base64,<b64>"))` and importing `ImageBrush`, `BitmapImage` from `@pragmatic-tech-ai/mural/visual-engine`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -60,7 +60,7 @@ describe('makeIncludeResolver — raster', () => {
         const js = compile(`resources I { include "dot.png" as Dot }`,
             { include: makeIncludeResolver(dir) }).js;
         assert.match(js, /\.Set\("Dot", new ImageBrush\(new BitmapImage\("data:image\/png;base64,/);
-        assert.match(js, /import \{[^}]*\bBitmapImage\b[^}]*\bImageBrush\b[^}]*\} from "@pragmatic-lab\/mural\/visual-engine"|import \{[^}]*\bImageBrush\b[^}]*\bBitmapImage\b[^}]*\} from "@pragmatic-lab\/mural\/visual-engine"/);
+        assert.match(js, /import \{[^}]*\bBitmapImage\b[^}]*\bImageBrush\b[^}]*\} from "@pragmatic-tech-ai\/mural\/visual-engine"|import \{[^}]*\bImageBrush\b[^}]*\bBitmapImage\b[^}]*\} from "@pragmatic-tech-ai\/mural\/visual-engine"/);
     });
 
     test('an unsupported extension still throws a clear error', () => {
@@ -179,9 +179,9 @@ Add to `src/compiler/tests/include.test.ts`:
 const singletonResolver: IncludeResolver = (path) => {
     if (path.endsWith('.png'))
         return { entries: [{ key: 'Dot', valueJs: 'new ImageBrush(0)', singleton: true }],
-                 imports: [{ module: '@pragmatic-lab/mural/visual-engine', names: ['ImageBrush'] }] };
+                 imports: [{ module: '@pragmatic-tech-ai/mural/visual-engine', names: ['ImageBrush'] }] };
     return { entries: [{ key: 'home', valueJs: 'new RectangleGeometry(0)' }],
-             imports: [{ module: '@pragmatic-lab/mural/visual-engine', names: ['RectangleGeometry'] }] };
+             imports: [{ module: '@pragmatic-tech-ai/mural/visual-engine', names: ['RectangleGeometry'] }] };
 };
 
 test('a singleton include hoists to a module-scope const referenced by Clone', () => {
@@ -429,7 +429,7 @@ EOF
 
 **Interfaces:**
 - Consumes: Tasks 1–3 merged and green.
-- Produces: a published `@pragmatic-lab/mural` version Plexus can consume; SP2 (Plexus consumers) builds on it.
+- Produces: a published `@pragmatic-tech-ai/mural` version Plexus can consume; SP2 (Plexus consumers) builds on it.
 
 - [ ] **Step 1: Full green gate**
 
@@ -454,7 +454,7 @@ Expected: publish succeeds. If it fails on auth/registry, stop and report — do
 
 - [ ] **Step 4: Bump Plexus's dependency + verify**
 
-In `Plexus/package.json`, set `@pragmatic-lab/mural` to the new version (match the existing `^`/exact style already there). Then:
+In `Plexus/package.json`, set `@pragmatic-tech-ai/mural` to the new version (match the existing `^`/exact style already there). Then:
 
 ```bash
 cd /c/Users/Eugene/Projects/architecture-agent/Plexus
@@ -477,7 +477,7 @@ EOF
 cd /c/Users/Eugene/Projects/architecture-agent/Plexus
 git add package.json package-lock.json
 git commit -m "$(cat <<'EOF'
-chore(deps): bump @pragmatic-lab/mural for raster include support
+chore(deps): bump @pragmatic-tech-ai/mural for raster include support
 
 Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
 EOF

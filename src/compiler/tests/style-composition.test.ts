@@ -31,7 +31,7 @@ describe('markup style composition `+`', () => {
         assert.match(js, /\(\) => Application\.current\?\.Resources\.Resolve\("Heading"\)/);
         assert.match(js, /\(\) => Application\.current\?\.Resources\.Resolve\("Hypertext"\)/);
         // Style is auto-imported from the runtime barrel.
-        assert.match(js, /import \{[^}]*\bStyle\b[^}]*\} from "@pragmatic-lab\/mural\/runtime"/);
+        assert.match(js, /import \{[^}]*\bStyle\b[^}]*\} from "@pragmatic-tech-ai\/mural\/runtime"/);
     });
 
     test('a same-scope local style operand uses its JS var (eager, not a Resolve thunk)', () => {

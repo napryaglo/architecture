@@ -1,9 +1,9 @@
 import { LoadingIndicatorVM } from "./loading-indicator-vm.mjs";
-import { Border, DataTemplate, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Button, ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { LoadingIndicator, LoadingIndicatorVariant } from "@pragmatic-lab/mural/framework/notifications/loading-indicator.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Orientation, StackPanel, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { Button, ButtonVariant } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { LoadingIndicator, LoadingIndicatorVariant } from "@pragmatic-tech-ai/mural/framework/notifications/loading-indicator.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_LoadingIndicatorDemo = Symbol("LoadingIndicatorDemo.ctor");

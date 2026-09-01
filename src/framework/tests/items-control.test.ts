@@ -12,7 +12,7 @@ import {
 } from '../../runtime/index.js';
 import { resolveKey } from '../../runtime/model-internals.js';
 import { Canvas, DataTemplate } from '../../basic/index.js';
-import { ItemsControl } from '@pragmatic-lab/mural/framework';
+import { ItemsControl } from '@pragmatic-tech-ai/mural/framework';
 
 // Test-side accessor for Visual's protected parent getters.
 function visualParentOf(v: Visual | undefined): Visual | undefined

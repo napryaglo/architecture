@@ -1,8 +1,8 @@
 ﻿// TopAppBarVM — backs the top-app-bar demo. One Variant DP that toggles
 // among the four M3 variants + a click counter for the nav icon and
 // each action button so the dynamic-binding chain is visible.
-import { MuralBase, MetaData, RelayCommand } from '@pragmatic-lab/mural/runtime';
-import { TopAppBarVariant }              from '@pragmatic-lab/mural/framework';
+import { MuralBase, MetaData, RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
+import { TopAppBarVariant }              from '@pragmatic-tech-ai/mural/framework';
 
 export class TopAppBarVM extends MuralBase
 {

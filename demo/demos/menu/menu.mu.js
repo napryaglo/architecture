@@ -1,8 +1,8 @@
 import { MenuVM } from "./menu-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { MenuButton, MenuItem, MenuSeparator } from "@pragmatic-lab/mural/framework/surface.js";
-import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { MenuButton, MenuItem, MenuSeparator } from "@pragmatic-tech-ai/mural/framework/surface.js";
+import { DataContextBinding, DynamicResource, ResourceDictionary, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_MenuDemo = Symbol("MenuDemo.ctor");

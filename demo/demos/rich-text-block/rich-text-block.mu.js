@@ -1,8 +1,8 @@
 import { RichTextBlockVM } from "./rich-text-block-vm.mjs";
-import { Bold, Border, DataTemplate, Dock, DockPanel, FlowDocument, InlineUIContainer, Italic, Orientation, Paragraph, RichTextBlock, Run, Span, StackPanel, TextBlock, TextWrapping, Underline } from "@pragmatic-lab/mural/basic";
-import { Chip, ChipVariant } from "@pragmatic-lab/mural/framework/markers/chip.js";
-import { DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontStyle, FontWeight } from "@pragmatic-lab/mural/visual-engine";
+import { Bold, Border, DataTemplate, Dock, DockPanel, FlowDocument, InlineUIContainer, Italic, Orientation, Paragraph, RichTextBlock, Run, Span, StackPanel, TextBlock, TextWrapping, Underline } from "@pragmatic-tech-ai/mural/basic";
+import { Chip, ChipVariant } from "@pragmatic-tech-ai/mural/framework/markers/chip.js";
+import { DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { FontStyle, FontWeight } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_RichTextBlockDemo = Symbol("RichTextBlockDemo.ctor");

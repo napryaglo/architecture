@@ -1,6 +1,6 @@
 // Barrel for the port-providers folder. The framework re-exports
 // these from `src/framework/diagram/index.ts` so consumers can
-// `import { BoundingBoxPorts, ... } from '@pragmatic-lab/mural/framework/diagram'`.
+// `import { BoundingBoxPorts, ... } from '@pragmatic-tech-ai/mural/framework/diagram'`.
 export type { IPortProvider } from './port-provider.js';
 export { BoundingBoxPorts }   from './bounding-box-ports.js';
 export { RadialPorts }        from './radial-ports.js';

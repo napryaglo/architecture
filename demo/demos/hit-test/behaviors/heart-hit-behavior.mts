@@ -5,7 +5,7 @@
 // only clicks INSIDE the outline reach the shape — the behavior never sees a
 // bounding-box-corner click. Fill (orange↔white) is swapped by a
 // `when ($IsToggled)` trigger in the view. Returns a mandatory detach thunk.
-import { type Visual } from '@pragmatic-lab/mural/runtime';
+import { type Visual } from '@pragmatic-tech-ai/mural/runtime';
 import type { HitTestVM } from '../hit-test-vm.mjs';
 
 export function attachHeartHit(heart: Visual, vm: HitTestVM): () => void

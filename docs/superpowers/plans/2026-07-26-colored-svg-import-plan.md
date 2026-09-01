@@ -65,8 +65,8 @@ describe('svgToIconJs', () => {
         assert.match(valueJs, /Fill: new Color\(255, 0, 0, 255\)/);
         assert.match(valueJs, /Fill: new Color\(0, 128, 0, 255\)/);
         // IconDefinition imported from basic; Color + geometry from visual-engine.
-        const basic = imports.find(i => i.module === '@pragmatic-lab/mural/basic');
-        const ve    = imports.find(i => i.module === '@pragmatic-lab/mural/visual-engine');
+        const basic = imports.find(i => i.module === '@pragmatic-tech-ai/mural/basic');
+        const ve    = imports.find(i => i.module === '@pragmatic-tech-ai/mural/visual-engine');
         assert.deepEqual([...basic!.names], ['IconDefinition']);
         assert.ok(ve!.names.includes('Color'));
         assert.ok(ve!.names.includes('RectangleGeometry'));
@@ -122,8 +122,8 @@ import { CURRENT_COLOR, type IconPaint } from '../basic/icon.js';
 Add module constants below the imports:
 
 ```ts
-const BASIC          = '@pragmatic-lab/mural/basic';
-const VISUAL_ENGINE  = '@pragmatic-lab/mural/visual-engine';
+const BASIC          = '@pragmatic-tech-ai/mural/basic';
+const VISUAL_ENGINE  = '@pragmatic-tech-ai/mural/visual-engine';
 ```
 
 Add the new public type + entry point (leave `svgToGeometryJs` and `geometryToJs` unchanged):
@@ -401,7 +401,7 @@ git commit -m "feat(compiler): thread include 'colored' flag to the resolver ctx
 
 **Interfaces:**
 - Consumes: `svgToIconJs` + `DrawingResourceJs` (Task 1); `svgToGeometryJs` (existing); `ctx.colored` (Task 3); `compile(src, { include })` from `../../compiler/compile.js`.
-- Produces: `makeIncludeResolver(baseDir)` now emits `IconDefinition` entries + a `@pragmatic-lab/mural/basic` import for colored includes, and unchanged `Geometry` entries for monochrome includes; imports are merged per module across all matched files.
+- Produces: `makeIncludeResolver(baseDir)` now emits `IconDefinition` entries + a `@pragmatic-tech-ai/mural/basic` import for colored includes, and unchanged `Geometry` entries for monochrome includes; imports are merged per module across all matched files.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -435,7 +435,7 @@ describe('makeIncludeResolver — colored vs monochrome', () => {
         const js = compile(`resources I { include "home.svg" }`,
             { include: makeIncludeResolver(dir) }).js;
         assert.match(js, /\.Set\("home", new RectangleGeometry\(/);
-        assert.match(js, /from "@pragmatic-lab\/mural\/visual-engine"/);
+        assert.match(js, /from "@pragmatic-tech-ai\/mural\/visual-engine"/);
         assert.doesNotMatch(js, /IconDefinition/);
     });
 
@@ -445,7 +445,7 @@ describe('makeIncludeResolver — colored vs monochrome', () => {
             { include: makeIncludeResolver(dir) }).js;
         assert.match(js, /\.Set\("logo", new IconDefinition\(24, 24, \[/);
         assert.match(js, /Fill: new Color\(255, 0, 0, 255\)/);
-        assert.match(js, /import \{ IconDefinition \} from "@pragmatic-lab\/mural\/basic"/);
+        assert.match(js, /import \{ IconDefinition \} from "@pragmatic-tech-ai\/mural\/basic"/);
         assert.match(js, /Color/);   // Color imported from visual-engine
     });
 });
@@ -467,8 +467,8 @@ import { svgToGeometryJs, svgToIconJs } from './svg-geometry.js';
 Add a `BASIC` constant beside the existing `VISUAL_ENGINE`:
 
 ```ts
-const VISUAL_ENGINE = '@pragmatic-lab/mural/visual-engine';
-const BASIC         = '@pragmatic-lab/mural/basic';
+const VISUAL_ENGINE = '@pragmatic-tech-ai/mural/visual-engine';
+const BASIC         = '@pragmatic-tech-ai/mural/basic';
 ```
 
 Replace the resolver callback body (the `return (spec, ctx) => { … }` block) so it accepts `colored`, dispatches, and merges imports per module:

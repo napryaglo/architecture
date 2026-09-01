@@ -1,9 +1,9 @@
 import { BannerVM } from "./banner-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Button, ButtonVariant } from "@pragmatic-lab/mural/framework/buttons/button.js";
-import { Banner } from "@pragmatic-lab/mural/framework/notifications/banner.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, Visibility } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { Button, ButtonVariant } from "@pragmatic-tech-ai/mural/framework/buttons/button.js";
+import { Banner } from "@pragmatic-tech-ai/mural/framework/notifications/banner.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, Visibility } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_BannerDemo = Symbol("BannerDemo.ctor");

@@ -61,7 +61,7 @@ Extend `include-resolver.ts` to accept raster extensions:
    from the extension (`image/png`, `image/jpeg`, `image/webp`, `image/gif`).
 3. Emit the resource value `new ImageBrush(new BitmapImage("<dataURI>"))`,
    importing `ImageBrush` and `BitmapImage` from
-   `@pragmatic-lab/mural/visual-engine`.
+   `@pragmatic-tech-ai/mural/visual-engine`.
 
 No size guard — any size embeds. The SVG branch is unchanged. A genuinely
 unsupported extension (e.g. `.txt`) still throws the existing clear error.
@@ -106,7 +106,7 @@ graph into the final single JS anyway.
 
 ```js
 // top of NAME.mu.js — one const per singleton, evaluated once
-import { ImageBrush, BitmapImage } from "@pragmatic-lab/mural/visual-engine";
+import { ImageBrush, BitmapImage } from "@pragmatic-tech-ai/mural/visual-engine";
 const _single_Logo   = new ImageBrush(new BitmapImage("data:image/png;base64,…")); // binary ⇒ implicit
 const _single_Accent = new SolidColorBrush(Color.FromHex('#ff0000'));              // x:single
 
@@ -222,7 +222,7 @@ Mural compiler/tooling tests (files in `tests/` subfolders):
 ## Ship
 
 Build mural, run the suite, publish to Verdaccio (localhost:4873), bump Plexus's
-`@pragmatic-lab/mural` dependency to the new version, and confirm Plexus still
+`@pragmatic-tech-ai/mural` dependency to the new version, and confirm Plexus still
 compiles + tests green. Merge to mural `main`.
 
 ## Out of scope (SP2 / later)

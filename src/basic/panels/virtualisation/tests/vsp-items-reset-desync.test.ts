@@ -2,7 +2,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rect, Size, Element, type DrawingContext } from '../../../../runtime/index.js';
 import { DataTemplate, VirtualizingStackPanel } from '../../../index.js';
-import { ItemsControl } from '@pragmatic-lab/mural/framework';
+import { ItemsControl } from '@pragmatic-tech-ai/mural/framework';
 
 // Fixed-height leaf so the viewport→index math is the uniform 20px estimate.
 class Leaf extends Element

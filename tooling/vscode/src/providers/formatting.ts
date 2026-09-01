@@ -5,7 +5,7 @@
 
 import { Range, TextEdit } from 'vscode-languageserver/node.js';
 import type { TextDocument } from 'vscode-languageserver-textdocument';
-import { format } from '@pragmatic-lab/mural/compiler';
+import { format } from '@pragmatic-tech-ai/mural/compiler';
 
 export function formatting(doc: TextDocument): TextEdit[]
 {

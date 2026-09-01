@@ -1,8 +1,8 @@
 import { DatePickerVM } from "./date-picker-vm.mjs";
-import { Border, DataTemplate, Orientation, StackPanel, TextBlock } from "@pragmatic-lab/mural/basic";
-import { DatePicker } from "@pragmatic-lab/mural/framework/pickers/date-picker.js";
-import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Orientation, StackPanel, TextBlock } from "@pragmatic-tech-ai/mural/basic";
+import { DatePicker } from "@pragmatic-tech-ai/mural/framework/pickers/date-picker.js";
+import { DataContextBinding, DynamicResource, HorizontalAlignment, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_DatePickerDemo = Symbol("DatePickerDemo.ctor");

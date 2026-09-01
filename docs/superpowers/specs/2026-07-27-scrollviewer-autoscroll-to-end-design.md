@@ -128,8 +128,8 @@ ScrollViewer [ HorizontalScrollEnabled = false, AutoScrollToEnd = true ] {
 compiler symbol-table change (it is not an enum). Recompile with
 `npm run compile:mu`.
 
-Because Plexus now reads a new Mural DP: bump + publish `@pragmatic-lab/mural`
-to the local Verdaccio registry, then bump the `@pragmatic-lab/mural` version in
+Because Plexus now reads a new Mural DP: bump + publish `@pragmatic-tech-ai/mural`
+to the local Verdaccio registry, then bump the `@pragmatic-tech-ai/mural` version in
 Plexus to consume it.
 
 ## Testing

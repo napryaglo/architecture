@@ -1,7 +1,7 @@
 import { DashboardVM } from "./dashboard-vm.mjs";
-import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Color, CornerRadius, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@pragmatic-lab/mural/runtime";
-import { SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { Border, Canvas, DataTemplate, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { Color, CornerRadius, DynamicResource, PropertyTrigger, ResourceDictionary, Setter, SetterFactory, Style, Thickness } from "@pragmatic-tech-ai/mural/runtime";
+import { SolidColorBrush } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_DashboardDemo = Symbol("DashboardDemo.ctor");

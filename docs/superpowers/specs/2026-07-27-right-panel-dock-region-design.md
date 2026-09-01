@@ -145,7 +145,7 @@ retired `InspectorService` / `InspectorStack` / `InspectorPanel` exports.
 
 ## Component 4 — Release
 
-Republish `@pragmatic-lab/mural` (0.1.44) to the local Verdaccio registry and
+Republish `@pragmatic-tech-ai/mural` (0.1.44) to the local Verdaccio registry and
 bump/install it in Plexus (same flow as the AutoScrollToEnd feature).
 
 ## Testing

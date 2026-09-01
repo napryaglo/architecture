@@ -51,7 +51,7 @@ resources RichTextEditorDemo {
                 Border [ Padding = (28,24,28,24) ] {
                     RichTextBox x:name="Editor" [ VerticalAlignment = Top, FontSize = 15 ] {
                         FlowDocument {
-                            Paragraph { "Rich text editing in " Bold { "@pragmatic-lab/mural" } "." }
+                            Paragraph { "Rich text editing in " Bold { "@pragmatic-tech-ai/mural" } "." }
                             Paragraph {
                                 "Select any text and toggle "
                                 Bold { "bold" } ", " Italic { "italic" } ", or " Underline { "underline" }

@@ -1,7 +1,7 @@
 import { HitTestVM } from "./hit-test-vm.mjs";
-import { Border, DataTemplate, Dock, DockPanel, Heart, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@pragmatic-lab/mural/basic";
-import { Color, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-lab/mural/runtime";
-import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-lab/mural/visual-engine";
+import { Border, DataTemplate, Dock, DockPanel, Heart, Orientation, StackPanel, TargetedSetter, TemplateDataTrigger, TextBlock, TextWrapping } from "@pragmatic-tech-ai/mural/basic";
+import { Color, DynamicResource, HorizontalAlignment, NameScope, ResourceDictionary, Thickness, VerticalAlignment } from "@pragmatic-tech-ai/mural/runtime";
+import { FontWeight, Pen, SolidColorBrush } from "@pragmatic-tech-ai/mural/visual-engine";
 
 
 const _gate_HitTestDemo = Symbol("HitTestDemo.ctor");

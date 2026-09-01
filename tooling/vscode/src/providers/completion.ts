@@ -32,9 +32,9 @@ import {
     ENUM_MEMBERS,
     DEFAULT_SLOT_INFO,
     type ElementNode,
-} from '@pragmatic-lab/mural/compiler';
+} from '@pragmatic-tech-ai/mural/compiler';
 
-import { MuralBase } from '@pragmatic-lab/mural/runtime';
+import { MuralBase } from '@pragmatic-tech-ai/mural/runtime';
 
 import {
     analyze,
@@ -539,5 +539,5 @@ function keyword(label: string, detail?: string): CompletionItem
 
 function shortModule(mod: string): string
 {
-    return mod.replace('@pragmatic-lab/mural/', '');
+    return mod.replace('@pragmatic-tech-ai/mural/', '');
 }

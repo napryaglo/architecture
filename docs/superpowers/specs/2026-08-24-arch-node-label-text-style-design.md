@@ -95,5 +95,5 @@ a large rewrite of arch presentation to avoid a focused redirect.
 ## Cross-repo / release
 
 Mural gains `ITextStyleTarget` + the `FormatMirror` redirect → **republish**
-`@pragmatic-lab/mural` (minor bump) to Verdaccio; Plexus bumps its dep and
+`@pragmatic-tech-ai/mural` (minor bump) to Verdaccio; Plexus bumps its dep and
 adds the VM DPs / template / serializer. Both `main`, committed on request.

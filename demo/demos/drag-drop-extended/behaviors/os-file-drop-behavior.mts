@@ -9,7 +9,7 @@
 // renders the right glyph. Optionally accepts text/plain and
 // text/uri-list drops too — useful for cross-window text/url drags.
 
-import { DragDropEffects, type DragEventArgs, type Visual } from '@pragmatic-lab/mural/runtime';
+import { DragDropEffects, type DragEventArgs, type Visual } from '@pragmatic-tech-ai/mural/runtime';
 import type { DragDropExtendedVM } from '../drag-drop-extended-vm.mjs';
 
 export function attachOsFileDrop(visual: Visual, vm: DragDropExtendedVM): () => void {
