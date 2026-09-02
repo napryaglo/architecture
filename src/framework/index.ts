@@ -242,6 +242,8 @@ export { ToolboxPage } from './diagram/toolbox/toolbox-page.js';
 export { ToolboxItem } from './diagram/toolbox/toolbox-item.js';
 export { ToolboxVisualDescriptor } from './diagram/toolbox/toolbox-visual-descriptor.js';
 export { ToolboxVisualPresenter } from './diagram/toolbox/toolbox-visual-presenter.js';
+export { reconcile } from './diagram/toolbox/reconcile.js';
+export { type IToolboxContextTarget, isToolboxContextTarget } from './diagram/toolbox/toolbox-context.js';
 export { RulerBar } from './diagram/guides/ruler-bar.js';
 export { PersistentGuidesAdorner } from './diagram/guides/persistent-guides-adorner.js';
 export { attachPersistentGuides, type PersistentGuidesHandlers } from './diagram/behaviors/persistent-guides-behavior.js';
