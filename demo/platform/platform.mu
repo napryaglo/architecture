@@ -59,6 +59,7 @@ import TimePickerDemo from "../demos/time-picker/time-picker.mu.js"
 import CarouselDemo from "../demos/carousel/carousel.mu.js"
 import ButtonGroupDemo from "../demos/button-group/button-group.mu.js"
 import CardDemo from "../demos/card/card.mu.js"
+import DialogDemo from "../demos/dialog/dialog.mu.js"
 import ColorPickerDemo from "../demos/color-picker/color-picker.mu.js"
 import CommandsDemo from "../demos/commands/commands.mu.js"
 import ContextMenuDemo from "../demos/context-menu/context-menu.mu.js"
@@ -133,6 +134,7 @@ Application [ Theme = Material, Scheme = MaterialLight ] {
         merge CarouselDemo
         merge ButtonGroupDemo
         merge CardDemo
+        merge DialogDemo
         merge ColorPickerDemo
         merge CommandsDemo
         merge ContextMenuDemo

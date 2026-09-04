@@ -18,6 +18,7 @@ import { CounterDemo } from "../demos/counter/counter.mu.js";
 import { DashboardDemo } from "../demos/dashboard/dashboard.mu.js";
 import { DatePickerDemo } from "../demos/date-picker/date-picker.mu.js";
 import { DiagramDemo } from "../demos/diagram/diagram.mu.js";
+import { DialogDemo } from "../demos/dialog/dialog.mu.js";
 import { DragDropExtendedDemo } from "../demos/drag-drop-extended/drag-drop-extended.mu.js";
 import { DragDropDemo } from "../demos/drag-drop/drag-drop.mu.js";
 import { DrawerDemo } from "../demos/drawer/drawer.mu.js";
@@ -84,6 +85,7 @@ export const app = (() => {
     for (const [_k, _v] of CarouselDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ButtonGroupDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of CardDemo.Clone().Entries()) _rd1.Set(_k, _v);
+    for (const [_k, _v] of DialogDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ColorPickerDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of CommandsDemo.Clone().Entries()) _rd1.Set(_k, _v);
     for (const [_k, _v] of ContextMenuDemo.Clone().Entries()) _rd1.Set(_k, _v);
