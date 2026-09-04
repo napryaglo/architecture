@@ -429,7 +429,12 @@ export class MenuItem extends HeaderedItemsControl
         }
         if (
             name === 'Header' || name === 'Icon' || name === 'InputGestureText' ||
-            name === 'IsCheckable' || name === 'IsChecked' || name === 'Items'
+            name === 'IsCheckable' || name === 'IsChecked' || name === 'Items' ||
+            // 'HasItems' flips when declaratively-nested children are added/removed
+            // (a collection mutation, which — unlike reassigning Items — never fires
+            // OnPropertyChanged('Items')). Refreshing here is what makes the submenu
+            // chevron (▶) appear for `MenuItem { MenuItem … }` authoring.
+            name === 'HasItems'
         )
         {
             this.refreshRow();

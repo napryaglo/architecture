@@ -52,6 +52,26 @@ describe('MenuStrip / MenuItem / MenuSeparator', () => {
         assert.equal(activated, 1);
     });
 
+    test('submenu chevron (▶) appears when a child is nested via AddChild', () => {
+        interface RowInternals { _chevronLabel?: { Text: string } }
+        const parent = new MenuItem();
+        parent.Header = 'Export';
+        // No children yet → no chevron.
+        assert.equal((parent as unknown as RowInternals)._chevronLabel?.Text ?? '', '');
+
+        // Declarative nesting (`MenuItem { MenuItem … }`) compiles to AddChild,
+        // which mutates the items collection — Items is never reassigned, so the
+        // chevron must refresh off the HasItems transition, not OnPropertyChanged('Items').
+        const child = new MenuItem();
+        child.Header = 'Vector Graphics (SVG)';
+        parent.AddChild(child);
+        assert.equal((parent as unknown as RowInternals)._chevronLabel?.Text, '▶');
+
+        // Removing the last child clears it again.
+        (parent.Items as { Remove(v: unknown): void }).Remove(child);
+        assert.equal((parent as unknown as RowInternals)._chevronLabel?.Text ?? '', '');
+    });
+
     test('Checkable MenuItem flips IsChecked on click', () => {
         const root = new Root();
         const mi = new MenuItem();
