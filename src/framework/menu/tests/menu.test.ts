@@ -4,7 +4,7 @@ import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import { Application, Key, NoModifiers, Panel, PointerButton, Rect, RelayCommand, Size, Visibility, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
-import { MenuButton, MenuItem, MenuSeparator, MenuStrip } from '../menu-strip.js';
+import { MenuButton, MenuItem, MenuPopupHost, MenuSeparator, MenuStrip } from '../menu-strip.js';
 
 class Root extends Panel {}
 
@@ -114,6 +114,68 @@ describe('MenuStrip / MenuItem / MenuSeparator', () => {
 
         assert.equal(i.IsSubmenuOpen, false, 'own submenu closed');
         assert.ok(propagated, 'propagated up the chain via _onActivated');
+    });
+
+    test('hovering a sibling closes an open submenu (standard hover navigation)', () => {
+        const strip = new MenuStrip();
+        const a = new MenuItem(); a.Header = 'Edit'; a.AddChild(new MenuItem());
+        const b = new MenuItem(); b.Header = 'View'; b.AddChild(new MenuItem());
+        strip.AddChild(a);
+        strip.AddChild(b);
+
+        a.IsSubmenuOpen = true;
+        assert.equal(a.IsSubmenuOpen, true, 'precondition: A open');
+
+        // Entering sibling B collapses A's flyout (only one open per group).
+        (b as unknown as { OnPointerEnter(x: unknown): void }).OnPointerEnter({});
+        assert.equal(a.IsSubmenuOpen, false, 'sibling hover closes the previously-open submenu');
+    });
+
+    test('MenuPopupHost is a transparent positioning container (its pad never swallows click-away)', () => {
+        // The host spans the full overlay slot; if it were hit-testable its
+        // renderer pad would blanket the surface with pointer-events:all and
+        // eat every empty-space click, leaving the outermost click-away scrim
+        // beneath it unreachable. It must be non-hit-testable so clicks fall
+        // through to that one live scrim (its own hittable children re-enable
+        // themselves via explicit pointer-events).
+        const host = new MenuPopupHost();
+        assert.equal(host.IsHitTestVisible, false);
+    });
+
+    test('closing a parent submenu cascades down to close an open child submenu', () => {
+        // A child submenu is a separate overlay child, so tearing down the
+        // parent's popup doesn't reach it. Closing the parent must cascade DOWN
+        // (closeOpenSubmenusIn) so the child doesn't linger open on the overlay.
+        const parent = new MenuItem(); parent.Header = 'Share';
+        const child  = new MenuItem(); child.Header  = 'Export';
+        child.AddChild(new MenuItem());   // child itself is a parent
+        parent.AddChild(child);
+
+        parent.IsSubmenuOpen = true;
+        child.IsSubmenuOpen  = true;
+        assert.equal(child.IsSubmenuOpen, true, 'precondition: child submenu open');
+
+        parent.IsSubmenuOpen = false;
+        assert.equal(child.IsSubmenuOpen, false, 'closing the parent closes the open child submenu');
+    });
+
+    test('moving the pointer off an open parent keeps its submenu open', () => {
+        const root = new Root();
+        const parent = new MenuItem();
+        parent.Header = 'Transform';
+        const child = new MenuItem();
+        child.Header = 'Rotate';
+        parent.AddChild(child);
+        root.AddChild(parent);
+
+        const im = new InputManager();
+        im.InjectPointerMove(parent, pointer());
+        parent.IsSubmenuOpen = true;
+        assert.equal(parent.IsSubmenuOpen, true, 'precondition: submenu open');
+
+        // Move off the parent (toward the submenu / to empty space).
+        im.InjectPointerMove(null, pointer());
+        assert.equal(parent.IsSubmenuOpen, true, 'submenu should stay open after the pointer leaves the parent');
     });
 
     test('Checkable MenuItem flips IsChecked on click', () => {

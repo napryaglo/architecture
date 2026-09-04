@@ -179,6 +179,12 @@ export class ContextMenu extends ItemsControl
         super.OnPropertyChanged(descriptor, oldValue, newValue);
         if (descriptor.Name === 'IsOpen' && newValue === false)
         {
+            // Cascade the close down — a nested submenu opened from one of our
+            // items mounts as its OWN overlay child, so unmounting the popup
+            // below won't reach it. Collapse open child submenus first (each
+            // recurses to its own children) so nothing is orphaned on the
+            // overlay after the outer click-away scrim dismisses us.
+            MenuItem.closeOpenSubmenusIn(this.Items);
             this.unmountPopup();
         }
     }

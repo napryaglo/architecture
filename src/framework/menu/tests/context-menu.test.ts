@@ -232,6 +232,64 @@ describe('ContextMenu — attached DP + auto-open', () => {
         assert.equal(cm.IsOpen, false, 'menu should close when a templated child is activated');
     });
 
+    test('a nested submenu keeps its click-away scrim hit-test-transparent (hover reaches ancestor rows)', () => {
+        // Root cause of the broken hover navigation: a nested submenu mounts its
+        // OWN full-surface ClickAwayScrim on the overlay, on top of the parent
+        // menu. If that scrim caught pointer events it would swallow hover on the
+        // parent row + its siblings, so moving off an open parent onto a sibling
+        // could never fire OnPointerEnter. A submenu opened from a ContextMenu is
+        // nested (not a top-level MenuStrip item), so its scrim must be
+        // IsHitTestVisible=false — the ContextMenu's own scrim handles click-away.
+        const target = new HeadlessTarget(400, 300);
+        const root = new Root();
+        target.Content = root;
+
+        const cm = new ContextMenu();
+        const parent = new MenuItem(); parent.Header = 'Transform';
+        parent.AddChild(new MenuItem());
+        cm.AddChild(parent);
+        root.ContextMenu = cm;
+
+        const im = new InputManager();
+        im.InjectPointerDown(root, rightClick());
+        target.Flush();
+        (parent as unknown as { activate(): void }).activate();   // open the submenu
+        target.Flush();
+
+        const scrim = (parent as unknown as { _scrim?: { IsHitTestVisible: boolean } })._scrim;
+        assert.notEqual(scrim, undefined, 'submenu scrim should be resolved');
+        assert.equal(scrim!.IsHitTestVisible, false,
+            'a nested submenu scrim must not intercept pointer events over ancestor rows');
+    });
+
+    test('closing the context menu cascades down and tears down an open nested submenu', () => {
+        // The submenu is mounted as its OWN overlay child, so unmounting the
+        // ContextMenu popup does not reach it. Closing must cascade DOWN
+        // (closeOpenSubmenusIn) or the submenu is orphaned, floating on the
+        // overlay after the menu is dismissed.
+        const target = new HeadlessTarget(400, 300);
+        const root = new Root();
+        target.Content = root;
+
+        const cm = new ContextMenu();
+        const parent = new MenuItem(); parent.Header = 'Transform';
+        parent.AddChild(new MenuItem());
+        cm.AddChild(parent);
+        root.ContextMenu = cm;
+
+        const im = new InputManager();
+        im.InjectPointerDown(root, rightClick());
+        target.Flush();
+        (parent as unknown as { activate(): void }).activate();   // open the submenu
+        target.Flush();
+        assert.equal(parent.IsSubmenuOpen, true, 'precondition: submenu open');
+
+        // Dismiss the whole menu (what the outer click-away scrim does).
+        cm.IsOpen = false;
+        assert.equal(parent.IsSubmenuOpen, false,
+            'closing the context menu must also close the open nested submenu');
+    });
+
     test('Right-click on a Visual WITHOUT an attached ContextMenu is a pass-through', () => {
         const root = new Root();
         // No ContextMenu attached.

@@ -434,7 +434,12 @@ export class MenuItem extends HeaderedItemsControl
         {
             // A pending hover-open is now moot either way (opened, or closed).
             this.clearHoverOpenTimer();
+            // Opening: collapse any sibling's open flyout (one per group).
+            // Closing: collapse any of OUR OWN open child submenus — each is a
+            // separate overlay child, so unmounting our popup below won't reach
+            // it; without this it would linger on the overlay after we close.
             if (newValue === true) this.closeSiblingSubmenus();
+            else                   MenuItem.closeOpenSubmenusIn(this.Items);
         }
         if (name === 'IsSubmenuOpen' && this._popupHost !== undefined)
         {
@@ -494,8 +499,21 @@ export class MenuItem extends HeaderedItemsControl
         // the host. MenuStrip → horizontal context; anything else
         // (ContextMenu, MenuButton, MenuItem, anonymous wrappers) →
         // vertical context.
+        const topLevel = this.isTopLevelInMenuStrip();
         if (this._rowRoot !== undefined) this._popupHost.anchor = this._rowRoot;
-        this._popupHost.anchorSide = this.isTopLevelInMenuStrip() ? MenuAnchorSide.Below : MenuAnchorSide.Right;
+        this._popupHost.anchorSide = topLevel ? MenuAnchorSide.Below : MenuAnchorSide.Right;
+        // A NESTED submenu must not lay a hit-testable scrim over the rest of
+        // the menu chain. The scrim fills the whole surface, so if it caught
+        // pointer events it would swallow hover on the ancestor row that opened
+        // us (and its siblings) — defeating standard hover navigation (moving
+        // off a parent onto a sibling can't fire OnPointerEnter through a
+        // covering scrim). Only a top-level MenuStrip item's submenu is the
+        // OUTERMOST dismissible surface and needs its own click-away scrim;
+        // everything nested inside a ContextMenu / MenuButton / parent MenuItem
+        // relies on that outer popup's scrim for click-away instead. Closing
+        // cascades DOWN (closeDescendantSubmenus) so a nested submenu is torn
+        // down when its ancestor closes rather than orphaned on the overlay.
+        if (this._scrim !== undefined) this._scrim.IsHitTestVisible = topLevel;
         // AttachOverlayChild: visual hop → target's OverlayLayer; logical
         // hop → THIS MenuItem so the submenu inherits resources /
         // DataContext / inheritable DPs from the row that opened it.
@@ -610,10 +628,14 @@ export class MenuItem extends HeaderedItemsControl
 
     protected override OnPointerEnter(_args: PointerEventArgs): void
     {
-        // Template trigger handles the IsMouseOver visual swap. On top of that,
-        // a parent item opens its submenu after a 1s dwell — click still opens
-        // it immediately via activate(). Arm the timer only when there's a
-        // submenu that isn't already open.
+        // Standard menu hover navigation. Entering an item first collapses any
+        // sibling's open submenu — so moving off a parent onto a different item
+        // in the same group closes that parent's flyout. Entering a CHILD of an
+        // open submenu closes only the child's siblings (its ancestor is a
+        // parent, not a sibling), so travelling parent → submenu keeps the chain
+        // open. Then, if THIS item is itself a parent, arm a dwell timer to open
+        // its own submenu (click still opens it immediately via activate()).
+        this.closeSiblingSubmenus();
         if (this.itemCount() > 0 && !this.IsSubmenuOpen)
         {
             this.clearHoverOpenTimer();
@@ -643,20 +665,45 @@ export class MenuItem extends HeaderedItemsControl
         }
     }
 
-    // Close any sibling MenuItem's open submenu so only one flyout in a group
-    // is open at a time (WPF / M3 behaviour). Matters most with hover-dwell
-    // opening as the pointer moves down a vertical menu, but also tidies the
-    // click path. The logical parent is the items owner — a parent MenuItem
-    // (nested submenu) or the ContextMenu / MenuStrip / MenuButton popup.
+    // Close every SIBLING MenuItem's open submenu so only one flyout per group
+    // is open at a time (WPF / M3 behaviour), and — driven from OnPointerEnter —
+    // so hovering a different item collapses the previous submenu. Resolve the
+    // collection this item belongs to by walking the logical chain to the first
+    // enclosing MenuItem (nested submenu owner) or ItemsControl exposing an Items
+    // collection (ContextMenu / MenuStrip / MenuButton popup). A one-hop lookup
+    // is not enough: a submenu child's immediate logical parent is a panel, not
+    // its owning MenuItem.
     private closeSiblingSubmenus(): void
     {
-        const owner = this.GetLogicalParent() as unknown as { Items?: unknown } | undefined;
-        const items = owner?.Items;
+        let owner: Visual | undefined = this.GetLogicalParent();
+        for (let guard = 0; owner !== undefined && guard < 64; guard++)
+        {
+            if (owner instanceof MenuItem) break;
+            if ((owner as unknown as { Items?: unknown }).Items !== undefined) break;
+            owner = owner.GetLogicalParent();
+        }
+        const items = (owner as unknown as { Items?: unknown } | undefined)?.Items;
         if (items === undefined || items === null) return;
         const iter = items as { [Symbol.iterator]?: unknown };
         if (typeof iter[Symbol.iterator] !== 'function') return;
         for (const it of items as Iterable<unknown>)
             if (it !== this && it instanceof MenuItem && it.IsSubmenuOpen) it.IsSubmenuOpen = false;
+    }
+
+    // Collapse every open MenuItem submenu directly inside `items`. Shared by
+    // the three menu roots — MenuItem (its own submenu closing), ContextMenu,
+    // and MenuButton — to cascade a close DOWNWARD: nested submenus mount as
+    // their own overlay children, so tearing down the container that owns them
+    // doesn't reach them. Closing each open child recurses (its own
+    // OnPropertyChanged fires this again for its children), so one call at each
+    // level unwinds the whole open branch.
+    public static closeOpenSubmenusIn(items: unknown): void
+    {
+        if (items === undefined || items === null) return;
+        const iter = items as { [Symbol.iterator]?: unknown };
+        if (typeof iter[Symbol.iterator] !== 'function') return;
+        for (const it of items as Iterable<unknown>)
+            if (it instanceof MenuItem && it.IsSubmenuOpen) it.IsSubmenuOpen = false;
     }
 
     // Keyboard navigation. Handles arrow keys, Enter / Space, Escape,
@@ -1217,7 +1264,14 @@ export class MenuButton extends HeaderedItemsControl
         if (name === 'IsOpen' && this._popupHost !== undefined)
         {
             if (newValue === true) this.mountPopup();
-            else                   this.unmountPopup();
+            else
+            {
+                // Cascade the close down — collapse any open child submenu
+                // (a separate overlay child) before we unmount our own popup,
+                // so it isn't left floating when the button closes.
+                MenuItem.closeOpenSubmenusIn(this.Items);
+                this.unmountPopup();
+            }
         }
         if (name === 'Icon' && this._buttonStack !== undefined && this._buttonText !== undefined)
         {
@@ -1295,6 +1349,24 @@ export enum MenuAnchorSide
 
 export class MenuPopupHost extends Panel
 {
+    constructor()
+    {
+        super();
+        // A positioning container only — never a hit target itself. The host
+        // is arranged to the FULL overlay slot (see ArrangeOverride), so its
+        // renderer hit pad would otherwise blanket the surface with
+        // `pointer-events: all` and swallow every empty-space click that
+        // should fall through to the ONE live click-away scrim beneath the
+        // whole menu chain. That swallowing is exactly what left click-away
+        // dead once nested submenu scrims were made transparent. Marking the
+        // host non-hit-testable drops its pad from the elementsFromPoint walk;
+        // its hittable children — the live outermost scrim, the popup
+        // container, the menu rows — each carry their own explicit
+        // `pointer-events="all"` and keep receiving events (same container-
+        // transparent pattern OverlayLayer / AdornerLayer use).
+        this.IsHitTestVisible = false;
+    }
+
     /** Anchor for popup positioning. When set, the popup is laid out
      *  relative to the anchor according to `anchorSide`. */
     public anchor: Visual | undefined;
