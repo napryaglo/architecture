@@ -10,7 +10,7 @@
 // to mount.
 
 import { Application } from '@pragmatic-tech-ai/mural/runtime';
-import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextNodeVM, CalloutNodeVM, deserializeFlowDocument, documentWithFields, ensureToolboxDefaults } from '@pragmatic-tech-ai/mural/framework';
+import { ConnectorEndpoint, DiagramDocument, DiagramStorageKey, TextPlacement, TextAutoFit, TextNode, Callout, deserializeFlowDocument, documentWithFields, ensureToolboxDefaults } from '@pragmatic-tech-ai/mural/framework';
 import { register } from '../../platform/registry.mjs';
 
 let docInstance;
@@ -80,19 +80,21 @@ register({
             docInstance.CreateConnector(
                 new ConnectorEndpoint({ Node: squir }),
                 new ConnectorEndpoint({ Node: flower }));
-            // Slice 8: text shapes. A free-floating annotation box (TextNodeVM,
-            // auto-grows to its text) and a callout (CalloutNodeVM) whose leader
-            // points at — and follows — the heart node.
-            const note = new TextNodeVM();
+            // Slice 8: text shapes. A free-floating annotation box (TextNode, a
+            // self-painting Figure that auto-grows to its text) and a callout
+            // (Callout — a TextNode with a leader) whose leader points at, and
+            // follows, the heart node. Text is set via the Figure's Text document
+            // (documentWithFields), the same seam used for the edge label above.
+            const note = new TextNode();
             note.Id = 'note1';
             note.Left = 380; note.Top = 210;
-            note.LabelText = 'Free-floating note — double-click to edit';
+            note.Text.Document = documentWithFields('Free-floating note — double-click to edit');
             docInstance.Nodes.Add(note);
 
-            const callout = new CalloutNodeVM();
+            const callout = new Callout();
             callout.Id = 'call1';
             callout.Left = 40; callout.Top = 320;
-            callout.LabelText = 'This one has a leader ↘';
+            callout.Text.Document = documentWithFields('This one has a leader ↘');
             callout.LeaderTargetNode = heart;
             docInstance.Nodes.Add(callout);
             docInstance.Status = `Ready. ${docInstance.Nodes.Count} nodes, ${docInstance.Connectors.Count} connectors. Drag a shape from the toolbox →`;
