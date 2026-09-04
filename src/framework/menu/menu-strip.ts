@@ -23,7 +23,8 @@ import { ItemsControl } from '../base/items-control.js';
 import { StackPanel } from '../../basic/panels/stack-panel.js';
 import { Orientation } from '../../basic/panels/orientation.js';
 import { TextBlock } from '../../basic/text-block.js';
-import { Brush } from '../../visual-engine/index.js';
+import { Shape } from '../../basic/shapes/shape.js';
+import { Brush, Visibility } from '../../visual-engine/index.js';
 import { ClickAwayScrim } from '../tool-bar/tool-bar.js';
 import { Button } from '../buttons/button.js';
 import type { ICommand } from '../../runtime/command.js';
@@ -195,7 +196,7 @@ export class MenuItem extends HeaderedItemsControl
     private _iconHost:     Border    | undefined;
     private _rowLabel:     TextBlock | undefined;
     private _gestureLabel: TextBlock | undefined;
-    private _chevronLabel: TextBlock | undefined;
+    private _chevron:      Shape     | undefined;
 
     // Submenu popup parts — cached after applyDefaultStyle materialises
     // the primary Template. The popup root is DETACHED from MenuItem so
@@ -208,6 +209,12 @@ export class MenuItem extends HeaderedItemsControl
     private _lastKnownTarget: PresentationTarget | undefined;
 
     private _pressOriginatedHere = false;
+
+    // Hover-to-open: a parent item opens its submenu after the pointer dwells
+    // over it for this long (click opens it immediately). Cancelled if the
+    // pointer leaves first.
+    private static readonly HoverOpenDelayMs = 500;
+    private _hoverOpenTimer: ReturnType<typeof setTimeout> | undefined;
 
     static
     {
@@ -255,7 +262,9 @@ export class MenuItem extends HeaderedItemsControl
         this._popupContainer = root.FindName('PART_PopupContainer') as Border;
         this._popupHost.popup = this._popupContainer;
         this._popupHost.owner = this;
-        this._scrim.onClick   = (): void => { this.IsSubmenuOpen = false; };
+        // Click-away closes the ENTIRE menu, not just this submenu level — a
+        // stray click anywhere outside dismisses the whole popup chain.
+        this._scrim.onClick   = (): void => { this.closeEntireMenu(); };
         this.DetachVisual(this._popupHost);
     }
 
@@ -272,7 +281,7 @@ export class MenuItem extends HeaderedItemsControl
             this._iconHost     = undefined;
             this._rowLabel     = undefined;
             this._gestureLabel = undefined;
-            this._chevronLabel = undefined;
+            this._chevron      = undefined;
         }
         const tpl = this.RowTemplate;
         if (tpl === undefined)
@@ -296,7 +305,7 @@ export class MenuItem extends HeaderedItemsControl
         if (icon instanceof Border)       this._iconHost     = icon;
         if (label instanceof TextBlock)   this._rowLabel     = label;
         if (gesture instanceof TextBlock) this._gestureLabel = gesture;
-        if (chevron instanceof TextBlock) this._chevronLabel = chevron;
+        if (chevron instanceof Shape)     this._chevron      = chevron;
     }
 
     public override get visualChildren(): readonly Visual[]
@@ -371,16 +380,15 @@ export class MenuItem extends HeaderedItemsControl
             this._gestureLabel.Text = g;
             this._gestureLabel.Width = g.length === 0 ? 0 : Number.NaN;
         }
-        // Chevron column — populated when this item has a submenu.
-        if (this._chevronLabel !== undefined)
+        // Chevron column — a @ChevronRight Shape shown only when this item
+        // has a submenu. The MenuStrip row template pins the chevron to
+        // Width=0, so this toggle is a no-op there (a zero-width shape stays
+        // invisible even when Visible) — top-level strip items never show a
+        // submenu chevron.
+        if (this._chevron !== undefined)
         {
             const hasSubmenu = this.itemCount() > 0;
-            this._chevronLabel.Text = hasSubmenu ? '▶' : '';
-            // Don't force a width when the stripped MenuStrip row
-            // template already pinned Width=0 via local setters — only
-            // restore to 12 when there's actually a submenu AND the
-            // template's preferred (non-zero) width allowed for the
-            // chevron column.
+            this._chevron.Visibility = hasSubmenu ? Visibility.Visible : Visibility.Collapsed;
         }
         // Icon column — host the consumer's Icon, OR an inline check
         // glyph when IsCheckable + IsChecked, OR clear it.
@@ -422,6 +430,12 @@ export class MenuItem extends HeaderedItemsControl
             this.refreshRow();
             return;
         }
+        if (name === 'IsSubmenuOpen')
+        {
+            // A pending hover-open is now moot either way (opened, or closed).
+            this.clearHoverOpenTimer();
+            if (newValue === true) this.closeSiblingSubmenus();
+        }
         if (name === 'IsSubmenuOpen' && this._popupHost !== undefined)
         {
             if (newValue === true) this.mountSubmenu();
@@ -445,6 +459,9 @@ export class MenuItem extends HeaderedItemsControl
     {
         const newTarget = (this as unknown as { target: PresentationTarget | undefined }).target;
         const oldTarget = this._lastKnownTarget;
+        // Detaching from the tree — drop any pending hover-open so it can't fire
+        // on a torn-down item.
+        if (newTarget === undefined) this.clearHoverOpenTimer();
         if (oldTarget !== undefined && oldTarget !== newTarget && this._popupMounted)
         {
             if (this._popupHost !== undefined) oldTarget.DetachOverlay(this._popupHost);
@@ -549,6 +566,19 @@ export class MenuItem extends HeaderedItemsControl
         if (cmd !== undefined && cmd.CanExecute(param)) cmd.Execute(param);
     }
 
+    // Tear down the WHOLE menu from this level down/up: close our own submenu,
+    // then propagate up the _onActivated chain (which collapses every ancestor
+    // submenu and the root host — MenuButton / ContextMenu). Falls back to
+    // walking the popup-host chain for templated items that were never wired.
+    // Used by the click-away scrim so an outside click dismisses everything,
+    // not just the deepest submenu.
+    private closeEntireMenu(): void
+    {
+        this.IsSubmenuOpen = false;
+        if (this._onActivated !== undefined) this._onActivated();
+        else                                 this.closeThroughOwner();
+    }
+
     // Walk up to the MenuPopupHost hosting this item and close the enclosing menu
     // through its owner. Used only as the activate() fallback above.
     private closeThroughOwner(): void
@@ -580,14 +610,53 @@ export class MenuItem extends HeaderedItemsControl
 
     protected override OnPointerEnter(_args: PointerEventArgs): void
     {
-        // Template trigger handles the IsMouseOver visual swap.
+        // Template trigger handles the IsMouseOver visual swap. On top of that,
+        // a parent item opens its submenu after a 1s dwell — click still opens
+        // it immediately via activate(). Arm the timer only when there's a
+        // submenu that isn't already open.
+        if (this.itemCount() > 0 && !this.IsSubmenuOpen)
+        {
+            this.clearHoverOpenTimer();
+            this._hoverOpenTimer = setTimeout((): void =>
+            {
+                this._hoverOpenTimer = undefined;
+                if (this.itemCount() > 0) this.IsSubmenuOpen = true;
+            }, MenuItem.HoverOpenDelayMs);
+        }
     }
 
     protected override OnPointerLeave(_args: PointerEventArgs): void
     {
-        // Template trigger handles the IsMouseOver visual swap — the
+        // Cancel a pending hover-open if the pointer leaves before the dwell
+        // completes. Template trigger handles the IsMouseOver visual swap — the
         // template tier knows about the press-originated-here / drag-
         // off behaviour through the IsPressed trigger fading first.
+        this.clearHoverOpenTimer();
+    }
+
+    private clearHoverOpenTimer(): void
+    {
+        if (this._hoverOpenTimer !== undefined)
+        {
+            clearTimeout(this._hoverOpenTimer);
+            this._hoverOpenTimer = undefined;
+        }
+    }
+
+    // Close any sibling MenuItem's open submenu so only one flyout in a group
+    // is open at a time (WPF / M3 behaviour). Matters most with hover-dwell
+    // opening as the pointer moves down a vertical menu, but also tidies the
+    // click path. The logical parent is the items owner — a parent MenuItem
+    // (nested submenu) or the ContextMenu / MenuStrip / MenuButton popup.
+    private closeSiblingSubmenus(): void
+    {
+        const owner = this.GetLogicalParent() as unknown as { Items?: unknown } | undefined;
+        const items = owner?.Items;
+        if (items === undefined || items === null) return;
+        const iter = items as { [Symbol.iterator]?: unknown };
+        if (typeof iter[Symbol.iterator] !== 'function') return;
+        for (const it of items as Iterable<unknown>)
+            if (it !== this && it instanceof MenuItem && it.IsSubmenuOpen) it.IsSubmenuOpen = false;
     }
 
     // Keyboard navigation. Handles arrow keys, Enter / Space, Escape,

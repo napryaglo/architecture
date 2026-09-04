@@ -2,7 +2,7 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
-import { Application, Key, NoModifiers, Panel, PointerButton, Rect, RelayCommand, Size, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
+import { Application, Key, NoModifiers, Panel, PointerButton, Rect, RelayCommand, Size, Visibility, type KeyEventInit, type PointerEventInit } from '../../../runtime/index.js';
 import { InputManager } from '../../../framework/index.js';;
 import { MenuButton, MenuItem, MenuSeparator, MenuStrip } from '../menu-strip.js';
 
@@ -52,12 +52,15 @@ describe('MenuStrip / MenuItem / MenuSeparator', () => {
         assert.equal(activated, 1);
     });
 
-    test('submenu chevron (▶) appears when a child is nested via AddChild', () => {
-        interface RowInternals { _chevronLabel?: { Text: string } }
+    test('submenu chevron Shape shows/hides when a child is nested via AddChild', () => {
+        // PART_Chevron is a @ChevronRight Shape (not a glyph TextBlock); the row
+        // toggles its Visibility rather than swapping text.
+        interface RowInternals { _chevron?: { Visibility: Visibility } }
         const parent = new MenuItem();
         parent.Header = 'Export';
-        // No children yet → no chevron.
-        assert.equal((parent as unknown as RowInternals)._chevronLabel?.Text ?? '', '');
+        const chevron = (): Visibility | undefined => (parent as unknown as RowInternals)._chevron?.Visibility;
+        // No children yet → chevron collapsed.
+        assert.equal(chevron(), Visibility.Collapsed);
 
         // Declarative nesting (`MenuItem { MenuItem … }`) compiles to AddChild,
         // which mutates the items collection — Items is never reassigned, so the
@@ -65,11 +68,52 @@ describe('MenuStrip / MenuItem / MenuSeparator', () => {
         const child = new MenuItem();
         child.Header = 'Vector Graphics (SVG)';
         parent.AddChild(child);
-        assert.equal((parent as unknown as RowInternals)._chevronLabel?.Text, '▶');
+        assert.equal(chevron(), Visibility.Visible);
 
-        // Removing the last child clears it again.
+        // Removing the last child collapses it again.
         (parent.Items as { Remove(v: unknown): void }).Remove(child);
-        assert.equal((parent as unknown as RowInternals)._chevronLabel?.Text ?? '', '');
+        assert.equal(chevron(), Visibility.Collapsed);
+    });
+
+    test('hover over a parent item arms a submenu-open timer, cancelled on leave', () => {
+        // A parent item (has a submenu) arms a dwell timer on pointer-enter and
+        // clears it on leave; a leaf item never arms one. The actual open fires
+        // from the timer after the dwell — here we assert the arm/cancel gate
+        // synchronously (no 1s wait).
+        interface Internals {
+            _hoverOpenTimer?: unknown;
+            OnPointerEnter(a: unknown): void;
+            OnPointerLeave(a: unknown): void;
+        }
+        const parent = new MenuItem();
+        parent.AddChild(new MenuItem());
+        const p = parent as unknown as Internals;
+        p.OnPointerEnter({});
+        assert.ok(p._hoverOpenTimer !== undefined, 'timer armed on enter over a parent item');
+        p.OnPointerLeave({});
+        assert.equal(p._hoverOpenTimer, undefined, 'timer cleared on leave');
+
+        const leaf = new MenuItem();
+        const l = leaf as unknown as Internals;
+        l.OnPointerEnter({});
+        assert.equal(l._hoverOpenTimer, undefined, 'leaf item never arms a hover-open timer');
+    });
+
+    test('click-away scrim closes the ENTIRE menu chain, not just this level', () => {
+        // The submenu scrim's onClick calls closeEntireMenu, which must close
+        // this item's own submenu AND propagate up the _onActivated chain (in a
+        // live menu that collapses every ancestor submenu + the root host).
+        interface Internals { IsSubmenuOpen: boolean; _onActivated?: () => void; closeEntireMenu(): void }
+        const item = new MenuItem();
+        const i = item as unknown as Internals;
+        i.IsSubmenuOpen = true;
+        let propagated = false;
+        i._onActivated = (): void => { propagated = true; };
+
+        i.closeEntireMenu();
+
+        assert.equal(i.IsSubmenuOpen, false, 'own submenu closed');
+        assert.ok(propagated, 'propagated up the chain via _onActivated');
     });
 
     test('Checkable MenuItem flips IsChecked on click', () => {

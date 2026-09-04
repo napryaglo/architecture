@@ -181,11 +181,17 @@ resources Menus {
                       Width                = 24,
                       MinWidth             = 24,
                       TextBlock.Foreground = @OnSurfaceVariant ]
-                // The submenu ▶ (empty when there's no submenu) pinned right.
-                TextBlock x:name="PART_Chevron"
-                    [ DockPanel.Dock = Right,
-                      Width          = 12,
-                      Foreground     = @OnSurfaceVariant ]
+                // The submenu chevron — a 5×10 @ChevronRight Shape pinned
+                // right, collapsed until refreshRow shows it for items that
+                // actually have a submenu.
+                Shape x:name="PART_Chevron"
+                    [ DockPanel.Dock   = Right,
+                      Geometry          = @ChevronRight,
+                      Fill              = @OnSurfaceVariant,
+                      Width             = 5,
+                      Height            = 10,
+                      VerticalAlignment = Center,
+                      Visibility        = Collapsed ]
                 // Keyboard-gesture text sits just left of the chevron, also right-docked.
                 TextBlock x:name="PART_Gesture"
                     [ DockPanel.Dock = Right,
@@ -279,7 +285,9 @@ resources Menus {
                       Foreground = @OnSurface,
                       Style      = @LabelLarge ]
                 TextBlock x:name="PART_Gesture" [ Width = 0, Foreground = @OnSurfaceVariant ]
-                TextBlock x:name="PART_Chevron" [ Width = 0, Foreground = @OnSurfaceVariant ]
+                // Suppressed on the strip (top-level items never show a submenu
+                // chevron): a zero-width Shape stays invisible even when shown.
+                Shape x:name="PART_Chevron" [ Geometry = @ChevronRight, Fill = @OnSurfaceVariant, Width = 0, Height = 10 ]
             }
         }
         // State-layer tokens — see DefaultMenuItemRow above for why.
