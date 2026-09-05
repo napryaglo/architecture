@@ -6,6 +6,7 @@
     Rect,
     Size,
     Element, Visual,
+    Visibility,
     type DrawingContext,
     type PropertyDescriptor,
 } from '../../runtime/index.js';
@@ -171,8 +172,8 @@ export class ToolBar extends ItemsControl
 
     // After applyDefaultStyle, ItemsControl's primary Template has been
     // materialised as super.visualChildren[0]. Find the chevron part and
-    // wire its click handler. The chevron's width is toggled between
-    // Number.NaN (auto) and 0 by applyChevronVisibility based on
+    // wire its click handler. The chevron's Visibility is toggled between
+    // Visible and Collapsed by applyChevronVisibility based on
     // HasOverflowItems.
     private adoptInlineTemplate(): void
     {
@@ -234,13 +235,16 @@ export class ToolBar extends ItemsControl
     public get PopupTemplate():  ControlTemplate | undefined { return this.get_property_value(ToolBar.PopupTemplateKey); }
     public set PopupTemplate(v: ControlTemplate | undefined) { this.set_property_value(ToolBar.PopupTemplateKey, v); }
 
-    // Width=0 collapses the chevron flush so the toolbar reads as if
-    // it has no overflow region; restoring sets Width to NaN which the
-    // layout pipeline treats as "auto-size to content" (the chevron
-    // re-measures to its natural glyph + padding width).
+    // Collapse the chevron out of layout when there's no overflow so the
+    // toolbar reads as if it has no overflow region — no space reserved and,
+    // critically, nothing painted. (Zeroing Width instead left the 16dp `⋯`
+    // glyph painting outside the empty button, since the chevron's chrome
+    // template doesn't clip its content — the stray three-dots artifact at
+    // each toolbar's edge.) Visible restores auto-size to the natural
+    // glyph + padding width.
     private applyChevronVisibility(visible: boolean): void
     {
-        this._chevron.Width = visible ? Number.NaN : 0;
+        this._chevron.Visibility = visible ? Visibility.Visible : Visibility.Collapsed;
     }
 
     public get IsOverflowOpen():  boolean { return this.get_property_value(ToolBar.IsOverflowOpenKey); }

@@ -312,10 +312,11 @@ resources ToolBars {
     // gets its click handler wired here, the popup is materialised
     // separately via @DefaultToolBarPopup.
     //
-    // The chevron is a plain Button (Filled variant — gets its M3 pill
-    // chrome from the basic theme). Its width is toggled between
-    // Number.NaN (auto) and 0 by ToolBar.applyChevronVisibility based
-    // on whether any items have overflowed.
+    // The chevron is a plain Button (subtle peer chrome via
+    // @ToolBarChevronButton). Its Visibility is toggled between Visible and
+    // Collapsed by ToolBar.applyChevronVisibility based on whether any items
+    // have overflowed — collapsed reserves no space AND paints nothing, so the
+    // 16dp `⋯` glyph never leaks past an empty button.
     // Chrome is borderless + fill-free by default: the connected-bar
     // buttons carry their own @SurfaceContainerHigh chrome and rounded
     // group ends (via ToolBarButton.Position), so an outlined @Surface box

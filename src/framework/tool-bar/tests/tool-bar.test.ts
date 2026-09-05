@@ -443,6 +443,40 @@ describe('ToolBar — split-button group chrome', () => {
         assert.equal(radiusOf(button), 8, 'solo button: uniform @ShapeSmall on every corner');
         assert.equal(dividerVisible(button), false, 'solo button: no leading divider');
     });
+
+    // Regression: with nothing overflowing, the overflow chevron must be
+    // Collapsed — NOT merely zero-width. The chevron chrome doesn't clip its
+    // content, so a zero-width-but-Visible chevron painted its 16dp `⋯` glyph
+    // outside the empty button (the stray three-dots artifact at each toolbar
+    // edge). Collapsed reserves no space and paints nothing.
+    test('the overflow chevron is Collapsed when nothing overflows', () => {
+        const tb = threeButtonBar();
+        const target = new HeadlessTarget(600, 80, tb);
+        target.Flush();
+
+        assert.equal(tb.HasOverflowItems, false, 'wide bar: no overflow');
+        const chevron = findNamed(tb, 'PART_Chevron')!;
+        assert.equal(
+            (chevron as unknown as { Visibility: Visibility }).Visibility,
+            Visibility.Collapsed,
+            'no-overflow chevron is Collapsed so its glyph never paints');
+    });
+
+    // The complement: once items overflow, the chevron returns to Visible so the
+    // popup affordance is reachable.
+    test('the overflow chevron is Visible once items overflow', () => {
+        const tb = threeButtonBar();
+        // Narrow budget → the three buttons cannot all fit → overflow.
+        const target = new HeadlessTarget(48, 80, tb);
+        target.Flush();
+
+        assert.equal(tb.HasOverflowItems, true, 'narrow bar: items overflow');
+        const chevron = findNamed(tb, 'PART_Chevron')!;
+        assert.equal(
+            (chevron as unknown as { Visibility: Visibility }).Visibility,
+            Visibility.Visible,
+            'overflowing chevron is Visible so the popup is reachable');
+    });
 });
 
 describe('ToolBarPanel — overflow math', () => {
