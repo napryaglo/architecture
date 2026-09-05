@@ -74,7 +74,7 @@ resources ToolBars {
         when ( Position = Last ) { PART_Border.CornerRadius = (0,@ShapeSmall,@ShapeSmall,0); PART_StateLayer.CornerRadius = (0,@ShapeSmall,@ShapeSmall,0); PART_Divider.Visibility = Visible; }
         // Adaptive layout — tighter in Compact, larger touch target
         // on coarse-pointer devices.
-        when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (8,6,8,6); }
         when ( ThemeManager.Density = Comfortable ) { PART_StateLayer.Padding = (16,10,16,10); }
         when ( ThemeManager.Pointer = Coarse ) { PART_StateLayer.Padding = (16,14,16,14); }
     }
@@ -145,7 +145,7 @@ resources ToolBars {
         // Adaptive layout (§ 17.7) — match DefaultToolBarButton's
         // density / pointer triggers so the connected-bar group stays
         // visually consistent when one button is a toggle.
-        when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (8,6,8,6); }
         when ( ThemeManager.Density = Comfortable ) { PART_StateLayer.Padding = (16,10,16,10); }
         when ( ThemeManager.Pointer = Coarse ) { PART_StateLayer.Padding = (16,14,16,14); }
     }
@@ -220,8 +220,8 @@ resources ToolBars {
         // split button ignored density and stood a size taller than its peers in
         // a Compact toolbar.
         when ( ThemeManager.Density = Compact ) {
-            PART_PrimaryState.Padding = (8,4,8,4);
-            PART_ArrowState.Padding = (6,4,6,4);
+            PART_PrimaryState.Padding = (8,6,8,6);
+            PART_ArrowState.Padding = (6,6,6,6);
         }
         when ( ThemeManager.Density = Comfortable ) {
             PART_PrimaryState.Padding = (16,10,14,10);
@@ -260,7 +260,7 @@ resources ToolBars {
         // Density ladder — match DefaultToolBarButton's padding so the icon-only
         // dropdown (the command SplitMenu / SplitGrid groups) shrinks in Compact
         // like its flat neighbours instead of standing a size taller.
-        when ( ThemeManager.Density = Compact ) { PART_PrimaryState.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Compact ) { PART_PrimaryState.Padding = (8,6,8,6); }
         when ( ThemeManager.Density = Comfortable ) { PART_PrimaryState.Padding = (16,10,16,10); }
         when ( ThemeManager.Pointer = Coarse ) { PART_PrimaryState.Padding = (16,14,16,14); }
     }
@@ -325,13 +325,32 @@ resources ToolBars {
     // contrast re-instates a 1px outline so the strip stays delineated for
     // users who need the edge cue. BorderBrush stays declared so that
     // trigger has a stroke to switch on.
+    // Overflow chevron chrome — the "⋯" reads as a PEER toolbar button, not the
+    // default Filled (primary-coloured) Button pill it used to be: subtle
+    // @SurfaceContainerHigh fill, @ShapeSmall corners, OnSurfaceVariant state
+    // layer, and the same density-tracked padding as the connected-bar buttons
+    // so it stands exactly their height (28dp in Compact) instead of a size
+    // taller and a colour louder than everything beside it.
+    Template x:key="ToolBarChevronButton" [ TargetType = Button ] {
+        Border x:name="PART_Border" [ Fill = @SurfaceContainerHigh, CornerRadius = @ShapeSmall ] {
+            Border x:name="PART_State" [ Fill = #00000000, CornerRadius = @ShapeSmall, Padding = (12,8,12,8) ] {
+                ContentPresenter [ HorizontalAlignment = Center, VerticalAlignment = Center ]
+            }
+        }
+        when ( IsMouseOver ) { PART_State.Fill = @OnSurfaceVariantHoverLayer; }
+        when ( IsPressed ) { PART_State.Fill = @OnSurfaceVariantPressLayer; }
+        when ( ThemeManager.Density = Compact ) { PART_State.Padding = (8,6,8,6); }
+        when ( ThemeManager.Density = Comfortable ) { PART_State.Padding = (16,10,16,10); }
+        when ( ThemeManager.Pointer = Coarse ) { PART_State.Padding = (16,14,16,14); }
+    }
+
     Template x:key="DefaultToolBar" [TargetType = ToolBar] {
         Border x:name="PART_Border"
             [ Stroke     = (@Outline, 0),
               Padding         = (4) ] {
             DockPanel x:name="PART_Layout" [ LastChildFill = true ] {
-                Button x:name="PART_Chevron" [ DockPanel.Dock = Right ] {
-                    TextBlock [ Text = "⋯" ]
+                Button x:name="PART_Chevron" [ DockPanel.Dock = Right, Template = @ToolBarChevronButton ] {
+                    Shape [ Geometry = @MoreHoriz, Fill = @OnSurfaceVariant, Width = 16, Height = 16 ]
                 }
                 ItemsPresenter x:name="PART_ItemsPresenter"
             }
