@@ -30,30 +30,48 @@ resources ToolBars {
     // glyph); a ToolBarButton with `ShowText=true` carries enough room
     // for the label via the inner StackPanel's margin (set by
     // rebuildContent in tool-bar-items.ts).
+    //
+    // Chrome shape follows the split button (DefaultToolBarSplitTrigger): a
+    // connected group reads as one @ShapeSmall-cornered capsule with a 1dp
+    // divider cueing each internal boundary — exactly the two-half split-button
+    // look, generalised to N buttons. The leading PART_Divider (same idiom as
+    // SegmentedItem) is collapsed on the group's first/only button (the group's
+    // own left edge is the boundary there) and shown for Middle / Last so every
+    // interior seam gets its hairline. Group-end rounding uses @ShapeSmall (not
+    // the former full pill) so the capsule matches the split button's size.
     Template x:key="DefaultToolBarButton" [TargetType = ToolBarButton] {
-        Border x:name="PART_Border"
-            [ Fill      = @SurfaceContainerHigh,
-              CornerRadius    = 0 ] {
-            // Transparent inner state layer (M3 state-layer model): the
-            // resting @SurfaceContainerHigh base stays put and hover / press
-            // paint a translucent OnSurfaceVariant tint ON TOP of it here,
-            // rather than swapping the base to a darker container step — which
-            // read as an abrupt "goes dark" flash. The layer carries the
-            // button padding so the tint covers the whole button; Border does
-            // NOT clip its child to CornerRadius, so the Position triggers
-            // round this layer in lock-step with PART_Border.
-            Border x:name="PART_StateLayer"
-                [ Fill   = #00000000,
-                  CornerRadius = 0,
-                  Padding      = (12,8,12,8) ] {
-                ContentPresenter
+        StackPanel [ Orientation = Horizontal ] {
+            // Leading boundary with the preceding button in the group. Vertical
+            // Line stretches to the button height; cross-axis size = 1dp pen.
+            // Sits OUTSIDE PART_Border so the hover / press state layer never
+            // tints it — it stays a constant hairline like the split button's.
+            Line x:name="PART_Divider"
+                [ Orientation = Vertical, Stroke = (@OutlineVariant, 1), Visibility = Collapsed ]
+            Border x:name="PART_Border"
+                [ Fill      = @SurfaceContainerHigh,
+                  CornerRadius    = 0 ] {
+                // Transparent inner state layer (M3 state-layer model): the
+                // resting @SurfaceContainerHigh base stays put and hover / press
+                // paint a translucent OnSurfaceVariant tint ON TOP of it here,
+                // rather than swapping the base to a darker container step — which
+                // read as an abrupt "goes dark" flash. The layer carries the
+                // button padding so the tint covers the whole button; Border does
+                // NOT clip its child to CornerRadius, so the Position triggers
+                // round this layer in lock-step with PART_Border.
+                Border x:name="PART_StateLayer"
+                    [ Fill   = #00000000,
+                      CornerRadius = 0,
+                      Padding      = (12,8,12,8) ] {
+                    ContentPresenter
+                }
             }
         }
         when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
         when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
-        when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; PART_StateLayer.CornerRadius = CornerRadius.Full; }
-        when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; PART_StateLayer.CornerRadius = CornerRadius.LeftRounded; }
-        when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; PART_StateLayer.CornerRadius = CornerRadius.RightRounded; }
+        when ( Position = Only ) { PART_Border.CornerRadius = @ShapeSmall; PART_StateLayer.CornerRadius = @ShapeSmall; }
+        when ( Position = First ) { PART_Border.CornerRadius = (@ShapeSmall,0,0,@ShapeSmall); PART_StateLayer.CornerRadius = (@ShapeSmall,0,0,@ShapeSmall); }
+        when ( Position = Middle ) { PART_Divider.Visibility = Visible; }
+        when ( Position = Last ) { PART_Border.CornerRadius = (0,@ShapeSmall,@ShapeSmall,0); PART_StateLayer.CornerRadius = (0,@ShapeSmall,@ShapeSmall,0); PART_Divider.Visibility = Visible; }
         // Adaptive layout — tighter in Compact, larger touch target
         // on coarse-pointer devices.
         when ( ThemeManager.Density = Compact ) { PART_StateLayer.Padding = (8,4,8,4); }
@@ -93,28 +111,37 @@ resources ToolBars {
     // 3-segment PART_Border.TextBlock.Foreground path — same reason the
     // IconButtonToggle Style carries its checked foregrounds.
     Template x:key="DefaultToolBarToggleButton" [TargetType = ToolBarToggleButton] {
-        Border x:name="PART_Border"
-            [ Fill      = @SurfaceContainerHigh,
-              CornerRadius    = 0 ] {
-            // Same transparent state layer as DefaultToolBarButton — hover /
-            // press ride a translucent OnSurfaceVariant tint ON TOP of the
-            // base, matching the Filled IconButtonToggle. IsChecked swaps the
-            // base fill (PART_Border.Fill) to @Primary; the state layer
-            // overlays either base without touching it, so checked + hover
-            // composes as Primary + tint instead of one darkening the other.
-            Border x:name="PART_StateLayer"
-                [ Fill   = #00000000,
-                  CornerRadius = 0,
-                  Padding      = (12,8,12,8) ] {
-                ContentPresenter
+        StackPanel [ Orientation = Horizontal ] {
+            // Leading group boundary — same split-button hairline as
+            // DefaultToolBarButton; outside PART_Border so the checked @Primary
+            // fill and the state layer never swallow it. Collapsed on First /
+            // Only, shown for Middle / Last.
+            Line x:name="PART_Divider"
+                [ Orientation = Vertical, Stroke = (@OutlineVariant, 1), Visibility = Collapsed ]
+            Border x:name="PART_Border"
+                [ Fill      = @SurfaceContainerHigh,
+                  CornerRadius    = 0 ] {
+                // Same transparent state layer as DefaultToolBarButton — hover /
+                // press ride a translucent OnSurfaceVariant tint ON TOP of the
+                // base, matching the Filled IconButtonToggle. IsChecked swaps the
+                // base fill (PART_Border.Fill) to @Primary; the state layer
+                // overlays either base without touching it, so checked + hover
+                // composes as Primary + tint instead of one darkening the other.
+                Border x:name="PART_StateLayer"
+                    [ Fill   = #00000000,
+                      CornerRadius = 0,
+                      Padding      = (12,8,12,8) ] {
+                    ContentPresenter
+                }
             }
         }
         when ( IsMouseOver ) { PART_StateLayer.Fill = @OnSurfaceVariantHoverLayer; }
         when ( IsPressed ) { PART_StateLayer.Fill = @OnSurfaceVariantPressLayer; }
         when ( IsChecked ) { PART_Border.Fill = @Primary; }
-        when ( Position = Only ) { PART_Border.CornerRadius = CornerRadius.Full; PART_StateLayer.CornerRadius = CornerRadius.Full; }
-        when ( Position = First ) { PART_Border.CornerRadius = CornerRadius.LeftRounded; PART_StateLayer.CornerRadius = CornerRadius.LeftRounded; }
-        when ( Position = Last ) { PART_Border.CornerRadius = CornerRadius.RightRounded; PART_StateLayer.CornerRadius = CornerRadius.RightRounded; }
+        when ( Position = Only ) { PART_Border.CornerRadius = @ShapeSmall; PART_StateLayer.CornerRadius = @ShapeSmall; }
+        when ( Position = First ) { PART_Border.CornerRadius = (@ShapeSmall,0,0,@ShapeSmall); PART_StateLayer.CornerRadius = (@ShapeSmall,0,0,@ShapeSmall); }
+        when ( Position = Middle ) { PART_Divider.Visibility = Visible; }
+        when ( Position = Last ) { PART_Border.CornerRadius = (0,@ShapeSmall,@ShapeSmall,0); PART_StateLayer.CornerRadius = (0,@ShapeSmall,@ShapeSmall,0); PART_Divider.Visibility = Visible; }
         // Adaptive layout (§ 17.7) — match DefaultToolBarButton's
         // density / pointer triggers so the connected-bar group stays
         // visually consistent when one button is a toggle.

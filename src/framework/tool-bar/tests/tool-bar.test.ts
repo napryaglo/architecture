@@ -2,7 +2,8 @@ import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
-import { Application, RelayCommand, Size, Style, Setter, PropertyTrigger, TriggerUnset, Visual, NoModifiers, PointerButton, type PointerEventInit } from '../../../runtime/index.js';
+import { Application, RelayCommand, Size, Style, Setter, PropertyTrigger, TriggerUnset, Visual, Visibility, NoModifiers, PointerButton, type PointerEventInit } from '../../../runtime/index.js';
+import { CornerRadius } from '../../../visual-engine/index.js';
 import { ControlTemplate } from '../../../basic/templates/control-template.js';
 import { ToolBar, ToolBarPanel } from '../tool-bar.js';
 import { ToolBarButton, ToolBarSeparator, ToolBarPosition } from '../tool-bar-items.js';
@@ -319,6 +320,112 @@ describe('ToolBarSplitButton — primary + dropdown', () => {
         pressRelease(hosted);
         assert.equal(ran, 0, 'the disabled command did not run');
         assert.equal(sb.IsOpen, false, 'the popup still closed despite the disabled command');
+    });
+});
+
+describe('ToolBar — split-button group chrome', () => {
+    beforeEach(() => { initTestApp(); });
+
+    function collect(root: Visual, name: string): Visual[] {
+        const out: Visual[] = [];
+        const walk = (v: Visual): void => {
+            if (v.constructor.name === name) out.push(v);
+            for (const k of (v as unknown as { visualChildren: Iterable<Visual> }).visualChildren) walk(k);
+        };
+        walk(root);
+        return out;
+    }
+    function findNamed(root: Visual, target: string): Visual | undefined {
+        const stack: Visual[] = [root];
+        while (stack.length > 0) {
+            const cur = stack.pop()!;
+            if ((cur as unknown as { Name?: string }).Name === target) return cur;
+            for (const c of (cur as unknown as { visualChildren: Iterable<Visual> }).visualChildren) stack.push(c);
+        }
+        return undefined;
+    }
+    function radiusOf(button: Visual): CornerRadius | number {
+        const border = findNamed(button, 'PART_Border')!;
+        return (border as unknown as { CornerRadius: CornerRadius | number }).CornerRadius;
+    }
+    function dividerVisible(button: Visual): boolean {
+        const divider = findNamed(button, 'PART_Divider')!;
+        return (divider as unknown as { Visibility: Visibility }).Visibility === Visibility.Visible;
+    }
+
+    function threeButtonBar(): ToolBar {
+        const tb = new ToolBar();
+        tb.ItemTemplate = new DataTemplate(() => {
+            const btn = new ToolBarButton();
+            const icon = new Border();
+            icon.Width = 20; icon.Height = 20;
+            btn.Content = icon;
+            return btn;
+        });
+        tb.ItemsSource = [{ id: 1 }, { id: 2 }, { id: 3 }];
+        return tb;
+    }
+
+    // The connected group reads like a split button: interior seams carry the
+    // 1dp PART_Divider hairline, and it is collapsed on the group's first
+    // button (the group's own left edge is the boundary there).
+    test('interior boundaries show the divider; the first button does not', () => {
+        const tb = threeButtonBar();
+        const target = new HeadlessTarget(600, 80, tb);
+        target.Flush();
+
+        const buttons = collect(tb, 'ToolBarButton');
+        assert.equal(buttons.length, 3);
+        assert.equal(dividerVisible(buttons[0]!), false, 'first button: no leading divider');
+        assert.equal(dividerVisible(buttons[1]!), true,  'middle button: divider cues the seam');
+        assert.equal(dividerVisible(buttons[2]!), true,  'last button: divider cues the seam');
+    });
+
+    // Group-end rounding is the split button's @ShapeSmall (8dp) capsule, NOT
+    // the former full-pill (CornerRadius.Full, infinite radius). First rounds
+    // its outer-left corners only, Last its outer-right only, interior square.
+    test('group ends round to @ShapeSmall (8dp), not the full pill', () => {
+        const tb = threeButtonBar();
+        const target = new HeadlessTarget(600, 80, tb);
+        target.Flush();
+
+        const buttons = collect(tb, 'ToolBarButton');
+        const first = radiusOf(buttons[0]!) as CornerRadius;
+        const middle = radiusOf(buttons[1]!);
+        const last = radiusOf(buttons[2]!) as CornerRadius;
+
+        assert.equal(first.TopLeft, 8,     'first: outer-left rounded to @ShapeSmall');
+        assert.equal(first.BottomLeft, 8,  'first: outer-left rounded to @ShapeSmall');
+        assert.equal(first.TopRight, 0,    'first: inner-right square (flush with next)');
+        assert.equal(Number.isFinite(first.TopLeft), true, 'no longer the infinite full-pill radius');
+
+        // Interior button: uniform 0 (a plain number, square all round).
+        assert.equal(middle, 0, 'middle button is square');
+
+        assert.equal(last.TopRight, 8,     'last: outer-right rounded to @ShapeSmall');
+        assert.equal(last.BottomRight, 8,  'last: outer-right rounded to @ShapeSmall');
+        assert.equal(last.TopLeft, 0,      'last: inner-left square (flush with previous)');
+    });
+
+    // A lone button in its own ToolBar is Position=Only → all four corners
+    // @ShapeSmall, no divider (nothing precedes it).
+    test('a solo button rounds all four corners and shows no divider', () => {
+        const tb = new ToolBar();
+        tb.ItemTemplate = new DataTemplate(() => {
+            const btn = new ToolBarButton();
+            const icon = new Border();
+            icon.Width = 20; icon.Height = 20;
+            btn.Content = icon;
+            return btn;
+        });
+        tb.ItemsSource = [{ id: 1 }];
+        const target = new HeadlessTarget(600, 80, tb);
+        target.Flush();
+
+        const button = collect(tb, 'ToolBarButton')[0]!;
+        assert.equal(button.constructor.name, 'ToolBarButton');
+        assert.equal(radiusOf(button), 8, 'solo button: uniform @ShapeSmall on every corner');
+        assert.equal(dividerVisible(button), false, 'solo button: no leading divider');
     });
 });
 
