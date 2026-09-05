@@ -214,6 +214,23 @@ resources ToolBars {
         when ( PART_Arrow.IsMouseOver ) { PART_ArrowState.Fill = @OnSurfaceVariantHoverLayer; }
         when ( PART_Arrow.IsPressed ) { PART_ArrowState.Fill = @OnSurfaceVariantPressLayer; }
         when ( IsEnabled = false ) { PART_Primary.Opacity = @DisabledContentOpacity; PART_Arrow.Opacity = @DisabledContentOpacity; }
+        // Density ladder — mirror DefaultToolBarButton's VERTICAL padding
+        // (base 8 → Compact 4, Comfortable 10, Coarse 14) so a split button's
+        // height tracks the flat toolbar buttons it sits beside. Without this the
+        // split button ignored density and stood a size taller than its peers in
+        // a Compact toolbar.
+        when ( ThemeManager.Density = Compact ) {
+            PART_PrimaryState.Padding = (8,4,8,4);
+            PART_ArrowState.Padding = (6,4,6,4);
+        }
+        when ( ThemeManager.Density = Comfortable ) {
+            PART_PrimaryState.Padding = (16,10,14,10);
+            PART_ArrowState.Padding = (10,10,10,10);
+        }
+        when ( ThemeManager.Pointer = Coarse ) {
+            PART_PrimaryState.Padding = (16,14,14,14);
+            PART_ArrowState.Padding = (10,14,10,14);
+        }
     }
     // Dropdown chrome (single-part) — adopted when the split button has NO
     // Command, so the whole button is one hit region that opens the popup.
@@ -240,6 +257,12 @@ resources ToolBars {
         when ( PART_Primary.IsMouseOver ) { PART_PrimaryState.Fill = @OnSurfaceVariantHoverLayer; }
         when ( PART_Primary.IsPressed ) { PART_PrimaryState.Fill = @OnSurfaceVariantPressLayer; }
         when ( IsEnabled = false ) { PART_Primary.Opacity = @DisabledContentOpacity; }
+        // Density ladder — match DefaultToolBarButton's padding so the icon-only
+        // dropdown (the command SplitMenu / SplitGrid groups) shrinks in Compact
+        // like its flat neighbours instead of standing a size taller.
+        when ( ThemeManager.Density = Compact ) { PART_PrimaryState.Padding = (8,4,8,4); }
+        when ( ThemeManager.Density = Comfortable ) { PART_PrimaryState.Padding = (16,10,16,10); }
+        when ( ThemeManager.Pointer = Coarse ) { PART_PrimaryState.Padding = (16,14,16,14); }
     }
     // Popup chrome — MenuPopupHost positions PART_PopupContainer below the
     // primary half; ItemsPresenter renders the MenuItem children.
