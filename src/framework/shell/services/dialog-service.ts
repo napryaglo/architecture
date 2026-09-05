@@ -9,18 +9,20 @@
 import { HorizontalAlignment, VerticalAlignment, type Brush } from '../../../visual-engine/index.js';
 import { Border } from '../../../basic/border.js';
 import { Dialog } from '../../surfaces/dialog.js';
+import { DialogAction } from '../../surfaces/dialog-action.js';
 import { ScrimSurface } from '../../surfaces/drawer.js';
 import { showDialog } from '../../overlay-helpers.js';
 
 // What to show in a modal dialog. `Content` is the body — a MuralBase (rendered by
 // its own DataTemplate, e.g. a SettingsPage) or a ready-made Visual. `Actions` is
-// the optional trailing button row. Sizing is optional; unset lets the dialog
+// the optional trailing action row — an array of DialogAction view-models the
+// Dialog template stamps into Buttons. Sizing is optional; unset lets the dialog
 // size to its content (with the surface centred over the scrim).
 export interface DialogOptions
 {
     readonly Title?: string;
     readonly Content: MuralBase | Visual;
-    readonly Actions?: Visual;
+    readonly Actions?: readonly DialogAction[];
     // Fixed body width / max height for large content (a settings page): the
     // content's own ScrollViewer scrolls within the bounded surface. Omit for
     // small prompts that should size to their text.

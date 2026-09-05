@@ -409,6 +409,7 @@ const ENTRIES: ReadonlyArray<readonly [string, string]> = [
     ['Banner',                  '@pragmatic-tech-ai/mural/framework/notifications/banner.js'],
     ['Snackbar',                '@pragmatic-tech-ai/mural/framework/notifications/snackbar.js'],
     ['Dialog',                  '@pragmatic-tech-ai/mural/framework/surfaces/dialog.js'],
+    ['DialogAction',            '@pragmatic-tech-ai/mural/framework/surfaces/dialog-action.js'],
     ['BottomSheet',             '@pragmatic-tech-ai/mural/framework/surfaces/bottom-sheet.js'],
     ['ToolBar',                 '@pragmatic-tech-ai/mural/framework/surface.js'],
     ['ToolBarButton',           '@pragmatic-tech-ai/mural/framework/surface.js'],

@@ -15,20 +15,6 @@ import DialogDemoVM from "./dialog-vm.mjs"
 //     it. All state rides through Observable INPC bindings.
 
 resources DialogDemo {
-    // The dialog's trailing action row. A DP value can't be an element carrying
-    // a `{ … }` child block, so the multi-button row lives here as a keyed
-    // resource and the Dialog references it via `Actions = @DeleteDialogActions`.
-    // Placed inside the dialog (under the VM DataContext), the $-command bindings
-    // resolve against the DialogDemoVM.
-    StackPanel x:key="DeleteDialogActions" [ Orientation = Horizontal, HorizontalAlignment = Right ] {
-        Button [ Variant = Text, Command = $CancelCommand, Margin = (0,0,8,0) ] {
-            TextBlock [ Text = "Cancel" ]
-        }
-        Button [ Variant = Filled, Command = $DeleteCommand ] {
-            TextBlock [ Text = "Delete" ]
-        }
-    }
-
     DataTemplate [DataType = DialogDemoVM] {
         Border [ Fill = @Surface, Stroke = Pen [ Brush = @OutlineVariant ] ] {
             DockPanel [ LastChildFill = true ] {
@@ -70,7 +56,7 @@ resources DialogDemo {
                           Width               = 360,
                           HorizontalAlignment = Center,
                           VerticalAlignment   = Center,
-                          Actions             = @DeleteDialogActions ] {
+                          Actions             = $Actions ] {
                         TextBlock
                             [ Text         = "This permanently deletes report.pdf. This action can't be undone.",
                               TextWrapping = Wrap,

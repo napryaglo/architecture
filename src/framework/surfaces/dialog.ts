@@ -1,5 +1,6 @@
-﻿import { MetaData, MuralBase, Element, Visual } from '../../runtime/index.js';
+﻿import { MetaData, MuralBase, Element } from '../../runtime/index.js';
 import { ContentControl } from '../base/content-control.js';
+import { DialogAction } from './dialog-action.js';
 
 // M3 Dialog — modal surface with title + content + actions, anchored
 // over a scrim that absorbs outside clicks.
@@ -19,19 +20,30 @@ import { ContentControl } from '../base/content-control.js';
 //
 // Slots — Title (string DP for the headline), Content (inherited
 // from ContentControl) for the body, Actions for the trailing action
-// row (typically Text Buttons per M3 spec).
+// row: an array of DialogAction view-models the template's ItemsControl
+// stamps into Buttons (one per action) via its DataTemplate.
 export class Dialog extends ContentControl
 {
     public static readonly TitleKey = MuralBase.RegisterProperty<string>(
         Dialog, 'Title', '', MetaData.Render);
-    public static readonly ActionsKey = MuralBase.RegisterProperty<Visual | undefined>(
+    public static readonly ActionsKey = MuralBase.RegisterProperty<readonly DialogAction[] | undefined>(
         Dialog, 'Actions', undefined, MetaData.Render);
 
     public get Title(): string { return this.get_property_value(Dialog.TitleKey); }
     public set Title(v: string) { this.set_property_value(Dialog.TitleKey, v); }
 
-    public get Actions(): Visual | undefined { return this.get_property_value(Dialog.ActionsKey); }
-    public set Actions(v: Visual | undefined) { this.set_property_value(Dialog.ActionsKey, v); }
+    public get Actions(): readonly DialogAction[] | undefined { return this.get_property_value(Dialog.ActionsKey); }
+    public set Actions(v: readonly DialogAction[] | undefined) { this.set_property_value(Dialog.ActionsKey, v); }
+
+    constructor()
+    {
+        super();
+        // Eagerly resolve the default Style (DefaultDialog template) — the
+        // convention for templated controls (Element.applyDefaultStyle), so a
+        // standalone Dialog (e.g. DialogService's `new Dialog()`, or a test) has
+        // its chrome + Actions ItemsControl before it's tree-mounted.
+        this.applyDefaultStyle();
+    }
 
     static {
         MuralBase.OverrideMetadata(

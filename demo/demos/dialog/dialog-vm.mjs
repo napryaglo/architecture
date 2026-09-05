@@ -4,19 +4,25 @@
 // the last action the user chose. Derives from Observable (the lightweight INPC
 // root) — no dependency properties are needed here, just bindable state.
 import { Observable, RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
+import { DialogAction } from '@pragmatic-tech-ai/mural/framework';
+import { ButtonVariant } from '@pragmatic-tech-ai/mural/framework';
 export class DialogDemoVM extends Observable {
     // Backing fields — plain state, surfaced through notifying accessors below.
     _isOpen = true;
     _result = 'No choice yet — the dialog is open.';
-    // Commands are created once in the ctor; the view binds the action buttons
-    // (Cancel / Delete) and the "Show dialog" trigger to them.
-    _cancelCommand;
-    _deleteCommand;
+    // The dialog's trailing actions — one DialogAction VM each. The Dialog
+    // template's ItemsControl stamps a Button per action; Delete is the primary
+    // (Filled) action, Cancel the secondary (Text). Built once in the ctor.
+    _actions;
     _showCommand;
     constructor() {
         super();
-        this._cancelCommand = new RelayCommand(() => { this.Result = 'Cancelled — nothing was deleted.'; this.IsOpen = false; });
-        this._deleteCommand = new RelayCommand(() => { this.Result = 'Deleted report.pdf.'; this.IsOpen = false; });
+        const cancel = new RelayCommand(() => { this.Result = 'Cancelled — nothing was deleted.'; this.IsOpen = false; });
+        const del = new RelayCommand(() => { this.Result = 'Deleted report.pdf.'; this.IsOpen = false; });
+        this._actions = [
+            new DialogAction('Cancel', cancel, ButtonVariant.Text),
+            new DialogAction('Delete', del, ButtonVariant.Filled),
+        ];
         this._showCommand = new RelayCommand(() => { this.Result = 'No choice yet — the dialog is open.'; this.IsOpen = true; });
     }
     // Drives the inline Dialog's (and its backdrop's) Visibility through
@@ -39,7 +45,8 @@ export class DialogDemoVM extends Observable {
         this._result = v;
         this.RaisePropertyChanged('Result', old, v);
     }
-    get CancelCommand() { return this._cancelCommand; }
-    get DeleteCommand() { return this._deleteCommand; }
+    // The Dialog binds Actions to this array; the template renders one Button
+    // per DialogAction through its DataTemplate.
+    get Actions() { return this._actions; }
     get ShowCommand() { return this._showCommand; }
 }

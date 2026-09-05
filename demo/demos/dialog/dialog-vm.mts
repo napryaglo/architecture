@@ -4,6 +4,8 @@
 // the last action the user chose. Derives from Observable (the lightweight INPC
 // root) — no dependency properties are needed here, just bindable state.
 import { Observable, RelayCommand } from '@pragmatic-tech-ai/mural/runtime';
+import { DialogAction } from '@pragmatic-tech-ai/mural/framework';
+import { ButtonVariant } from '@pragmatic-tech-ai/mural/framework';
 
 export class DialogDemoVM extends Observable
 {
@@ -11,18 +13,22 @@ export class DialogDemoVM extends Observable
     private _isOpen = true;
     private _result = 'No choice yet — the dialog is open.';
 
-    // Commands are created once in the ctor; the view binds the action buttons
-    // (Cancel / Delete) and the "Show dialog" trigger to them.
-    private readonly _cancelCommand: RelayCommand;
-    private readonly _deleteCommand: RelayCommand;
-    private readonly _showCommand:   RelayCommand;
+    // The dialog's trailing actions — one DialogAction VM each. The Dialog
+    // template's ItemsControl stamps a Button per action; Delete is the primary
+    // (Filled) action, Cancel the secondary (Text). Built once in the ctor.
+    private readonly _actions: readonly DialogAction[];
+    private readonly _showCommand: RelayCommand;
 
     public constructor()
     {
         super();
-        this._cancelCommand = new RelayCommand(() => { this.Result = 'Cancelled — nothing was deleted.'; this.IsOpen = false; });
-        this._deleteCommand = new RelayCommand(() => { this.Result = 'Deleted report.pdf.';               this.IsOpen = false; });
-        this._showCommand   = new RelayCommand(() => { this.Result = 'No choice yet — the dialog is open.'; this.IsOpen = true; });
+        const cancel = new RelayCommand(() => { this.Result = 'Cancelled — nothing was deleted.'; this.IsOpen = false; });
+        const del    = new RelayCommand(() => { this.Result = 'Deleted report.pdf.';               this.IsOpen = false; });
+        this._actions = [
+            new DialogAction('Cancel', cancel, ButtonVariant.Text),
+            new DialogAction('Delete', del,    ButtonVariant.Filled),
+        ];
+        this._showCommand = new RelayCommand(() => { this.Result = 'No choice yet — the dialog is open.'; this.IsOpen = true; });
     }
 
     // Drives the inline Dialog's (and its backdrop's) Visibility through
@@ -47,7 +53,8 @@ export class DialogDemoVM extends Observable
         this.RaisePropertyChanged('Result', old, v);
     }
 
-    public get CancelCommand(): RelayCommand { return this._cancelCommand; }
-    public get DeleteCommand(): RelayCommand { return this._deleteCommand; }
-    public get ShowCommand():   RelayCommand { return this._showCommand; }
+    // The Dialog binds Actions to this array; the template renders one Button
+    // per DialogAction through its DataTemplate.
+    public get Actions(): readonly DialogAction[] { return this._actions; }
+    public get ShowCommand(): RelayCommand { return this._showCommand; }
 }

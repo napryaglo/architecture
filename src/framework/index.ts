@@ -119,6 +119,7 @@ export { Carousel } from './carousel/carousel.js';
 export { Banner } from './notifications/banner.js';
 export { Snackbar } from './notifications/snackbar.js';
 export { Dialog } from './surfaces/dialog.js';
+export { DialogAction } from './surfaces/dialog-action.js';
 export { BottomSheet } from './surfaces/bottom-sheet.js';
 export { attachTooltip, showSnackbar, showDialog } from './overlay-helpers.js';
 export { Drawer, DrawerVariant, ScrimSurface, TemporaryOverlayHost } from './surfaces/drawer.js';

@@ -181,6 +181,18 @@ resources Surfaces {
     // onto the PresentationTarget's OverlayLayer and that surface
     // owns the scrim. The dialog template just paints the floating
     // surface itself.
+    // Per-action button — the DataTemplate the Actions ItemsControl stamps once
+    // per DialogAction. Each binds against its DialogAction item (Label / Command
+    // / Variant); a small leading margin spaces the row.
+    DataTemplate x:key="DialogActionTemplate" [DataType = DialogAction] {
+        Button [ Variant = $Variant, Command = $Command, Margin = (@Spacing2,0,0,0) ] {
+            TextBlock [ Text = $Label ]
+        }
+    }
+    ItemsPanelTemplate x:key="DialogActionsPanel" {
+        StackPanel [ Orientation = Horizontal, HorizontalAlignment = Right ]
+    }
+
     Template x:key="DefaultDialog" [TargetType = Dialog] {
         Border x:name="PART_Dialog"
             [ Fill      = @Surface,
@@ -191,13 +203,17 @@ resources Surfaces {
             DockPanel [ LastChildFill = true ] {
                 TextBlock x:name="PART_Title"
                     [ DockPanel.Dock = Top,
-                      Text           = $Title,
+                      Text           = $$Title,
                       Foreground     = @OnSurface,
                       Style          = @HeadlineSmall,
                       Margin         = (0,0,0,@Spacing4) ]
-                ContentPresenter
+                // Trailing action row — one Button per DialogAction, bound to the
+                // control's Actions array via a control binding ($$Actions).
+                ItemsControl x:name="PART_Actions"
                     [ DockPanel.Dock      = Bottom,
-                      Content             = $Actions,
+                      ItemsSource         = $$Actions,
+                      ItemTemplate        = @DialogActionTemplate,
+                      ItemsPanel          = @DialogActionsPanel,
                       HorizontalAlignment = Right,
                       Margin              = (0,@Spacing4,0,0) ]
                 ContentPresenter
