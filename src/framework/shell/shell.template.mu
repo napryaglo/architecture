@@ -99,17 +99,24 @@ resources Shells {
                             // are app-supplied (@Save/@SaveAll via DynamicResource);
                             // absent → empty glyph. Enablement is command-driven
                             // (Save: active dirty; Save All: any dirty).
-                            StackPanel
+                            //
+                            // A ToolBar (not a bare StackPanel of IconButtons), so the
+                            // two buttons connect into one split-button-shaped group —
+                            // @ShapeSmall capsule with a 1dp divider between Save and
+                            // Save All (ToolBar assigns First/Last Position). Icons are
+                            // the 16×16 + Margin (2) command-bar glyph metric so the
+                            // cluster sizes identically to the adjacent command groups
+                            // (was 18×18 IconButtons, which read a size larger).
+                            ToolBar
                                 [ DockPanel.Dock    = Left,
-                                  Orientation       = Horizontal,
                                   VerticalAlignment = Center,
                                   Margin            = (0,0,8,0),
                                   Visibility        = $service(ContentHostService).ActiveDocument << ToVisibility ] {
-                                IconButton [ Variant = Standard, Command = $service(ContentHostService).SaveActiveCommand ] {
-                                    Shape [ Geometry = @Save, Fill = @OnSurfaceVariant, Width = 18, Height = 18 ]
+                                ToolBarButton [ Command = $service(ContentHostService).SaveActiveCommand ] {
+                                    Shape [ Geometry = @Save, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
                                 }
-                                IconButton [ Variant = Standard, Command = $service(ContentHostService).SaveAllCommand ] {
-                                    Shape [ Geometry = @SaveAll, Fill = @OnSurfaceVariant, Width = 18, Height = 18 ]
+                                ToolBarButton [ Command = $service(ContentHostService).SaveAllCommand ] {
+                                    Shape [ Geometry = @SaveAll, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
                                 }
                             }
                             ItemsControl
