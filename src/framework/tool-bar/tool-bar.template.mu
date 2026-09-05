@@ -46,7 +46,7 @@ resources ToolBars {
             // Sits OUTSIDE PART_Border so the hover / press state layer never
             // tints it — it stays a constant hairline like the split button's.
             Line x:name="PART_Divider"
-                [ Orientation = Vertical, Stroke = (@OutlineVariant, 1), Visibility = Collapsed ]
+                [ Orientation = Vertical, Stroke = Pen [ Brush = @OutlineVariant ], Visibility = Collapsed ]
             Border x:name="PART_Border"
                 [ Fill      = @SurfaceContainerHigh,
                   CornerRadius    = 0 ] {
@@ -117,7 +117,7 @@ resources ToolBars {
             // fill and the state layer never swallow it. Collapsed on First /
             // Only, shown for Middle / Last.
             Line x:name="PART_Divider"
-                [ Orientation = Vertical, Stroke = (@OutlineVariant, 1), Visibility = Collapsed ]
+                [ Orientation = Vertical, Stroke = Pen [ Brush = @OutlineVariant ], Visibility = Collapsed ]
             Border x:name="PART_Border"
                 [ Fill      = @SurfaceContainerHigh,
                   CornerRadius    = 0 ] {
@@ -199,7 +199,7 @@ resources ToolBars {
                 // BorderThickness (1,0,0,0); now a vertical oriented Line
                 // docked Left so the 1dp rule cues the two hit targets.
                 DockPanel [ LastChildFill = true ] {
-                    Line [ DockPanel.Dock = Left, Orientation = Vertical, Stroke = (@OutlineVariant, 1) ]
+                    Line [ DockPanel.Dock = Left, Orientation = Vertical, Stroke = Pen [ Brush = @OutlineVariant ] ]
                     Border x:name="PART_ArrowState"
                         [ Fill   = #00000000,
                           CornerRadius = (0,@ShapeSmall,@ShapeSmall,0),

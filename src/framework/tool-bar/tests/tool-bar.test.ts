@@ -381,6 +381,22 @@ describe('ToolBar — split-button group chrome', () => {
         assert.equal(dividerVisible(buttons[2]!), true,  'last button: divider cues the seam');
     });
 
+    // Regression: the divider must actually PAINT, not just be Visible. Its
+    // Stroke has to be a Pen (thickness 1) — authoring it as the `(brush, 1)`
+    // tuple silently makes a Thickness, so the vertical Line measures to 0 width
+    // and the "separator" never shows despite Visibility=Visible.
+    test('the shown divider has a real (non-zero) painted width', () => {
+        const tb = threeButtonBar();
+        const target = new HeadlessTarget(600, 80, tb);
+        target.Flush();
+
+        const last = collect(tb, 'ToolBarButton')[2]!;
+        const divider = findNamed(last, 'PART_Divider')!;
+        const w = (divider as unknown as { ArrangedRect: { Width: number; Height: number } }).ArrangedRect;
+        assert.ok(w.Width >= 1, `divider paints with width >= 1 (got ${w.Width})`);
+        assert.ok(w.Height > 0, `divider stretches to the button height (got ${w.Height})`);
+    });
+
     // Group-end rounding is the split button's @ShapeSmall (8dp) capsule, NOT
     // the former full-pill (CornerRadius.Full, infinite radius). First rounds
     // its outer-left corners only, Last its outer-right only, interior square.

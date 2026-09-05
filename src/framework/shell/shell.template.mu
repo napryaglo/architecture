@@ -113,10 +113,10 @@ resources Shells {
                                   Margin            = (0,0,8,0),
                                   Visibility        = $service(ContentHostService).ActiveDocument << ToVisibility ] {
                                 ToolBarButton [ Command = $service(ContentHostService).SaveActiveCommand ] {
-                                    Shape [ Geometry = @Save, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
+                                    Shape [ Geometry = @Save, Fill = @OnSurfaceVariant, Width = 16, Height = 16 ]
                                 }
                                 ToolBarButton [ Command = $service(ContentHostService).SaveAllCommand ] {
-                                    Shape [ Geometry = @SaveAll, Fill = @OnSurfaceVariant, Width = 16, Height = 16, Margin = (2) ]
+                                    Shape [ Geometry = @SaveAll, Fill = @OnSurfaceVariant, Width = 16, Height = 16 ]
                                 }
                             }
                             ItemsControl
