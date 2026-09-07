@@ -185,14 +185,17 @@ resources Diagrams {
                       FontStyle           = $$FontStyle,
                       Foreground          = $$Foreground,
                       Visibility          = Collapsed,
+                      // Measure with the paint engine's SVG <text> layout (not
+                      // Canvas measureText) so the box matches the painted glyphs —
+                      // same fix PART_Text and the arch node label use.
+                      MeasurementFidelity = Exact,
                       HorizontalAlignment = Stretch,
                       VerticalAlignment   = $$VerticalTextAlignment ]
                 // MinWidth / MinHeight give the editor a visible caret box even
                 // when the content is EMPTY — an empty RichTextBox otherwise
                 // measures to zero size, so editing an empty label (e.g. a bare
                 // connector) would flip IsEditing but show nothing to type into.
-                // Only applies while editing: PART_Edit is Collapsed otherwise, so
-                // a non-editing empty label stays zero-size (invisible) as before.
+                // Only applies while editing: PART_Edit is Collapsed otherwise.
                 RichTextBox x:name="PART_Edit"
                     [ FontFamily          = $$FontFamily,
                       FontSize            = $$FontSize,
@@ -202,6 +205,10 @@ resources Diagrams {
                       Visibility          = Collapsed,
                       MinWidth            = 32,
                       MinHeight           = 16,
+                      // Measure the editor with the paint engine's SVG <text>
+                      // layout (not Canvas measureText) so the caret box matches
+                      // the painted glyphs — same fix the arch node label uses.
+                      MeasurementFidelity = Exact,
                       HorizontalAlignment = Stretch,
                       VerticalAlignment   = $$VerticalTextAlignment ]
             }
@@ -211,12 +218,13 @@ resources Diagrams {
             PART_Text.Visibility     = Collapsed;
             PART_RichText.Visibility = Visible;
         }
-        // In-place edit (declared last so it wins over the rich-display swap
-        // when both are active): reveal the editor, hide both displays.
+        // In-place edit (declared last so it wins over the rich-display swap when
+        // both are active): reveal the editor, hide both displays.
         when ( IsEditing ) {
             PART_Text.Visibility     = Collapsed;
             PART_RichText.Visibility = Collapsed;
             PART_Edit.Visibility     = Visible;
+            PART_Bg.Stroke           = (@Primary, 0.5);
         }
     }
     Style [TargetType = ShapeText] {

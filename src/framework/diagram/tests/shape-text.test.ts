@@ -69,6 +69,13 @@ describe('ShapeText — Figure ownership + sugar', () => {
 
         assert.ok(box.DesiredSize.Width  >= 32, `editor width ${box.DesiredSize.Width} >= 32`);
         assert.ok(box.DesiredSize.Height >= 16, `editor height ${box.DesiredSize.Height} >= 16`);
+
+        // The active editor draws a hairline 0.5px bounding box on PART_Bg,
+        // cleared when editing ends.
+        const bg = t.GetTemplateChild('PART_Bg') as Border;
+        assert.ok(bg?.Stroke !== undefined, 'editing shows a bounding box');
+        t.IsEditing = false;
+        assert.equal(bg.Stroke, undefined, 'the bounding box clears when editing ends');
     });
 
     test('LabelText is sugar over Text.Content, both directions', () => {

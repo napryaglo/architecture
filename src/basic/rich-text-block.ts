@@ -10,6 +10,7 @@
 } from '../runtime/index.js';
 import { Brush, FontFamily, FontStyle, FontWeight, TextDecorations } from '../visual-engine/index.js';
 import { DEFAULT_FONT_FAMILY, Theme } from './theme.js';
+import { MeasurementFidelity } from './text-block.js';
 import { FlowDocument } from './documents/flow-document.js';
 import { type BlockHost } from './documents/block.js';
 import { type LinkTarget, type RunProps } from './documents/text-element.js';
@@ -77,6 +78,12 @@ export class RichTextBlock extends Element implements BlockHost
     public static readonly TextDecorationsKey = MuralBase.RegisterProperty<TextDecorations>(RichTextBlock, 'TextDecorations', TextDecorations.None, MetaData.Render | MetaData.Inherits);
     public static readonly ForegroundKey   = MuralBase.RegisterProperty<Brush | undefined>(RichTextBlock, 'Foreground', undefined, MetaData.Render | MetaData.Inherits);
     public static readonly LetterSpacingKey = MuralBase.RegisterProperty<number>(   RichTextBlock, 'LetterSpacing', 0,              MetaData.Measure | MetaData.Render | MetaData.Inherits);
+    // Fast (Canvas) vs Exact (paint-engine SVG) width measurement — the same knob
+    // TextBlock exposes. Exact routes each run's WIDTH through the host's
+    // ExactTextMeasurer so the rich layout matches the painted glyphs (no sub-pixel
+    // clip of the last glyph). Measure | Inherits so a styled control sets it once
+    // and it flows into nested rich content, like the font DPs above.
+    public static readonly MeasurementFidelityKey = MuralBase.RegisterProperty<MeasurementFidelity>(RichTextBlock, 'MeasurementFidelity', MeasurementFidelity.Fast, MetaData.Measure | MetaData.Inherits);
 
     // Last block layout — kept for Arrange / Render / hit-test.
     protected _layout: BlockLayoutResult | undefined;
@@ -116,6 +123,9 @@ export class RichTextBlock extends Element implements BlockHost
     public set Foreground(v: Brush | undefined) { this.set_property_value(RichTextBlock.ForegroundKey, v); }
     public get LetterSpacing(): number { return this.get_property_value(RichTextBlock.LetterSpacingKey); }
     public set LetterSpacing(v: number) { this.set_property_value(RichTextBlock.LetterSpacingKey, v); }
+
+    public get MeasurementFidelity(): MeasurementFidelity { return this.get_property_value(RichTextBlock.MeasurementFidelityKey); }
+    public set MeasurementFidelity(v: MeasurementFidelity) { this.set_property_value(RichTextBlock.MeasurementFidelityKey, v); }
 
     // BlockHost — the document (and everything under it) reports content /
     // format changes here so the control re-measures and repaints.
@@ -157,7 +167,20 @@ export class RichTextBlock extends Element implements BlockHost
         if (doc.Parent !== this) doc.Parent = this;   // defensive re-wire
 
         const measurer = this.target?.TextMeasurer ?? APPROXIMATE_TEXT_MEASURER;
-        const measureText: MeasureText = (t, p) => measurer.Measure(t, p.family, p.size, p.weight, p.style);
+        // MeasurementFidelity = Exact: take each run's WIDTH from the host's
+        // paint-engine (offscreen SVG) measurer so the layout matches the painted
+        // glyphs — same reconciliation TextBlock does. Vertical metrics stay on the
+        // primary measurer; only the horizontal advance switches.
+        const exactMeasurer = this.MeasurementFidelity === MeasurementFidelity.Exact
+            ? this.target?.ExactTextMeasurer
+            : undefined;
+        const measureText: MeasureText = (t, p) =>
+        {
+            const m = measurer.Measure(t, p.family, p.size, p.weight, p.style);
+            if (exactMeasurer === undefined) return m;
+            const exactWidth = exactMeasurer.Measure(t, p.family, p.size, p.weight, p.style).Width;
+            return { ...m, Width: exactWidth };
+        };
         const measureObject: MeasureObject = (v) =>
         {
             v.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
