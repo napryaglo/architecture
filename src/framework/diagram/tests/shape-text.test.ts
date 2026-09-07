@@ -55,6 +55,22 @@ describe('ShapeText — Figure ownership + sugar', () => {
         assert.ok(f.Text instanceof ShapeText, 'Figure.Text is a ShapeText');
     });
 
+    // An empty label (e.g. a bare connector) previously entered edit mode with a
+    // zero-size, invisible RichTextBox — "no editor appears". PART_Edit now carries
+    // MinWidth/MinHeight so a clickable caret box shows while editing.
+    test('an empty ShapeText shows a visible (non-zero) editor while editing', () => {
+        const t = new ShapeText();
+        t.Content = '';
+        const box = t.GetTemplateChild('PART_Edit') as RichTextBox;
+        assert.ok(box instanceof RichTextBox, 'template carries a PART_Edit editor');
+
+        t.IsEditing = true;   // the when(IsEditing) trigger reveals PART_Edit
+        t.Measure(new Size(Number.POSITIVE_INFINITY, Number.POSITIVE_INFINITY));
+
+        assert.ok(box.DesiredSize.Width  >= 32, `editor width ${box.DesiredSize.Width} >= 32`);
+        assert.ok(box.DesiredSize.Height >= 16, `editor height ${box.DesiredSize.Height} >= 16`);
+    });
+
     test('LabelText is sugar over Text.Content, both directions', () => {
         const f = new Figure();
         f.LabelText = 'Hello';

@@ -187,6 +187,12 @@ resources Diagrams {
                       Visibility          = Collapsed,
                       HorizontalAlignment = Stretch,
                       VerticalAlignment   = $$VerticalTextAlignment ]
+                // MinWidth / MinHeight give the editor a visible caret box even
+                // when the content is EMPTY — an empty RichTextBox otherwise
+                // measures to zero size, so editing an empty label (e.g. a bare
+                // connector) would flip IsEditing but show nothing to type into.
+                // Only applies while editing: PART_Edit is Collapsed otherwise, so
+                // a non-editing empty label stays zero-size (invisible) as before.
                 RichTextBox x:name="PART_Edit"
                     [ FontFamily          = $$FontFamily,
                       FontSize            = $$FontSize,
@@ -194,6 +200,8 @@ resources Diagrams {
                       FontStyle           = $$FontStyle,
                       Foreground          = $$Foreground,
                       Visibility          = Collapsed,
+                      MinWidth            = 32,
+                      MinHeight           = 16,
                       HorizontalAlignment = Stretch,
                       VerticalAlignment   = $$VerticalTextAlignment ]
             }
