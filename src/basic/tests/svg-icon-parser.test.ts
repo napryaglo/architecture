@@ -45,3 +45,14 @@ test('solid hex fills are unaffected', () => {
     assert.equal(fill?.G, 0xf2);
     assert.equal(fill?.B, 0xf2);
 });
+
+test('a self-closing <g/> (empty group) does not swallow following shapes', () => {
+    // Adobe Illustrator exports an empty layer as `<g id="Layer_1"/>`. It must
+    // be treated as an empty group, not an open <g>: otherwise the depth count
+    // never balances, findMatchingClose returns -1, and the whole parse bails
+    // out emitting zero shapes (the Microsoft Teams icon rendered blank).
+    const svg = '<svg viewBox="0 0 10 10"><g id="Layer_1"/><rect width="10" height="10" fill="#f00"/></svg>';
+    const icon = parseSvgIcon(svg);
+    assert.equal(icon.Shapes.length, 1);
+    assert.equal(icon.Shapes[0]!.Fill?.R, 0xff);
+});

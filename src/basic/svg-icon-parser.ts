@@ -180,6 +180,16 @@ function parseGroup(body: string, inherited: InheritedPaint, out: IconShape[], g
 
         if (tagName === 'g')
         {
+            // A self-closing `<g .../>` is an empty group (Adobe Illustrator
+            // exports empty layers this way). It has no children to emit — skip
+            // it. Treating it as an open <g> would leave findMatchingClose
+            // depth-counting a phantom open it can never balance, so it returns
+            // -1 and the whole parse bails out with zero shapes.
+            if (selfClose)
+            {
+                i = tagEnd + 1;
+                continue;
+            }
             const merged = mergeInherited(inherited, attrs, gradients);
             // Walk to matching </g>. Nesting-aware (skip <g> opens that
             // aren't ours).
