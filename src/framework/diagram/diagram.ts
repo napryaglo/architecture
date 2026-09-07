@@ -2104,10 +2104,12 @@ export class Diagram extends Selector implements RigidConnectorDragHost
             args.Handled = true;
             return;
         }
-        // F2 — begin in-place editing of the first selected figure's label
-        // (Visio). Double-click is the pointer equivalent (Figure.OnPointerDown).
-        if (key === Key.F2 && this._selectedContainers.size > 0)
+        // F2 — begin in-place editing of the first selected figure's label, or,
+        // when only a connector is selected, its label (Visio). Double-click is the
+        // pointer equivalent (Figure.OnPointerDown / Connector.OnPointerDown).
+        if (key === Key.F2 && (this._selectedContainers.size > 0 || this._selectedConnectors.size > 0))
         {
+            let edited = false;
             for (const container of this._selectedContainers)
             {
                 if (container instanceof Figure)
@@ -2115,6 +2117,17 @@ export class Diagram extends Selector implements RigidConnectorDragHost
                     // Same resolution as double-click (Figure.OnPointerDown):
                     // the content VM's own edit entry, else the Figure's ShapeText.
                     resolveEditTarget(container)?.BeginEdit();
+                    edited = true;
+                    break;
+                }
+            }
+            // No editable figure selected → edit the first selected connector's
+            // label (its ShapeText), matching Connector.OnPointerDown's double-click.
+            if (!edited)
+            {
+                for (const c of this._selectedConnectors)
+                {
+                    c.Text?.BeginEdit();
                     break;
                 }
             }

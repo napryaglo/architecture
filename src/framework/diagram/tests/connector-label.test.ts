@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
 import { Point } from '../../../visual-engine/index.js';
+import { Key, KeyEventArgs, ModifierKeys } from '../../../runtime/index.js';
 import { Canvas } from '../../../basic/panels/canvas.js';
+import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { ShapeText } from '../shape-text.js';
 import { Connector } from '../connector.js';
@@ -62,6 +64,21 @@ describe('Connector label — model + sugar', () => {
     test('a Connector seeds a first-class ShapeText label', () => {
         const c = new Connector();
         assert.ok(c.Text instanceof ShapeText, 'Connector.Text is a ShapeText');
+    });
+
+    // F2 on a selected connector begins editing its label — the keyboard
+    // equivalent of double-clicking it (Connector.OnPointerDown). Previously F2
+    // only handled selected figures, so a selected connector did nothing.
+    test('F2 on a selected connector begins editing its label', () => {
+        const diagram = new Diagram();
+        const c = new Connector();
+        diagram.SelectConnector(c);
+        const keyArgs = new KeyEventArgs('KeyDown', diagram, {
+            Key: Key.F2, KeyText: 'F2', Code: 'F2', Modifiers: ModifierKeys.None, IsRepeat: false,
+        });
+        (diagram as unknown as { OnKeyDown(a: KeyEventArgs): void }).OnKeyDown(keyArgs);
+        assert.equal(keyArgs.Handled, true, 'F2 is consumed');
+        assert.equal(c.Text.IsEditing, true, 'F2 puts the connector label into edit mode');
     });
 
     test('LabelText is sugar over Text.Content; LabelPosition defaults to the midpoint', () => {
