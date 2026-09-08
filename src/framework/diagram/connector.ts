@@ -10,6 +10,7 @@
 import { resolveKey } from '../../runtime/model-internals.js';
 import {
     type Geometry,
+    PathGeometry,
     Pen,
     Point,
     RotateTransform,
@@ -22,7 +23,7 @@ import { Canvas } from '../../basic/panels/canvas.js';
 import { DataTemplate } from '../../basic/templates/data-template.js';
 import { ShapeText } from './shape-text.js';
 import { FieldKind, resolveFields } from './shape-text-field.js';
-import { nearestTOnPolyline, pointAlongPolyline, polylineLength } from './connector-route.js';
+import { nearestTOnPolyline, pointAlongPolyline, polylineLength, splitPolylineAroundRect } from './connector-route.js';
 import { diagramSpaceRect, type SpatialNode } from './coordinate-space.js';
 import { ConnectorEndpoint } from './connector-endpoint.js';
 import { ConnectorCapDataContext } from './caps/connector-cap-data-context.js';
@@ -45,6 +46,7 @@ import {
 } from './routing/router.js';
 import {
     pathGeometryToPolyline,
+    polylinesToPathGeometry,
     polylineToPathGeometry,
     shortenPolyline,
 } from './caps/cap-inset.js';
@@ -269,6 +271,19 @@ export class Connector extends Shape
     private _currentRoutePoints: readonly Point[] | undefined = undefined;
     public get CurrentRoutePoints(): readonly Point[] | undefined { return this._currentRoutePoints; }
 
+    // The polyline actually DRAWN (post cap-inset), from which the final
+    // Geometry is built — split into two runs when a label breaks the line
+    // (the "line gap" style). undefined for a Bezier route or a missing
+    // endpoint, where Geometry is written verbatim and no gap applies.
+    // Cached so a label drag / edit (which does not re-route) can re-break
+    // the line at the label's new spot via _applyLabelGap without a full
+    // route recompute.
+    private _drawnPolyline: readonly Point[] | undefined = undefined;
+
+    // Breathing room, in host units, added around the label's box so the
+    // route stops a hair short of the glyphs rather than kissing them.
+    private static readonly LabelGapMargin = 3;
+
     // Tracked previous endpoint references so OnPropertyChanged can
     // detach listeners from the OLD endpoint before re-attaching to
     // the NEW one. _trackedSourceNode / _trackedTargetNode play the
@@ -315,7 +330,7 @@ export class Connector extends Shape
     private _labelDragging = false;
     private _labelOffsetX = 0;
     private _labelOffsetY = 0;
-    private readonly _onLabelContentChanged = (): void => { this._syncLabelHitTest(); this._placeLabel(); this._refreshLabelFields(); };
+    private readonly _onLabelContentChanged = (): void => { this._syncLabelHitTest(); this._placeLabel(); this._applyLabelGap(); this._refreshLabelFields(); };
 
     // Bound callbacks — required for symmetric Add/Remove on the
     // MuralBase PropertyChangedListener API.
@@ -487,6 +502,46 @@ export class Connector extends Shape
         Canvas.SetTop(label,  cy - d.Height / 2);
     }
 
+    // The label's placed box in host coords, inflated by LabelGapMargin — the
+    // region the route should break around. undefined when there is nothing to
+    // break around: no label, an empty label that isn't being edited, or an
+    // unmeasured (zero-size) label. Reads the position _placeLabel wrote, so
+    // it must run after it.
+    private _labelGapRect(): Rect | undefined
+    {
+        const label = this.Text;
+        if (label === undefined) return undefined;
+        if (label.IsEmpty && !label.IsEditing) return undefined;
+        const w = label.DesiredSize.Width, h = label.DesiredSize.Height;
+        if (!(w > 0) || !(h > 0)) return undefined;
+        const m = Connector.LabelGapMargin;
+        return new Rect(Canvas.GetLeft(label) - m, Canvas.GetTop(label) - m, w + 2 * m, h + 2 * m);
+    }
+
+    // Finalize Geometry from the drawn polyline, breaking the line around the
+    // label (line-gap style). A no-op for Bezier routes (_drawnPolyline
+    // undefined — the curve was already written). Called from the recompute
+    // body and, without a re-route, whenever the label moves or its content
+    // changes (drag / edit) so the gap tracks the label.
+    private _applyLabelGap(): void
+    {
+        const poly = this._drawnPolyline;
+        if (poly === undefined) return;
+        this.Geometry = this._gappedGeometry(poly, this._labelGapRect()) as unknown as Geometry;
+    }
+
+    // The route Geometry built from the drawn polyline, broken into two open
+    // figures around `gap` when a label sits on the line, or a single figure
+    // when there is nothing to break around (no gap, or the rect misses the
+    // route). Split out from _applyLabelGap so the assembly is unit-testable
+    // without a mounted, measured label.
+    private _gappedGeometry(poly: readonly Point[], gap: Rect | undefined): PathGeometry
+    {
+        if (gap === undefined) return polylineToPathGeometry(poly);
+        const runs = splitPolylineAroundRect(poly, gap);
+        return runs.length > 1 ? polylinesToPathGeometry(runs) : polylineToPathGeometry(runs[0] ?? poly);
+    }
+
     // Double-clicking the route (not the label) captions a bare connector —
     // begins editing the midpoint label, matching Visio.
     protected override OnPointerDown(args: PointerEventArgs): void
@@ -574,8 +629,10 @@ export class Connector extends Shape
         }
         else if (descriptor === Connector.LabelPositionKey.descriptor)
         {
-            // Slide the label to its new arc-length fraction without a reroute.
+            // Slide the label to its new arc-length fraction without a reroute,
+            // and re-break the line at the label's new spot.
             this._placeLabel();
+            this._applyLabelGap();
         }
     }
 
@@ -1127,22 +1184,21 @@ export class Connector extends Shape
         const targetInset = this._targetCapInstance !== undefined
             ? Connector.GetCapInset(this._targetCapInstance) * this.TargetCapScale : 0;
 
-        if (sourceInset > 0 || targetInset > 0)
+        // The drawn polyline = the route (already snapshotted above) with the
+        // cap insets trimmed off each tip. Bezier routes have no polyline —
+        // draw the curve verbatim and skip both inset trimming and the label
+        // gap. _applyLabelGap (below) finalizes Geometry from _drawnPolyline.
+        const basePolyline = this._currentRoutePoints;
+        if (basePolyline === undefined)
         {
-            const polyline = pathGeometryToPolyline(routeGeom);
-            if (polyline !== undefined)
-            {
-                const shortened = shortenPolyline(polyline, sourceInset, targetInset);
-                this.Geometry = polylineToPathGeometry(shortened) as unknown as Geometry;
-            }
-            else
-            {
-                this.Geometry = routeGeom as unknown as Geometry;
-            }
+            this._drawnPolyline = undefined;
+            this.Geometry = routeGeom as unknown as Geometry;
         }
         else
         {
-            this.Geometry = routeGeom as unknown as Geometry;
+            this._drawnPolyline = (sourceInset > 0 || targetInset > 0)
+                ? shortenPolyline(basePolyline, sourceInset, targetInset)
+                : basePolyline;
         }
 
         // Cap visual placement: Canvas.Left / Top to the anchor position
@@ -1153,9 +1209,11 @@ export class Connector extends Shape
         placeCap(this._sourceCapInstance, srcAnchor, router.tangentAt(spec, ConnectorEnd.Source), ConnectorEnd.Source, this.SourceCapScale);
         placeCap(this._targetCapInstance, tgtAnchor, router.tangentAt(spec, ConnectorEnd.Target), ConnectorEnd.Target, this.TargetCapScale);
 
-        // Re-place the label on the freshly-computed route (§ Slice 5) and
-        // refresh its {Length}/{SourceId}/… fields (§ Slice 6).
+        // Re-place the label on the freshly-computed route (§ Slice 5), break
+        // the drawn line around it (line-gap style), and refresh its
+        // {Length}/{SourceId}/… fields (§ Slice 6).
         this._placeLabel();
+        this._applyLabelGap();
         this._refreshLabelFields();
         // NOTE: side-intersection optimization is NOT run here. It must run
         // only AFTER this connector's `_recomputing` guard is released (see

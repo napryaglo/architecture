@@ -2,15 +2,15 @@ import { describe, test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { initTestApp } from '../../../basic/tests/test-app.js';
 
-import { Point } from '../../../visual-engine/index.js';
-import { Key, KeyEventArgs, ModifierKeys } from '../../../runtime/index.js';
+import { Point, PathGeometry } from '../../../visual-engine/index.js';
+import { Key, KeyEventArgs, ModifierKeys, Rect } from '../../../runtime/index.js';
 import { Canvas } from '../../../basic/panels/canvas.js';
 import { Diagram } from '../diagram.js';
 import { Figure } from '../figure.js';
 import { ShapeText } from '../shape-text.js';
 import { Connector } from '../connector.js';
 import { ConnectorEndpoint } from '../connector-endpoint.js';
-import { pointAlongPolyline, nearestTOnPolyline } from '../connector-route.js';
+import { pointAlongPolyline, nearestTOnPolyline, splitPolylineAroundRect } from '../connector-route.js';
 import { DiagramDocument, type DiagramStorage } from '../diagram-document.js';
 
 // § diagram-text Slice 5 — connector labels. A Connector owns a first-class
@@ -55,6 +55,42 @@ describe('connector-route — polyline geometry (pure)', () => {
         // Off the ends clamps to the segment (t stays in [0,1]).
         assert.equal(nearestTOnPolyline(pts, P(-40, 0)), 0);
         assert.equal(nearestTOnPolyline(pts, P(140, 0)), 1);
+    });
+
+    // splitPolylineAroundRect breaks a route where a label sits: the drawn
+    // line stops at the label rect's near edge and resumes at its far edge.
+    test('splitPolylineAroundRect breaks a straight line into two around a mid rect', () => {
+        const pts = [P(0, 0), P(100, 0)];
+        // Label rect covers x 40..60 (y -10..10 straddles the line).
+        const parts = splitPolylineAroundRect(pts, new Rect(40, -10, 20, 20));
+        assert.equal(parts.length, 2, 'one polyline each side of the label');
+        assert.deepEqual(parts[0], [P(0, 0), P(40, 0)], 'leading run stops at the near edge');
+        assert.deepEqual(parts[1], [P(60, 0), P(100, 0)], 'trailing run resumes at the far edge');
+    });
+
+    test('splitPolylineAroundRect returns the whole line when the rect misses it', () => {
+        const pts = [P(0, 0), P(100, 0)];
+        // Rect sits well off the line (label dragged away from the route).
+        const parts = splitPolylineAroundRect(pts, new Rect(40, 50, 20, 20));
+        assert.equal(parts.length, 1, 'no gap');
+        assert.deepEqual(parts[0], pts, 'the original polyline, unbroken');
+    });
+
+    test('splitPolylineAroundRect drops the leading run when the rect covers the start', () => {
+        const pts = [P(0, 0), P(100, 0)];
+        // Rect x -10..40 swallows the start vertex → only a trailing run remains.
+        const parts = splitPolylineAroundRect(pts, new Rect(-10, -10, 50, 20));
+        assert.equal(parts.length, 1, 'only the trailing run survives');
+        assert.deepEqual(parts[0], [P(40, 0), P(100, 0)]);
+    });
+
+    test('splitPolylineAroundRect spans a bend when the label sits on a corner', () => {
+        const pts = [P(0, 0), P(100, 0), P(100, 100)];
+        // Rect x 90..110 y -10..10 covers the (100,0) corner.
+        const parts = splitPolylineAroundRect(pts, new Rect(90, -10, 20, 20));
+        assert.equal(parts.length, 2, 'gap spans the corner');
+        assert.deepEqual(parts[0], [P(0, 0), P(90, 0)], 'leading run into the corner');
+        assert.deepEqual(parts[1], [P(100, 10), P(100, 100)], 'trailing run out of the corner');
     });
 });
 
@@ -135,6 +171,68 @@ describe('Connector label — route positioning', () => {
         (c as unknown as { OnPointerDown(a: unknown): void }).OnPointerDown(args);
         assert.equal(args.Handled, true, 'the gesture is consumed');
         assert.equal(c.Text.IsEditing, true, 'the midpoint label enters edit mode');
+    });
+});
+
+describe('Connector label — line gap', () => {
+    beforeEach(() => { initTestApp(); });
+
+    // The route runs horizontally at y≈40 from x≈80 to x≈240 (see the route
+    // positioning suite above).
+    function wired(): Connector
+    {
+        const a = new Figure(); a.Left = 0;   a.Top = 0;
+        const b = new Figure(); b.Left = 240; b.Top = 0;
+        const c = new Connector();
+        c.Source = new ConnectorEndpoint({ Node: a });
+        c.Target = new ConnectorEndpoint({ Node: b });
+        return c;
+    }
+
+    // The drawn polyline the connector cached for its route (post cap-inset) —
+    // what _applyLabelGap breaks around a label. Set by the recompute.
+    function drawnPolyline(c: Connector): readonly Point[] | undefined
+    {
+        return (c as unknown as { _drawnPolyline: readonly Point[] | undefined })._drawnPolyline;
+    }
+
+    function gapped(c: Connector, gap: Rect | undefined): PathGeometry
+    {
+        const poly = drawnPolyline(c)!;
+        return (c as unknown as { _gappedGeometry(p: readonly Point[], g: Rect | undefined): PathGeometry })
+            ._gappedGeometry(poly, gap);
+    }
+
+    // Note: a detached connector label cannot MEASURE in this headless harness
+    // (its template only materializes once mounted, so DesiredSize is 0 and
+    // _labelGapRect always bails). We therefore exercise the connector's
+    // geometry assembly directly with an explicit gap rect — the measured
+    // placement path is verified live in Plexus. splitPolylineAroundRect's own
+    // math is covered by the pure suite above.
+
+    test('an empty connector draws one unbroken figure', () => {
+        const c = wired();
+        // End-to-end: an empty label yields no gap rect, so the recompute wrote
+        // a single continuous figure.
+        assert.equal((c.Geometry as unknown as PathGeometry).Figures.length, 1);
+    });
+
+    test('the route assembles as two figures when a label rect sits on it', () => {
+        const c = wired();
+        // A label box straddling the mid of the route (y≈40, x 80..240).
+        const geom = gapped(c, new Rect(140, 30, 60, 20));
+        assert.equal(geom.Figures.length, 2, 'the line gaps around the label');
+    });
+
+    test('the route assembles as one figure when there is no gap rect', () => {
+        const c = wired();
+        assert.equal(gapped(c, undefined).Figures.length, 1, 'no label → one continuous figure');
+    });
+
+    test('the route assembles as one figure when the rect misses the line', () => {
+        const c = wired();
+        // Rect well below the y≈40 route — a label dragged off the path.
+        assert.equal(gapped(c, new Rect(140, 200, 60, 20)).Figures.length, 1);
     });
 });
 

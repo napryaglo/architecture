@@ -119,3 +119,22 @@ export function polylineToPathGeometry(points: readonly Point[]): PathGeometry
     for (let i = 1; i < points.length; i++) segments.push(new LineSegment(points[i]!));
     return new PathGeometry([new PathFigure(points[0]!, segments, false)]);
 }
+
+// Build a multi-figure PathGeometry — one open figure per polyline run.
+// Backs the connector "line gap" label style, where a route is drawn as
+// two disjoint runs that break around the label. Runs shorter than two
+// points are skipped; an all-empty input yields a single empty figure so
+// the PathGeometry / PathFigure shape stays intact for the renderer.
+export function polylinesToPathGeometry(runs: readonly (readonly Point[])[]): PathGeometry
+{
+    const figures: PathFigure[] = [];
+    for (const points of runs)
+    {
+        if (points.length < 2) continue;
+        const segments: LineSegment[] = [];
+        for (let i = 1; i < points.length; i++) segments.push(new LineSegment(points[i]!));
+        figures.push(new PathFigure(points[0]!, segments, false));
+    }
+    if (figures.length === 0) figures.push(new PathFigure(new Point(0, 0), [], false));
+    return new PathGeometry(figures);
+}
